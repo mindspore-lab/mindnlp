@@ -35,11 +35,14 @@ def _requires_grad(args) -> bool:
     return False
 
 
-def _make_grad_fn(op_name: str, args, result):
+def _make_grad_fn(op_name: str, args, result, kwargs=None):
     """Create gradient function node for an op."""
     from .._tensor import Tensor
     from .._autograd.node import AccumulateGrad
     from .._autograd import functions as F
+
+    if kwargs is None:
+        kwargs = {}
 
     # Map op names to backward classes
     backward_classes = {
@@ -55,6 +58,12 @@ def _make_grad_fn(op_name: str, args, result):
         'exp': F.ExpBackward,
         'log': F.LogBackward,
         'sqrt': F.SqrtBackward,
+        'transpose': F.TransposeBackward,
+        'embedding': F.EmbeddingBackward,
+        'layer_norm': F.LayerNormBackward,
+        'relu': F.ReluBackward,
+        'gelu': F.GeluBackward,
+        'silu': F.SiluBackward,
     }
 
     BackwardClass = backward_classes.get(op_name)
@@ -86,7 +95,7 @@ def _make_grad_fn(op_name: str, args, result):
     grad_fn._next_functions = tuple(next_fns)
 
     # Save tensors for backward
-    if op_name in ('mul', 'div', 'pow', 'matmul'):
+    if op_name in ('mul', 'div', 'pow', 'matmul', 'embedding'):
         grad_fn.save_for_backward(*tensors_to_save)
     elif op_name == 'exp':
         grad_fn.save_for_backward(result)  # Save result for exp backward
@@ -96,6 +105,23 @@ def _make_grad_fn(op_name: str, args, result):
         grad_fn.save_for_backward(result)  # Save result
     elif op_name in ('sum', 'mean'):
         grad_fn._input_shape = tensors_to_save[0].shape
+    elif op_name == 'transpose':
+        # For transpose, save the dims from kwargs or args
+        if 'dim0' in kwargs and 'dim1' in kwargs:
+            grad_fn._dims = (kwargs['dim0'], kwargs['dim1'])
+        elif len(args) >= 3:
+            grad_fn._dims = (args[1], args[2])
+    elif op_name == 'layer_norm':
+        # Save input, normalized_shape, weight, bias, eps for layer_norm backward
+        # args = (input, normalized_shape, weight, bias, eps)
+        grad_fn._saved_info = (args[0], args[1], args[2] if len(args) > 2 else None,
+                               args[3] if len(args) > 3 else None,
+                               args[4] if len(args) > 4 else 1e-5)
+    elif op_name in ('relu', 'silu'):
+        grad_fn.save_for_backward(tensors_to_save[0])  # Save input
+    elif op_name == 'gelu':
+        grad_fn.save_for_backward(tensors_to_save[0])  # Save input
+        grad_fn._approximate = kwargs.get('approximate', 'none')
 
     return grad_fn
 
@@ -137,7 +163,7 @@ def dispatch(op_name: str, *args, **kwargs) -> Any:
 
     # Record autograd if needed
     if is_grad_enabled() and _requires_grad(args) and isinstance(result, Tensor):
-        grad_fn = _make_grad_fn(op_name, args, result)
+        grad_fn = _make_grad_fn(op_name, args, result, kwargs)
         if grad_fn is not None:
             result._grad_fn = grad_fn
             result._requires_grad = True

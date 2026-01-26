@@ -374,27 +374,9 @@ class Tensor:
         return self.contiguous().view(*new_shape)
 
     def transpose(self, dim0, dim1):
-        """Swap two dimensions. Returns a view."""
-        ndim = self.dim()
-        if dim0 < 0:
-            dim0 += ndim
-        if dim1 < 0:
-            dim1 += ndim
-
-        new_shape = list(self._shape)
-        new_shape[dim0], new_shape[dim1] = new_shape[dim1], new_shape[dim0]
-
-        new_stride = list(self._stride)
-        new_stride[dim0], new_stride[dim1] = new_stride[dim1], new_stride[dim0]
-
-        return Tensor(
-            _storage=self._storage,
-            _shape=tuple(new_shape),
-            _stride=tuple(new_stride),
-            _storage_offset=self._storage_offset,
-            device=str(self._device),
-            requires_grad=self._requires_grad,
-        )
+        """Swap two dimensions. Returns a view with autograd support."""
+        from ._dispatch import dispatch
+        return dispatch("transpose", self, dim0, dim1)
 
     def t(self):
         """Transpose 2D tensor."""

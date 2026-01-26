@@ -139,6 +139,13 @@ def relu_cpu(a):
     return _wrap_result(np.maximum(a_np, 0))
 
 
+@register_op("transpose", DispatchKey.Backend_CPU)
+def transpose_cpu(a, dim0, dim1):
+    """Transpose two dimensions."""
+    a_np = _to_numpy(a)
+    return _wrap_result(np.swapaxes(a_np, dim0, dim1))
+
+
 @register_op("matmul", DispatchKey.Backend_CPU)
 def matmul_cpu(a, b):
     """Matrix multiplication."""
@@ -276,3 +283,97 @@ def le_cpu(a, b):
     a_np = _to_numpy(a)
     b_np = _to_numpy(b)
     return _wrap_result(a_np <= b_np)
+
+
+# --- Activation ops ---
+
+@register_op("gelu", DispatchKey.Backend_CPU)
+def gelu_cpu(a, approximate='none'):
+    """GELU activation."""
+    import math
+    a_np = _to_numpy(a)
+    if approximate == 'tanh':
+        # Approximate GELU
+        coef = math.sqrt(2.0 / math.pi)
+        result = 0.5 * a_np * (1.0 + np.tanh(coef * (a_np + 0.044715 * a_np ** 3)))
+    else:
+        # Exact GELU using erf
+        from scipy.special import erf
+        result = 0.5 * a_np * (1.0 + erf(a_np / math.sqrt(2.0)))
+    return _wrap_result(result)
+
+
+@register_op("silu", DispatchKey.Backend_CPU)
+def silu_cpu(a):
+    """SiLU/Swish activation: x * sigmoid(x)."""
+    a_np = _to_numpy(a)
+    result = a_np * (1.0 / (1.0 + np.exp(-a_np)))
+    return _wrap_result(result)
+
+
+@register_op("softmax", DispatchKey.Backend_CPU)
+def softmax_cpu(a, dim=None):
+    """Softmax activation."""
+    a_np = _to_numpy(a)
+    if dim is None:
+        dim = -1
+    # Subtract max for numerical stability
+    a_max = np.max(a_np, axis=dim, keepdims=True)
+    exp_a = np.exp(a_np - a_max)
+    result = exp_a / np.sum(exp_a, axis=dim, keepdims=True)
+    return _wrap_result(result)
+
+
+@register_op("log_softmax", DispatchKey.Backend_CPU)
+def log_softmax_cpu(a, dim=None):
+    """Log softmax."""
+    a_np = _to_numpy(a)
+    if dim is None:
+        dim = -1
+    a_max = np.max(a_np, axis=dim, keepdims=True)
+    log_sum_exp = a_max + np.log(np.sum(np.exp(a_np - a_max), axis=dim, keepdims=True))
+    result = a_np - log_sum_exp
+    return _wrap_result(result)
+
+
+# --- Neural network ops ---
+
+@register_op("embedding", DispatchKey.Backend_CPU)
+def embedding_cpu(indices, weight):
+    """Embedding lookup."""
+    indices_np = _to_numpy(indices).astype(np.int64)
+    weight_np = _to_numpy(weight)
+    result = weight_np[indices_np]
+    return _wrap_result(result)
+
+
+@register_op("dropout", DispatchKey.Backend_CPU)
+def dropout_cpu(a, p=0.5, training=True):
+    """Dropout."""
+    if not training or p == 0:
+        return a
+    a_np = _to_numpy(a)
+    mask = np.random.binomial(1, 1 - p, a_np.shape) / (1 - p)
+    result = a_np * mask
+    return _wrap_result(result.astype(a_np.dtype))
+
+
+@register_op("layer_norm", DispatchKey.Backend_CPU)
+def layer_norm_cpu(a, normalized_shape, weight=None, bias=None, eps=1e-5):
+    """Layer normalization."""
+    a_np = _to_numpy(a)
+
+    # Determine axes to normalize over
+    ndim = len(normalized_shape)
+    axes = tuple(range(-ndim, 0))
+
+    mean = np.mean(a_np, axis=axes, keepdims=True)
+    var = np.var(a_np, axis=axes, keepdims=True)
+    result = (a_np - mean) / np.sqrt(var + eps)
+
+    if weight is not None:
+        result = result * _to_numpy(weight)
+    if bias is not None:
+        result = result + _to_numpy(bias)
+
+    return _wrap_result(result)
