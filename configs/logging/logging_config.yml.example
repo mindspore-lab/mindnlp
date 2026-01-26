@@ -1,0 +1,65 @@
+# 日志配置
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+  
+  # 日志格式: json (生产环境推荐) 或 console (开发环境)
+  format: json
+  
+  # 日志输出
+  output:
+    console: true           # 是否输出到控制台
+    file: true              # 是否输出到文件
+  
+  # 文件配置
+  file:
+    path: "logs/ocr_service.log"
+    rotation:
+      max_size_mb: 100      # 单个日志文件最大大小 (MB)
+      max_files: 10         # 最多保留文件数
+      compress: true        # 是否压缩旧日志文件
+
+# 模块日志级别 (可覆盖全局级别)
+module_loggers:
+  ocr.api: INFO             # API 层日志
+  ocr.performance: DEBUG    # 性能日志 (更详细)
+  ocr.inference: INFO       # 推理日志
+  uvicorn: WARNING          # Web 服务器日志
+
+# 分布式追踪配置
+tracing:
+  enabled: true             # 是否启用追踪
+  service_name: "ocr-api"   # 服务名称 (Jaeger 中显示)
+  sampling_rate: 0.1        # 采样率 (0.0 - 1.0, 建议生产环境 0.01 - 0.1)
+  
+  # 导出器类型: jaeger, otlp, console
+  exporter: jaeger
+  
+  # Jaeger 配置 (当 exporter=jaeger 时)
+  jaeger:
+    endpoint: "localhost:6831"  # Jaeger Agent 地址
+  
+  # OTLP 配置 (当 exporter=otlp 时)
+  otlp:
+    endpoint: "http://localhost:4317"  # OTLP Collector 地址
+
+# 性能 Profiling 配置
+profiling:
+  enabled: false            # 默认关闭 (仅在需要性能分析时启用)
+  output_dir: "profiling_results"  # Profiling 结果输出目录
+  
+  # CPU Profiling
+  cpu:
+    enabled: true
+    format: "prof"          # 输出格式: prof (cProfile)
+  
+  # GPU Profiling
+  gpu:
+    enabled: true
+    format: "json"          # 输出格式: json (Chrome Tracing)
+    with_stack: true        # 是否包含调用栈
+  
+  # Memory Profiling
+  memory:
+    enabled: true
+    interval_ms: 100        # 采样间隔 (毫秒)

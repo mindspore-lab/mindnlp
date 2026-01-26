@@ -1,0 +1,77 @@
+# 日志配置文件
+# Structured Logging Configuration
+
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+  
+  # 日志格式: json, console
+  format: json
+  
+  # 输出目标: file, console, both
+  output: both
+  
+  # 文件输出配置
+  file:
+    enabled: true
+    path: "logs/ocr_service.log"
+    
+    # 日志轮转配置
+    rotation:
+      max_size_mb: 100      # 单文件最大大小
+      max_files: 10         # 保留文件数
+      compress: true        # 是否压缩旧日志
+  
+  # 控制台输出配置
+  console:
+    enabled: true
+    colorize: true          # 是否彩色输出 (仅console格式)
+  
+  # 按模块配置日志级别
+  loggers:
+    "ocr.api": INFO
+    "ocr.engine": INFO
+    "ocr.performance": DEBUG
+    "ocr.batch": DEBUG
+    "uvicorn": WARNING
+    "fastapi": WARNING
+
+# 追踪配置
+tracing:
+  enabled: true
+  service_name: "ocr-api"
+  
+  # 采样率: 0.0-1.0
+  # 1.0 = 100% 采样, 0.1 = 10% 采样
+  sampling_rate: 0.1
+  
+  # 导出器类型: jaeger, otlp, console
+  exporter: jaeger
+  
+  # Jaeger 配置
+  jaeger:
+    endpoint: "localhost:6831"
+    
+  # OTLP 配置
+  otlp:
+    endpoint: "http://localhost:4317"
+    insecure: true
+
+# Profiling 配置
+profiling:
+  enabled: false  # 默认关闭,性能损耗较大
+  
+  # 输出目录
+  output_dir: "profiling_results"
+  
+  # CPU Profiling
+  cpu:
+    enabled: false
+    
+  # GPU Profiling
+  gpu:
+    enabled: false
+    
+  # 内存 Profiling
+  memory:
+    enabled: false

@@ -1,0 +1,51 @@
+# Prometheus 配置文件
+# OCR Service Monitoring Configuration
+
+global:
+  scrape_interval: 15s      # 默认抓取间隔
+  evaluation_interval: 15s  # 告警规则评估间隔
+  external_labels:
+    cluster: 'ocr-cluster'
+    environment: 'production'
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'localhost:9093'  # Alertmanager 地址
+
+# 加载告警规则
+rule_files:
+  - 'alert_rules.yml'
+
+# 抓取配置
+scrape_configs:
+  # OCR API 服务
+  - job_name: 'ocr-api'
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - 'localhost:8000'  # OCR API 地址
+    metrics_path: '/api/v1/metrics/metrics'  # Prometheus metrics 端点
+    
+  # Node Exporter (系统指标)
+  - job_name: 'node'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'localhost:9100'
+    
+  # GPU Exporter (GPU指标,如果使用)
+  - job_name: 'gpu'
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - 'localhost:9445'  # DCGM Exporter 默认端口
+    
+  # Prometheus 自身
+  - job_name: 'prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'localhost:9090'
