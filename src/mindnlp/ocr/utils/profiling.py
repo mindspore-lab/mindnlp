@@ -12,14 +12,14 @@ import time
 import cProfile
 import pstats
 import io
+import logging
 from typing import Optional, Callable, Any, Dict
 from contextlib import contextmanager
 from pathlib import Path
 import json
 
-from mindnlp.ocr.utils.logger import get_logger
-
-logger = get_logger(__name__)
+# 使用标准logger避免循环导入
+logger = logging.getLogger(__name__)
 
 
 class CPUProfiler:

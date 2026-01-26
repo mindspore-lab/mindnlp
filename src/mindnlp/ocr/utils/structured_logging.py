@@ -32,6 +32,14 @@ def setup_structured_logging(
         json_format: 是否使用JSON格式
         enable_console: 是否输出到控制台
     """
+    # 清除全局logger实例，以便使用新配置
+    global _request_logger, _performance_logger
+    _request_logger = None
+    _performance_logger = None
+    
+    # 清除之前的配置
+    structlog.reset_defaults()
+    
     # 配置 structlog
     timestamper = structlog.processors.TimeStamper(fmt="iso")
     
@@ -70,10 +78,14 @@ def setup_structured_logging(
         )
     
     # 配置标准 logging
+    # 清除所有旧的handlers
+    logging.root.handlers.clear()
+    
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout if enable_console else None,
         level=getattr(logging, log_level.upper()),
+        force=True  # 强制重新配置
     )
     
     # 配置文件输出
@@ -180,13 +192,13 @@ class RequestLogger:
         
         if error:
             log_data["error"] = error
-            self.logger.error("request_failed", **log_data)
+            self.logger.error(**log_data)
         elif status_code >= 500:
-            self.logger.error("request_server_error", **log_data)
+            self.logger.error(**log_data)
         elif status_code >= 400:
-            self.logger.warning("request_client_error", **log_data)
+            self.logger.warning(**log_data)
         else:
-            self.logger.info("request_completed", **log_data)
+            self.logger.info(**log_data)
     
     def log_inference(
         self,
@@ -222,9 +234,9 @@ class RequestLogger:
         
         if error:
             log_data["error"] = error
-            self.logger.error("inference_failed", **log_data)
+            self.logger.error(**log_data)
         else:
-            self.logger.info("inference_completed", **log_data)
+            self.logger.info(**log_data)
 
 
 class PerformanceLogger:
@@ -271,7 +283,7 @@ class PerformanceLogger:
         if gpu_memory_mb is not None:
             log_data["gpu_memory_mb"] = gpu_memory_mb
         
-        self.logger.info("resource_snapshot", **log_data)
+        self.logger.info(**log_data)
     
     def log_queue_metrics(
         self,
@@ -298,7 +310,7 @@ class PerformanceLogger:
             **extra_fields
         }
         
-        self.logger.info("queue_snapshot", **log_data)
+        self.logger.info(**log_data)
 
 
 # 全局日志器实例

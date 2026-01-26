@@ -9,6 +9,7 @@
 """
 
 import os
+import logging
 from typing import Optional, Dict, Any
 from contextlib import contextmanager
 
@@ -21,9 +22,8 @@ from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
-from mindnlp.ocr.utils.logger import get_logger
-
-logger = get_logger(__name__)
+# 使用标准logger避免循环导入
+logger = logging.getLogger(__name__)
 
 
 class TracingConfig:
