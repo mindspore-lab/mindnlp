@@ -331,6 +331,29 @@ class VLMOCREngine:
                 model_name=self.model_name,
                 details={"error_type": type(e).__name__}
             ) from e
+        finally:
+            # 显式清理中间变量释放内存（NPU 内存管理）
+            try:
+                # 清理局部变量
+                if 'pil_image' in locals():
+                    del pil_image
+                if 'image_uri' in locals():
+                    del image_uri
+                if 'messages' in locals():
+                    del messages
+                if 'outputs' in locals():
+                    del outputs
+                
+                # NPU 内存清理
+                if "npu" in self.device:
+                    import gc
+                    gc.collect()
+                    if hasattr(__import__('torch'), 'npu'):
+                        torch_module = __import__('torch')
+                        if hasattr(torch_module.npu, 'empty_cache'):
+                            torch_module.npu.empty_cache()
+            except Exception as cleanup_error:
+                logger.debug(f"Memory cleanup warning: {cleanup_error}")
 
     def predict_batch(self, request: OCRBatchRequest) -> List[OCRResponse]:
         """
@@ -534,3 +557,27 @@ class VLMOCREngine:
         inputs = {k: v.to(device) if hasattr(v, 'to') else v for k, v in inputs.items()}
 
         return inputs
+
+    def process_batch(self, batch_items: List[OCRRequest]) -> List[OCRResponse]:
+        """
+        批处理接口（适配DynamicBatcher）
+        
+        Args:
+            batch_items: OCR请求列表
+            
+        Returns:
+            List[OCRResponse]: OCR响应列表
+        """
+        logger.info(f"Processing batch of {len(batch_items)} requests via process_batch")
+        
+        # 转换为OCRBatchRequest并调用predict_batch
+        batch_request = OCRBatchRequest(
+            images=[item.image for item in batch_items],
+            output_format=batch_items[0].output_format if batch_items else "json",
+            language=batch_items[0].language if batch_items else "en",
+            task_type=batch_items[0].task_type if batch_items else "ocr",
+            confidence_threshold=batch_items[0].confidence_threshold if batch_items else 0.5,
+            custom_prompt=batch_items[0].custom_prompt if batch_items else None
+        )
+        
+        return self.predict_batch(batch_request)

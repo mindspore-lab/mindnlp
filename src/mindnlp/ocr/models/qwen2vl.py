@@ -3,7 +3,6 @@ Qwen2-VL模型封装
 """
 
 import base64
-import logging
 import os
 from io import BytesIO
 from typing import Any, Dict, List, Union
@@ -13,6 +12,7 @@ from transformers import AutoModel, AutoTokenizer, AutoProcessor
 from mindnlp.ocr.utils.cache_manager import (
     KVCacheManager, CacheConfig, get_optimal_cache_config, detect_flash_attention_support
 )
+from mindnlp.ocr.utils.logger import get_logger
 from .base import VLMModelBase
 
 # Define custom exceptions locally
@@ -31,7 +31,7 @@ class ModelInferenceError(Exception):
         super().__init__(self.message)
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 尝试导入 qwen_vl_utils，如果不存在则使用内置实现
 try:
@@ -912,11 +912,34 @@ class Qwen2VLModel(VLMModelBase):
             if self.cache_manager.stats.total_requests % 10 == 0 and use_cache:
                 stats = self.cache_manager.get_stats()
                 logger.info(f"Cache stats: {stats}")
+            
+            # 显式清理中间变量和释放内存（NPU 内存管理）
+            del generated_ids
+            if "npu" in self.device:
+                try:
+                    import gc
+                    # 清理 Python 垃圾
+                    gc.collect()
+                    # 清理 NPU 缓存
+                    if hasattr(torch, 'npu') and hasattr(torch.npu, 'empty_cache'):
+                        torch.npu.empty_cache()
+                        logger.debug("NPU cache cleared")
+                except Exception as cleanup_error:
+                    logger.warning(f"Memory cleanup warning: {cleanup_error}")
 
             return output_text
 
         except Exception as e:
             logger.error(f"Generation failed: {e}")
+            # 发生错误时也尝试清理内存
+            if "npu" in self.device:
+                try:
+                    import gc
+                    gc.collect()
+                    if hasattr(torch, 'npu') and hasattr(torch.npu, 'empty_cache'):
+                        torch.npu.empty_cache()
+                except:
+                    pass
             raise
 
     def batch_generate(self, batch_messages: List[List[Dict]], **kwargs) -> List[str]:
@@ -1018,11 +1041,32 @@ class Qwen2VLModel(VLMModelBase):
 
             # 4. 解码输出
             output_text = self.decode_output(generated_ids, inputs['input_ids'])
+            
+            # 显式清理中间变量和释放内存（NPU 内存管理）
+            del generated_ids, inputs
+            if "npu" in self.device:
+                try:
+                    import gc
+                    gc.collect()
+                    if hasattr(torch, 'npu') and hasattr(torch.npu, 'empty_cache'):
+                        torch.npu.empty_cache()
+                        logger.debug("NPU cache cleared after batch generation")
+                except Exception as cleanup_error:
+                    logger.warning(f"Batch memory cleanup warning: {cleanup_error}")
 
             return output_text
 
         except Exception as e:
             logger.error(f"Batch inference failed: {e}", exc_info=True)
+            # 发生错误时也尝试清理内存
+            if "npu" in self.device:
+                try:
+                    import gc
+                    gc.collect()
+                    if hasattr(torch, 'npu') and hasattr(torch.npu, 'empty_cache'):
+                        torch.npu.empty_cache()
+                except:
+                    pass
             raise ModelInferenceError(
                 message=f"Batch inference error: {str(e)}",
                 model_name=self.model_name,
@@ -1073,39 +1117,66 @@ class Qwen2VLModel(VLMModelBase):
             model_state_dict = self.model.state_dict()
             updated_count = 0
             
+            # 第一步: 收集所有 LoRA A/B 矩阵对
+            lora_pairs = {}  # {base_key: {'A': tensor, 'B': tensor}}
+            
             for lora_key, lora_weight in lora_state_dict.items():
-                # 解析LoRA键名（格式: base_model.model.xxx.lora_A.weight 或 lora_B.weight）
-                # 移除前缀得到实际的模型参数名
+                # 移除 base_model.model. 前缀
                 if 'base_model.model.' in lora_key:
-                    # 标准PEFT格式
                     model_key = lora_key.replace('base_model.model.', '')
                 else:
                     model_key = lora_key
                 
-                # 检查是否是LoRA A/B矩阵
+                # 检查是否是 LoRA A/B 矩阵
                 if 'lora_A' in model_key or 'lora_B' in model_key:
-                    # 获取基础权重的键名
-                    base_key = model_key.replace('.lora_A.weight', '.weight') \
-                                       .replace('.lora_B.weight', '.weight') \
-                                       .replace('.lora_A.default.weight', '.weight') \
-                                       .replace('.lora_B.default.weight', '.weight')
+                    # 获取基础权重的键名(去掉 .lora_A/B.default.weight 或 .lora_A/B.weight)
+                    base_key = model_key.replace('.lora_A.default.weight', '.weight') \
+                                       .replace('.lora_B.default.weight', '.weight') \
+                                       .replace('.lora_A.weight', '.weight') \
+                                       .replace('.lora_B.weight', '.weight')
                     
-                    # 如果基础权重存在于模型中，更新它
-                    if base_key in model_state_dict:
-                        # 这里简化处理：直接添加LoRA权重
-                        # 完整实现应该是 W_new = W_base + (lora_B @ lora_A) * scaling
-                        # 但这需要配对的A和B矩阵，暂时跳过
-                        pass
+                    # 判断是 A 还是 B
+                    if 'lora_A' in model_key:
+                        matrix_type = 'A'
                     else:
-                        # 可能是直接保存的合并权重
-                        if model_key in model_state_dict:
-                            model_state_dict[model_key] = lora_weight
-                            updated_count += 1
-                else:
-                    # 非LoRA参数，直接更新
-                    if model_key in model_state_dict:
-                        model_state_dict[model_key] = lora_weight
+                        matrix_type = 'B'
+                    
+                    # 收集配对
+                    if base_key not in lora_pairs:
+                        lora_pairs[base_key] = {}
+                    lora_pairs[base_key][matrix_type] = lora_weight
+            
+            # 第二步: 合并 LoRA 到基础权重
+            # LoRA 公式: W_new = W_base + (lora_B @ lora_A) * scaling
+            lora_scaling = 1.0  # 默认缩放因子,可以从 adapter_config.json 读取
+            
+            for base_key, matrices in lora_pairs.items():
+                # 检查是否有配对的 A 和 B
+                if 'A' in matrices and 'B' in matrices and base_key in model_state_dict:
+                    lora_A = matrices['A']
+                    lora_B = matrices['B']
+                    base_weight = model_state_dict[base_key]
+                    
+                    # 计算 delta_W = (lora_B @ lora_A) * scaling
+                    # lora_A: (r, in_features), lora_B: (out_features, r)
+                    # delta_W: (out_features, in_features)
+                    try:
+                        delta_w = torch.matmul(lora_B, lora_A) * lora_scaling
+                        
+                        # 合并到基础权重
+                        new_weight = base_weight + delta_w
+                        model_state_dict[base_key] = new_weight
                         updated_count += 1
+                        
+                    except Exception as merge_error:
+                        logger.warning(f"Failed to merge LoRA for {base_key}: {merge_error}")
+                        logger.debug(f"  lora_A shape: {lora_A.shape}, lora_B shape: {lora_B.shape}, base shape: {base_weight.shape}")
+                elif 'A' in matrices or 'B' in matrices:
+                    # 只有 A 或只有 B,缺少配对
+                    missing = 'B' if 'A' in matrices else 'A'
+                    logger.debug(f"LoRA pair incomplete for {base_key}: missing lora_{missing}")
+            
+            logger.info(f"Processed {len(lora_pairs)} LoRA pairs, merged {updated_count} parameters")
             
             # 如果有更新，重新加载到模型
             if updated_count > 0:
@@ -1121,11 +1192,8 @@ class Qwen2VLModel(VLMModelBase):
                     logger.info("✅ Successfully loaded LoRA using PEFT")
                 except Exception as peft_error:
                     logger.warning(f"PEFT loading failed (expected with mindtorch): {peft_error}")
-                    raise ModelLoadingError(
-                        message=f"Failed to load LoRA weights: {str(peft_error)}",
-                        model_name=self.model_name,
-                        details={"lora_path": lora_path, "error": str(peft_error)}
-                    )
+                    logger.warning("⚠️  Continuing with base model only (LoRA not loaded)")
+                    # 不抛出异常,继续使用基础模型
         
         except Exception as e:
             logger.error(f"Failed to load LoRA weights: {e}", exc_info=True)

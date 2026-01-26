@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     batch_size: int = 1  # NPU 批处理大小
     use_cache: bool = True  # 启用 KV cache
 
+    # 并发处理配置 (Issue #2380)
+    max_batch_size: int = 2  # 动态批处理最大batch size（减小避免超时）
+    batch_wait_timeout_ms: int = 50  # 批处理等待窗口（毫秒，减小提升响应速度）
+    qps_limit: int = 100  # QPS限制
+    queue_maxsize: int = 1000  # 请求队列最大长度
+
     # 量化配置 (Performance Optimization - Issue #2377)
     quantization_mode: str = "none"  # 量化模式: none/fp16/int8/int4
     # INT8 量化配置 (bitsandbytes)

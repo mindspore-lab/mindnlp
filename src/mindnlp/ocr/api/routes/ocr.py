@@ -109,10 +109,19 @@ async def predict_image(
             confidence_threshold=confidence_threshold
         )
 
-        # 执行真实 OCR 推理
+        # 尝试使用并发管理器（支持动态批处理）
         logger.info(f"Processing image with real model: {settings.default_model}")
         try:
-            result = _engine.predict(_request)
+            # 尝试获取service_manager
+            from ..app import get_service_manager
+            try:
+                service_manager = get_service_manager()
+                logger.debug("Using service manager for batched processing")
+                result = await service_manager.process_request(_request)
+            except RuntimeError:
+                # service_manager未初始化，降级到直接调用engine
+                logger.debug("Service manager not available, using direct engine call")
+                result = _engine.predict(_request)
         except ValidationError as e:
             logger.error(f"Validation error: {e.to_dict()}")
             raise HTTPException(
