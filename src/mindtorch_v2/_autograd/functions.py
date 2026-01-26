@@ -182,3 +182,185 @@ class SqrtBackward(Node):
         from .. import div, mul
         from .._tensor import Tensor
         return (div(grad_output, mul(Tensor(2.0), result)),)
+
+
+class TransposeBackward(Node):
+    """Backward for transpose."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "TransposeBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        dim0, dim1 = self._dims
+        # Transpose gradient back
+        return (grad_output.transpose(dim0, dim1),)
+
+
+class EmbeddingBackward(Node):
+    """Backward for embedding lookup."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "EmbeddingBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        indices, weight = self.saved_tensors
+        num_embeddings = weight.shape[0]
+        embedding_dim = weight.shape[1]
+
+        # Create zero gradient for weight
+        import numpy as np
+        from .._tensor import Tensor
+        grad_weight_np = np.zeros((num_embeddings, embedding_dim), dtype=np.float32)
+
+        # Scatter add: grad_weight[indices] += grad_output
+        indices_np = indices.numpy().astype(np.int64).flatten()
+        grad_output_np = grad_output.numpy().reshape(-1, embedding_dim)
+
+        for i, idx in enumerate(indices_np):
+            grad_weight_np[idx] += grad_output_np[i]
+
+        grad_weight = Tensor(grad_weight_np)
+        # Indices don't have gradients
+        return (None, grad_weight)
+
+
+class LayerNormBackward(Node):
+    """Backward for layer normalization."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "LayerNormBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        input_tensor, normalized_shape, weight, bias, eps = self._saved_info
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        x = input_tensor.numpy()
+        grad_out = grad_output.numpy()
+
+        # Determine axes to normalize over
+        ndim = len(normalized_shape)
+        axes = tuple(range(-ndim, 0))
+        normalized_size = 1
+        for s in normalized_shape:
+            normalized_size *= s
+
+        # Recompute forward values
+        mean = np.mean(x, axis=axes, keepdims=True)
+        var = np.var(x, axis=axes, keepdims=True)
+        std = np.sqrt(var + eps)
+        x_norm = (x - mean) / std
+
+        # Gradient w.r.t. weight and bias
+        grad_weight = None
+        grad_bias = None
+        if weight is not None:
+            # Sum over all axes except the normalized ones
+            sum_axes = tuple(range(x.ndim - ndim))
+            grad_weight = Tensor(np.sum(grad_out * x_norm, axis=sum_axes))
+        if bias is not None:
+            sum_axes = tuple(range(x.ndim - ndim))
+            grad_bias = Tensor(np.sum(grad_out, axis=sum_axes))
+
+        # Gradient w.r.t. input
+        if weight is not None:
+            grad_out = grad_out * weight.numpy()
+
+        # d(norm)/dx = (1/std) * (I - (1/N) - (1/N) * x_norm * x_norm)
+        grad_x_norm = grad_out
+        grad_var = np.sum(grad_x_norm * (x - mean) * -0.5 * (var + eps) ** (-1.5), axis=axes, keepdims=True)
+        grad_mean = np.sum(grad_x_norm * -1 / std, axis=axes, keepdims=True) + grad_var * np.mean(-2 * (x - mean), axis=axes, keepdims=True)
+        grad_x = grad_x_norm / std + grad_var * 2 * (x - mean) / normalized_size + grad_mean / normalized_size
+
+        return (Tensor(grad_x.astype(np.float32)), None, grad_weight, grad_bias, None)
+
+
+class ReluBackward(Node):
+    """Backward for ReLU."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "ReluBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        input_tensor = self.saved_tensors[0]
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        x = input_tensor.numpy()
+        grad_out = grad_output.numpy()
+
+        # ReLU derivative: 1 if x > 0, else 0
+        grad_x = grad_out * (x > 0).astype(np.float32)
+        return (Tensor(grad_x),)
+
+
+class GeluBackward(Node):
+    """Backward for GELU."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "GeluBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        input_tensor = self.saved_tensors[0]
+        approximate = self._approximate
+
+        import numpy as np
+        import math
+        from .._tensor import Tensor
+
+        x = input_tensor.numpy()
+        grad_out = grad_output.numpy()
+
+        if approximate == 'tanh':
+            # Approximate GELU derivative
+            coef = math.sqrt(2.0 / math.pi)
+            inner = coef * (x + 0.044715 * x ** 3)
+            tanh_inner = np.tanh(inner)
+            sech2 = 1 - tanh_inner ** 2
+            grad_x = 0.5 * (1 + tanh_inner) + 0.5 * x * sech2 * coef * (1 + 3 * 0.044715 * x ** 2)
+        else:
+            # Exact GELU derivative
+            from scipy.special import erf
+            cdf = 0.5 * (1 + erf(x / math.sqrt(2)))
+            pdf = np.exp(-0.5 * x ** 2) / math.sqrt(2 * math.pi)
+            grad_x = cdf + x * pdf
+
+        grad_x = grad_out * grad_x
+        return (Tensor(grad_x.astype(np.float32)),)
+
+
+class SiluBackward(Node):
+    """Backward for SiLU/Swish."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "SiluBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        input_tensor = self.saved_tensors[0]
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        x = input_tensor.numpy()
+        grad_out = grad_output.numpy()
+
+        # SiLU = x * sigmoid(x)
+        # d/dx SiLU = sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x))
+        #           = sigmoid(x) * (1 + x * (1 - sigmoid(x)))
+        sigmoid_x = 1.0 / (1.0 + np.exp(-x))
+        grad_x = grad_out * (sigmoid_x * (1 + x * (1 - sigmoid_x)))
+        return (Tensor(grad_x.astype(np.float32)),)
