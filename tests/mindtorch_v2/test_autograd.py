@@ -1,7 +1,8 @@
 # tests/mindtorch_v2/test_autograd.py
-"""Tests for autograd grad mode context managers."""
+"""Tests for autograd grad mode context managers and Node base class."""
 
 import mindtorch_v2 as torch
+from mindtorch_v2._autograd import Node
 
 
 def test_grad_enabled_default():
@@ -43,3 +44,33 @@ def test_no_grad_decorator():
     assert torch.is_grad_enabled() == True
     assert my_func() == False
     assert torch.is_grad_enabled() == True
+
+
+# ============================================
+# Node Base Class Tests
+# ============================================
+
+def test_node_base_class():
+    """Node is the base class for autograd functions."""
+    node = Node()
+    assert hasattr(node, 'next_functions')
+    assert hasattr(node, 'backward')
+    assert node.next_functions == ()
+
+
+def test_node_next_functions():
+    """Node can store next_functions."""
+    node1 = Node()
+    node2 = Node()
+    node2._next_functions = ((node1, 0),)
+    assert node2.next_functions == ((node1, 0),)
+
+
+def test_node_backward_not_implemented():
+    """Node.backward raises NotImplementedError by default."""
+    node = Node()
+    try:
+        node.backward((None,))
+        assert False, "Should have raised"
+    except NotImplementedError:
+        pass
