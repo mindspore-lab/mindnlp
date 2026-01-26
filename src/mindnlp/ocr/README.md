@@ -281,6 +281,47 @@ OCR_DEFAULT_MODEL=Qwen/Qwen2-VL-2B-Instruct
 - [Issue #2349 - API 服务层](https://github.com/mindspore-lab/mindnlp/issues/2349)
 - [Issue #2350 - 核心预处理组件](https://github.com/mindspore-lab/mindnlp/issues/2350)
 
+## 📂 项目规范说明
+
+### 目录结构规范
+
+OCR 模块遵循 MindNLP 项目规范：
+
+1. **✅ 模块位置**: `src/mindnlp/ocr/` - 作为 mindnlp 的子模块
+2. **✅ 测试位置**: `tests/mindnlp/ocr/` - 测试文件统一放置
+3. **✅ 配置文件**: `configs/` - 全局配置（Prometheus、Grafana、Logging）
+4. **✅ 依赖管理**: OCR专用依赖在 `requirements/ocr-requirements.txt`
+5. **✅ 无独立包**: 不使用单独的 setup.py，统一使用 mindnlp 包管理
+
+### 安装说明
+
+```bash
+# 基础依赖（MindNLP核心）
+pip install -r requirements/requirements.txt
+
+# OCR模块依赖（使用OCR功能时需要）
+pip install -r requirements/ocr-requirements.txt
+```
+
+### 不应提交的文件
+
+以下生成文件已通过 `.gitignore` 排除，请勿提交：
+- `*.prof` - CPU/Memory profiling 结果
+- `*.log` - 日志文件
+- `benchmark_*.json` - 性能测试报告
+- `*_results.json` - 评估结果文件
+
+### 依赖说明
+
+OCR 模块的核心依赖：
+- **API 服务**: FastAPI, Uvicorn, Pydantic
+- **图像处理**: OpenCV, Pillow
+- **监控日志**: Structlog, OpenTelemetry, Prometheus
+- **模型推理**: Transformers, QWen-VL-Utils
+- **性能分析**: psutil, tensorboard
+
+完整依赖列表见 `requirements/ocr-requirements.txt`
+
 ## 🤝 贡献指南
 
 1. Fork 本仓库

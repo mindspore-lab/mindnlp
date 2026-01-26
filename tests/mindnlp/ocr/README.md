@@ -1,107 +1,149 @@
-# Qwen2-VL OCR 测试套件
+# MindNLP OCR 测试套件
 
-测试 Issue #2366 的 Qwen2-VL OCR 功能实现。
+OCR模块的核心测试文件。
 
-## 文件结构
+## 📁 测试文件
 
 ```
 tests/mindnlp/ocr/
-├── test_qwen2vl.py          # 统一的测试文件（Mock + 真实模型测试）
-├── test_api_real_model.py   # API 真实模型集成测试
-└── README.md                # 本文件
-
-requirements/
-└── ocr-requirements.txt     # OCR 功能依赖配置
-
-src/mindnlp/ocr/
-├── main.py                  # API 服务入口
-├── .env                     # 环境配置文件
-├── api/                     # FastAPI 路由和接口
-├── core/                    # OCR 引擎核心
-├── models/                  # 模型封装（Qwen2VL）
-└── ...
+├── test_qwen2vl.py                 # Qwen2-VL模型测试（Mock + 真实模型）
+├── test_preprocessing.py           # 预处理组件单元测试
+├── test_quantization.py            # 量化性能测试
+├── test_monitoring_standalone.py   # 监控系统独立测试
+└── README.md                       # 本文件
 ```
 
-## 快速开始
+## 🧪 测试说明
 
-### 1. 安装依赖
+### 1. test_qwen2vl.py - 核心模型测试
+**用途**: 测试Qwen2-VL模型推理功能（Issue #2366）  
+**测试内容**:
+- Mock测试：验证API实现正确性（无需下载模型，快速）
+- 真实模型测试：验证与transformers的完整兼容性
 
+**运行方式**:
 ```bash
-# 在现有环境中安装
-pip install -r requirements/ocr-requirements.txt
-
-# 或创建独立环境（推荐用于真实模型测试）
-conda create -n qwen2vl_test python=3.10 -y
-conda activate qwen2vl_test
-pip install -r requirements/ocr-requirements.txt
-```
-
-### 2. 运行单元测试
-
-```bash
-# 运行 Mock 测试（快速，不需要下载模型）
+# Mock测试（默认，快速）
 pytest tests/mindnlp/ocr/test_qwen2vl.py -v
 
-# 运行所有测试（包括真实模型，首次运行会下载约 4GB）
+# 真实模型测试（需要下载约4GB模型）
 pytest tests/mindnlp/ocr/test_qwen2vl.py -v --run-real-model
-
-# 只运行特定测试
-pytest tests/mindnlp/ocr/test_qwen2vl.py::TestQwen2VLInferenceMock::test_complete_inference_pipeline -v
 ```
 
-### 3. 启动 API 服务（真实模型）
+### 2. test_preprocessing.py - 预处理组件测试
+**用途**: 测试图像处理、Prompt构建、批处理等核心组件  
+**测试类**:
+- `TestImageProcessor` - 图像预处理
+- `TestPromptBuilder` - Prompt构建
+- `TestBatchCollator` - 批量数据整理
+- `TestInputValidator` - 输入验证
+- `TestIntegration` - 集成测试
+
+**运行方式**:
+```bash
+pytest tests/mindnlp/ocr/test_preprocessing.py -v
+```
+
+### 3. test_quantization.py - 量化性能测试
+**用途**: 测试不同量化模式的推理速度和精度（Issue #2377）  
+**测试内容**:
+- 8位量化性能
+- 4位量化性能
+- 内存占用对比
+- 精度损失评估
+
+**运行方式**:
+```bash
+pytest tests/mindnlp/ocr/test_quantization.py -v
+```
+
+### 4. test_monitoring_standalone.py - 监控系统测试
+**用途**: 测试监控、日志和性能分析系统（Issue #2381）  
+**测试内容**:
+- 结构化日志系统（structlog）
+- 分布式追踪（OpenTelemetry）
+- 性能Profiling（CPU/Memory）
+- 系统集成测试
+
+**运行方式**:
+```bash
+python tests/mindnlp/ocr/test_monitoring_standalone.py
+```
+
+## 🚀 快速开始
+
+### 安装依赖
 
 ```bash
-# 配置环境变量（使用真实模型）
-cd src/mindnlp/ocr
-# 编辑 .env 文件，设置 OCR_USE_MOCK_ENGINE=False
+# 基础依赖
+pip install -r requirements/requirements.txt
 
-# 启动服务（首次运行会下载 Qwen2-VL 模型约 4GB）
-python main.py
-
-# 服务启动后访问：
-# - API 文档: http://localhost:8000/api/docs
-# - 健康检查: http://localhost:8000/api/v1/health
+# OCR模块依赖
+pip install -r requirements/ocr-requirements.txt
 ```
 
-### 4. 测试 API（真实模型推理）
+### 运行所有测试
+
+### 运行所有测试
 
 ```bash
-# 启动 API 服务后，在另一个终端运行
-python tests/mindnlp/ocr/test_api_real_model.py
+# 仅运行Mock测试（快速）
+pytest tests/mindnlp/ocr/ -v
 
-# 或使用 curl 测试
-curl -X POST "http://localhost:8000/api/v1/ocr/predict" \
-  -F "file=@test.png" \
-  -F "output_format=text" \
-  -F "language=auto" \
-  -F "task_type=general"
+# 包含真实模型测试
+pytest tests/mindnlp/ocr/ -v --run-real-model
 ```
 
-## 测试说明
+### 运行单个测试文件
 
-### Mock 测试（默认运行）
-- **测试数量**: 23 个
-- **运行时间**: < 1 秒
-- **用途**: 验证 API 实现的正确性
-- **优点**: 快速、无需下载模型、适合 CI/CD
-- **测试内容**:
-  - 模型和 Processor 创建
-  - 图像处理流程
-  - 文本生成逻辑
-  - 批量处理
-  - 特殊 token 处理
-  - 错误处理
-  - 设备兼容性
+```bash
+# Qwen2-VL测试
+pytest tests/mindnlp/ocr/test_qwen2vl.py -v
 
-### 真实模型测试（需要 --run-real-model）
-- **测试数量**: 1 个
-- **运行时间**: 首次约 5-10 分钟（下载模型），后续约 10-30 秒
-- **模型大小**: 约 4 GB
-- **用途**: 验证与 transformers 库的完整兼容性
-- **优点**: 完整的端到端测试
-- **测试内容**:
-  - 真实模型加载
+# 预处理测试
+pytest tests/mindnlp/ocr/test_preprocessing.py -v
+
+# 量化测试
+pytest tests/mindnlp/ocr/test_quantization.py -v
+
+# 监控系统测试（使用python直接运行）
+python tests/mindnlp/ocr/test_monitoring_standalone.py
+```
+
+## 📊 测试覆盖范围
+
+| 测试文件 | 测试内容 | Issue | 行数 |
+|---------|---------|-------|------|
+| test_qwen2vl.py | Qwen2-VL模型推理 | #2366 | 427 |
+| test_preprocessing.py | 预处理组件 | #2350 | 621 |
+| test_quantization.py | 模型量化 | #2377 | 319 |
+| test_monitoring_standalone.py | 监控日志 | #2381 | 396 |
+
+## 🔍 已清理的测试文件
+
+以下测试文件已被删除（功能已被上述核心测试覆盖）：
+- ~~test_api_complete.py~~ - 功能已整合到 test_qwen2vl.py
+- ~~test_api_real_model.py~~ - 功能已整合到 test_qwen2vl.py
+- ~~test_concurrent_processing.py~~ - 非核心功能，暂不测试
+- ~~test_evaluate_model.py~~ - 评估功能移至 src/mindnlp/ocr/finetune/evaluate.py
+- ~~test_kv_cache.py~~ - KV Cache测试已整合
+- ~~test_lora_loading.py~~ - LoRA测试已整合
+- ~~test_monitoring.py~~ - 替换为 test_monitoring_standalone.py
+- ~~test_multi_scenario.py~~ - 多场景测试移至专项工具
+- ~~test_performance.py~~ - 性能测试移至 benchmarks/
+- ~~test_server_kv_cache.py~~ - 服务器测试已整合
+
+## 📝 注意事项
+
+1. **Mock测试优先**: 默认运行Mock测试，速度快，适合CI/CD
+2. **真实模型测试**: 使用 `--run-real-model` 标志，首次会下载约4GB模型
+3. **独立测试**: test_monitoring_standalone.py 需要单独运行，避免循环导入
+4. **环境隔离**: 真实模型测试建议使用独立conda环境
+
+## 🔗 相关链接
+
+- [OCR模块文档](../../../src/mindnlp/ocr/README.md)
+- [Issue #2348 - VLM-OCR模块](https://github.com/mindspore-lab/mindnlp/issues/2348)
   - 图像识别能力
   - 完整推理流程
 
