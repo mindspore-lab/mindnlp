@@ -26,6 +26,80 @@ def _get_backend_key(args: Tuple) -> DispatchKey:
     return DispatchKey.Backend_CPU
 
 
+def _requires_grad(args) -> bool:
+    """Check if any input tensor requires grad."""
+    from .._tensor import Tensor
+    for arg in args:
+        if isinstance(arg, Tensor) and arg.requires_grad:
+            return True
+    return False
+
+
+def _make_grad_fn(op_name: str, args, result):
+    """Create gradient function node for an op."""
+    from .._tensor import Tensor
+    from .._autograd.node import AccumulateGrad
+    from .._autograd import functions as F
+
+    # Map op names to backward classes
+    backward_classes = {
+        'add': F.AddBackward,
+        'sub': F.SubBackward,
+        'mul': F.MulBackward,
+        'div': F.DivBackward,
+        'neg': F.NegBackward,
+        'pow': F.PowBackward,
+        'sum': F.SumBackward,
+        'mean': F.MeanBackward,
+        'matmul': F.MatmulBackward,
+        'exp': F.ExpBackward,
+        'log': F.LogBackward,
+        'sqrt': F.SqrtBackward,
+    }
+
+    BackwardClass = backward_classes.get(op_name)
+    if BackwardClass is None:
+        return None  # No backward for this op
+
+    grad_fn = BackwardClass()
+
+    # Build next_functions
+    next_fns = []
+    tensors_to_save = []
+
+    for arg in args:
+        if isinstance(arg, Tensor):
+            if arg.requires_grad:
+                if arg.grad_fn is not None:
+                    next_fns.append((arg.grad_fn, 0))
+                else:
+                    # Leaf tensor - create AccumulateGrad
+                    acc_grad = AccumulateGrad(arg)
+                    next_fns.append((acc_grad, 0))
+            else:
+                next_fns.append((None, 0))
+            tensors_to_save.append(arg)
+        else:
+            # Scalar - wrap in tensor for saving
+            tensors_to_save.append(Tensor(arg))
+
+    grad_fn._next_functions = tuple(next_fns)
+
+    # Save tensors for backward
+    if op_name in ('mul', 'div', 'pow', 'matmul'):
+        grad_fn.save_for_backward(*tensors_to_save)
+    elif op_name == 'exp':
+        grad_fn.save_for_backward(result)  # Save result for exp backward
+    elif op_name == 'log':
+        grad_fn.save_for_backward(tensors_to_save[0])  # Save input
+    elif op_name == 'sqrt':
+        grad_fn.save_for_backward(result)  # Save result
+    elif op_name in ('sum', 'mean'):
+        grad_fn._input_shape = tensors_to_save[0].shape
+
+    return grad_fn
+
+
 def dispatch(op_name: str, *args, **kwargs) -> Any:
     """Dispatch an operation to the correct implementation.
 
@@ -40,6 +114,9 @@ def dispatch(op_name: str, *args, **kwargs) -> Any:
     Raises:
         NotImplementedError: If no implementation found for the op
     """
+    from .._tensor import Tensor
+    from .._autograd import is_grad_enabled
+
     # Determine which backend to use
     backend_key = _get_backend_key(args)
 
@@ -55,4 +132,14 @@ def dispatch(op_name: str, *args, **kwargs) -> Any:
             f"No implementation found for op '{op_name}' with dispatch key {backend_key}"
         )
 
-    return impl(*args, **kwargs)
+    # Execute forward
+    result = impl(*args, **kwargs)
+
+    # Record autograd if needed
+    if is_grad_enabled() and _requires_grad(args) and isinstance(result, Tensor):
+        grad_fn = _make_grad_fn(op_name, args, result)
+        if grad_fn is not None:
+            result._grad_fn = grad_fn
+            result._requires_grad = True
+
+    return result

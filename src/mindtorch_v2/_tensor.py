@@ -103,6 +103,18 @@ def _expand_ellipsis(key, ndim):
     return expanded
 
 
+class RemovableHandle:
+    """Handle returned by register_hook that allows removing the hook."""
+
+    def __init__(self, hooks_dict, hook_id):
+        self._hooks_dict = hooks_dict
+        self._hook_id = hook_id
+
+    def remove(self):
+        if self._hook_id in self._hooks_dict:
+            del self._hooks_dict[self._hook_id]
+
+
 class Tensor:
     """PyTorch-compatible Tensor backed by Storage.
 
@@ -154,6 +166,8 @@ class Tensor:
         self._grad_fn = None
         self._grad = None
         self._version = 0
+        self._hooks = {}  # Dict of hook_id -> hook_fn
+        self._hook_counter = 0
 
     # --- Shape / metadata ---
 
@@ -790,3 +804,80 @@ class Tensor:
 
     def __le__(self, other):
         return self.le(other)
+
+    # --- Autograd methods ---
+
+    def backward(self, gradient=None, retain_graph=False, create_graph=False):
+        """Compute gradients of this tensor w.r.t. graph leaves.
+
+        Args:
+            gradient: Gradient w.r.t. this tensor. Required for non-scalar tensors.
+            retain_graph: If True, graph is retained for future backward calls.
+            create_graph: If True, graph of gradient computation is constructed.
+        """
+        from ._autograd import backward as autograd_backward
+        autograd_backward(self, gradient, retain_graph=retain_graph, create_graph=create_graph)
+
+    def register_hook(self, hook):
+        """Register a backward hook on the tensor.
+
+        The hook will be called every time a gradient with respect to the
+        tensor is computed. The hook should have the signature:
+            hook(grad) -> Tensor or None
+
+        Returns a handle that can be used to remove the hook.
+        """
+        if not self.requires_grad:
+            raise RuntimeError(
+                "cannot register a hook on a tensor that doesn't require gradient"
+            )
+
+        hook_id = self._hook_counter
+        self._hook_counter += 1
+        self._hooks[hook_id] = hook
+
+        return RemovableHandle(self._hooks, hook_id)
+
+    def _call_hooks(self, grad):
+        """Call all registered hooks on a gradient."""
+        for hook in self._hooks.values():
+            result = hook(grad)
+            if result is not None:
+                grad = result
+        return grad
+
+    def zero_grad_(self):
+        """Zero the gradient of this tensor in-place."""
+        self._grad = None
+        return self
+
+    def detach(self):
+        """Returns a new Tensor detached from the current graph.
+
+        The result will never require gradient.
+        """
+        return Tensor(
+            _storage=self._storage,
+            _shape=self._shape,
+            _stride=self._stride,
+            _storage_offset=self._storage_offset,
+            device=str(self._device),
+            requires_grad=False,
+        )
+
+    def detach_(self):
+        """Detach this tensor from the computation graph in-place.
+
+        Sets requires_grad to False and clears grad_fn.
+        """
+        self._requires_grad = False
+        self._grad_fn = None
+        return self
+
+    def requires_grad_(self, requires_grad: bool = True):
+        """Change if this tensor requires gradients, in-place.
+
+        Returns self.
+        """
+        self._requires_grad = requires_grad
+        return self
