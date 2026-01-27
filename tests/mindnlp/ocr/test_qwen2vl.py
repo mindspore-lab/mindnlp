@@ -396,31 +396,51 @@ class TestQwen2VLInferenceRealModel:
         
         print("\n检查真实模型服务状态...")
         
-        # 检查本地是否已有模型缓存
-        model_path = os.path.expanduser("~/.cache/huggingface/hub")
-        model_exists = os.path.exists(model_path)
+        # 检查环境变量中的缓存路径
+        cache_paths = [
+            os.environ.get("HF_HOME"),
+            os.environ.get("TRANSFORMERS_CACHE"),
+            os.environ.get("HF_HUB_CACHE"),
+            os.path.expanduser("~/.cache/huggingface/hub"),
+        ]
         
-        print(f"模型缓存路径: {model_path}")
-        print(f"模型是否存在: {model_exists}")
+        model_found = False
+        model_path = None
         
-        # 验证模型目录内容
-        if model_exists:
-            try:
-                # 查找Qwen2-VL模型目录
-                for item in os.listdir(model_path):
-                    if 'qwen2-vl' in item.lower():
-                        print(f"找到模型: {item}")
-                        
-                print("\n✅ 真实模型已缓存到本地!")
-                print("提示: 运行 'python src/mindnlp/ocr/api/app.py' 启动OCR服务")
-                print("然后使用 'curl' 或 'requests' 测试服务端点")
+        # 遍历所有可能的缓存路径
+        for cache_path in cache_paths:
+            if not cache_path or not os.path.exists(cache_path):
+                continue
                 
-                assert model_exists, "模型应该存在于本地缓存"
+            print(f"检查缓存路径: {cache_path}")
+            
+            try:
+                # 查找Qwen2-VL-7B-Instruct模型目录
+                for item in os.listdir(cache_path):
+                    if 'qwen2-vl-7b-instruct' in item.lower():
+                        model_path = os.path.join(cache_path, item)
+                        print(f"✅ 找到模型: {item}")
+                        model_found = True
+                        break
+                        
+                if model_found:
+                    break
             except Exception as e:
-                print(f"检查模型目录失败: {e}")
-                pytest.skip(f"无法访问模型目录: {e}")
+                print(f"检查目录 {cache_path} 失败: {e}")
+                continue
+        
+        if model_found:
+            print(f"\n✅ 真实模型已缓存到本地: {model_path}")
+            print("提示: 运行 'python src/mindnlp/ocr/api/app.py' 启动OCR服务")
+            print("然后使用 'curl' 或 'requests' 测试服务端点")
+            
+            assert model_found, "模型应该存在于本地缓存"
         else:
-            pytest.skip("模型未缓存到本地，请先运行服务下载模型")
+            print("\n可能的缓存路径:")
+            for p in cache_paths:
+                if p:
+                    print(f"  - {p}")
+            pytest.skip("未找到 Qwen2-VL-7B-Instruct 模型，请先运行服务下载模型")
 
 
 # ============================================================================
