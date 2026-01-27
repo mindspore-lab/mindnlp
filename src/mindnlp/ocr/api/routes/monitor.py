@@ -6,7 +6,6 @@
 from fastapi import APIRouter, Depends  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.core.monitor import get_performance_monitor
-from mindnlp.ocr.api.app import get_service_manager
 
 
 logger = get_logger(__name__)
@@ -127,6 +126,7 @@ async def get_service_stats():
         Dict: 服务统计数据
     """
     try:
+        from mindnlp.ocr.api.app import get_service_manager
         service_mgr = get_service_manager()
         stats = service_mgr.get_stats()
 
@@ -151,6 +151,7 @@ async def reset_service_stats():
         Dict: 操作结果
     """
     try:
+        from mindnlp.ocr.api.app import get_service_manager
         service_mgr = get_service_manager()
         service_mgr.reset_stats()
 
