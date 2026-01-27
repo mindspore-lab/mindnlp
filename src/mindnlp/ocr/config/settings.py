@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # 模型配置
     default_model: str = "Qwen/Qwen2-VL-7B-Instruct"  # 使用7B模型提高精度
     device: str = "npu:0"
-    lora_weights_path: Optional[str] = None  # LoRA权重路径，用于加载微调模型
+    lora_weights_path: Optional[str] = "/data1/mindnlp_output/lora_final_20260108_222408/checkpoint-39"  # LoRA权重路径，用于加载微调模型
 
     @property
     def use_mock_engine(self) -> bool:
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     target_image_size: tuple = (448, 448)
 
     # 推理配置（针对 NPU 优化）
-    max_new_tokens: int = 512  # 减少生成长度提升速度
+    max_new_tokens: int = 1024  # 减少生成长度提升速度
     temperature: float = 0.1  # 降低温度提高准确性
     top_p: float = 0.9
     batch_size: int = 1  # NPU 批处理大小
