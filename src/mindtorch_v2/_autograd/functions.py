@@ -12,7 +12,38 @@ class AddBackward(Node):
 
     def backward(self, grad_outputs):
         grad_output = grad_outputs[0]
-        return (grad_output, grad_output)
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_np = grad_output.numpy()
+        a_shape = self._a_shape
+        b_shape = self._b_shape
+
+        # Handle broadcasting: reduce gradients to match input shapes
+        grad_a = _reduce_gradient(grad_np, a_shape)
+        grad_b = _reduce_gradient(grad_np, b_shape)
+
+        return (Tensor(grad_a.astype(np.float32)), Tensor(grad_b.astype(np.float32)))
+
+
+def _reduce_gradient(grad, target_shape):
+    """Reduce gradient to match target shape by summing over broadcasted dimensions."""
+    import numpy as np
+
+    # First, sum over extra leading dimensions
+    while grad.ndim > len(target_shape):
+        grad = grad.sum(axis=0)
+
+    # Then sum over dimensions that were broadcast (size 1 in target)
+    for i in range(len(target_shape)):
+        if target_shape[i] == 1 and grad.shape[i] != 1:
+            grad = grad.sum(axis=i, keepdims=True)
+        elif i < grad.ndim and grad.shape[i] != target_shape[i]:
+            # This handles the case where grad has larger shape
+            if target_shape[i] == 1:
+                grad = grad.sum(axis=i, keepdims=True)
+
+    return grad
 
 
 class SubBackward(Node):
@@ -24,8 +55,18 @@ class SubBackward(Node):
 
     def backward(self, grad_outputs):
         grad_output = grad_outputs[0]
-        from .. import neg
-        return (grad_output, neg(grad_output))
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_np = grad_output.numpy()
+        a_shape = self._a_shape
+        b_shape = self._b_shape
+
+        # Handle broadcasting: reduce gradients to match input shapes
+        grad_a = _reduce_gradient(grad_np, a_shape)
+        grad_b = _reduce_gradient(-grad_np, b_shape)  # Negate for subtraction
+
+        return (Tensor(grad_a.astype(np.float32)), Tensor(grad_b.astype(np.float32)))
 
 
 class MulBackward(Node):
@@ -37,9 +78,37 @@ class MulBackward(Node):
 
     def backward(self, grad_outputs):
         grad_output = grad_outputs[0]
-        a, b = self.saved_tensors
-        from .. import mul
-        return (mul(grad_output, b), mul(grad_output, a))
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_np = grad_output.numpy()
+
+        # Handle scalar multiplication case
+        if len(self.saved_tensors) == 1:
+            # Scalar case: y = x * scalar
+            a = self.saved_tensors[0]
+            scalar = self._scalar_multiplier
+            a_np = a.numpy()
+
+            # Gradient for tensor: grad * scalar
+            grad_a = grad_np * scalar
+            grad_a = _reduce_gradient(grad_a, a_np.shape)
+            return (Tensor(grad_a.astype(np.float32)),)
+        else:
+            # Two-tensor case: y = a * b
+            a, b = self.saved_tensors
+            a_np = a.numpy()
+            b_np = b.numpy()
+
+            # Compute gradients
+            grad_a_raw = grad_np * b_np
+            grad_b_raw = grad_np * a_np
+
+            # Handle broadcasting: reduce gradients to match input shapes
+            grad_a = _reduce_gradient(grad_a_raw, a_np.shape)
+            grad_b = _reduce_gradient(grad_b_raw, b_np.shape)
+
+            return (Tensor(grad_a.astype(np.float32)), Tensor(grad_b.astype(np.float32)))
 
 
 class DivBackward(Node):
@@ -51,11 +120,21 @@ class DivBackward(Node):
 
     def backward(self, grad_outputs):
         grad_output = grad_outputs[0]
-        a, b = self.saved_tensors
-        from .. import div, mul, neg, pow
-        grad_a = div(grad_output, b)
-        grad_b = neg(div(mul(grad_output, a), pow(b, 2)))
-        return (grad_a, grad_b)
+        saved = self.saved_tensors
+
+        if len(saved) == 1:
+            # Division by scalar - only need grad w.r.t. first arg
+            a = saved[0]
+            b_val = self._scalar_divisor
+            from .. import div
+            grad_a = div(grad_output, b_val)
+            return (grad_a,)
+        else:
+            a, b = saved
+            from .. import div, mul, neg, pow
+            grad_a = div(grad_output, b)
+            grad_b = neg(div(mul(grad_output, a), pow(b, 2)))
+            return (grad_a, grad_b)
 
 
 class NegBackward(Node):
@@ -80,13 +159,26 @@ class PowBackward(Node):
 
     def backward(self, grad_outputs):
         grad_output = grad_outputs[0]
-        base, exp = self.saved_tensors
-        from .. import mul, pow, sub
+        import numpy as np
         from .._tensor import Tensor
 
-        exp_minus_1 = sub(exp, Tensor(1.0))
-        grad_base = mul(mul(grad_output, exp), pow(base, exp_minus_1))
-        return (grad_base, None)
+        # Handle scalar exponent case
+        if len(self.saved_tensors) == 1:
+            base = self.saved_tensors[0]
+            exp_val = self._scalar_exponent
+            base_np = base.numpy()
+            grad_out_np = grad_output.numpy()
+
+            # d/dx (x^n) = n * x^(n-1)
+            grad_base = grad_out_np * exp_val * np.power(base_np, exp_val - 1)
+            return (Tensor(grad_base.astype(np.float32)),)
+        else:
+            base, exp = self.saved_tensors
+            from .. import mul, pow, sub
+
+            exp_minus_1 = sub(exp, Tensor(1.0))
+            grad_base = mul(mul(grad_output, exp), pow(base, exp_minus_1))
+            return (grad_base, None)
 
 
 class SumBackward(Node):
@@ -135,10 +227,37 @@ class MatmulBackward(Node):
     def backward(self, grad_outputs):
         grad_output = grad_outputs[0]
         a, b = self.saved_tensors
-        from .. import matmul
-        grad_a = matmul(grad_output, b.t())
-        grad_b = matmul(a.t(), grad_output)
-        return (grad_a, grad_b)
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_out = grad_output.numpy()
+        a_np = a.numpy()
+        b_np = b.numpy()
+
+        # Handle n-dimensional matmul with broadcasting
+        # C = A @ B
+        # dA = dC @ B.T
+        # dB = A.T @ dC
+        grad_a = np.matmul(grad_out, np.swapaxes(b_np, -2, -1))
+        grad_b = np.matmul(np.swapaxes(a_np, -2, -1), grad_out)
+
+        # Handle broadcasting: sum gradients over broadcasted dimensions
+        # grad_a should match a_np shape
+        while grad_a.ndim > a_np.ndim:
+            grad_a = grad_a.sum(axis=0)
+        for i in range(a_np.ndim):
+            if i < len(a_np.shape) and a_np.shape[i] == 1 and grad_a.shape[i] != 1:
+                grad_a = grad_a.sum(axis=i, keepdims=True)
+
+        # grad_b should match b_np shape
+        while grad_b.ndim > b_np.ndim:
+            grad_b = grad_b.sum(axis=0)
+        for i in range(b_np.ndim):
+            if i < len(b_np.shape) and b_np.shape[i] == 1 and grad_b.shape[i] != 1:
+                grad_b = grad_b.sum(axis=i, keepdims=True)
+
+        return (Tensor(grad_a.astype(np.float32)), Tensor(grad_b.astype(np.float32)))
 
 
 class ExpBackward(Node):
@@ -364,3 +483,193 @@ class SiluBackward(Node):
         sigmoid_x = 1.0 / (1.0 + np.exp(-x))
         grad_x = grad_out * (sigmoid_x * (1 + x * (1 - sigmoid_x)))
         return (Tensor(grad_x.astype(np.float32)),)
+
+
+class TanhBackward(Node):
+    """Backward for tanh."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "TanhBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        result = self.saved_tensors[0]  # tanh output
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        tanh_out = result.numpy()
+        grad_out = grad_output.numpy()
+
+        # d/dx tanh(x) = 1 - tanh(x)^2
+        grad_x = grad_out * (1 - tanh_out ** 2)
+        return (Tensor(grad_x.astype(np.float32)),)
+
+
+class SoftmaxBackward(Node):
+    """Backward for softmax."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "SoftmaxBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        result = self.saved_tensors[0]  # softmax output
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        s = result.numpy()
+        grad_out = grad_output.numpy()
+        dim = self._dim
+
+        # Jacobian: diag(s) - s @ s.T (element-wise for each batch)
+        # Simplified: grad_input = s * (grad_out - sum(grad_out * s, dim))
+        sum_grad_s = np.sum(grad_out * s, axis=dim, keepdims=True)
+        grad_x = s * (grad_out - sum_grad_s)
+
+        return (Tensor(grad_x.astype(np.float32)),)
+
+
+class BmmBackward(Node):
+    """Backward for batched matrix multiplication."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "BmmBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        a, b = self.saved_tensors
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_out = grad_output.numpy()
+        a_np = a.numpy()
+        b_np = b.numpy()
+
+        # C = A @ B
+        # dA = dC @ B.T
+        # dB = A.T @ dC
+        grad_a = np.matmul(grad_out, np.swapaxes(b_np, -2, -1))
+        grad_b = np.matmul(np.swapaxes(a_np, -2, -1), grad_out)
+
+        return (Tensor(grad_a.astype(np.float32)), Tensor(grad_b.astype(np.float32)))
+
+
+class CloneBackward(Node):
+    """Backward for clone."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "CloneBackward"
+
+    def backward(self, grad_outputs):
+        # Clone just passes gradients through
+        return (grad_outputs[0],)
+
+
+class ContiguousBackward(Node):
+    """Backward for contiguous (identity)."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "ContiguousBackward"
+
+    def backward(self, grad_outputs):
+        return (grad_outputs[0],)
+
+
+class ViewBackward(Node):
+    """Backward for view/reshape."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "ViewBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        input_shape = self._input_shape
+
+        # Reshape gradient back to input shape
+        return (grad_output.reshape(*input_shape),)
+
+
+class SelectBackward(Node):
+    """Backward for indexing/slicing operations."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "SelectBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        input_shape = self._input_shape
+        key = self._key
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        # Create zero gradient with input shape
+        grad_input = np.zeros(input_shape, dtype=np.float32)
+
+        # Scatter gradient to the indexed positions
+        grad_out_np = grad_output.numpy()
+        grad_input[key] = grad_out_np
+
+        return (Tensor(grad_input),)
+
+
+class DropoutBackward(Node):
+    """Backward for dropout."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "DropoutBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        mask = self._mask  # Saved during forward
+        p = self._p
+
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_out_np = grad_output.numpy()
+        # Apply same mask to gradient (scaled by 1/(1-p))
+        grad_input = grad_out_np * mask
+
+        return (Tensor(grad_input.astype(np.float32)),)
+
+
+class PermuteBackward(Node):
+    """Backward for permute."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "PermuteBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        dims = self._dims
+
+        # Inverse permutation
+        inv_dims = [0] * len(dims)
+        for i, d in enumerate(dims):
+            inv_dims[d] = i
+
+        return (grad_output.permute(*inv_dims),)
+
+
+class ContiguousBackward(Node):
+    """Backward for contiguous (identity pass-through)."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "ContiguousBackward"
+
+    def backward(self, grad_outputs):
+        return (grad_outputs[0],)

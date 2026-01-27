@@ -1,0 +1,376 @@
+"""MindTorchV2Loader - Returns mindtorch_v2 modules for torch imports."""
+
+import sys
+import importlib
+from types import ModuleType
+
+
+class MindTorchV2Loader:
+    """Module loader that returns mindtorch_v2 or stubs for torch.* imports.
+
+    Tier 1 (Real): torch -> mindtorch_v2, torch.nn -> mindtorch_v2.nn, etc.
+    Tier 2 (Functional stubs): torch.cuda, torch.jit, etc.
+    Tier 3 (Import stubs): torch._C, torch._dynamo, etc.
+    """
+
+    # Tier 1: Real implementations - these map to actual mindtorch_v2 modules
+    REAL_MODULES = {
+        'torch': 'mindtorch_v2',
+        'torch.nn': 'mindtorch_v2.nn',
+        'torch.nn.functional': 'mindtorch_v2.nn.functional',
+        'torch.nn.modules': 'mindtorch_v2.nn.modules',
+        'torch.nn.parameter': 'mindtorch_v2.nn.parameter',
+        'torch.optim': 'mindtorch_v2.optim',
+        'torch.autograd': 'mindtorch_v2._autograd',
+    }
+
+    # Tier 2 & 3: Stub modules - these return stub implementations
+    STUB_MODULES = {
+        'torch._C': 'mindtorch_v2._torch_proxy.stubs._C',
+        'torch.cuda': 'mindtorch_v2._torch_proxy.stubs.cuda',
+        'torch.jit': 'mindtorch_v2._torch_proxy.stubs.jit',
+        'torch.jit.annotations': 'mindtorch_v2._torch_proxy.stubs.jit.annotations',
+        'torch.hub': 'mindtorch_v2._torch_proxy.stubs.hub',
+        'torch.ops': 'mindtorch_v2._torch_proxy.stubs.ops',
+        'torch.library': 'mindtorch_v2._torch_proxy.stubs.library',
+        'torch.onnx': 'mindtorch_v2._torch_proxy.stubs.onnx',
+        'torch.onnx.symbolic_helper': 'mindtorch_v2._torch_proxy.stubs.onnx.symbolic_helper',
+        'torch.onnx.symbolic_opset11': 'mindtorch_v2._torch_proxy.stubs.onnx',
+        'torch.backends': 'mindtorch_v2._torch_proxy.stubs.backends',
+        'torch.backends.cuda': 'mindtorch_v2._torch_proxy.stubs.backends',
+        'torch.backends.cudnn': 'mindtorch_v2._torch_proxy.stubs.backends',
+        'torch.distributed': 'mindtorch_v2._torch_proxy.stubs.distributed',
+        'torch.distributed.algorithms': 'mindtorch_v2._torch_proxy.stubs.distributed.algorithms',
+        'torch.distributed.algorithms.join': 'mindtorch_v2._torch_proxy.stubs.distributed.algorithms.join',
+        'torch.utils': 'mindtorch_v2._torch_proxy.stubs.utils',
+        'torch.utils._pytree': 'mindtorch_v2._torch_proxy.stubs.utils._pytree',
+        'torch.utils.data': 'mindtorch_v2._torch_proxy.stubs.utils.data',
+        'torch.amp': 'mindtorch_v2._torch_proxy.stubs.amp',
+        'torch.compiler': 'mindtorch_v2._torch_proxy.stubs.compiler',
+        'torch.fx': 'mindtorch_v2._torch_proxy.stubs.fx',
+        'torch.version': 'mindtorch_v2._torch_proxy.stubs.version',
+        'torch.profiler': 'mindtorch_v2._torch_proxy.stubs.profiler',
+    }
+
+    def load_module(self, fullname):
+        """Load a torch module, returning mindtorch_v2 equivalent or stub.
+
+        Args:
+            fullname: Full module name (e.g., 'torch.nn')
+
+        Returns:
+            The loaded module
+        """
+        # Check if already loaded
+        if fullname in sys.modules:
+            return sys.modules[fullname]
+
+        # Tier 1: Real mindtorch_v2 modules
+        if fullname in self.REAL_MODULES:
+            real_name = self.REAL_MODULES[fullname]
+            module = importlib.import_module(real_name)
+            # Add torch-specific aliases if needed
+            if fullname == 'torch':
+                module = self._enhance_torch_module(module)
+            sys.modules[fullname] = module
+            return module
+
+        # Tier 2 & 3: Stub modules
+        if fullname in self.STUB_MODULES:
+            stub_name = self.STUB_MODULES[fullname]
+            try:
+                module = importlib.import_module(stub_name)
+            except ImportError:
+                # Create empty stub if not found
+                module = self._create_empty_stub(fullname)
+            sys.modules[fullname] = module
+            return module
+
+        # Check if it's a submodule of a known module
+        for prefix in self.REAL_MODULES:
+            if fullname.startswith(prefix + '.'):
+                # Try to import as submodule of real module
+                real_prefix = self.REAL_MODULES[prefix]
+                real_name = real_prefix + fullname[len(prefix):]
+                try:
+                    module = importlib.import_module(real_name)
+                    sys.modules[fullname] = module
+                    return module
+                except ImportError:
+                    pass
+
+        # Default: create empty stub for unknown torch.* modules
+        module = self._create_empty_stub(fullname)
+        sys.modules[fullname] = module
+        return module
+
+    def create_module(self, spec):
+        """Create module for ModuleSpec-based loading."""
+        # Return the actual module directly instead of letting Python create empty one
+        return self.load_module(spec.name)
+
+    def exec_module(self, module):
+        """Execute module for ModuleSpec-based loading."""
+        # Module is already fully loaded by create_module, nothing to do
+        pass
+
+    def _enhance_torch_module(self, module):
+        """Add torch-specific attributes to the main torch module."""
+        import numpy as np
+
+        # Add version info
+        module.__version__ = "2.0.0"
+
+        # Add submodules that should be accessible via torch.xxx
+        # Import stubs and add them as attributes
+        from .stubs import cuda, jit, backends, distributed, amp, version, profiler, hub, ops, library, onnx, compiler, fx
+        module.cuda = cuda
+        module.jit = jit
+        module.backends = backends
+        module.distributed = distributed
+        module.amp = amp
+        module.version = version
+        module.profiler = profiler
+        module.hub = hub
+        module.ops = ops
+        module.library = library
+        module.onnx = onnx
+        module.compiler = compiler
+        module.fx = fx
+
+        # Also register in sys.modules so direct imports work
+        import sys
+        sys.modules['torch.cuda'] = cuda
+        sys.modules['torch.jit'] = jit
+        sys.modules['torch.backends'] = backends
+        sys.modules['torch.distributed'] = distributed
+        sys.modules['torch.amp'] = amp
+        sys.modules['torch.version'] = version
+        sys.modules['torch.profiler'] = profiler
+        sys.modules['torch.hub'] = hub
+        sys.modules['torch.ops'] = ops
+        sys.modules['torch.library'] = library
+        sys.modules['torch.onnx'] = onnx
+        sys.modules['torch.compiler'] = compiler
+        sys.modules['torch.fx'] = fx
+
+        # Add FloatTensor / LongTensor constructors
+        def FloatTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.float32, **kwargs)
+
+        def LongTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.int64, **kwargs)
+
+        def IntTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.int32, **kwargs)
+
+        def BoolTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.bool, **kwargs)
+
+        def HalfTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.float16, **kwargs)
+
+        def DoubleTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.float64, **kwargs)
+
+        def ByteTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.uint8, **kwargs)
+
+        def ShortTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.int16, **kwargs)
+
+        def CharTensor(*args, **kwargs):
+            return module.tensor(*args, dtype=module.int8, **kwargs)
+
+        module.FloatTensor = FloatTensor
+        module.LongTensor = LongTensor
+        module.IntTensor = IntTensor
+        module.BoolTensor = BoolTensor
+        module.HalfTensor = HalfTensor
+        module.DoubleTensor = DoubleTensor
+        module.ByteTensor = ByteTensor
+        module.ShortTensor = ShortTensor
+        module.CharTensor = CharTensor
+
+        # Add from_numpy
+        def from_numpy(arr):
+            return module.Tensor(arr)
+        module.from_numpy = from_numpy
+
+        # Add einsum
+        def einsum(equation, *operands):
+            np_operands = [op.numpy() if hasattr(op, 'numpy') else np.asarray(op) for op in operands]
+            result = np.einsum(equation, *np_operands)
+            return module.Tensor(result.astype(np.float32))
+        module.einsum = einsum
+
+        # Add compile (no-op)
+        def compile(fn, *args, **kwargs):
+            return fn
+        module.compile = compile
+
+        # Add Size as tuple alias
+        module.Size = tuple
+
+        # Add dtype as alias for DType (safetensors uses torch.dtype)
+        module.dtype = module.DType
+
+        # Add finfo/iinfo
+        class finfo:
+            def __init__(self, dtype):
+                if dtype in (module.float32, getattr(module, 'float', None)):
+                    self.min = np.finfo(np.float32).min
+                    self.max = np.finfo(np.float32).max
+                    self.eps = np.finfo(np.float32).eps
+                    self.tiny = np.finfo(np.float32).tiny
+                elif dtype in (module.float64, getattr(module, 'double', None)):
+                    self.min = np.finfo(np.float64).min
+                    self.max = np.finfo(np.float64).max
+                    self.eps = np.finfo(np.float64).eps
+                    self.tiny = np.finfo(np.float64).tiny
+                elif dtype in (module.float16, getattr(module, 'half', None)):
+                    self.min = np.finfo(np.float16).min
+                    self.max = np.finfo(np.float16).max
+                    self.eps = np.finfo(np.float16).eps
+                    self.tiny = np.finfo(np.float16).tiny
+
+        class iinfo:
+            def __init__(self, dtype):
+                if dtype in (module.int32, getattr(module, 'int', None)):
+                    self.min = np.iinfo(np.int32).min
+                    self.max = np.iinfo(np.int32).max
+                elif dtype in (module.int64, getattr(module, 'long', None)):
+                    self.min = np.iinfo(np.int64).min
+                    self.max = np.iinfo(np.int64).max
+
+        module.finfo = finfo
+        module.iinfo = iinfo
+
+        # Add device function
+        if not hasattr(module, 'device'):
+            module.device = module._device.device
+
+        # Add manual_seed
+        def manual_seed(seed):
+            np.random.seed(seed)
+        module.manual_seed = manual_seed
+
+        # Add triu/tril/diag
+        def triu(input, diagonal=0):
+            return module.Tensor(np.triu(input.numpy(), k=diagonal))
+        def tril(input, diagonal=0):
+            return module.Tensor(np.tril(input.numpy(), k=diagonal))
+        def diag(input, diagonal=0):
+            arr = input.numpy()
+            if arr.ndim == 1:
+                return module.Tensor(np.diag(arr, k=diagonal))
+            else:
+                return module.Tensor(np.diag(arr, k=diagonal))
+
+        module.triu = triu
+        module.tril = tril
+        module.diag = diag
+
+        # Add is_tensor
+        def is_tensor(obj):
+            return isinstance(obj, module.Tensor)
+        module.is_tensor = is_tensor
+
+        # Add inference_mode (context manager, same as no_grad for now)
+        module.inference_mode = module.no_grad
+
+        # Add Generator class stub
+        class Generator:
+            """Random number generator stub."""
+            def __init__(self, device='cpu'):
+                self._device = device
+                self._state = np.random.RandomState()
+
+            def manual_seed(self, seed):
+                self._state.seed(seed)
+                return self
+
+            def get_state(self):
+                return self._state.get_state()
+
+            def set_state(self, state):
+                self._state.set_state(state)
+
+            @property
+            def device(self):
+                return module.device(self._device)
+
+        module.Generator = Generator
+
+        # Add default_generator
+        module.default_generator = Generator()
+
+        # Add get_rng_state / set_rng_state
+        def get_rng_state():
+            return np.random.get_state()
+
+        def set_rng_state(state):
+            np.random.set_state(state)
+
+        module.get_rng_state = get_rng_state
+        module.set_rng_state = set_rng_state
+
+        # Add save/load functions
+        import pickle
+
+        def save(obj, f, pickle_module=pickle, pickle_protocol=2, _use_new_zipfile_serialization=True):
+            """Save object to file."""
+            if isinstance(f, str):
+                with open(f, 'wb') as fp:
+                    pickle_module.dump(obj, fp, protocol=pickle_protocol)
+            else:
+                pickle_module.dump(obj, f, protocol=pickle_protocol)
+
+        def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, **pickle_load_args):
+            """Load object from file."""
+            if isinstance(f, str):
+                with open(f, 'rb') as fp:
+                    return pickle_module.load(fp, **pickle_load_args)
+            return pickle_module.load(f, **pickle_load_args)
+
+        module.save = save
+        module.load = load
+
+        # Add serialization namespace
+        class serialization:
+            """Serialization utilities."""
+            @staticmethod
+            def default_restore_location(storage, location):
+                return storage
+
+            @staticmethod
+            def register_package(priority, tagger, deserializer):
+                pass
+
+        module.serialization = serialization
+
+        return module
+
+    def _create_empty_stub(self, fullname):
+        """Create an empty stub module for unknown torch.* imports."""
+        module = ModuleType(fullname)
+        module.__file__ = f"<mindtorch_v2 stub for {fullname}>"
+        module.__loader__ = self
+        module.__package__ = fullname.rsplit('.', 1)[0] if '.' in fullname else fullname
+
+        # Make it return None for any attribute access
+        class StubModule(ModuleType):
+            def __getattr__(self, name):
+                # Return a callable that returns None for most things
+                if name.startswith('_'):
+                    return None
+                # Return another stub for submodule access
+                subname = f"{fullname}.{name}"
+                if subname not in sys.modules:
+                    sys.modules[subname] = self.__class__(subname)
+                return sys.modules[subname]
+
+            def __call__(self, *args, **kwargs):
+                return None
+
+        return StubModule(fullname)

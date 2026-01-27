@@ -56,6 +56,12 @@ float32 = DType("float32", mindspore.float32, np.float32, 4, is_float=True)
 float64 = DType("float64", mindspore.float64, np.float64, 8, is_float=True)
 bfloat16 = DType("bfloat16", mindspore.bfloat16, None, 2, is_float=True)
 
+# Float8 dtypes (stub - MindSpore may not natively support these)
+float8_e4m3fn = DType("float8_e4m3fn", None, None, 1, is_float=True)
+float8_e4m3fnuz = DType("float8_e4m3fnuz", None, None, 1, is_float=True)
+float8_e5m2 = DType("float8_e5m2", None, None, 1, is_float=True)
+float8_e5m2fnuz = DType("float8_e5m2fnuz", None, None, 1, is_float=True)
+
 int8 = DType("int8", mindspore.int8, np.int8, 1)
 int16 = DType("int16", mindspore.int16, np.int16, 2)
 int32 = DType("int32", mindspore.int32, np.int32, 4)
