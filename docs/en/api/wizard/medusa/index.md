@@ -1,5 +1,13 @@
 # Medusa
 
-API documentation for medusa module.
+Medusa decoding module for faster LLM inference.
 
-<!-- TODO: Add detailed API documentation -->
+## Status
+
+This module is currently under development. Check back for updates.
+
+## Planned Features
+
+- Medusa head implementation
+- Speculative decoding
+- Multi-token prediction

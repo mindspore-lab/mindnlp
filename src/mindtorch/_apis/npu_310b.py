@@ -98,6 +98,10 @@ def slice(input, dim, start, end, step):
     """
     # if step == 1:
     return pyboost.slice_ext_view_op(input, dim, start, end, step)
+
+def inplace_sub(input, other):
+    return inplace_copy(input, legacy.sub(input, other))
+
     # # ndim = input.ndim
     # # begins = [0] * ndim
     # # ends = [i for i in input.shape]
@@ -1224,7 +1228,7 @@ def sin(input):
         return pyboost.sin_op(input)
     return legacy.sin(input)
 
-def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
+def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
     if running_mean is None:
         running_mean = ones(input.shape[1], dtype=input.dtype)
     if running_var is None:
@@ -1234,7 +1238,7 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
     if bias is None:
         bias = zeros(input.shape[1], dtype=input.dtype)
 
-    return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+    return legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
 
 def silu(input):
     if ENABLE_PYBOOST:
@@ -1342,7 +1346,7 @@ def roll(input, shifts, axis):
         return pyboost.roll_impl(input, shifts, axis)
     return legacy.roll(input, shifts, axis)
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
 def conv1d_legacy(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
@@ -1722,7 +1726,7 @@ def adaptive_avg_pool1d(input, output_size):
         return pyboost.adaptive_avg_pool1d_op(input, output_size)
     return legacy.adaptive_avg_pool1d(input, output_size)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, (tuple, list)):
@@ -1857,6 +1861,11 @@ def reduce_max(input, axis, keepdims):
     if ENABLE_PYBOOST:
         return pyboost.reduce_max_impl(input, axis, keepdims)
     return legacy.reduce_max(input, axis, keepdims)
+
+def reduce_min(input, axis, keepdims):
+    if ENABLE_PYBOOST:
+        return pyboost.reduce_min_impl(input, axis, keepdims)
+    return legacy.reduce_min(input, axis, keepdims)
 
 def dynamic_rnn(x, w, b, seq_length, init_h, init_c):
     return legacy.dynamic_rnn(x, w, b, seq_length, init_h, init_c,

@@ -290,10 +290,7 @@ def scatter_add(input, dim, index, src):
 
 # scatter_reduce
 def scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
-    if reduce == 'sum':
-        return scatter_add(input, dim, index, src)
-    else:
-        raise ValueError(f'do not support reduce: {reduce}')
+    return execute("scatter_reduce", input, dim, index, src, reduce, include_self)
 
 
 # split

@@ -81,6 +81,9 @@ memory_format = None
 inf = float("inf")
 nan = float("nan")
 
+class OutOfMemoryError(RuntimeError):
+    """Compatibility alias for torch.OutOfMemoryError."""
+    pass
 
 from . import _C
 from ._dtype import *
@@ -198,14 +201,21 @@ def ms_run_check():
 from .autograd import *
 from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
-    set_autocast_dtype, get_autocast_dtype
+    set_autocast_dtype, get_autocast_dtype, asarray as _mt_asarray
 
 from .amp import autocast, GradScaler
 from .func import vmap
 from .storage import UntypedStorage, Storage, TypedStorage
 
+# Provide torch-compatible asarray API at top-level
+# Delegate to _bind.asarray with sensible defaults
+def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
+    if dtype is None:
+        dtype = get_default_dtype()
+    return _mt_asarray(obj, dtype=dtype, device=device, copy=copy, requires_grad=requires_grad)
+
 from . import _dynamo, library
-from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
+from . import profiler, cuda, npu, xpu, mps, cpu, amp, compiler, jit, version, __future__, overrides, \
     return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops, accelerator, special
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state

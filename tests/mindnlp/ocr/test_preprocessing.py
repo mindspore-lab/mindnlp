@@ -170,15 +170,13 @@ class TestImageProcessor:
     
     def test_invalid_input(self, processor):
         """测试无效输入"""
-        from mindnlp.ocr.core.exceptions import ValidationError
-        with pytest.raises(ValidationError):
+        with pytest.raises((ValueError, TypeError)):
             processor.process("invalid_image_data")
     
     def test_empty_image(self, processor):
         """测试空图像"""
-        from mindnlp.ocr.core.exceptions import ValidationError
         empty_image = Image.new('RGB', (0, 0))
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValueError):
             processor.process(empty_image)
 
 

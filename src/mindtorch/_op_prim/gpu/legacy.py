@@ -1765,15 +1765,6 @@ def gamma(*args):
     return op(*args[:-2])
 
 
-def gather__call__(self, input_params, input_indices, axis):
-    # Ensure that input_indices has no negative values by adding input_params.shape[axis] to any negative index
-    input_shape_dim = input_params.shape[axis]
-    # Adjust negative indices
-    if 0 not in input_indices.shape:
-        input_indices = select(less(input_indices, 0), add(input_indices, input_shape_dim), input_indices)
-    return super(Gather, self).__call__(input_params, input_indices, axis, self.batch_dims)
-
-setattr(Gather, '__call__', gather__call__)
 def gather(*args):
     op = _get_cache_prim(Gather)(*args[-1:]).set_device('GPU')
     return op(*args[:-1])

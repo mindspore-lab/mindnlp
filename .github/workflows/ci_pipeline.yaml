@@ -134,9 +134,11 @@ jobs:
         pip install mindspore
     - name: Test with pytest
       run: |
-        pip install transformers==4.57.1
+        pip install transformers
+        TRANSFORMERS_VERSION=$(python -c "import transformers; print(transformers.__version__)")
+        echo "Installed transformers version: $TRANSFORMERS_VERSION"
         cd tests
-        git clone -b v4.56.2 https://github.com/huggingface/transformers
+        git clone -b v${TRANSFORMERS_VERSION} https://github.com/huggingface/transformers
         cd ..
         bash scripts/build_and_reinstall.sh
         python tests/run_test.py -vs tests/transformers/tests/models/${{ matrix.alpha }}*/test_modeling*

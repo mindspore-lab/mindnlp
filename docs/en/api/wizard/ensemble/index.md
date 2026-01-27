@@ -1,5 +1,13 @@
 # Ensemble
 
-API documentation for ensemble module.
+Model ensemble module for combining multiple models.
 
-<!-- TODO: Add detailed API documentation -->
+## Status
+
+This module is currently under development. Check back for updates.
+
+## Planned Features
+
+- Model ensemble strategies
+- Weighted model averaging
+- Voting and aggregation methods

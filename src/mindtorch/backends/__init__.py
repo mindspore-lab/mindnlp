@@ -1,4 +1,4 @@
-from . import cuda, mps, cudnn, mkldnn
+from . import cuda, mps, cudnn, mkldnn, cpu
 
 __allow_nonbracketed_mutation_flag = True
 

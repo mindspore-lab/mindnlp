@@ -1,7 +1,7 @@
-﻿"""
+"""
 API路由模块
 """
 
-from . import ocr, health, metrics
+from . import ocr, health
 
-__all__ = ['ocr', 'health', 'metrics']
+__all__ = ['ocr', 'health']

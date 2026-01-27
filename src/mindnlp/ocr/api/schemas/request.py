@@ -1,4 +1,4 @@
-﻿"""
+"""
 API请求模型
 """
 
@@ -15,7 +15,6 @@ class OCRRequest(BaseModel):
     task_type: str = Field("general", description="任务类型: general/document/table/formula")
     confidence_threshold: float = Field(0.0, ge=0.0, le=1.0, description="置信度阈值")
     custom_prompt: Optional[str] = Field(None, description="自定义Prompt")
-    model: Optional[str] = Field(None, description="指定模型: 2b/7b 或完整模型名称 (留空使用默认)")
 
     class Config:
         json_schema_extra = {
@@ -23,8 +22,7 @@ class OCRRequest(BaseModel):
                 "output_format": "text",
                 "language": "auto",
                 "task_type": "general",
-                "confidence_threshold": 0.5,
-                "model": "2b"
+                "confidence_threshold": 0.5
             }
         }
 
@@ -38,7 +36,6 @@ class OCRBatchRequest(BaseModel):
     task_type: str = Field("general", description="任务类型: general/document/table/formula")
     confidence_threshold: float = Field(0.0, ge=0.0, le=1.0, description="置信度阈值")
     custom_prompt: Optional[str] = Field(None, description="自定义Prompt")
-    model: Optional[str] = Field(None, description="指定模型: 2b/7b 或完整模型名称 (留空使用默认)")
 
 
 class OCRURLRequest(BaseModel):

@@ -1108,7 +1108,7 @@ def sin(input):
         return pyboost.sin_op(input)
     return legacy.sin(input)
 
-def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
+def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
     if running_mean is None:
         running_mean = ones(input.shape[1], dtype=input.dtype)
     if running_var is None:
@@ -1118,8 +1118,8 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
     if bias is None:
         bias = zeros(input.shape[1], dtype=input.dtype)
     if ENABLE_PYBOOST:
-        return pyboost.batch_norm_ext_op(input, weight, bias, running_mean, runnning_var, training, momentum, epsilon)
-    return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+        return pyboost.batch_norm_ext_op(input, weight, bias, running_mean, running_var, training, momentum, epsilon)
+    return legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
 
 def silu(input):
     if ENABLE_PYBOOST:
@@ -1882,6 +1882,11 @@ def reduce_max(input, axis, keepdims):
     if ENABLE_PYBOOST:
         return pyboost.reduce_max_impl(input, axis, keepdims)
     return legacy.reduce_max(input, axis, keepdims)
+
+def reduce_min(input, axis, keepdims):
+    if ENABLE_PYBOOST:
+        return pyboost.reduce_min_impl(input, axis, keepdims)
+    return legacy.reduce_min(input, axis, keepdims)
 
 def dynamic_rnn(x, w, b, seq_length, init_h, init_c):
     return legacy.dynamic_rnn(x, w, b, seq_length, init_h, init_c,

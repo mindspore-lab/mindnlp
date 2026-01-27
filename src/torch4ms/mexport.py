@@ -23,7 +23,7 @@ class MsInterpreter(torch.fx.Interpreter):
   def __init__(self, graph_module):
     super().__init__(graph_module)
     # Import MindSpore ops modules
-    import torch4ms.ops.mten
+    import torch4ms.ops.maten
   import torch4ms.ops.mtorch
 
   def call_function(self, target, args: Tuple, kwargs: Dict) -> Any:

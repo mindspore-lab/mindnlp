@@ -179,3 +179,6 @@ pytorch/
 *.pkl
 *.tsv
 *.index
+
+# Git worktrees
+.worktrees/
