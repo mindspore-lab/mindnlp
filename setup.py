@@ -154,8 +154,8 @@ setup(
         'Issue Tracker': 'https://github.com/mindlab-ai/mindnlp/issues',
     },
     description=get_description(),
-    license='Apache 2.0',
-    packages=find_packages(where='src', include=['mindnlp', 'mindtorch', 'torch4ms']),
+    license='Apache-2.0',
+    packages=find_packages(where='src', include=['mindnlp*', 'mindtorch*', 'torch4ms*']),
     include_package_data=True,
     package_dir={
         "mindnlp": "src/mindnlp",
@@ -211,8 +211,6 @@ setup(
             'diffusers',
         ],
     },
-    classifiers=[
-        'License :: OSI Approved :: Apache Software License'
-    ]
+    python_requires='>=3.8',
 )
 print(find_packages(where='src'))
