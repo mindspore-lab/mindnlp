@@ -183,9 +183,9 @@ class VLMOCREngine:
                 if task_type in ["simple"]:
                     max_tokens = 128  # 简单OCR使用128（4x加速）
                 elif task_type in ["document", "table", "general"]:
-                    max_tokens = 2048  # 文档和通用OCR使用2048支持长文档
+                    max_tokens = 1024  # 文档和通用OCR使用1024支持长文档
                 else:
-                    max_tokens = 2048  # 默认使用2048确保完整性
+                    max_tokens = 1024  # 默认使用1024确保完整性
 
                 outputs = self.model_instance.batch_generate(
                     batch_messages=[messages],
