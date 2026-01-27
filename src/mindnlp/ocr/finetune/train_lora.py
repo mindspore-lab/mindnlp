@@ -471,7 +471,7 @@ def train_lora(
 
         # Patch Qwen2VL VisionAttention to avoid mindtorch split issues
         try:
-            from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLVisionAttention
+            from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLVisionAttention  # pylint: disable=no-name-in-module
             original_vision_attn_forward = Qwen2VLVisionAttention.forward
 
             def patched_vision_attn_forward(self, hidden_states, cu_seqlens, rotary_pos_emb):

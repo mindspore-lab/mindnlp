@@ -381,6 +381,7 @@ def run_comprehensive_benchmark(model_path: str,
     logger.info(f"LoRA: {lora_path if lora_path else 'None'}")
     logger.info(f"Flash Attention: {enable_flash_attention}")
 
+    # pylint: disable=unexpected-keyword-arg
     model = Qwen2VLModel(
         model_name=model_path,
         device=device,

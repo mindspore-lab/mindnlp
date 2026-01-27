@@ -249,6 +249,7 @@ def train_qlora(
     )
 
     # 7. 配置训练参数
+    # pylint: disable=unexpected-keyword-arg
     training_args = TrainingArguments(
         output_dir=str(output_dir),
         num_train_epochs=num_epochs,

@@ -13,13 +13,14 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from benchmark_kv_cache import (  # pylint: disable=import-error
+# pylint: disable=wrong-import-position,import-error
+from benchmark_kv_cache import (
     create_test_image,
     benchmark_single_inference,
     benchmark_batch_inference,
     benchmark_long_sequence,
 )
-from mindnlp.ocr.utils.cache_manager import CacheConfig  # pylint: disable=wrong-import-position
+from mindnlp.ocr.utils.cache_manager import CacheConfig
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -69,6 +70,7 @@ def run_comparison_benchmark(model_path: str,
     )
 
     logger.info("Loading model (KV Cache disabled)...")
+    # pylint: disable=unexpected-keyword-arg
     model_disabled = Qwen2VLModel(
         model_name=model_path,
         device=device,
@@ -106,6 +108,7 @@ def run_comparison_benchmark(model_path: str,
     )
 
     logger.info("Loading model (KV Cache enabled)...")
+    # pylint: disable=unexpected-keyword-arg
     model_enabled = Qwen2VLModel(
         model_name=model_path,
         device=device,

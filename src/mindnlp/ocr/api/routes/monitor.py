@@ -126,7 +126,7 @@ async def get_service_stats():
         Dict: 服务统计数据
     """
     try:
-        from mindnlp.ocr.api.app import get_service_manager
+        from mindnlp.ocr.api.app import get_service_manager  # pylint: disable=no-name-in-module
         service_mgr = get_service_manager()
         stats = service_mgr.get_stats()
 
@@ -151,7 +151,7 @@ async def reset_service_stats():
         Dict: 操作结果
     """
     try:
-        from mindnlp.ocr.api.app import get_service_manager
+        from mindnlp.ocr.api.app import get_service_manager  # pylint: disable=no-name-in-module
         service_mgr = get_service_manager()
         service_mgr.reset_stats()
 
