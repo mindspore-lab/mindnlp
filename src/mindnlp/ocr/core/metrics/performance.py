@@ -3,9 +3,9 @@
 """
 
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from mindnlp.ocr.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -204,38 +204,38 @@ class PrometheusExporter:
         metrics = []
 
         # QPS
-        metrics.append(f"# HELP ocr_qps Current queries per second")
-        metrics.append(f"# TYPE ocr_qps gauge")
+        metrics.append("# HELP ocr_qps Current queries per second")
+        metrics.append("# TYPE ocr_qps gauge")
         metrics.append(f"ocr_qps {summary['qps']:.2f}")
         metrics.append("")
 
         # 总请求数
-        metrics.append(f"# HELP ocr_requests_total Total number of requests")
-        metrics.append(f"# TYPE ocr_requests_total counter")
+        metrics.append("# HELP ocr_requests_total Total number of requests")
+        metrics.append("# TYPE ocr_requests_total counter")
         metrics.append(f"ocr_requests_total {counters['total_requests']}")
         metrics.append("")
 
         # 成功请求数
-        metrics.append(f"# HELP ocr_success_total Total number of successful requests")
-        metrics.append(f"# TYPE ocr_success_total counter")
+        metrics.append("# HELP ocr_success_total Total number of successful requests")
+        metrics.append("# TYPE ocr_success_total counter")
         metrics.append(f"ocr_success_total {counters['success_requests']}")
         metrics.append("")
 
         # 失败请求数
-        metrics.append(f"# HELP ocr_failed_total Total number of failed requests")
-        metrics.append(f"# TYPE ocr_failed_total counter")
+        metrics.append("# HELP ocr_failed_total Total number of failed requests")
+        metrics.append("# TYPE ocr_failed_total counter")
         metrics.append(f"ocr_failed_total {counters['failed_requests']}")
         metrics.append("")
 
         # 被拒绝请求数
-        metrics.append(f"# HELP ocr_rejected_total Total number of rejected requests")
-        metrics.append(f"# TYPE ocr_rejected_total counter")
+        metrics.append("# HELP ocr_rejected_total Total number of rejected requests")
+        metrics.append("# TYPE ocr_rejected_total counter")
         metrics.append(f"ocr_rejected_total {counters['rejected_requests']}")
         metrics.append("")
 
         # 成功率
-        metrics.append(f"# HELP ocr_success_rate Request success rate")
-        metrics.append(f"# TYPE ocr_success_rate gauge")
+        metrics.append("# HELP ocr_success_rate Request success rate")
+        metrics.append("# TYPE ocr_success_rate gauge")
         metrics.append(f"ocr_success_rate {summary['success_rate']:.4f}")
         metrics.append("")
 
@@ -248,8 +248,8 @@ class PrometheusExporter:
             metrics.append("")
 
         # 运行时间
-        metrics.append(f"# HELP ocr_uptime_seconds Service uptime in seconds")
-        metrics.append(f"# TYPE ocr_uptime_seconds counter")
+        metrics.append("# HELP ocr_uptime_seconds Service uptime in seconds")
+        metrics.append("# TYPE ocr_uptime_seconds counter")
         metrics.append(f"ocr_uptime_seconds {summary['uptime_seconds']:.0f}")
         metrics.append("")
 

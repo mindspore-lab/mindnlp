@@ -239,7 +239,7 @@ def main():
     output_path = sys.argv[3]
 
     print("=" * 60)
-    print(f"数据集转换工具")
+    print("数据集转换工具")
     print("=" * 60)
     print(f"类型: {dataset_type}")
     print(f"输入: {input_path}")
@@ -263,10 +263,10 @@ def main():
     print("")
     print("后续步骤:")
     print(f"1. 检查数 ls {output_path}")
-    print(f"2. 开始训")
+    print("２．开始训")
     print(f"   export DATA_PATH='{output_path}/train.json'")
     print(f"   export IMAGE_FOLDER='{output_path}/images'")
-    print(f"   ./scripts/ocr/train_lora_npu.sh")
+    print("   ./scripts/ocr/train_lora_npu.sh")
 
 
 if __name__ == "__main__":

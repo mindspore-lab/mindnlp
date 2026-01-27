@@ -2,8 +2,8 @@
 监控和指标路由
 """
 
-from fastapi import APIRouter
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter  # pylint: disable=import-error
+from fastapi.responses import PlainTextResponse  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -12,7 +12,7 @@ import sys
 import logging
 from typing import Optional
 from pathlib import Path
-import structlog
+import structlog  # pylint: disable=import-error
 
 
 def setup_structured_logging(

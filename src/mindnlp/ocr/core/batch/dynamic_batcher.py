@@ -4,7 +4,7 @@
 
 import asyncio
 import time
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
 from mindnlp.ocr.utils.logger import get_logger
 

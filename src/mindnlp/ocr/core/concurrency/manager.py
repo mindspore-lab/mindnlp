@@ -5,7 +5,7 @@
 import asyncio
 import uuid
 from typing import Any, Optional
-from fastapi import HTTPException
+from fastapi import HTTPException  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.config.settings import get_settings
 from mindnlp.ocr.core.batch import DynamicBatcher, BatchConfig

@@ -13,14 +13,14 @@ import logging
 from typing import Optional, Dict, Any
 from contextlib import contextmanager
 
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+from opentelemetry import trace  # pylint: disable=import-error
+from opentelemetry.sdk.trace import TracerProvider  # pylint: disable=import-error
+from opentelemetry.sdk.trace.export import BatchSpanProcessor  # pylint: disable=import-error
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME  # pylint: disable=import-error
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter  # pylint: disable=import-error
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter  # pylint: disable=import-error
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # pylint: disable=import-error
+from opentelemetry.sdk.trace.sampling import TraceIdRatioBased  # pylint: disable=import-error
 
 # 使用标准logger避免循环导入
 logger = logging.getLogger(__name__)

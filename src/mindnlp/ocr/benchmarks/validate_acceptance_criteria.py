@@ -7,7 +7,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import logging
 
 # 添加项目路径
@@ -228,7 +228,7 @@ class AcceptanceCriteriaValidator:
             if optional_found:
                 logger.info(f"  ✅ 可选脚本文件: {len(optional_found)}个")
         else:
-            logger.warning(f"  ⚠️  部分必需脚本文件缺失:")
+            logger.warning("  ⚠️  部分必需脚本文件缺失:")
             for missing in scripts_missing:
                 logger.warning(f"    - {missing}")
 
@@ -268,11 +268,11 @@ class AcceptanceCriteriaValidator:
         self.criteria["documentation"]["passed"] = guide_found
 
         if self.criteria["documentation"]["passed"]:
-            logger.info(f"  ✅ 微调文档已提供")
+            logger.info("  ✅ 微调文档已提供")
             if len(docs_found) > 1:
                 logger.info(f"  ✅ 额外文档: {len(docs_found)-1}个")
         else:
-            logger.warning(f"  ⚠️  缺少微调文档")
+            logger.warning("  ⚠️  缺少微调文档")
 
         return self.criteria["scripts_provided"]["passed"] and self.criteria["documentation"]["passed"]
 
@@ -307,9 +307,9 @@ class AcceptanceCriteriaValidator:
         self.criteria["model_weights"]["passed"] = len(files_missing) == 0
 
         if self.criteria["model_weights"]["passed"]:
-            logger.info(f"  ✅ 模型权重文件完整")
+            logger.info("  ✅ 模型权重文件完整")
         else:
-            logger.warning(f"  ❌ 部分模型文件缺失:")
+            logger.warning("  ❌ 部分模型文件缺失:")
             for missing in files_missing:
                 logger.warning(f"    - {missing}")
 
@@ -317,9 +317,9 @@ class AcceptanceCriteriaValidator:
 
     def generate_report(self, output_file: Optional[str] = None) -> Dict:
         """生成验收报告"""
-        logger.info("\n" + "="*60)
+        logger.info("%s", "\n" + "="*60)
         logger.info("Issue #2379 验收标准评估报告")
-        logger.info("="*60 + "\n")
+        logger.info("%s", "="*60 + "\n")
 
         total_criteria = len(self.criteria)
         passed_criteria = sum(1 for c in self.criteria.values() if c["passed"])
@@ -330,14 +330,16 @@ class AcceptanceCriteriaValidator:
 
             if criterion.get("actual") is not None:
                 if isinstance(criterion["actual"], float):
-                    logger.info(f"       实际值: {criterion['actual']*100:.2f}%, 目标值: {criterion['target']*100:.0f}%")
+                    logger.info("       实际值: %.2f%%, 目标值: %.0f%%",
+                               criterion['actual']*100, criterion['target']*100)
 
             if criterion.get("files"):
                 logger.info(f"       文件数: {len(criterion['files'])}")
 
-        logger.info("\n" + "="*60)
-        logger.info(f"总体结果: {passed_criteria}/{total_criteria} 项达标 ({passed_criteria/total_criteria*100:.1f}%)")
-        logger.info("="*60 + "\n")
+        logger.info("%s", "\n" + "="*60)
+        logger.info("总体结果: %d/%d 项达标 (%.1f%%)",
+                   passed_criteria, total_criteria, passed_criteria/total_criteria*100)
+        logger.info("%s", "="*60 + "\n")
 
         report = {
             "issue": "#2379",
