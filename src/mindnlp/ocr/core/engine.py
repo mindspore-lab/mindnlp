@@ -98,7 +98,7 @@ class VLMOCREngine:
 
             # 5. 模型推理
             logger.info("Running model inference...")
-            
+
             # 推理加速优化：根据任务类型动态调整 max_new_tokens
             task_type = request.task_type.lower() if request.task_type else "general"
             if task_type in ["simple"]:
@@ -107,7 +107,7 @@ class VLMOCREngine:
                 max_tokens = 1024  # 文档和通用OCR使用1024支持长文档
             else:
                 max_tokens = 1024  # 默认使用1024确保完整性
-            
+
             outputs = self.model.generate(**inputs, max_new_tokens=max_tokens)
 
             # 6. Token解码

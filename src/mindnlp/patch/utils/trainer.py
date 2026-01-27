@@ -4,7 +4,7 @@ from transformers.training_args import OptimizerNames
 from accelerate.utils import DistributedType
 
 import mindtorch
-from mindtorch import nn, autograd
+from mindtorch import nn
 
 def training_step(
     self,
@@ -35,7 +35,7 @@ def training_step(
 
     inputs = self._prepare_inputs(inputs)
 
-    # 使用标准 PyTorch backward 而不是 MindSpore autograd（避免 PEFT 兼容性问题）
+    # 使用标准 PyTorch backward（避免 PEFT 兼容性问题）
     with self.compute_loss_context_manager():
         loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
 
