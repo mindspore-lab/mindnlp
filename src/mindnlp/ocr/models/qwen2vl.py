@@ -867,11 +867,12 @@ class Qwen2VLModel(VLMModelBase):
         use_cache = kwargs.get('use_cache', self.cache_config.enable_kv_cache)
 
         generation_config = {
-            'max_new_tokens': kwargs.get('max_new_tokens', 512),  # OCR 通常 512 足够
+            'max_new_tokens': kwargs.get('max_new_tokens', 1024),  # 增加到1024支持长文档
             'do_sample': do_sample,
             'use_cache': use_cache,  # 从配置或参数读取
             'num_beams': 1,  # 禁用 beam search 提升速度
-            'repetition_penalty': 1.0,  # 禁用重复惩罚提
+            'repetition_penalty': 1.0,  # 禁用重复惩罚提升
+            'eos_token_id': None,  # 禁用EOS提前停止，让模型输出完整内容
         }
 
         # 只在采样时添temperature top_p
