@@ -106,6 +106,7 @@ def train_with_preextracted(
     data_collator = PreExtractedDataCollator(processor=processor)
 
     # 5. 配置训练参数
+    # pylint: disable=unexpected-keyword-arg
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_epochs,

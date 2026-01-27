@@ -44,6 +44,7 @@ import numpy as np
 
 import mindspore
 
+# pylint: disable=no-name-in-module
 from transformers.utils.import_utils import (
     is_pytest_available,
     is_essentia_available,
