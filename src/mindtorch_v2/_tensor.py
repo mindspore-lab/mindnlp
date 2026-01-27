@@ -268,8 +268,27 @@ class Tensor:
         # Force a contiguous copy
         arr = self.numpy()
         arr = np.ascontiguousarray(arr)
-        return Tensor(arr, dtype=self._dtype, device=str(self._device),
+        result = Tensor(arr, dtype=self._dtype, device=str(self._device),
                       requires_grad=self._requires_grad)
+
+        # Track autograd if needed
+        if self._requires_grad:
+            from ._autograd import is_grad_enabled
+            from ._autograd.node import AccumulateGrad
+            from ._autograd.functions import ContiguousBackward
+
+            if is_grad_enabled():
+                grad_fn = ContiguousBackward()
+
+                if self._grad_fn is not None:
+                    grad_fn._next_functions = ((self._grad_fn, 0),)
+                else:
+                    acc_grad = AccumulateGrad(self)
+                    grad_fn._next_functions = ((acc_grad, 0),)
+
+                result._grad_fn = grad_fn
+
+        return result
 
     # --- Conversion ---
 
@@ -330,6 +349,13 @@ class Tensor:
             )
         return builtins_bool(self.item())
 
+    def __contains__(self, item):
+        """Check if item is contained in this tensor."""
+        if isinstance(item, Tensor):
+            item = item.item() if item.numel() == 1 else item.numpy()
+        arr = self.numpy()
+        return item in arr
+
     def __float__(self):
         return builtins_float(self.item())
 
@@ -352,7 +378,7 @@ class Tensor:
         new_shape = _resolve_neg_one(shape, self.numel())
         new_stride = _compute_strides(new_shape)
 
-        return Tensor(
+        result = Tensor(
             _storage=self._storage,
             _shape=new_shape,
             _stride=new_stride,
@@ -360,6 +386,26 @@ class Tensor:
             device=str(self._device),
             requires_grad=self._requires_grad,
         )
+
+        # Track autograd if needed
+        if self._requires_grad:
+            from ._autograd import is_grad_enabled
+            from ._autograd.node import AccumulateGrad
+            from ._autograd.functions import ViewBackward
+
+            if is_grad_enabled():
+                grad_fn = ViewBackward()
+                grad_fn._input_shape = self._shape
+
+                if self._grad_fn is not None:
+                    grad_fn._next_functions = ((self._grad_fn, 0),)
+                else:
+                    acc_grad = AccumulateGrad(self)
+                    grad_fn._next_functions = ((acc_grad, 0),)
+
+                result._grad_fn = grad_fn
+
+        return result
 
     def reshape(self, *shape):
         """Reshape tensor. Returns view if possible, copy otherwise."""
@@ -375,8 +421,48 @@ class Tensor:
 
     def transpose(self, dim0, dim1):
         """Swap two dimensions. Returns a view with autograd support."""
-        from ._dispatch import dispatch
-        return dispatch("transpose", self, dim0, dim1)
+        ndim = self.dim()
+        # Normalize negative dims
+        if dim0 < 0:
+            dim0 += ndim
+        if dim1 < 0:
+            dim1 += ndim
+
+        # Swap shape and stride at the two dimensions
+        new_shape = list(self._shape)
+        new_shape[dim0], new_shape[dim1] = new_shape[dim1], new_shape[dim0]
+
+        new_stride = list(self._stride)
+        new_stride[dim0], new_stride[dim1] = new_stride[dim1], new_stride[dim0]
+
+        result = Tensor(
+            _storage=self._storage,
+            _shape=tuple(new_shape),
+            _stride=tuple(new_stride),
+            _storage_offset=self._storage_offset,
+            device=str(self._device),
+            requires_grad=self._requires_grad,
+        )
+
+        # Track autograd if needed
+        if self._requires_grad:
+            from ._autograd import is_grad_enabled
+            from ._autograd.node import AccumulateGrad
+            from ._autograd.functions import TransposeBackward
+
+            if is_grad_enabled():
+                grad_fn = TransposeBackward()
+                grad_fn._dims = (dim0, dim1)
+
+                if self._grad_fn is not None:
+                    grad_fn._next_functions = ((self._grad_fn, 0),)
+                else:
+                    acc_grad = AccumulateGrad(self)
+                    grad_fn._next_functions = ((acc_grad, 0),)
+
+                result._grad_fn = grad_fn
+
+        return result
 
     def t(self):
         """Transpose 2D tensor."""
@@ -395,7 +481,7 @@ class Tensor:
         new_shape = tuple(self._shape[d] for d in dims)
         new_stride = tuple(self._stride[d] for d in dims)
 
-        return Tensor(
+        result = Tensor(
             _storage=self._storage,
             _shape=new_shape,
             _stride=new_stride,
@@ -403,6 +489,26 @@ class Tensor:
             device=str(self._device),
             requires_grad=self._requires_grad,
         )
+
+        # Track autograd if needed
+        if self._requires_grad:
+            from ._autograd import is_grad_enabled
+            from ._autograd.node import AccumulateGrad
+            from ._autograd.functions import PermuteBackward
+
+            if is_grad_enabled():
+                grad_fn = PermuteBackward()
+                grad_fn._dims = dims
+
+                if self._grad_fn is not None:
+                    grad_fn._next_functions = ((self._grad_fn, 0),)
+                else:
+                    acc_grad = AccumulateGrad(self)
+                    grad_fn._next_functions = ((acc_grad, 0),)
+
+                result._grad_fn = grad_fn
+
+        return result
 
     def unsqueeze(self, dim):
         """Insert a dimension of size 1."""
@@ -518,13 +624,17 @@ class Tensor:
         if not isinstance(key, tuple):
             key = (key,)
 
-        # Check for advanced indexing (bool/int tensors)
+        # Check for advanced indexing (bool/int tensors, lists, numpy arrays)
         has_advanced = any(
-            isinstance(k, Tensor) for k in key
+            isinstance(k, (Tensor, list, np.ndarray)) for k in key
         )
 
         if has_advanced:
             return self._advanced_getitem(key)
+
+        # Use gradient-tracking version if requires_grad
+        if self._requires_grad:
+            return self._basic_getitem_with_grad(key)
 
         return self._basic_getitem(key)
 
@@ -581,6 +691,31 @@ class Tensor:
             device=str(self._device),
             requires_grad=self._requires_grad,
         )
+
+    def _basic_getitem_with_grad(self, key):
+        """Basic indexing with gradient tracking."""
+        from ._autograd import is_grad_enabled
+        from ._autograd.node import AccumulateGrad
+
+        result = self._basic_getitem(key)
+
+        # Track autograd if needed
+        if is_grad_enabled() and self._requires_grad:
+            from ._autograd.functions import SelectBackward
+            grad_fn = SelectBackward()
+            grad_fn._input_shape = self._shape
+            grad_fn._key = key
+
+            if self._grad_fn is not None:
+                grad_fn._next_functions = ((self._grad_fn, 0),)
+            else:
+                acc_grad = AccumulateGrad(self)
+                grad_fn._next_functions = ((acc_grad, 0),)
+
+            result._grad_fn = grad_fn
+            result._requires_grad = True
+
+        return result
 
     def _advanced_getitem(self, key):
         """Advanced indexing: bool/int tensors. Returns a copy."""
@@ -711,6 +846,54 @@ class Tensor:
     def __matmul__(self, other):
         return self.matmul(other)
 
+    def __invert__(self):
+        """Bitwise NOT (~). For bool tensors, returns logical not."""
+        arr = self.numpy()
+        if arr.dtype == np.bool_:
+            result = ~arr
+        else:
+            result = np.bitwise_not(arr)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __or__(self, other):
+        """Bitwise OR (|)."""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = np.bitwise_or(arr, other_arr)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __ror__(self, other):
+        """Reflected bitwise OR (|)."""
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = np.bitwise_or(other_arr, self.numpy())
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __and__(self, other):
+        """Bitwise AND (&)."""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = np.bitwise_and(arr, other_arr)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __rand__(self, other):
+        """Reflected bitwise AND (&)."""
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = np.bitwise_and(other_arr, self.numpy())
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __xor__(self, other):
+        """Bitwise XOR (^)."""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = np.bitwise_xor(arr, other_arr)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __rxor__(self, other):
+        """Reflected bitwise XOR (^)."""
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = np.bitwise_xor(other_arr, self.numpy())
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
     # --- Reduction methods ---
 
     def sum(self, dim=None, keepdim=False, *, dtype=None):
@@ -833,6 +1016,106 @@ class Tensor:
         self._grad = None
         return self
 
+    # --- In-place initialization methods ---
+
+    def normal_(self, mean=0.0, std=1.0):
+        """Fill tensor with values from normal distribution N(mean, std) in-place."""
+        import numpy as np
+        import mindspore
+        # Get current data and modify in place
+        arr = np.random.normal(mean, std, self._shape).astype(np.float32)
+        # Calculate the storage indices we need to update
+        storage_arr = self._storage._ms_tensor.asnumpy().copy()
+        # Ensure storage is large enough
+        required_size = self._storage_offset + self.numel()
+        if len(storage_arr) < required_size:
+            # Resize storage
+            new_storage = np.zeros(required_size, dtype=np.float32)
+            new_storage[:len(storage_arr)] = storage_arr
+            storage_arr = new_storage
+        # Update the portion of storage that this tensor uses
+        storage_arr[self._storage_offset:self._storage_offset + self.numel()] = arr.ravel()
+        self._storage._ms_tensor = mindspore.Tensor(storage_arr)
+        self._version += 1
+        return self
+
+    def uniform_(self, a=0.0, b=1.0):
+        """Fill tensor with values from uniform distribution U(a, b) in-place."""
+        import numpy as np
+        import mindspore
+        arr = np.random.uniform(a, b, self._shape).astype(np.float32)
+        storage_arr = self._storage._ms_tensor.asnumpy().copy()
+        required_size = self._storage_offset + self.numel()
+        if len(storage_arr) < required_size:
+            new_storage = np.zeros(required_size, dtype=np.float32)
+            new_storage[:len(storage_arr)] = storage_arr
+            storage_arr = new_storage
+        storage_arr[self._storage_offset:self._storage_offset + self.numel()] = arr.ravel()
+        self._storage._ms_tensor = mindspore.Tensor(storage_arr)
+        self._version += 1
+        return self
+
+    def fill_(self, value):
+        """Fill tensor with a constant value in-place."""
+        import numpy as np
+        import mindspore
+        arr = np.full(self._shape, value, dtype=np.float32)
+        storage_arr = self._storage._ms_tensor.asnumpy().copy()
+        required_size = self._storage_offset + self.numel()
+        if len(storage_arr) < required_size:
+            new_storage = np.zeros(required_size, dtype=np.float32)
+            new_storage[:len(storage_arr)] = storage_arr
+            storage_arr = new_storage
+        storage_arr[self._storage_offset:self._storage_offset + self.numel()] = arr.ravel()
+        self._storage._ms_tensor = mindspore.Tensor(storage_arr)
+        self._version += 1
+        return self
+
+    def zero_(self):
+        """Fill tensor with zeros in-place."""
+        return self.fill_(0.0)
+
+    def ones_(self):
+        """Fill tensor with ones in-place."""
+        return self.fill_(1.0)
+
+    def bernoulli_(self, p=0.5):
+        """Fill tensor with values from Bernoulli distribution in-place."""
+        import numpy as np
+        import mindspore
+        arr = (np.random.random(self._shape) < p).astype(np.float32)
+        flat = arr.ravel()
+        self._storage._ms_tensor = mindspore.Tensor(flat)
+        self._version += 1
+        return self
+
+    def random_(self, from_=0, to=None, *, generator=None):
+        """Fill tensor with random integers in-place."""
+        import numpy as np
+        import mindspore
+        if to is None:
+            # For float types, fill with [0, 1)
+            arr = np.random.random(self._shape).astype(np.float32)
+        else:
+            arr = np.random.randint(from_, to, self._shape).astype(np.float32)
+        flat = arr.ravel()
+        self._storage._ms_tensor = mindspore.Tensor(flat)
+        self._version += 1
+        return self
+
+    def copy_(self, src, non_blocking=False):
+        """Copy data from src tensor to self in-place."""
+        import numpy as np
+        import mindspore
+        src_arr = src.numpy()
+        # Reshape if needed
+        if src_arr.shape != self._shape:
+            src_arr = np.broadcast_to(src_arr, self._shape)
+        flat = src_arr.ravel().astype(np.float32)
+        self._storage._ms_tensor = mindspore.Tensor(flat)
+        self._version += 1
+        return self
+
     def detach(self):
         """Returns a new Tensor detached from the current graph.
 
@@ -863,3 +1146,192 @@ class Tensor:
         """
         self._requires_grad = requires_grad
         return self
+
+    # --- Additional tensor manipulation methods ---
+
+    def clone(self, *, memory_format=None):
+        """Create a copy of tensor with new storage."""
+        from ._dispatch import dispatch
+        return dispatch("clone", self)
+
+    def repeat(self, *sizes):
+        """Repeat tensor along dimensions."""
+        if len(sizes) == 1 and isinstance(sizes[0], (tuple, list)):
+            sizes = tuple(sizes[0])
+        arr = self.numpy()
+        result = np.tile(arr, sizes)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def masked_fill(self, mask, value):
+        """Fill elements where mask is True with value."""
+        arr = self.numpy().copy()
+        mask_np = mask.numpy() if isinstance(mask, Tensor) else np.asarray(mask)
+        arr[mask_np] = value
+        return Tensor(arr, dtype=self._dtype, device=str(self._device))
+
+    def masked_fill_(self, mask, value):
+        """Fill elements where mask is True with value, in-place."""
+        arr = self.numpy()
+        mask_np = mask.numpy() if isinstance(mask, Tensor) else np.asarray(mask)
+        arr[mask_np] = value
+        # Write back to storage
+        flat = arr.ravel()
+        import mindspore
+        self._storage._ms_tensor = mindspore.Tensor(flat)
+        self._version += 1
+        return self
+
+    def clamp(self, min=None, max=None):
+        """Clamp values to range [min, max]."""
+        from . import clamp as torch_clamp
+        return torch_clamp(self, min=min, max=max)
+
+    def clamp_(self, min=None, max=None):
+        """Clamp values to range [min, max], in-place."""
+        arr = np.clip(self.numpy(), min, max)
+        flat = arr.ravel()
+        import mindspore
+        self._storage._ms_tensor = mindspore.Tensor(flat)
+        self._version += 1
+        return self
+
+    def all(self, dim=None, keepdim=False):
+        """Test if all elements evaluate to True."""
+        from . import all as torch_all
+        return torch_all(self, dim=dim, keepdim=keepdim)
+
+    def any(self, dim=None, keepdim=False):
+        """Test if any element evaluates to True."""
+        from . import any as torch_any
+        return torch_any(self, dim=dim, keepdim=keepdim)
+
+    def cumsum(self, dim):
+        """Cumulative sum along a dimension."""
+        arr = self.numpy()
+        result = np.cumsum(arr, axis=dim)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def cumprod(self, dim):
+        """Cumulative product along a dimension."""
+        arr = self.numpy()
+        result = np.cumprod(arr, axis=dim)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    # --- Type conversion methods ---
+
+    def long(self):
+        """Convert tensor to int64 dtype."""
+        arr = self.numpy().astype(np.int64)
+        return Tensor(arr, dtype=dtype_mod.int64, device=str(self._device),
+                      requires_grad=False)
+
+    def int(self):
+        """Convert tensor to int32 dtype."""
+        arr = self.numpy().astype(np.int32)
+        return Tensor(arr, dtype=dtype_mod.int32, device=str(self._device),
+                      requires_grad=False)
+
+    def float(self):
+        """Convert tensor to float32 dtype."""
+        arr = self.numpy().astype(np.float32)
+        return Tensor(arr, dtype=dtype_mod.float32, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def double(self):
+        """Convert tensor to float64 dtype."""
+        arr = self.numpy().astype(np.float64)
+        return Tensor(arr, dtype=dtype_mod.float64, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def half(self):
+        """Convert tensor to float16 dtype."""
+        arr = self.numpy().astype(np.float16)
+        return Tensor(arr, dtype=dtype_mod.float16, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def bool(self):
+        """Convert tensor to bool dtype."""
+        arr = self.numpy().astype(np.bool_)
+        return Tensor(arr, dtype=dtype_mod.bool, device=str(self._device),
+                      requires_grad=False)
+
+    def to(self, *args, **kwargs):
+        """Move tensor to device and/or change dtype."""
+        # Parse args: can be (device), (dtype), (device, dtype), or keyword args
+        dtype = kwargs.get('dtype', None)
+        device = kwargs.get('device', None)
+
+        for arg in args:
+            if isinstance(arg, device_cls):
+                device = arg
+            elif isinstance(arg, str):
+                if arg in ('cpu', 'cuda', 'mps'):
+                    device = device_cls(arg)
+                else:
+                    # Might be a dtype string
+                    pass
+            elif isinstance(arg, dtype_mod.DType):
+                dtype = arg
+            elif arg is None:
+                pass
+
+        # Apply dtype conversion if needed
+        if dtype is not None:
+            np_dtype = dtype_mod.dtype_to_numpy(dtype)
+            arr = self.numpy().astype(np_dtype)
+            return Tensor(arr, dtype=dtype, device=str(device or self._device),
+                          requires_grad=self._requires_grad)
+
+        # Device only change (no-op for CPU backend)
+        return self
+
+    # --- Factory methods (new_*) ---
+
+    def new_ones(self, *size, dtype=None, device=None, requires_grad=False):
+        """Create a new tensor filled with ones with same dtype/device."""
+        if len(size) == 1 and isinstance(size[0], (tuple, list)):
+            size = tuple(size[0])
+        target_dtype = dtype if dtype is not None else self._dtype
+        target_device = device if device is not None else str(self._device)
+        np_dtype = dtype_mod.dtype_to_numpy(target_dtype)
+        arr = np.ones(size, dtype=np_dtype)
+        return Tensor(arr, dtype=target_dtype, device=target_device, requires_grad=requires_grad)
+
+    def new_zeros(self, *size, dtype=None, device=None, requires_grad=False):
+        """Create a new tensor filled with zeros with same dtype/device."""
+        if len(size) == 1 and isinstance(size[0], (tuple, list)):
+            size = tuple(size[0])
+        target_dtype = dtype if dtype is not None else self._dtype
+        target_device = device if device is not None else str(self._device)
+        np_dtype = dtype_mod.dtype_to_numpy(target_dtype)
+        arr = np.zeros(size, dtype=np_dtype)
+        return Tensor(arr, dtype=target_dtype, device=target_device, requires_grad=requires_grad)
+
+    def new_empty(self, *size, dtype=None, device=None, requires_grad=False):
+        """Create a new uninitialized tensor with same dtype/device."""
+        if len(size) == 1 and isinstance(size[0], (tuple, list)):
+            size = tuple(size[0])
+        target_dtype = dtype if dtype is not None else self._dtype
+        target_device = device if device is not None else str(self._device)
+        np_dtype = dtype_mod.dtype_to_numpy(target_dtype)
+        arr = np.empty(size, dtype=np_dtype)
+        return Tensor(arr, dtype=target_dtype, device=target_device, requires_grad=requires_grad)
+
+    def new_full(self, size, fill_value, dtype=None, device=None, requires_grad=False):
+        """Create a new tensor filled with fill_value with same dtype/device."""
+        if isinstance(size, builtins_int):
+            size = (size,)
+        target_dtype = dtype if dtype is not None else self._dtype
+        target_device = device if device is not None else str(self._device)
+        np_dtype = dtype_mod.dtype_to_numpy(target_dtype)
+        arr = np.full(size, fill_value, dtype=np_dtype)
+        return Tensor(arr, dtype=target_dtype, device=target_device, requires_grad=requires_grad)
+
+    def new_tensor(self, data, dtype=None, device=None, requires_grad=False):
+        """Create a new tensor from data with same dtype/device."""
+        target_dtype = dtype if dtype is not None else self._dtype
+        target_device = device if device is not None else str(self._device)
+        return Tensor(data, dtype=target_dtype, device=target_device, requires_grad=requires_grad)

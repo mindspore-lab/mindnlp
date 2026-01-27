@@ -132,3 +132,24 @@ def from_numpy(ndarray):
     arr = np.ascontiguousarray(ndarray)
     dt = dtype_mod.numpy_to_dtype(arr.dtype)
     return Tensor(arr, dtype=dt)
+
+
+def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False):
+    """Create tensor with random integers in [low, high).
+
+    Args:
+        low: Lowest integer (inclusive), or high if high is None
+        high: One above highest integer (exclusive)
+        size: Shape of output tensor
+    """
+    if high is None:
+        high = low
+        low = 0
+    if size is None:
+        size = ()
+    if isinstance(size, int):
+        size = (size,)
+
+    dt = dtype or dtype_mod.int64
+    arr = np.random.randint(low, high, size=size)
+    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)

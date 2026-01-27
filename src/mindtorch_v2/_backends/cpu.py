@@ -348,14 +348,19 @@ def embedding_cpu(indices, weight):
 
 
 @register_op("dropout", DispatchKey.Backend_CPU)
-def dropout_cpu(a, p=0.5, training=True):
+def dropout_cpu(a, p=0.5, training=True, return_mask=False):
     """Dropout."""
     if not training or p == 0:
+        if return_mask:
+            return a, None
         return a
     a_np = _to_numpy(a)
     mask = np.random.binomial(1, 1 - p, a_np.shape) / (1 - p)
     result = a_np * mask
-    return _wrap_result(result.astype(a_np.dtype))
+    result_tensor = _wrap_result(result.astype(a_np.dtype))
+    if return_mask:
+        return result_tensor, mask
+    return result_tensor
 
 
 @register_op("layer_norm", DispatchKey.Backend_CPU)
@@ -375,5 +380,239 @@ def layer_norm_cpu(a, normalized_shape, weight=None, bias=None, eps=1e-5):
         result = result * _to_numpy(weight)
     if bias is not None:
         result = result + _to_numpy(bias)
+
+    return _wrap_result(result)
+
+
+# --- Tensor manipulation ops ---
+
+@register_op("cat", DispatchKey.Backend_CPU)
+def cat_cpu(tensors, dim=0):
+    """Concatenate tensors along a dimension."""
+    # Filter out empty tensors that have different dimensions (common in KV cache)
+    non_empty = []
+    for t in tensors:
+        arr = _to_numpy(t)
+        if arr.size > 0:
+            non_empty.append(arr)
+        elif arr.ndim > 1:
+            # Keep empty tensors only if they have the right shape (just 0 in one dim)
+            non_empty.append(arr)
+
+    if len(non_empty) == 0:
+        # All tensors are empty, return first one
+        return tensors[0] if len(tensors) > 0 else _wrap_result(np.array([]))
+    elif len(non_empty) == 1:
+        # Only one non-empty tensor, return it
+        return _wrap_result(non_empty[0])
+
+    result = np.concatenate(non_empty, axis=dim)
+    return _wrap_result(result)
+
+
+@register_op("stack", DispatchKey.Backend_CPU)
+def stack_cpu(tensors, dim=0):
+    """Stack tensors along a new dimension."""
+    arrays = [_to_numpy(t) for t in tensors]
+    result = np.stack(arrays, axis=dim)
+    return _wrap_result(result)
+
+
+@register_op("split", DispatchKey.Backend_CPU)
+def split_cpu(tensor, split_size_or_sections, dim=0):
+    """Split tensor into chunks."""
+    arr = _to_numpy(tensor)
+    if isinstance(split_size_or_sections, int):
+        # Split into chunks of given size
+        size = arr.shape[dim]
+        indices = list(range(split_size_or_sections, size, split_size_or_sections))
+        splits = np.split(arr, indices, axis=dim)
+    else:
+        # Split at given section sizes
+        indices = np.cumsum(split_size_or_sections[:-1])
+        splits = np.split(arr, indices, axis=dim)
+    return tuple(_wrap_result(s) for s in splits)
+
+
+@register_op("chunk", DispatchKey.Backend_CPU)
+def chunk_cpu(input, chunks, dim=0):
+    """Split tensor into specified number of chunks."""
+    arr = _to_numpy(input)
+    splits = np.array_split(arr, chunks, axis=dim)
+    return tuple(_wrap_result(s) for s in splits)
+
+
+@register_op("clone", DispatchKey.Backend_CPU)
+def clone_cpu(input):
+    """Create a copy of tensor with new storage."""
+    arr = _to_numpy(input)
+    return _wrap_result(arr.copy())
+
+
+@register_op("where", DispatchKey.Backend_CPU)
+def where_cpu(condition, input, other):
+    """Select elements based on condition."""
+    cond_np = _to_numpy(condition).astype(bool)
+    input_np = _to_numpy(input)
+    other_np = _to_numpy(other)
+    result = np.where(cond_np, input_np, other_np)
+    return _wrap_result(result)
+
+
+# --- Additional math ops ---
+
+@register_op("var", DispatchKey.Backend_CPU)
+def var_cpu(a, dim=None, correction=1, keepdim=False):
+    """Variance reduction."""
+    a_np = _to_numpy(a)
+    # Use ddof for Bessel's correction
+    result = np.var(a_np, axis=dim, ddof=correction, keepdims=keepdim)
+    return _wrap_result(result)
+
+
+@register_op("std", DispatchKey.Backend_CPU)
+def std_cpu(a, dim=None, correction=1, keepdim=False):
+    """Standard deviation reduction."""
+    a_np = _to_numpy(a)
+    result = np.std(a_np, axis=dim, ddof=correction, keepdims=keepdim)
+    return _wrap_result(result)
+
+
+@register_op("clamp", DispatchKey.Backend_CPU)
+def clamp_cpu(a, min=None, max=None):
+    """Clamp values to range [min, max]."""
+    a_np = _to_numpy(a)
+    result = np.clip(a_np, min, max)
+    return _wrap_result(result)
+
+
+@register_op("rsqrt", DispatchKey.Backend_CPU)
+def rsqrt_cpu(a):
+    """Reciprocal square root element-wise."""
+    a_np = _to_numpy(a)
+    result = 1.0 / np.sqrt(a_np)
+    return _wrap_result(result)
+
+
+@register_op("reciprocal", DispatchKey.Backend_CPU)
+def reciprocal_cpu(a):
+    """Reciprocal (1/x) element-wise."""
+    a_np = _to_numpy(a)
+    result = 1.0 / a_np
+    return _wrap_result(result)
+
+
+@register_op("bmm", DispatchKey.Backend_CPU)
+def bmm_cpu(a, b):
+    """Batched matrix multiplication."""
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b)
+    result = np.matmul(a_np, b_np)
+    return _wrap_result(result)
+
+
+@register_op("baddbmm", DispatchKey.Backend_CPU)
+def baddbmm_cpu(input, batch1, batch2, beta=1, alpha=1):
+    """Batched matrix multiply with add: beta*input + alpha*(batch1 @ batch2)."""
+    input_np = _to_numpy(input)
+    batch1_np = _to_numpy(batch1)
+    batch2_np = _to_numpy(batch2)
+    result = beta * input_np + alpha * np.matmul(batch1_np, batch2_np)
+    return _wrap_result(result)
+
+
+@register_op("all", DispatchKey.Backend_CPU)
+def all_cpu(input, dim=None, keepdim=False):
+    """Test if all elements evaluate to True."""
+    arr = _to_numpy(input)
+    if dim is None:
+        result = np.all(arr)
+    else:
+        result = np.all(arr, axis=dim, keepdims=keepdim)
+    return _wrap_result(result)
+
+
+@register_op("any", DispatchKey.Backend_CPU)
+def any_cpu(input, dim=None, keepdim=False):
+    """Test if any element evaluates to True."""
+    arr = _to_numpy(input)
+    if dim is None:
+        result = np.any(arr)
+    else:
+        result = np.any(arr, axis=dim, keepdims=keepdim)
+    return _wrap_result(result)
+
+
+@register_op("isin", DispatchKey.Backend_CPU)
+def isin_cpu(elements, test_elements, *, assume_unique=False, invert=False):
+    """Test if each element is in test_elements."""
+    elements_np = _to_numpy(elements)
+    test_np = _to_numpy(test_elements)
+    result = np.isin(elements_np, test_np, assume_unique=assume_unique, invert=invert)
+    return _wrap_result(result)
+
+
+@register_op("topk", DispatchKey.Backend_CPU)
+def topk_cpu(input, k, dim=-1, largest=True, sorted=True):
+    """Return the k largest/smallest elements along a dimension."""
+    arr = _to_numpy(input)
+    if dim < 0:
+        dim = arr.ndim + dim
+
+    # Use partition for efficiency
+    if largest:
+        # Get indices of top k
+        indices = np.argpartition(arr, -k, axis=dim)
+        # Take the top k indices
+        indices = np.take(indices, range(-k, 0), axis=dim)
+        # Get the values at those indices
+        values = np.take_along_axis(arr, indices, axis=dim)
+        # Sort if needed
+        if sorted:
+            sort_indices = np.argsort(-values, axis=dim)
+            values = np.take_along_axis(values, sort_indices, axis=dim)
+            indices = np.take_along_axis(indices, sort_indices, axis=dim)
+    else:
+        # Get indices of bottom k
+        indices = np.argpartition(arr, k, axis=dim)
+        indices = np.take(indices, range(k), axis=dim)
+        values = np.take_along_axis(arr, indices, axis=dim)
+        if sorted:
+            sort_indices = np.argsort(values, axis=dim)
+            values = np.take_along_axis(values, sort_indices, axis=dim)
+            indices = np.take_along_axis(indices, sort_indices, axis=dim)
+
+    from collections import namedtuple
+    TopKResult = namedtuple('TopKResult', ['values', 'indices'])
+    return TopKResult(_wrap_result(values), _wrap_result(indices.astype(np.int64)))
+
+
+@register_op("multinomial", DispatchKey.Backend_CPU)
+def multinomial_cpu(input, num_samples, replacement=False, *, generator=None):
+    """Draw samples from a multinomial distribution."""
+    probs = _to_numpy(input)
+
+    # Handle 1D case
+    if probs.ndim == 1:
+        probs = probs.reshape(1, -1)
+        squeeze_result = True
+    else:
+        squeeze_result = False
+
+    # Normalize probabilities
+    probs = probs / probs.sum(axis=-1, keepdims=True)
+
+    # Sample for each row
+    results = []
+    for row in probs:
+        if replacement:
+            samples = np.random.choice(len(row), size=num_samples, replace=True, p=row)
+        else:
+            samples = np.random.choice(len(row), size=num_samples, replace=False, p=row)
+        results.append(samples)
+
+    result = np.array(results, dtype=np.int64)
+    if squeeze_result:
+        result = result.squeeze(0)
 
     return _wrap_result(result)

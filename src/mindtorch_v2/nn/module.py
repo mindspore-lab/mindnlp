@@ -181,6 +181,38 @@ class Module:
         # TODO: Implement actual device/dtype conversion
         return self
 
+    def cuda(self, device=None):
+        """Move module to CUDA (no-op in mindtorch_v2, returns self)."""
+        return self
+
+    def cpu(self):
+        """Move module to CPU (no-op in mindtorch_v2, returns self)."""
+        return self
+
+    def xpu(self, device=None):
+        """Move module to XPU (no-op in mindtorch_v2, returns self)."""
+        return self
+
+    def type(self, dst_type):
+        """Cast module parameters to dst_type (placeholder - returns self)."""
+        return self
+
+    def float(self):
+        """Cast module to float32 (placeholder - returns self)."""
+        return self
+
+    def double(self):
+        """Cast module to float64 (placeholder - returns self)."""
+        return self
+
+    def half(self):
+        """Cast module to float16 (placeholder - returns self)."""
+        return self
+
+    def bfloat16(self):
+        """Cast module to bfloat16 (placeholder - returns self)."""
+        return self
+
     def __repr__(self) -> str:
         lines = [self.__class__.__name__ + '(']
         for name, module in self._modules.items():
