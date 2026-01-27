@@ -405,21 +405,21 @@ def run_comprehensive_benchmark(model_path: str,
     }
 
     # 1. 单图推理测试
-    logger.info("\n" + "="*80)
+    logger.info("%s", "\n" + "="*80)
     logger.info("Test 1: Single Image Inference")
-    logger.info("="*80)
+    logger.info("%s", "="*80)
     all_results['single_inference'] = benchmark_single_inference(model, test_image, num_runs=10)
 
     # 2. 批量推理测试
-    logger.info("\n" + "="*80)
+    logger.info("%s", "\n" + "="*80)
     logger.info("Test 2: Batch Inference")
-    logger.info("="*80)
+    logger.info("%s", "="*80)
     all_results['batch_inference'] = benchmark_batch_inference(model, test_image, batch_sizes=[1, 2, 4])
 
     # 3. 长序列测试
-    logger.info("\n" + "="*80)
+    logger.info("%s", "\n" + "="*80)
     logger.info("Test 3: Long Sequence Generation")
-    logger.info("="*80)
+    logger.info("%s", "="*80)
     all_results['long_sequence'] = benchmark_long_sequence(model, test_image, max_tokens=1024)
 
     # 保存结果
@@ -458,7 +458,7 @@ def print_summary(results: Dict[str, Any]):
         print(f"  Peak Memory: {single['memory_peak_mb']:.2f} MB")
 
     # 批量推理
-    print(f"\n📊 Batch Inference:")
+    print("\n📊 Batch Inference:")
     batch = results['batch_inference']
     for key, data in batch.items():
         print(f"  Batch {data['batch_size']}: "

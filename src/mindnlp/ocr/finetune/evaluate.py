@@ -371,6 +371,7 @@ def load_lora_model(base_model_path: str, lora_path: str, device: Optional[str] 
         logger.info(f"File size: {adapter_file.stat().st_size / (1024**3):.2f} GB")
 
         # 加载 NPZ 数据
+        import numpy as np  # pylint: disable=reimported
         data = np.load(str(adapter_file))
         logger.info(f"Found {len(data.files)} weight tensors in NPZ")
 
@@ -517,60 +518,7 @@ def evaluate_handwriting_accuracy(references: List[str], hypotheses: List[str]) 
     return metrics
 
 
-def calculate_task_accuracy(
-    references: List[str],
-    hypotheses: List[str],
-    task_labels: List[str],
-) -> Dict[str, Dict[str, float]]:
-    """
-    按任务类型计算准确率
-
-    Args:
-        references: 参考文本列
-        hypotheses: 识别结果列表
-        task_labels: 任务类型标签列表 (e.g., "table", "formula", "handwriting", "general")
-
-    Returns:
-        按任务分组的指标字典
-    """
-    # 按任务分
-    task_groups = defaultdict(lambda: {"refs": [], "hyps": []})
-
-    for ref, hyp, task in zip(references, hypotheses, task_labels):
-        task_groups[task]["refs"].append(ref)
-        task_groups[task]["hyps"].append(hyp)
-
-    # 计算每个任务的指
-    task_metrics = {}
-    for task, data in task_groups.items():
-        refs = data["refs"]
-        hyps = data["hyps"]
-
-        # 基础指标
-        base_metrics = calculate_accuracy(refs, hyps)
-        task_metrics[task] = base_metrics
-
-        # 任务特定指标
-        if task == "table":
-            table_metrics = evaluate_table_accuracy(refs, hyps)
-            task_metrics[task].update({"table_metrics": table_metrics})
-            logger.info(f"Table Task - Cell Acc: {table_metrics['cell_accuracy']:.4f}, "
-                       f"Row Acc: {table_metrics['row_accuracy']:.4f}, "
-                       f"Structure Acc: {table_metrics['structure_accuracy']:.4f}")
-        elif task == "formula":
-            formula_metrics = evaluate_formula_accuracy(refs, hyps)
-            task_metrics[task].update({"formula_metrics": formula_metrics})
-            logger.info(f"Formula Task - Symbol Acc: {formula_metrics['symbol_accuracy']:.4f}, "
-                       f"Structure Acc: {formula_metrics['structure_accuracy']:.4f}")
-        elif task == "handwriting":
-            handwriting_metrics = evaluate_handwriting_accuracy(refs, hyps)
-            task_metrics[task].update({"handwriting_metrics": handwriting_metrics})
-            logger.info(f"Handwriting Task - CER: {handwriting_metrics['cer']:.4f}, "
-                       f"Normalized Dist: {handwriting_metrics['normalized_edit_distance']:.4f}")
-
-        logger.info(f"Task '{task}': CER={base_metrics['cer']:.4f}, WER={base_metrics['wer']:.4f}, EM={base_metrics['exact_match']:.4f}")
-
-    return task_metrics
+# Function removed - duplicate of calculate_task_accuracy at line 132
 
 
 @torch.no_grad()
@@ -857,7 +805,7 @@ def main():
     # 自动检测设
     if args.device is None:
         try:
-            import torch_npu
+            import torch_npu  # pylint: disable=import-error,unused-import
             if torch.npu.is_available():
                 args.device = "npu:0"
                 logger.info("Auto-detected NPU device")

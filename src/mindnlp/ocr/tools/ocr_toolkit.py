@@ -11,7 +11,6 @@ import sys
 import argparse
 import json
 import logging
-from pathlib import Path
 from typing import Optional
 
 import torch
@@ -154,7 +153,6 @@ def train_with_preextracted(
                     else:
                         numpy_state_dict[key] = value
 
-                import numpy as np
                 weights_file = os.path.join(output_dir, "adapter_model.npz")
                 np.savez(weights_file, **numpy_state_dict)
 

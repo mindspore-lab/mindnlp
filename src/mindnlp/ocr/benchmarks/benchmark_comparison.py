@@ -261,10 +261,10 @@ def print_comparison_summary(results: Dict[str, Any]):
     # 3. 长文本推理不 OOM
     criteria_total += 1
     if 'memory_peak_mb' in optimized['long_sequence']:
-        print(f"  ✅ Long sequence inference completed without OOM")
+        print("  ✅ Long sequence inference completed without OOM")
         criteria_passed += 1
     else:
-        print(f"  ⚠️  Memory info not available")
+        print("  ⚠️  Memory info not available")
 
     print(f"\n📈 Overall: {criteria_passed}/{criteria_total} criteria passed")
     print("="*80)

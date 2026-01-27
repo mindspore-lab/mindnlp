@@ -88,8 +88,8 @@ if '--cpu_offload' in sys.argv:
             print("✓ Patched mindtorch.Tensor.random_ for CUDA compatibility")
 
             # Patch torch.arange to always use CPU device
-            import mindtorch as torch
-            original_arange = torch.arange
+            import mindtorch as mt  # pylint: disable=reimported
+            original_arange = mt.arange
 
             def patched_arange(*args, **kwargs):
                 """强制所有 arange 调用使用 CPU 设备，避免 device:3 路由错误"""
@@ -98,15 +98,15 @@ if '--cpu_offload' in sys.argv:
                     kwargs['device'] = 'cpu'
                 return original_arange(*args, **kwargs)
 
-            torch.arange = patched_arange
+            mt.arange = patched_arange
             print("✓ Patched torch.arange to always use CPU device")
 
             # Patch torch.split to handle mindtorch edge cases
-            original_split = torch.split
+            original_split = mt.split
 
             def patched_split(tensor, split_size_or_sections, dim=0):
                 """修复 torch.split 在 mindtorch 中的兼容性问题 - 完全绕过"""
-                import sys
+                import sys  # pylint: disable=reimported
 
                 # 获取 split_size_or_sections 的实际类型和值
                 if hasattr(split_size_or_sections, 'tolist'):
@@ -144,7 +144,7 @@ if '--cpu_offload' in sys.argv:
                 # 正常路径
                 return original_split(tensor, split_list if isinstance(split_list, (list, tuple)) else split_size_or_sections, dim)
 
-            torch.split = patched_split
+            mt.split = patched_split
             print("✓ Patched torch.split with forced debug and manual chunking")
 
         except Exception as e:
@@ -476,7 +476,7 @@ def train_lora(
 
             def patched_vision_attn_forward(self, hidden_states, cu_seqlens, rotary_pos_emb):
                 """绕过 mindtorch split 问题的 vision attention forward"""
-                import torch
+                import torch  # pylint: disable=reimported,unused-import
 
                 seq_length = hidden_states.shape[0]
                 q, k, v = self.qkv(hidden_states).reshape(seq_length, 3, self.num_heads, -1).permute(1, 0, 2, 3).unbind(0)
@@ -535,7 +535,7 @@ def train_lora(
                 # 关键：切换mindspore context回Ascend
                 mindspore.set_context(device_target='Ascend', device_id=0)
                 if rank == 0:
-                    logger.info(f"✓ MindSpore context restored to Ascend (device_id=0)")
+                    logger.info("✓ MindSpore context restored to Ascend (device_id=0)")
 
                 from mindtorch._bind import set_default_device
                 set_default_device(device)
@@ -560,7 +560,7 @@ def train_lora(
                 trainable_params.append(name)
         if rank == 0:
             logger.info(f"✓ Moved {len(trainable_params)} LoRA parameters to {device}")
-            logger.info(f"✓ Base model remains on CPU (saves ~14GB NPU memory)")
+            logger.info("✓ Base model remains on CPU (saves ~14GB NPU memory)")
     else:
         # 非offload模式：整个模型移动到device
         if rank == 0:
@@ -683,7 +683,7 @@ def load_lora_model(
     # 自动检测设备
     if device is None:
         try:
-            import torch_npu
+            import torch_npu  # pylint: disable=import-error,unused-import
             if torch.npu.is_available():
                 device = "npu:0"
                 logger.info("Detected NPU device")
@@ -719,9 +719,8 @@ def load_lora_model(
 
     # 加载 LoRA 权重
     logger.info(f"Loading LoRA weights from {lora_path}")
-    from pathlib import Path
-    import numpy as np
-    import os
+    from pathlib import Path  # pylint: disable=reimported
+    import numpy as np  # pylint: disable=reimported
 
     lora_path = Path(lora_path).resolve()
 
@@ -730,7 +729,7 @@ def load_lora_model(
     if adapter_file.exists():
         logger.info("Loading MindSpore format (.npz) LoRA weights")
         # 为基础模型添加LoRA配置
-        from peft import LoraConfig, get_peft_model
+        from peft import LoraConfig, get_peft_model  # pylint: disable=import-error,reimported
         import json
 
         # 读取adapter配置
