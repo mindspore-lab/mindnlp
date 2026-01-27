@@ -1,4 +1,4 @@
-"""
+﻿"""
 Benchmarking tools for OCR model performance evaluation.
 
 This package contains scripts for testing and comparing model performance:

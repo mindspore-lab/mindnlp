@@ -1,4 +1,4 @@
-"""
+﻿"""
 监控和指标路由
 """
 
@@ -20,7 +20,7 @@ def get_engine():
 async def get_stats():
     """
     获取服务统计信息
-    
+
     Returns:
         JSON格式的统计信息
     """
@@ -30,13 +30,13 @@ async def get_stats():
             "success": False,
             "error": "Engine not initialized"
         }
-    
+
     try:
         # 从engine的monitor获取统计
         if hasattr(engine, 'monitor') and engine.monitor:
             stats_data = engine.monitor.get_statistics()
             recent_metrics = engine.monitor.get_recent_metrics(count=10)
-            
+
             # 计算延迟百分位数
             if recent_metrics:
                 latencies = [m['inference_time'] for m in recent_metrics if m.get('success', True)]
@@ -51,7 +51,7 @@ async def get_stats():
                     p50 = p95 = p99 = avg = 0
             else:
                 p50 = p95 = p99 = avg = 0
-            
+
             stats = {
                 "monitor": {
                     "qps": stats_data.get('throughput', 0),
@@ -69,7 +69,7 @@ async def get_stats():
                     }
                 }
             }
-            
+
             return {
                 "success": True,
                 "data": stats
@@ -95,14 +95,14 @@ async def get_stats():
 async def get_metrics():
     """
     获取 Prometheus 格式的指标
-    
+
     Returns:
         Prometheus metrics 文本
     """
     engine = get_engine()
     if not engine:
         return "# Engine not initialized\n"
-    
+
     try:
         # 从engine获取性能监控器
         if hasattr(engine, 'monitor') and engine.monitor:
@@ -143,7 +143,7 @@ ocr_memory_mb {stats.get('current_memory_mb', 0)}
 async def reset_stats():
     """
     重置统计信息
-    
+
     Returns:
         操作结果
     """
@@ -153,7 +153,7 @@ async def reset_stats():
             "success": False,
             "error": "Engine not initialized"
         }
-    
+
     try:
         if hasattr(engine, 'monitor') and engine.monitor:
             # PerformanceMonitor没有reset方法,返回提示
@@ -178,33 +178,33 @@ async def reset_stats():
 async def detailed_health():
     """
     详细健康检查(包含统计信息)
-    
+
     Returns:
         详细的健康状态
     """
     engine = get_engine()
-    
+
     if not engine:
         return {
             "status": "unhealthy",
             "reason": "Engine not initialized",
             "components": {}
         }
-    
+
     try:
         components = {}
-        
+
         # 检查engine状态
         components['engine'] = {
             "status": "healthy" if engine else "unhealthy",
             "model": getattr(engine, 'model_name', 'unknown') if engine else None
         }
-        
+
         # 检查monitor状态
         if hasattr(engine, 'monitor') and engine.monitor:
             stats_data = engine.monitor.get_statistics()
             recent_metrics = engine.monitor.get_recent_metrics(count=10)
-            
+
             # 计算延迟百分位数
             if recent_metrics:
                 latencies = [m['inference_time'] for m in recent_metrics if m.get('success', True)]
@@ -219,7 +219,7 @@ async def detailed_health():
                     p50 = p95 = p99 = avg = 0
             else:
                 p50 = p95 = p99 = avg = 0
-            
+
             components['monitor'] = {
                 "status": "healthy",
                 "qps": stats_data.get('throughput', 0),
@@ -227,7 +227,7 @@ async def detailed_health():
                 "p95_latency": p95,
                 "total_requests": stats_data.get('total_requests', 0)
             }
-            
+
             stats = {
                 "monitor": stats_data,
                 "latency": {
@@ -243,16 +243,16 @@ async def detailed_health():
                 "message": "Running in simplified mode"
             }
             stats = {}
-        
+
         # 判断整体状态
         overall_status = "healthy"
-        
+
         return {
             "status": overall_status,
             "components": components,
             "stats": stats
         }
-        
+
     except Exception as e:
         logger.error(f"Error in detailed health check: {e}", exc_info=True)
         return {

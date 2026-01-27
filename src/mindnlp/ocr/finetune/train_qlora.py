@@ -1,10 +1,9 @@
-"""
+﻿"""
 Qwen2-VL QLoRA Fine-tuning Script
 使用 4-bit 量化 + LoRA 实现低显存微调
 """
 import argparse
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -35,27 +34,27 @@ def create_quantization_config(
 ) -> BitsAndBytesConfig:
     """
     创建量化配置
-    
+
     Args:
         load_in_4bit: 是否使用 4-bit 量化
         bnb_4bit_compute_dtype: 计算数据类型
         bnb_4bit_quant_type: 量化类型 (nf4 or fp4)
         bnb_4bit_use_double_quant: 是否使用双重量化
-        
+
     Returns:
         BitsAndBytesConfig 实例
     """
     compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
-    
+
     config = BitsAndBytesConfig(
         load_in_4bit=load_in_4bit,
         bnb_4bit_compute_dtype=compute_dtype,
         bnb_4bit_quant_type=bnb_4bit_quant_type,
         bnb_4bit_use_double_quant=bnb_4bit_use_double_quant,
     )
-    
+
     logger.info(f"Quantization config created: 4bit={load_in_4bit}, dtype={bnb_4bit_compute_dtype}, quant_type={bnb_4bit_quant_type}")
-    
+
     return config
 
 
@@ -67,13 +66,13 @@ def create_lora_config(
 ) -> LoraConfig:
     """
     创建 LoRA 配置
-    
+
     Args:
         r: LoRA rank
         lora_alpha: LoRA alpha
         lora_dropout: Dropout 比例
         target_modules: 目标模块列表
-        
+
     Returns:
         LoraConfig 实例
     """
@@ -83,7 +82,7 @@ def create_lora_config(
             "q_proj", "k_proj", "v_proj", "o_proj",
             "gate_proj", "up_proj", "down_proj",
         ]
-    
+
     config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         inference_mode=False,
@@ -93,9 +92,9 @@ def create_lora_config(
         target_modules=target_modules,
         bias="none",
     )
-    
+
     logger.info(f"LoRA config created: r={r}, alpha={lora_alpha}, dropout={lora_dropout}")
-    
+
     return config
 
 
@@ -134,7 +133,7 @@ def train_qlora(
 ):
     """
     执行 QLoRA 微调
-    
+
     Args:
         model_name_or_path: 预训练模型路径或名称
         data_path: 训练数据 JSON 文件路径
@@ -165,11 +164,11 @@ def train_qlora(
     """
     # 设置随机种子
     torch.manual_seed(random_seed)
-    
+
     # 创建输出目录
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logger.info("=" * 80)
     logger.info("Starting QLoRA Fine-tuning")
     logger.info("=" * 80)
@@ -179,14 +178,14 @@ def train_qlora(
     logger.info(f"Quantization: 4bit={load_in_4bit}, quant_type={bnb_4bit_quant_type}")
     logger.info(f"LoRA: r={lora_r}, alpha={lora_alpha}, dropout={lora_dropout}")
     logger.info(f"Training: epochs={num_epochs}, batch_size={batch_size}, lr={learning_rate}")
-    
+
     # 1. 加载 processor
     logger.info("Loading processor...")
     processor = AutoProcessor.from_pretrained(
         model_name_or_path,
         trust_remote_code=True
     )
-    
+
     # 2. 加载数据集
     logger.info("Loading dataset...")
     full_dataset = OCRDataset(
@@ -195,7 +194,7 @@ def train_qlora(
         max_length=max_length,
         image_folder=image_folder,
     )
-    
+
     # 分割数据集
     train_dataset, val_dataset, test_dataset = split_dataset(
         full_dataset,
@@ -204,7 +203,7 @@ def train_qlora(
         test_ratio=test_ratio,
         random_seed=random_seed,
     )
-    
+
     # 3. 创建量化配置
     logger.info("Creating quantization config...")
     quantization_config = create_quantization_config(
@@ -213,7 +212,7 @@ def train_qlora(
         bnb_4bit_quant_type=bnb_4bit_quant_type,
         bnb_4bit_use_double_quant=bnb_4bit_use_double_quant,
     )
-    
+
     # 4. 加载量化模型
     logger.info("Loading quantized model...")
     model = Qwen2VLForConditionalGeneration.from_pretrained(
@@ -222,15 +221,15 @@ def train_qlora(
         device_map="auto",
         trust_remote_code=True
     )
-    
+
     # 准备模型用于 k-bit 训练
     model = prepare_model_for_kbit_training(model)
-    
+
     # 启用梯度检查点
     if gradient_checkpointing:
         model.gradient_checkpointing_enable()
         logger.info("Gradient checkpointing enabled")
-    
+
     # 5. 创建 LoRA 模型
     logger.info("Creating LoRA model...")
     lora_config = create_lora_config(
@@ -238,17 +237,17 @@ def train_qlora(
         lora_alpha=lora_alpha,
         lora_dropout=lora_dropout,
     )
-    
+
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
-    
+
     # 6. 创建数据整理器
     data_collator = OCRDataCollator(
         processor=processor,
         padding=True,
         max_length=max_length,
     )
-    
+
     # 7. 配置训练参数
     training_args = TrainingArguments(
         output_dir=str(output_dir),
@@ -274,7 +273,7 @@ def train_qlora(
         report_to=["tensorboard"],
         seed=random_seed,
     )
-    
+
     # 8. 创建 Trainer
     trainer = Trainer(
         model=model,
@@ -283,25 +282,25 @@ def train_qlora(
         eval_dataset=val_dataset,
         data_collator=data_collator,
     )
-    
+
     # 9. 开始训练
     logger.info("Starting training...")
     trainer.train()
-    
+
     # 10. 保存最终模型
     final_output_dir = output_dir / "final_model"
     trainer.save_model(str(final_output_dir))
     processor.save_pretrained(str(final_output_dir))
-    
+
     logger.info(f"Model saved to {final_output_dir}")
     logger.info("Training completed!")
-    
+
     return model, processor
 
 
 def main():
     parser = argparse.ArgumentParser(description="Qwen2-VL QLoRA Fine-tuning")
-    
+
     # 基础参数
     parser.add_argument("--model_name_or_path", type=str, required=True,
                         help="预训练模型路径或名称")
@@ -311,7 +310,7 @@ def main():
                         help="输出目录")
     parser.add_argument("--image_folder", type=str, default=None,
                         help="图片文件夹路径")
-    
+
     # 量化参数
     parser.add_argument("--load_in_4bit", action="store_true", default=True,
                         help="使用 4-bit 量化")
@@ -323,7 +322,7 @@ def main():
                         help="量化类型")
     parser.add_argument("--bnb_4bit_use_double_quant", action="store_true", default=True,
                         help="使用双重量化")
-    
+
     # LoRA 参数
     parser.add_argument("--lora_r", type=int, default=16,
                         help="LoRA rank")
@@ -331,7 +330,7 @@ def main():
                         help="LoRA alpha")
     parser.add_argument("--lora_dropout", type=float, default=0.1,
                         help="LoRA dropout")
-    
+
     # 训练参数
     parser.add_argument("--num_epochs", type=int, default=3,
                         help="训练轮数")
@@ -355,7 +354,7 @@ def main():
                         help="权重衰减")
     parser.add_argument("--no_gradient_checkpointing", action="store_true",
                         help="不使用梯度检查点")
-    
+
     # 数据集分割
     parser.add_argument("--train_ratio", type=float, default=0.8,
                         help="训练集比例")
@@ -365,9 +364,9 @@ def main():
                         help="测试集比例")
     parser.add_argument("--random_seed", type=int, default=42,
                         help="随机种子")
-    
+
     args = parser.parse_args()
-    
+
     # 执行训练
     train_qlora(
         model_name_or_path=args.model_name_or_path,

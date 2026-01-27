@@ -1,4 +1,4 @@
-"""
+﻿"""
 MindNLP OCR Module
 
 基于 Vision-Language Model 的 OCR 模块，提供文字识别、文档理解等功能。

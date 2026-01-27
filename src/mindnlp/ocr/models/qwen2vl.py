@@ -1,3 +1,4 @@
+﻿# -*- coding: utf-8 -*-
 """
 Qwen2-VL模型封装
 """
@@ -8,7 +9,7 @@ from io import BytesIO
 from typing import Any, Dict, List, Union
 import torch
 from PIL import Image
-from transformers import AutoModel, AutoTokenizer, AutoProcessor
+from transformers import AutoTokenizer, AutoProcessor
 from mindnlp.ocr.utils.cache_manager import (
     KVCacheManager, CacheConfig, get_optimal_cache_config, detect_flash_attention_support
 )
@@ -33,7 +34,7 @@ class ModelInferenceError(Exception):
 
 logger = get_logger(__name__)
 
-# 尝试导入 qwen_vl_utils，如果不存在则使用内置实现
+# 尝试导入 qwen_vl_utils，如果不存在则使用内置实
 try:
     from qwen_vl_utils import process_vision_info
     QWEN_VL_UTILS_AVAILABLE = True
@@ -60,7 +61,7 @@ class Qwen2VLModel(VLMModelBase):
             min_pixels: 最小像素数 (用于动态分辨率)
             max_pixels: 最大像素数 (用于动态分辨率)
             quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
-            quantization_config: 量化配置字典 (可选,覆盖默认配置)
+            quantization_config: 量化配置字典 (可覆盖默认配置)
             lora_weights_path: LoRA权重路径 (可选，用于加载微调模型)
             cache_config: KV Cache配置 (可选，用于优化推理性能)
         """
@@ -72,55 +73,55 @@ class Qwen2VLModel(VLMModelBase):
         self.quantization_mode = quantization_mode.lower()
         self.quantization_config = quantization_config or {}
         self.lora_weights_path = lora_weights_path
-        
+
         # 解析本地模型路径
         self.local_model_path = self._resolve_model_path(model_name)
-        
-        # 保存基础模型路径（用于 NPZ 加载模式）
+
+        # 保存基础模型路径（用NPZ 加载模式
         self.base_model_path = None
         self.is_npz_mode = False
-        
-        # 初始化 KV Cache 管理器
+
+        # 初始KV Cache 管理
         if cache_config is None:
             cache_config = get_optimal_cache_config(device, model_size_gb=7.0)
         self.cache_manager = KVCacheManager(cache_config)
         self.cache_config = cache_config
-        
+
         self.load_model()
-        
+
         # 如果指定了LoRA权重，加载LoRA
         if self.lora_weights_path:
             self.load_lora_weights(self.lora_weights_path)
-        
+
         self.load_tokenizer()  # 先加载tokenizer,processor需要它的chat_template
         self.load_processor()
-    
+
     def _resolve_model_path(self, model_name: str) -> str:
         """
-        解析模型路径,优先使用本地缓存的绝对路径
-        
+        解析模型路径,优先使用本地缓存的绝对路
+
         Args:
-            model_name: 模型名称,如 Qwen/Qwen2-VL-2B-Instruct
-            
+            model_name: 模型名称,Qwen/Qwen2-VL-2B-Instruct
+
         Returns:
-            str: 本地模型路径或原始模型名称
+            str: 本地模型路径或原始模型名
         """
         from pathlib import Path
         import os
-        
-        # 如果已经是本地路径,直接返回
+
+        # 如果已经是本地路直接返回
         if Path(model_name).exists():
             return model_name
-        
+
         # 获取HuggingFace缓存目录
         cache_dir = os.environ.get('HF_HOME') or os.environ.get('TRANSFORMERS_CACHE') or \
                    Path.home() / '.cache' / 'huggingface'
-        
-        # 转换模型名称为缓存目录格式
+
+        # 转换模型名称为缓存目录格
         model_cache_name = f"models--{model_name.replace('/', '--')}"
         model_cache_path = Path(cache_dir) / model_cache_name
-        
-        # 检查缓存是否存在
+
+        # 检查缓存是否存
         if model_cache_path.exists():
             snapshots_dir = model_cache_path / "snapshots"
             if snapshots_dir.exists():
@@ -130,26 +131,26 @@ class Qwen2VLModel(VLMModelBase):
                     local_path = str(snapshot_dirs[-1])
                     logger.info(f"Using local model path: {local_path}")
                     return local_path
-        
-        # 缓存不存在,返回原始名称
+
+        # 缓存不存返回原始名称
         logger.warning(f"Local cache not found for {model_name}, will use hub name")
         return model_name
-    
+
     def _load_from_npz(self):
         """
-        从 .npz 文件加载完整模型权重（内存优化版）
-        
-        逐个加载并替换参数，避免内存占用翻倍
+        .npz 文件加载完整模型权重（内存优化版
+
+        逐个加载并替换参数，避免内存占用翻
         """
         import os
         import numpy as np
         import gc
-        
-        # 标记为 NPZ 加载模式
+
+        # 标记NPZ 加载模式
         self.is_npz_mode = True
-        # 设置基础模型路径（用于加载 tokenizer 和 processor）
+        # 设置基础模型路径（用于加tokenizer processor
         self.base_model_path = "Qwen/Qwen2-VL-7B-Instruct"
-        
+
         # 确定 .npz 文件路径
         if self.local_model_path.endswith('.npz'):
             npz_file = self.local_model_path
@@ -157,17 +158,17 @@ class Qwen2VLModel(VLMModelBase):
         else:
             npz_file = os.path.join(self.local_model_path, 'adapter_model.npz')
             base_model_name = "Qwen/Qwen2-VL-7B-Instruct"
-        
+
         logger.info(f"Loading model from NPZ file: {npz_file}")
         logger.info(f"File size: {os.path.getsize(npz_file) / (1024**3):.2f} GB")
-        
+
         try:
             from transformers import Qwen2VLForConditionalGeneration, AutoConfig
-            
-            # 1. 确定目标精度和设备
+
+            # 1. 确定目标精度和设
             torch_dtype = torch.float16 if "npu" in self.device or "cuda" in self.device else torch.float32
             logger.info(f"Target device: {self.device}, dtype: {torch_dtype}")
-            
+
             # 2. 创建空模型架构并直接放到目标设备
             logger.info("Creating model architecture on target device...")
             config = AutoConfig.from_pretrained(
@@ -175,27 +176,27 @@ class Qwen2VLModel(VLMModelBase):
                 trust_remote_code=True,
                 local_files_only=False
             )
-            
-            # NPU 特殊配置：强制使用 eager attention（NPU 不支持 SDPA）和 FP16（不支持 BF16）
+
+            # NPU 特殊配置：强制使eager attention（NPU 不支SDPA）和 FP16（不支持 BF16
             if "npu" in self.device:
                 logger.info("Configuring for NPU...")
                 config._attn_implementation = "eager"  # 关键：NPU不支持SDPA
                 logger.info("Set attn_implementation='eager' for NPU compatibility")
-            
-            # 创建模型前：为 NPU 强制设置 FP16 默认 dtype（防止 BF16）
+
+            # 创建模型前：NPU 强制设置 FP16 默认 dtype（防BF16
             original_dtype = None
             if "npu" in self.device:
                 original_dtype = torch.get_default_dtype()
                 torch.set_default_dtype(torch.float16)
                 logger.info("Set default_dtype=float16 for NPU (BF16 not supported)")
-            
-            # 创建空模型（不使用 torch.device context manager，因为它可能重置 dtype）
+
+            # 创建空模型（不使torch.device context manager，因为它可能重置 dtype
             self.model = Qwen2VLForConditionalGeneration(config)
-            
-            # NPU: 处理 BF16 参数（NPU 不支持直接 BF16→FP16 转换）
+
+            # NPU: 处理 BF16 参数（NPU 不支持直BF16→FP16 转换
             if "npu" in self.device:
                 logger.info("Converting BF16 parameters to FP16 for NPU compatibility...")
-                # 先转到 CPU FP32（避免 NPU 上的 BF16 转换错误），然后再转到 NPU FP16
+                # 先转CPU FP32（避NPU 上的 BF16 转换错误），然后再转NPU FP16
                 for name, param in self.model.named_parameters():
                     if param.dtype == torch.bfloat16:
                         logger.debug(f"Converting BF16 parameter: {name}")
@@ -205,32 +206,32 @@ class Qwen2VLModel(VLMModelBase):
                         logger.debug(f"Converting BF16 buffer: {name}")
                         buf.data = buf.data.to('cpu', dtype=torch.float32).to(self.device, dtype=torch_dtype)
                 logger.info("BF16 conversion completed")
-            
+
             # 移动到目标设备并转换精度
             self.model = self.model.to(self.device, dtype=torch_dtype)
-            
-            # NPU: 保持 FP16 为默认 dtype（不恢复），确保后续加载也使用 FP16
+
+            # NPU: 保持 FP16 为默dtype（不恢复），确保后续加载也使FP16
             if "npu" in self.device:
                 logger.info("Keeping default_dtype=float16 for subsequent loads")
-            
+
             logger.info(f"Empty model created on {self.device}")
-            
-            # 3. 逐个加载并替换参数（内存优化）
+
+            # 3. 逐个加载并替换参数（内存优化
             logger.info("Loading and replacing weights one by one...")
             data = np.load(npz_file)
             total_weights = len(data.files)
             logger.info(f"Found {total_weights} weight tensors")
-            
-            # 构建参数名映射
+
+            # 构建参数名映
             param_dict = dict(self.model.named_parameters())
             buffer_dict = dict(self.model.named_buffers())
-            
+
             # 分组权重：base_layer、lora_A、lora_B
             base_weights = {}
             lora_a_weights = {}
             lora_b_weights = {}
-            
-            # 先收集所有权重
+
+            # 先收集所有权
             for npz_key in data.files:
                 if 'lora_A.default' in npz_key:
                     # 提取模块名：base_model.model.xxx.lora_A.default.weight -> xxx
@@ -251,79 +252,79 @@ class Qwen2VLModel(VLMModelBase):
                     # 其他权重（非 LoRA 层）: base_model.model.xxx -> xxx
                     module_name = npz_key.replace('base_model.model.', '')
                     base_weights[module_name] = data[npz_key]
-            
+
             logger.info(f"Found {len(base_weights)} base weights, {len(lora_a_weights)} LoRA-A, {len(lora_b_weights)} LoRA-B")
-            
+
             loaded_count = 0
             merged_count = 0
             idx = 0
-            
-            # 加载基础权重和合并 LoRA
+
+            # 加载基础权重和合LoRA
             for module_name, base_weight in base_weights.items():
                 idx += 1
-                
-                # 查找对应的模型参数
+
+                # 查找对应的模型参
                 target_param = None
                 if module_name in param_dict:
                     target_param = param_dict[module_name]
                 elif module_name in buffer_dict:
                     target_param = buffer_dict[module_name]
-                
+
                 if target_param is not None:
                     # 转换基础权重
                     torch_weight = torch.from_numpy(base_weight).to(dtype=torch_dtype)
-                    
-                    # 检查是否有对应的 LoRA 权重
+
+                    # 检查是否有对应LoRA 权重
                     # module_name 格式: language_model.layers.0.self_attn.q_proj.weight
-                    # 需要去掉 .weight 后缀来匹配 LoRA 键
+                    # 需要去.weight 后缀来匹配LoRA
                     module_base_name = module_name.replace('.weight', '').replace('.bias', '')
-                    
-                    # 只对 2D 权重（weight 矩阵）合并 LoRA，跳过 1D 权重（bias）
-                    if (module_base_name in lora_a_weights and 
-                        module_base_name in lora_b_weights and 
-                        len(base_weight.shape) == 2):  # 确保是 2D 权重
-                        
+
+                    # 只对 2D 权重（weight 矩阵）合并LoRA，跳过1D 权重（bias）
+                    if (module_base_name in lora_a_weights and
+                        module_base_name in lora_b_weights and
+                        len(base_weight.shape) == 2):  # 确保是2D 权重
+
                         # 获取 LoRA 权重（保持为 numpy，先检查形状）
                         lora_a_np = lora_a_weights[module_base_name]
                         lora_b_np = lora_b_weights[module_base_name]
-                        
-                        # 验证形状是否匹配（LoRA 也应该是 2D）
+
+                        # 验证形状是否匹配（LoRA 也应该是 2D
                         if len(lora_a_np.shape) == 2 and len(lora_b_np.shape) == 2:
                             lora_a = torch.from_numpy(lora_a_np).to(dtype=torch_dtype)
                             lora_b = torch.from_numpy(lora_b_np).to(dtype=torch_dtype)
-                            
+
                             # 合并 LoRA: weight = base + lora_B @ lora_A
                             # LoRA 默认 scaling = lora_alpha / r，通常 = 1.0
                             lora_delta = torch.matmul(lora_b, lora_a)
                             torch_weight = torch_weight + lora_delta
-                            
+
                             del lora_a, lora_b, lora_delta, lora_a_np, lora_b_np
                             merged_count += 1
-                    
+
                     # 移动到目标设备并替换参数
                     with torch.no_grad():
                         target_param.copy_(torch_weight.to(self.device))
-                    
+
                     # 立即释放临时内存
                     del base_weight, torch_weight
                     loaded_count += 1
-                    
-                    # 每 100 个参数打印一次进度
+
+                    # 100 个参数打印一次进
                     if idx % 100 == 0:
                         logger.info(f"Progress: {idx}/{len(base_weights)} ({loaded_count} loaded, {merged_count} merged)")
                         gc.collect()  # 强制垃圾回收
                 else:
                     logger.warning(f"Parameter not found in model: {module_name}")
-            
-            logger.info(f"✓ Loaded {loaded_count} weights ({merged_count} LoRA merged)")
-            
-            # 4. 清理和优化
+
+            logger.info(f"Loaded {loaded_count} weights ({merged_count} LoRA merged)")
+
+            # 4. 清理和优
             del data
             gc.collect()
-            
+
             # 设置评估模式
             self.model.eval()
-            
+
             # NPU 优化
             if "npu" in self.device:
                 try:
@@ -332,28 +333,28 @@ class Qwen2VLModel(VLMModelBase):
                     logger.info("NPU optimization: JIT compile disabled")
                 except Exception as e:
                     logger.warning(f"NPU optimization setup failed: {e}")
-            
+
             precision_info = "FP32" if torch_dtype == torch.float32 else "FP16"
-            logger.info(f"✅ Model successfully loaded with {precision_info} precision")
+            logger.info(f"Model successfully loaded with {precision_info} precision")
             logger.info(f"Model device: {next(self.model.parameters()).device}")
-            
+
         except Exception as e:
             logger.error(f"Failed to load model from NPZ: {e}")
             import traceback
             logger.error(traceback.format_exc())
             raise ModelLoadingError(f"NPZ loading failed: {e}")
-    
+
     def _get_quantization_config(self):
         """
         根据量化模式生成BitsAndBytesConfig
-        
+
         Returns:
             BitsAndBytesConfig or None: 量化配置对象
         """
         if self.quantization_mode == "none" or self.quantization_mode == "fp16":
-            # FP16 不使用 bitsandbytes, 直接通过 torch_dtype 指定
+            # FP16 不使bitsandbytes, 直接通过 torch_dtype 指定
             return None
-        
+
         try:
             from transformers import BitsAndBytesConfig
         except ImportError:
@@ -362,7 +363,7 @@ class Qwen2VLModel(VLMModelBase):
                 "bitsandbytes is required for INT8/INT4 quantization. "
                 "Install it with: pip install bitsandbytes"
             )
-        
+
         if self.quantization_mode == "int8":
             # INT8 量化配置 (LLM.int8())
             logger.info("Configuring INT8 quantization (LLM.int8())")
@@ -372,11 +373,11 @@ class Qwen2VLModel(VLMModelBase):
                 llm_int8_skip_modules=self.quantization_config.get('int8_skip_modules', None),
             )
             return config
-        
+
         elif self.quantization_mode == "int4":
             # INT4 量化配置 (NF4/FP4)
             logger.info("Configuring INT4 quantization (NF4)")
-            
+
             # 解析计算数据类型
             compute_dtype_str = self.quantization_config.get('int4_compute_dtype', 'float16')
             if hasattr(torch, compute_dtype_str):
@@ -384,7 +385,7 @@ class Qwen2VLModel(VLMModelBase):
             else:
                 logger.warning(f"Unknown compute dtype: {compute_dtype_str}, using float16")
                 compute_dtype = torch.float16
-            
+
             config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_compute_dtype=compute_dtype,
@@ -392,7 +393,7 @@ class Qwen2VLModel(VLMModelBase):
                 bnb_4bit_use_double_quant=self.quantization_config.get('int4_use_double_quant', True),
             )
             return config
-        
+
         else:
             logger.warning(f"Unknown quantization mode: {self.quantization_mode}, using none")
             return None
@@ -400,29 +401,29 @@ class Qwen2VLModel(VLMModelBase):
     def load_model(self):
         """
         加载Qwen2-VL模型 (支持量化和从.npz加载)
-        
+
         Raises:
             ModelLoadingError: 模型加载失败
         """
         try:
             # 检查是否是 .npz 文件（完整模型权重）
             if self.local_model_path.endswith('.npz') or \
-               (os.path.isdir(self.local_model_path) and 
+               (os.path.isdir(self.local_model_path) and
                 os.path.exists(os.path.join(self.local_model_path, 'adapter_model.npz'))):
                 self._load_from_npz()
                 return
-            
+
             logger.info(f"Loading Qwen2-VL model: {self.model_name} with quantization: {self.quantization_mode}")
-            
+
             # 获取量化配置
             quantization_config = self._get_quantization_config()
-            
+
             # 确定 torch_dtype
             if self.quantization_mode == "fp16":
                 torch_dtype = torch.float16
                 logger.info("Using FP16 precision")
             elif self.quantization_mode in ["int8", "int4"]:
-                # bitsandbytes 量化时, torch_dtype 应该是None或与bnb_4bit_compute_dtype一致
+                # bitsandbytes 量化 torch_dtype 应该是None或与bnb_4bit_compute_dtype一
                 torch_dtype = torch.float16  # 默认使用 float16 作为基础类型
                 logger.info(f"Using {self.quantization_mode.upper()} quantization with bitsandbytes")
             elif self.device == "cpu":
@@ -434,35 +435,35 @@ class Qwen2VLModel(VLMModelBase):
                 logger.info("Using FP16 precision by default (GPU/NPU)")
             else:
                 torch_dtype = torch.float32
-            
+
             # Qwen2-VL 官方推荐的加载方式：
             # 使用 Qwen2VLForConditionalGeneration 而非 AutoModel
             try:
-                # 方法1：尝试直接导入 Qwen2VLForConditionalGeneration
+                # 方法1：尝试直接导Qwen2VLForConditionalGeneration
                 from transformers import Qwen2VLForConditionalGeneration
-                
+
                 # 构建加载参数
                 load_kwargs = {
                     "torch_dtype": torch_dtype,
                     "low_cpu_mem_usage": True,
                     "local_files_only": True,
                 }
-                
+
                 # 添加量化配置
                 if quantization_config is not None:
                     load_kwargs["quantization_config"] = quantization_config
-                    load_kwargs["device_map"] = "auto"  # bitsandbytes 需要 device_map
+                    load_kwargs["device_map"] = "auto"  # bitsandbytes 需device_map
                     logger.info(f"Quantization config: {quantization_config}")
                 else:
-                    # 非量化模式,手动指定设备
+                    # 非量化模手动指定设备
                     load_kwargs["device_map"] = None
-                
+
                 # NPU 特殊处理
                 if "npu" in self.device:
                     logger.info("Setting attn_implementation='eager' for NPU (SDPA not supported)")
                     load_kwargs["attn_implementation"] = "eager"  # 关键：NPU不支持SDPA
-                    load_kwargs["use_cache"] = True  # 启用 KV cache 加速推理
-                # CUDA 设备：尝试使用 Flash Attention
+                    load_kwargs["use_cache"] = True  # 启用 KV cache 加速推
+                # CUDA 设备：尝试使Flash Attention
                 elif "cuda" in self.device and self.cache_config.enable_flash_attention:
                     supported, reason = detect_flash_attention_support()
                     if supported:
@@ -477,40 +478,40 @@ class Qwen2VLModel(VLMModelBase):
                     # 默认使用 eager 实现
                     load_kwargs["attn_implementation"] = "eager"
                     load_kwargs["use_cache"] = True
-                
+
                 # 加载模型
                 self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                     self.local_model_path,
                     **load_kwargs
                 )
-                
-                # 如果没有使用 device_map="auto", 手动移动到目标设备
+
+                # 如果没有使用 device_map="auto", 手动移动到目标设
                 if load_kwargs["device_map"] is None:
                     self.model = self.model.to(self.device)
-                
+
                 # NPU 性能优化
                 if "npu" in self.device:
                     try:
                         import torch_npu
-                        torch_npu.npu.set_compile_mode(jit_compile=False)  # 禁用JIT避免首次推理慢
+                        torch_npu.npu.set_compile_mode(jit_compile=False)  # 禁用JIT避免首次推理
                         logger.info("NPU optimization: JIT compile disabled for faster first inference")
                     except Exception as e:
                         logger.warning(f"NPU optimization setup failed: {e}")
-                
+
                 logger.info(f"Loaded with Qwen2VLForConditionalGeneration on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
-                
+
             except ImportError:
-                # 方法2：使用 trust_remote_code 动态导入
+                # 方法2：使trust_remote_code 动态导
                 logger.info("Qwen2VLForConditionalGeneration not in transformers, trying trust_remote_code...")
                 from transformers import AutoConfig, AutoModelForVision2Seq
-                
+
                 config = AutoConfig.from_pretrained(
                     self.model_name,
                     trust_remote_code=True
                 )
                 if config.architectures:
                     logger.info(f"Model architecture: {config.architectures[0]}")
-                
+
                 # 构建加载参数
                 load_kwargs = {
                     "trust_remote_code": True,
@@ -518,20 +519,20 @@ class Qwen2VLModel(VLMModelBase):
                     "low_cpu_mem_usage": True,
                     "local_files_only": True,
                 }
-                
+
                 # 添加量化配置
                 if quantization_config is not None:
                     load_kwargs["quantization_config"] = quantization_config
                     load_kwargs["device_map"] = "auto"
                 else:
                     load_kwargs["device_map"] = None
-                
+
                 # NPU 特殊处理
                 if "npu" in self.device:
                     logger.info("Setting attn_implementation='eager' for NPU")
                     load_kwargs["attn_implementation"] = "eager"
                     load_kwargs["use_cache"] = True
-                # CUDA 设备：尝试使用 Flash Attention
+                # CUDA 设备：尝试使Flash Attention
                 elif "cuda" in self.device and self.cache_config.enable_flash_attention:
                     supported, reason = detect_flash_attention_support()
                     if supported:
@@ -545,28 +546,28 @@ class Qwen2VLModel(VLMModelBase):
                 else:
                     load_kwargs["attn_implementation"] = "eager"
                     load_kwargs["use_cache"] = True
-                
+
                 self.model = AutoModelForVision2Seq.from_pretrained(
                     self.local_model_path,
                     **load_kwargs
                 )
-                
+
                 # 手动移动设备
                 if load_kwargs["device_map"] is None:
                     self.model = self.model.to(self.device)
-                
+
                 logger.info(f"Loaded with AutoModelForVision2Seq on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
-            
+
             self.model.eval()
-            
+
             # 记录量化信息
             if hasattr(self.model, 'is_loaded_in_8bit') and self.model.is_loaded_in_8bit:
-                logger.info("✅ Model successfully loaded with INT8 quantization")
+                logger.info("Model successfully loaded with INT8 quantization")
             elif hasattr(self.model, 'is_loaded_in_4bit') and self.model.is_loaded_in_4bit:
-                logger.info("✅ Model successfully loaded with INT4 quantization")
+                logger.info("Model successfully loaded with INT4 quantization")
             else:
-                logger.info(f"✅ Model successfully loaded with {self.quantization_mode.upper()} precision")
-            
+                logger.info(f"Model successfully loaded with {self.quantization_mode.upper()} precision")
+
             logger.info(f"Qwen2-VL model loaded successfully (type: {type(self.model).__name__}, has_generate: {hasattr(self.model, 'generate')})")
             return self.model
         except ImportError as e:
@@ -601,19 +602,19 @@ class Qwen2VLModel(VLMModelBase):
     def load_processor(self):
         """
         加载Qwen2-VL processor
-        
+
         Raises:
             ModelLoadingError: Processor加载失败
         """
         try:
-            # 在 NPZ 模式下，使用基础模型路径加载 processor
+            # NPZ 模式下，使用基础模型路径加载 processor
             if self.is_npz_mode and self.base_model_path:
                 logger.info(f"Loading Qwen2-VL processor from base model: {self.base_model_path}")
                 processor_path = self.base_model_path
             else:
                 logger.info(f"Loading Qwen2-VL processor: {self.model_name}")
                 processor_path = self.local_model_path
-            
+
             # 只从本地加载,不再尝试在线加载
             self.processor = AutoProcessor.from_pretrained(
                 processor_path,
@@ -623,7 +624,7 @@ class Qwen2VLModel(VLMModelBase):
                 local_files_only=True
             )
             logger.info("Processor loaded from local cache")
-            
+
             # 确保processor有chat_template,如果没有则从tokenizer获取
             if not hasattr(self.processor, 'chat_template') or self.processor.chat_template is None:
                 logger.info("Processor missing chat_template, copying from tokenizer")
@@ -633,11 +634,11 @@ class Qwen2VLModel(VLMModelBase):
                     logger.info("Chat template copied from tokenizer to processor")
                 else:
                     logger.warning("Tokenizer also missing chat_template")
-                
+
             logger.info(f"Qwen2-VL processor loaded successfully (min_pixels={self.min_pixels}, max_pixels={self.max_pixels})")
             return self.processor
         except ModelLoadingError:
-            # 重新抛出我们自己的异常
+            # 重新抛出我们自己的异
             raise
         except Exception as e:
             logger.error(f"Unexpected error loading processor: {e}", exc_info=True)
@@ -650,19 +651,19 @@ class Qwen2VLModel(VLMModelBase):
     def load_tokenizer(self):
         """
         加载Qwen2-VL tokenizer
-        
+
         Raises:
             ModelLoadingError: Tokenizer加载失败
         """
         try:
-            # 在 NPZ 模式下，使用基础模型路径加载 tokenizer
+            # NPZ 模式下，使用基础模型路径加载 tokenizer
             if self.is_npz_mode and self.base_model_path:
                 logger.info(f"Loading Qwen2-VL tokenizer from base model: {self.base_model_path}")
                 tokenizer_path = self.base_model_path
             else:
                 logger.info(f"Loading Qwen2-VL tokenizer: {self.model_name}")
                 tokenizer_path = self.local_model_path
-            
+
             # 只从本地加载
             self.tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_path,
@@ -670,7 +671,7 @@ class Qwen2VLModel(VLMModelBase):
                 local_files_only=True
             )
             logger.info("Tokenizer loaded from local cache")
-            
+
             logger.info("Qwen2-VL tokenizer loaded successfully")
             return self.tokenizer
         except Exception as e:
@@ -679,7 +680,7 @@ class Qwen2VLModel(VLMModelBase):
 
     def _process_image_input(self, image_input: Union[str, bytes, Image.Image]) -> str:
         """
-        处理不同格式的图像输入
+        处理不同格式的图像输
 
         Args:
             image_input: 图像输入 (本地路径、URL、base64、PIL Image)
@@ -706,11 +707,11 @@ class Qwen2VLModel(VLMModelBase):
                     img_str = base64.b64encode(image_input).decode()
                     return f"data:image/jpeg;base64,{img_str}"
             except Exception:
-                # 如果不是 base64，作为原始图像处理
+                # 如果不是 base64，作为原始图像处
                 img_str = base64.b64encode(image_input).decode()
                 return f"data:image/jpeg;base64,{img_str}"
 
-        # 字符串 (路径或URL或base64)
+        # 字符(路径或URL或base64)
         if isinstance(image_input, str):
             # 检查是否是 data URI
             if image_input.startswith('data:image'):
@@ -722,14 +723,14 @@ class Qwen2VLModel(VLMModelBase):
             elif image_input.startswith('file://'):
                 return image_input
             else:
-                # 假定是本地文件路径
+                # 假定是本地文件路
                 return f"file://{image_input}"
 
         raise ValueError(f"Unsupported image input type: {type(image_input)}")
 
     def _builtin_process_vision_info(self, messages: List[Dict]) -> tuple:
         """
-        内置的视觉信息处理 (当 qwen_vl_utils 不可用时使用)
+        内置的视觉信息处(qwen_vl_utils 不可用时使用)
 
         Args:
             messages: 消息列表
@@ -761,7 +762,7 @@ class Qwen2VLModel(VLMModelBase):
         准备模型输入
 
         Args:
-            messages: 消息列表，格式参考 Qwen2-VL
+            messages: 消息列表，格式参Qwen2-VL
                 [
                     {
                         "role": "user",
@@ -802,7 +803,7 @@ class Qwen2VLModel(VLMModelBase):
                 return_tensors="pt"
             )
 
-            # 4. 移动到目标设备（优化：使用 non_blocking 异步传输）
+            # 4. 移动到目标设备（优化：使non_blocking 异步传输
             is_npu = "npu" in self.device
             inputs = {k: v.to(self.device, non_blocking=is_npu) for k, v in inputs.items()}
 
@@ -815,17 +816,17 @@ class Qwen2VLModel(VLMModelBase):
 
     def decode_output(self, generated_ids: torch.Tensor, input_ids: torch.Tensor) -> List[str]:
         """
-        解码生成的输出
+        解码生成的输
 
         Args:
-            generated_ids: 生成的 token IDs [batch_size, seq_len]
-            input_ids: 输入的 token IDs [batch_size, seq_len]
+            generated_ids: 生成token IDs [batch_size, seq_len]
+            input_ids: 输入token IDs [batch_size, seq_len]
 
         Returns:
             解码后的文本列表
         """
         try:
-            # Token trimming: 只保留新生成的 tokens
+            # Token trimming: 只保留新生成tokens
             generated_ids_trimmed = [
                 out_ids[len(in_ids):]
                 for in_ids, out_ids in zip(input_ids, generated_ids)
@@ -847,12 +848,12 @@ class Qwen2VLModel(VLMModelBase):
 
     def generate(self, inputs: Dict[str, Any], **kwargs) -> List[str]:
         """
-        生成输出并解码
+        生成输出并解
 
         Args:
             inputs: 模型输入字典 (来自 prepare_inputs)
             **kwargs: 生成参数
-                - max_new_tokens: 最大生成token数
+                - max_new_tokens: 最大生成token
                 - do_sample: 是否采样
                 - temperature: 温度参数
                 - top_p: top-p 采样
@@ -861,19 +862,19 @@ class Qwen2VLModel(VLMModelBase):
         Returns:
             解码后的文本列表
         """
-        # 设置默认生成参数（OCR 优化）
+        # 设置默认生成参数（OCR 优化
         do_sample = kwargs.get('do_sample', False)
         use_cache = kwargs.get('use_cache', self.cache_config.enable_kv_cache)
-        
+
         generation_config = {
             'max_new_tokens': kwargs.get('max_new_tokens', 512),  # OCR 通常 512 足够
             'do_sample': do_sample,
             'use_cache': use_cache,  # 从配置或参数读取
             'num_beams': 1,  # 禁用 beam search 提升速度
-            'repetition_penalty': 1.0,  # 禁用重复惩罚提速
+            'repetition_penalty': 1.0,  # 禁用重复惩罚提
         }
-        
-        # 只在采样时添加 temperature 和 top_p
+
+        # 只在采样时添temperature top_p
         if do_sample:
             generation_config['temperature'] = kwargs.get('temperature', 0.7)
             generation_config['top_p'] = kwargs.get('top_p', 0.9)
@@ -885,35 +886,35 @@ class Qwen2VLModel(VLMModelBase):
         try:
             # NPU 推理优化：减少同步开销
             if "npu" in self.device:
-                torch.npu.synchronize()  # 确保输入已传输完成
-            
-            # 记录开始时间（用于性能统计）
+                torch.npu.synchronize()  # 确保输入已传输完
+
+            # 记录开始时间（用于性能统计
             import time
             start_time = time.time()
-            
+
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **inputs,
                     **generation_config
                 )
-            
-            # NPU 推理完成后同步
+
+            # NPU 推理完成后同
             if "npu" in self.device:
                 torch.npu.synchronize()
-            
+
             # 记录推理时间
             inference_time = time.time() - start_time
             logger.info(f"Generation completed in {inference_time:.2f}s, decoding...")
 
             # 解码输出
             output_text = self.decode_output(generated_ids, inputs['input_ids'])
-            
+
             # 输出缓存统计（每10次请求输出一次）
             if self.cache_manager.stats.total_requests % 10 == 0 and use_cache:
                 stats = self.cache_manager.get_stats()
                 logger.info(f"Cache stats: {stats}")
-            
-            # 显式清理中间变量和释放内存（NPU 内存管理）
+
+            # 显式清理中间变量和释放内存（NPU 内存管理
             del generated_ids
             if "npu" in self.device:
                 try:
@@ -989,7 +990,7 @@ class Qwen2VLModel(VLMModelBase):
                 else:
                     image_inputs, video_inputs = self._builtin_process_vision_info(messages)
 
-                # 确保返回值不为 None
+                # 确保返回值不None
                 if image_inputs is not None:
                     all_image_inputs.extend(image_inputs)
                 if video_inputs is not None:
@@ -1011,7 +1012,7 @@ class Qwen2VLModel(VLMModelBase):
             # 3. 生成（NPU 推理加速优化）
             do_sample = kwargs.get('do_sample', False)
             generation_config = {
-                'max_new_tokens': kwargs.get('max_new_tokens', 256),  # 默认从 512 降至 256
+                'max_new_tokens': kwargs.get('max_new_tokens', 256),  # 默认512 降至 256
                 'do_sample': do_sample,
                 'use_cache': True,
                 'num_beams': 1,
@@ -1019,30 +1020,30 @@ class Qwen2VLModel(VLMModelBase):
                 'pad_token_id': self.processor.tokenizer.pad_token_id,
                 'eos_token_id': self.processor.tokenizer.eos_token_id,
             }
-            
-            # 只在采样时添加 temperature 和 top_p
+
+            # 只在采样时添temperature top_p
             if do_sample:
                 generation_config['temperature'] = kwargs.get('temperature', 0.7)
                 generation_config['top_p'] = kwargs.get('top_p', 0.9)
 
-            # NPU 优化：减少同步
+            # NPU 优化：减少同
             if "npu" in self.device:
                 torch.npu.synchronize()
-            
+
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **inputs,
                     **generation_config
                 )
-            
+
             # NPU 优化：推理完成后同步
             if "npu" in self.device:
                 torch.npu.synchronize()
 
             # 4. 解码输出
             output_text = self.decode_output(generated_ids, inputs['input_ids'])
-            
-            # 显式清理中间变量和释放内存（NPU 内存管理）
+
+            # 显式清理中间变量和释放内存（NPU 内存管理
             del generated_ids, inputs
             if "npu" in self.device:
                 try:
@@ -1072,36 +1073,36 @@ class Qwen2VLModel(VLMModelBase):
                 model_name=self.model_name,
                 details={"batch_size": len(batch_messages), "error_type": type(e).__name__}
             ) from e
-    
+
     def load_lora_weights(self, lora_path: str):
         """
-        手动加载LoRA权重（使用numpy格式，避免bitsandbytes依赖）
-        
+        手动加载LoRA权重（使用numpy格式，避免bitsandbytes依赖
+
         Args:
-            lora_path: LoRA权重文件路径（.npz文件或包含adapter_model.npz的目录）
-        
+            lora_path: LoRA权重文件路径npz文件或包含adapter_model.npz的目录）
+
         Raises:
             ModelLoadingError: LoRA权重加载失败
         """
         import os
         import numpy as np
-        
+
         try:
             # 确定权重文件路径
             if os.path.isdir(lora_path):
                 weights_file = os.path.join(lora_path, 'adapter_model.npz')
             else:
                 weights_file = lora_path
-            
+
             if not os.path.exists(weights_file):
                 raise FileNotFoundError(f"LoRA weights file not found: {weights_file}")
-            
+
             logger.info(f"Loading LoRA weights from: {weights_file}")
-            
+
             # 加载numpy权重
             weights = np.load(weights_file)
             logger.info(f"Loaded {len(weights.files)} LoRA parameters")
-            
+
             # 转换为PyTorch张量
             lora_state_dict = {}
             for key in weights.files:
@@ -1112,76 +1113,76 @@ class Qwen2VLModel(VLMModelBase):
                 else:
                     tensor = tensor.to(device=self.device)
                 lora_state_dict[key] = tensor
-            
-            # 手动合并LoRA权重到模型
+
+            # 手动合并LoRA权重到模
             model_state_dict = self.model.state_dict()
             updated_count = 0
-            
-            # 第一步: 收集所有 LoRA A/B 矩阵对
+
+            # 第一 收集所LoRA A/B 矩阵
             lora_pairs = {}  # {base_key: {'A': tensor, 'B': tensor}}
-            
+
             for lora_key, lora_weight in lora_state_dict.items():
                 # 移除 base_model.model. 前缀
                 if 'base_model.model.' in lora_key:
                     model_key = lora_key.replace('base_model.model.', '')
                 else:
                     model_key = lora_key
-                
+
                 # 检查是否是 LoRA A/B 矩阵
                 if 'lora_A' in model_key or 'lora_B' in model_key:
-                    # 获取基础权重的键名(去掉 .lora_A/B.default.weight 或 .lora_A/B.weight)
+                    # 获取基础权重的键去掉 .lora_A/B.default.weight .lora_A/B.weight)
                     base_key = model_key.replace('.lora_A.default.weight', '.weight') \
                                        .replace('.lora_B.default.weight', '.weight') \
                                        .replace('.lora_A.weight', '.weight') \
                                        .replace('.lora_B.weight', '.weight')
-                    
-                    # 判断是 A 还是 B
+
+                    # 判断A 还是 B
                     if 'lora_A' in model_key:
                         matrix_type = 'A'
                     else:
                         matrix_type = 'B'
-                    
+
                     # 收集配对
                     if base_key not in lora_pairs:
                         lora_pairs[base_key] = {}
                     lora_pairs[base_key][matrix_type] = lora_weight
-            
-            # 第二步: 合并 LoRA 到基础权重
+
+            # 第二 合并 LoRA 到基础权重
             # LoRA 公式: W_new = W_base + (lora_B @ lora_A) * scaling
-            lora_scaling = 1.0  # 默认缩放因子,可以从 adapter_config.json 读取
-            
+            lora_scaling = 1.0  # 默认缩放因子,可以adapter_config.json 读取
+
             for base_key, matrices in lora_pairs.items():
-                # 检查是否有配对的 A 和 B
+                # 检查是否有配对A B
                 if 'A' in matrices and 'B' in matrices and base_key in model_state_dict:
                     lora_A = matrices['A']
                     lora_B = matrices['B']
                     base_weight = model_state_dict[base_key]
-                    
+
                     # 计算 delta_W = (lora_B @ lora_A) * scaling
                     # lora_A: (r, in_features), lora_B: (out_features, r)
                     # delta_W: (out_features, in_features)
                     try:
                         delta_w = torch.matmul(lora_B, lora_A) * lora_scaling
-                        
+
                         # 合并到基础权重
                         new_weight = base_weight + delta_w
                         model_state_dict[base_key] = new_weight
                         updated_count += 1
-                        
+
                     except Exception as merge_error:
                         logger.warning(f"Failed to merge LoRA for {base_key}: {merge_error}")
                         logger.debug(f"  lora_A shape: {lora_A.shape}, lora_B shape: {lora_B.shape}, base shape: {base_weight.shape}")
                 elif 'A' in matrices or 'B' in matrices:
-                    # 只有 A 或只有 B,缺少配对
+                    # 只有 A 或只B,缺少配对
                     missing = 'B' if 'A' in matrices else 'A'
                     logger.debug(f"LoRA pair incomplete for {base_key}: missing lora_{missing}")
-            
+
             logger.info(f"Processed {len(lora_pairs)} LoRA pairs, merged {updated_count} parameters")
-            
-            # 如果有更新，重新加载到模型
+
+            # 如果有更新，重新加载到模
             if updated_count > 0:
                 self.model.load_state_dict(model_state_dict, strict=False)
-                logger.info(f"✅ Successfully loaded LoRA weights, updated {updated_count} parameters")
+                logger.info(f"Successfully loaded LoRA weights, updated {updated_count} parameters")
             else:
                 logger.warning("⚠️  No parameters were updated. LoRA weights may not be compatible.")
                 # 尝试使用PEFT标准方式（可能失败）
@@ -1189,12 +1190,12 @@ class Qwen2VLModel(VLMModelBase):
                 try:
                     from peft import PeftModel
                     self.model = PeftModel.from_pretrained(self.model, lora_path)
-                    logger.info("✅ Successfully loaded LoRA using PEFT")
+                    logger.info("Successfully loaded LoRA using PEFT")
                 except Exception as peft_error:
                     logger.warning(f"PEFT loading failed (expected with mindtorch): {peft_error}")
                     logger.warning("⚠️  Continuing with base model only (LoRA not loaded)")
-                    # 不抛出异常,继续使用基础模型
-        
+                    # 不抛出异继续使用基础模型
+
         except Exception as e:
             logger.error(f"Failed to load LoRA weights: {e}", exc_info=True)
             raise ModelLoadingError(
@@ -1208,41 +1209,41 @@ class Qwen2VLModel(VLMModelBase):
 
         except Exception as e:
             logger.error(f"Batch generation failed: {e}")
-            raise    
+            raise
     def get_cache_stats(self) -> Dict[str, Any]:
         """
         获取缓存统计信息
-        
+
         Returns:
             缓存统计字典
         """
         return self.cache_manager.get_stats()
-    
+
     def clear_cache(self):
         """清空 KV Cache"""
         self.cache_manager.clear()
         logger.info("KV Cache cleared")
-    
+
     def reset_cache_stats(self):
         """重置缓存统计"""
         self.cache_manager.reset_stats()
         logger.info("Cache statistics reset")
-    
+
     def update_cache_config(self, new_config: CacheConfig):
         """
         更新缓存配置
-        
+
         Args:
             new_config: 新的缓存配置
         """
         self.cache_config = new_config
         self.cache_manager.config = new_config
         logger.info(f"Cache config updated: {new_config}")
-    
+
     def get_model_info(self) -> Dict[str, Any]:
         """
-        获取模型信息（包括 Flash Attention 状态）
-        
+        获取模型信息（包Flash Attention 状态）
+
         Returns:
             模型信息字典
         """
@@ -1254,16 +1255,16 @@ class Qwen2VLModel(VLMModelBase):
             'flash_attention_enabled': self.cache_config.enable_flash_attention,
             'max_cache_size_mb': self.cache_config.max_cache_size_mb,
         }
-        
+
         # 检查实际的 attention 实现
         if hasattr(self.model, 'config'):
             config = self.model.config
             if hasattr(config, '_attn_implementation'):
                 info['attn_implementation'] = config._attn_implementation
-        
-        # 添加 Flash Attention 支持检测
+
+        # 添加 Flash Attention 支持检
         flash_supported, flash_reason = detect_flash_attention_support()
         info['flash_attention_support'] = flash_supported
         info['flash_attention_reason'] = flash_reason
-        
+
         return info

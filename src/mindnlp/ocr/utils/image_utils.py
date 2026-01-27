@@ -1,3 +1,4 @@
+﻿# -*- coding: utf-8 -*-
 """
 图像工具函数
 """
@@ -17,7 +18,7 @@ def download_image_from_url(url: str, timeout: int = 10) -> bytes:
 
     Args:
         url: 图像URL
-        timeout: 超时时间(秒)
+        timeout: 超时时间(
 
     Returns:
         bytes: 图像数据
@@ -32,11 +33,11 @@ def download_image_from_url(url: str, timeout: int = 10) -> bytes:
         })
         response.raise_for_status()
 
-        # 检查响应内容类型
+        # 检查响应内容类
         content_type = response.headers.get('Content-Type', '')
         logger.info("Response Content-Type: %s, Size: %d bytes", content_type, len(response.content))
-        
-        # 验证是否为有效图像
+
+        # 验证是否为有效图
         # 注意: verify() 会使 Image 对象失效，所以需要重新打开
         try:
             image = Image.open(io.BytesIO(response.content))
@@ -70,7 +71,7 @@ def validate_image_format(image_data: bytes) -> bool:
         image_data: 图像数据
 
     Returns:
-        bool: 是否为有效图像
+        bool: 是否为有效图
     """
     try:
         image = Image.open(io.BytesIO(image_data))
@@ -86,7 +87,7 @@ def resize_image(image: Image.Image, max_size: tuple = (1024, 1024)) -> Image.Im
 
     Args:
         image: PIL Image对象
-        max_size: 最大尺寸 (width, height)
+        max_size: 最大尺(width, height)
 
     Returns:
         Image.Image: 缩放后的图像

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Utility tools for OCR model development and maintenance.
 
 This package contains various development and debugging tools:

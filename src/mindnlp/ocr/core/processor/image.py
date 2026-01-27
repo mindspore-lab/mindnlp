@@ -1,4 +1,4 @@
-"""
+﻿"""
 图像预处理器
 负责图像加载、增强、归一化等预处理操作
 """
@@ -80,7 +80,7 @@ class ImageProcessor:
                 - scale: 缩放比例
                 - padding: Padding 信息 {left, top, right, bottom}
                 - offset: 图像在画布上的偏移 (x, y)
-        
+
         Raises:
             ImageProcessingError: 图像处理失败
             ValidationError: 输入数据验证失败
@@ -178,7 +178,7 @@ class ImageProcessor:
                         message=f"Failed to decode image from bytes: {str(e)}",
                         details={"data_length": len(image_data)}
                     ) from e
-                    
+
             elif isinstance(image_data, str):
                 # 从文件路径加载
                 import os
@@ -195,7 +195,7 @@ class ImageProcessor:
                         message=f"Failed to load image from file: {str(e)}",
                         details={"file_path": image_data}
                     ) from e
-                    
+
             elif isinstance(image_data, np.ndarray):
                 # 检查数组是否为空
                 if image_data.size == 0 or image_data.shape[0] == 0 or image_data.shape[1] == 0:
@@ -229,7 +229,7 @@ class ImageProcessor:
                         field="image_data",
                         details={"shape": str(image_data.shape)}
                     )
-                    
+
             elif isinstance(image_data, Image.Image):
                 # 已经是 PIL Image
                 # 检查图像是否为空
@@ -319,15 +319,15 @@ class ImageProcessor:
         """
         try:
             from PIL import ImageEnhance
-            
+
             # 1. 自动对比度增强
             enhancer = ImageEnhance.Contrast(image)
             image = enhancer.enhance(1.2)  # 增强20%对比度
-            
+
             # 2. 轻微锐化
             enhancer = ImageEnhance.Sharpness(image)
             image = enhancer.enhance(1.1)  # 增强10%锐度
-            
+
             logger.debug("Image quality enhanced")
             return image
         except Exception as e:  # pylint: disable=broad-exception-caught

@@ -1,4 +1,4 @@
-"""
+﻿"""
 配置设置
 """
 
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     int4_compute_dtype: str = "float16"  # INT4 计算数据类型
     int4_quant_type: str = "nf4"  # 量化类型: fp4 或 nf4 (推荐)
     int4_use_double_quant: bool = True  # 启用双重量化节省更多内存
-    
+
     # 日志配置
     log_level: str = "INFO"
 

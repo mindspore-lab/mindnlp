@@ -1,4 +1,4 @@
-"""
+﻿"""
 OCR预测路由
 """
 
@@ -32,7 +32,7 @@ def get_engine():
 async def predict_info():
     """
     OCR预测端点使用说明
-    
+
     此端点需要使用 POST 方法并上传图像文件。
     请访问 /api/docs 查看交互式文档进行测试。
     """
@@ -85,14 +85,14 @@ async def predict_image(
 
         # 获取OCR引擎
         _engine = get_engine()
-        
+
         # 当前版本暂不支持动态切换模型
         if model:
             logger.info(f"Model parameter ignored (using default engine): {model}")
 
         # 读取图像数据
         image_bytes = await file.read()
-        
+
         # 验证图像大小
         if not image_bytes:
             raise HTTPException(
@@ -157,7 +157,7 @@ async def predict_image(
                 status_code=500,
                 detail=e.to_dict()
             ) from e
-        
+
         # 如果推理成功，添加额外的元数据
         if result.success:
             if not result.metadata:
@@ -168,7 +168,7 @@ async def predict_image(
                 "task_type": task_type,
                 "filename": file.filename
             })
-        
+
         logger.info(f"OCR completed in {result.inference_time:.2f}s")
         return result
 
@@ -194,7 +194,7 @@ async def predict_image(
 async def predict_batch_info():
     """
     批量OCR预测端点使用说明
-    
+
     此端点需要使用 POST 方法并上传多个图像文件。
     请访问 /api/docs 查看交互式文档进行测试。
     """
@@ -248,7 +248,7 @@ async def predict_batch(
         # 处理每个图像
         results = []
         logger.info(f"Processing batch of {len(files)} images with real model")
-        
+
         for idx, file in enumerate(files):
             try:
                 # 验证文件类型
@@ -266,9 +266,9 @@ async def predict_batch(
                         error=f"Invalid file type: {file.content_type}"
                     ))
                     continue
-                
+
                 image_bytes = await file.read()
-                
+
                 if not image_bytes:
                     logger.warning(f"Skipping empty file {file.filename}")
                     results.append(OCRResponse(
@@ -292,7 +292,7 @@ async def predict_batch(
                     task_type=task_type,
                     confidence_threshold=confidence_threshold
                 )
-                
+
                 logger.info(f"Processing image {idx+1}/{len(files)}: {file.filename}")
                 try:
                     single_result = _engine.predict(_request)
@@ -310,15 +310,15 @@ async def predict_batch(
                         error=e.message
                     ))
                     continue
-                
+
                 # 添加文件名到元数据
                 if single_result.success:
                     if not single_result.metadata:
                         single_result.metadata = {}
                     single_result.metadata["filename"] = file.filename
-                
+
                 results.append(single_result)
-                
+
             except Exception as e:
                 logger.error(f"Failed to process image {file.filename}: {e}", exc_info=True)
                 # 为失败的图像添加错误结果
@@ -361,7 +361,7 @@ async def predict_batch(
 async def predict_url_info():
     """
     URL OCR预测端点使用说明
-    
+
     此端点需要使用 POST 方法并提供图像 URL。
     请访问 /api/docs 查看交互式文档进行测试。
     """
@@ -413,13 +413,13 @@ async def predict_from_url(request: OCRURLRequest):
         # 执行真实 OCR 推理
         logger.info(f"Processing URL image with real model: {settings.default_model}")
         result = _engine.predict(_ocr_request)
-        
+
         # 添加 URL 到元数据
         if result.success:
             if not result.metadata:
                 result.metadata = {}
             result.metadata["source_url"] = str(request.image_url)
-        
+
         logger.info(f"URL OCR completed in {result.inference_time:.2f}s")
         return result
 

@@ -1,14 +1,14 @@
+﻿# -*- coding: utf-8 -*-
 """
-分布式追踪模块 - OpenTelemetry集成
+分布式追踪模- OpenTelemetry集成
 
-实现全链路追踪:
+实现全链路追
 - FastAPI 自动埋点
-- 自定义 Span 标记
+- 自定Span 标记
 - 集成 Jaeger/Zipkin
-- 采样率配置
+- 采样率配
 """
 
-import os
 import logging
 from typing import Optional, Dict, Any
 from contextlib import contextmanager
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class TracingConfig:
     """追踪配置"""
-    
+
     def __init__(
         self,
         enabled: bool = True,
@@ -42,8 +42,8 @@ class TracingConfig:
         Args:
             enabled: 是否启用追踪
             service_name: 服务名称
-            sampling_rate: 采样率 (0.0-1.0)
-            exporter_type: 导出器类型
+            sampling_rate: 采样(0.0-1.0)
+            exporter_type: 导出器类
             jaeger_endpoint: Jaeger端点
             otlp_endpoint: OTLP端点
         """
@@ -57,77 +57,77 @@ class TracingConfig:
 
 def setup_tracing(config: TracingConfig) -> Optional[TracerProvider]:
     """
-    配置分布式追踪
-    
+    配置分布式追
+
     Args:
         config: 追踪配置
-    
+
     Returns:
         TracerProvider实例
     """
     if not config.enabled:
         logger.info("Distributed tracing is disabled")
         return None
-    
+
     # 创建资源
     resource = Resource(attributes={
         SERVICE_NAME: config.service_name
     })
-    
-    # 创建采样器
+
+    # 创建采样
     sampler = TraceIdRatioBased(config.sampling_rate)
-    
+
     # 创建 TracerProvider
     provider = TracerProvider(
         resource=resource,
         sampler=sampler
     )
-    
-    # 创建导出器
+
+    # 创建导出
     if config.exporter_type == "jaeger":
         exporter = JaegerExporter(
             agent_host_name=config.jaeger_endpoint.split(":")[0],
             agent_port=int(config.jaeger_endpoint.split(":")[1]),
         )
         logger.info(f"Using Jaeger exporter: {config.jaeger_endpoint}")
-    
+
     elif config.exporter_type == "otlp":
         exporter = OTLPSpanExporter(
             endpoint=config.otlp_endpoint,
             insecure=True  # 使用 HTTP
         )
         logger.info(f"Using OTLP exporter: {config.otlp_endpoint}")
-    
+
     elif config.exporter_type == "console":
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
         exporter = ConsoleSpanExporter()
         logger.info("Using Console exporter (for debugging)")
-    
+
     else:
         logger.warning(f"Unknown exporter type: {config.exporter_type}, using console")
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
         exporter = ConsoleSpanExporter()
-    
+
     # 添加批处理器
     provider.add_span_processor(BatchSpanProcessor(exporter))
-    
+
     # 设置全局 tracer
     trace.set_tracer_provider(provider)
-    
+
     logger.info(
         f"Distributed tracing configured: "
         f"service={config.service_name}, "
         f"sampling_rate={config.sampling_rate}, "
         f"exporter={config.exporter_type}"
     )
-    
+
     return provider
 
 
 def instrument_fastapi(app):
     """
-    为 FastAPI 应用添加自动埋点
-    
+    FastAPI 应用添加自动埋点
+
     Args:
         app: FastAPI 应用实例
     """
@@ -140,11 +140,11 @@ def instrument_fastapi(app):
 
 def get_tracer(name: str = "ocr") -> trace.Tracer:
     """
-    获取追踪器
-    
+    获取追踪
+
     Args:
-        name: 追踪器名称
-    
+        name: 追踪器名
+
     Returns:
         Tracer实例
     """
@@ -158,26 +158,26 @@ def trace_span(
     kind: trace.SpanKind = trace.SpanKind.INTERNAL
 ):
     """
-    创建追踪 Span 的上下文管理器
-    
+    创建追踪 Span 的上下文管理
+
     Args:
         name: Span名称
-        attributes: Span属性
+        attributes: Span属
         kind: Span类型
-    
+
     Example:
         with trace_span("image_preprocessing", {"image_size": "1024x768"}):
             # 处理图像
             pass
     """
     tracer = get_tracer()
-    
+
     with tracer.start_as_current_span(name, kind=kind) as span:
-        # 添加属性
+        # 添加属
         if attributes:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
-        
+
         try:
             yield span
         except Exception as e:
@@ -189,23 +189,23 @@ def trace_span(
 
 class OCRTracer:
     """
-    OCR 专用追踪器
-    
-    提供便捷的追踪方法
+    OCR 专用追踪
+
+    提供便捷的追踪方
     """
-    
+
     def __init__(self, tracer_name: str = "ocr"):
         """
         Args:
-            tracer_name: 追踪器名称
+            tracer_name: 追踪器名
         """
         self.tracer = get_tracer(tracer_name)
-    
+
     @contextmanager
     def trace_request(self, request_id: str, endpoint: str):
         """
         追踪HTTP请求
-        
+
         Args:
             request_id: 请求ID
             endpoint: 请求端点
@@ -216,19 +216,19 @@ class OCRTracer:
         ) as span:
             span.set_attribute("request.id", request_id)
             span.set_attribute("http.route", endpoint)
-            
+
             try:
                 yield span
             except Exception as e:
                 span.record_exception(e)
                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
                 raise
-    
+
     @contextmanager
     def trace_preprocessing(self, image_size: str, format: str):
         """
-        追踪图像预处理
-        
+        追踪图像预处
+
         Args:
             image_size: 图像大小
             format: 图像格式
@@ -236,14 +236,14 @@ class OCRTracer:
         with self.tracer.start_as_current_span("preprocessing") as span:
             span.set_attribute("image.size", image_size)
             span.set_attribute("image.format", format)
-            
+
             try:
                 yield span
             except Exception as e:
                 span.record_exception(e)
                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
                 raise
-    
+
     @contextmanager
     def trace_inference(
         self,
@@ -253,68 +253,68 @@ class OCRTracer:
     ):
         """
         追踪模型推理
-        
+
         Args:
             model_name: 模型名称
             batch_size: 批次大小
-            max_tokens: 最大token数
+            max_tokens: 最大token
         """
         with self.tracer.start_as_current_span("model_inference") as span:
             span.set_attribute("model.name", model_name)
             span.set_attribute("model.batch_size", batch_size)
             span.set_attribute("model.max_tokens", max_tokens)
-            
+
             try:
                 yield span
             except Exception as e:
                 span.record_exception(e)
                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
                 raise
-    
+
     @contextmanager
     def trace_postprocessing(self, output_format: str):
         """
-        追踪后处理
-        
+        追踪后处
+
         Args:
             output_format: 输出格式
         """
         with self.tracer.start_as_current_span("postprocessing") as span:
             span.set_attribute("output.format", output_format)
-            
+
             try:
                 yield span
             except Exception as e:
                 span.record_exception(e)
                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
                 raise
-    
+
     def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None):
         """
-        在当前 Span 添加事件
-        
+        在当Span 添加事件
+
         Args:
             name: 事件名称
-            attributes: 事件属性
+            attributes: 事件属
         """
         current_span = trace.get_current_span()
         if current_span.is_recording():
             current_span.add_event(name, attributes or {})
-    
+
     def set_attribute(self, key: str, value: Any):
         """
-        在当前 Span 设置属性
-        
+        在当Span 设置属
+
         Args:
             key: 属性键
-            value: 属性值
+            value: 属性
         """
         current_span = trace.get_current_span()
         if current_span.is_recording():
             current_span.set_attribute(key, value)
 
 
-# 全局追踪器实例
+# 全局追踪器实
 _ocr_tracer: Optional[OCRTracer] = None
 
 

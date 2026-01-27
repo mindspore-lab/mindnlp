@@ -1,4 +1,4 @@
-"""
+﻿"""
 OCR API 独立启动脚本
 完全独立于 mindnlp 其他模块,避免触发 mindspore 依赖
 """
@@ -35,9 +35,9 @@ def check_and_install_dependencies():
             'requests': 'requests>=2.31.0',
             'yaml': 'pyyaml>=6.0',
         }
-    
+
     missing_packages = []
-    
+
     print("正在检查依赖...")
     for package, install_name in required_packages.items():
         try:
@@ -46,11 +46,11 @@ def check_and_install_dependencies():
         except ImportError:
             print(f"  ✗ {package} (缺失)")
             missing_packages.append(install_name)
-    
+
     if missing_packages:
         print(f"\n发现 {len(missing_packages)} 个缺失的依赖包")
         print("正在自动安装...")
-        
+
         try:
             # 使用当前 Python 解释器安装依赖
             cmd = [sys.executable, '-m', 'pip', 'install'] + missing_packages
@@ -95,25 +95,25 @@ mindnlp_ocr.__path__ = [current_dir]
 sys.modules['mindnlp.ocr'] = mindnlp_ocr
 
 # 现在可以安全导入 OCR 子模块了
-from mindnlp.ocr.api.app import create_app
 import uvicorn
+from mindnlp.ocr.api.app import create_app
 
 
 def check_model_exists(model_name: str) -> bool:
     """检查模型是否已下载到本地
-    
+
     Args:
         model_name: 模型名称，如 Qwen/Qwen2-VL-2B-Instruct，或本地路径
-        
+
     Returns:
         bool: 模型是否存在
     """
     from pathlib import Path
-    
+
     # 如果是本地路径（绝对路径或包含 .npz）
     if os.path.isabs(model_name) or model_name.endswith('.npz'):
         model_path = Path(model_name)
-        
+
         # 检查 NPZ 文件或包含 adapter_model.npz 的目录
         if model_path.is_file() and model_path.suffix == '.npz':
             return True
@@ -126,69 +126,69 @@ def check_model_exists(model_name: str) -> bool:
             config_file = model_path / 'config.json'
             if config_file.exists():
                 return True
-        
+
         return False
-    
+
     # HuggingFace 模型名称（如 Qwen/Qwen2-VL-7B-Instruct）
     cache_dir = os.environ.get('HF_HOME') or os.environ.get('TRANSFORMERS_CACHE') or \
                 Path.home() / '.cache' / 'huggingface'
-    
+
     # 转换模型名称为缓存目录格式
     model_cache_name = f"models--{model_name.replace('/', '--')}"
     model_path = Path(cache_dir) / model_cache_name
-    
+
     # 检查目录和必要文件是否存在
     if not model_path.exists():
         return False
-    
+
     snapshots_dir = model_path / "snapshots"
     if not snapshots_dir.exists():
         return False
-    
+
     # 检查是否有快照目录(至少有一个完整下载的版本)
     snapshot_dirs = list(snapshots_dir.iterdir())
     if not snapshot_dirs:
         return False
-    
+
     # 检查最新的快照是否包含必要文件
     latest_snapshot = snapshot_dirs[-1]
     required_files = ['config.json', 'tokenizer_config.json']
-    
+
     for file in required_files:
         if not (latest_snapshot / file).exists():
             return False
-    
+
     return True
 
 
 def download_model(model_name: str):
     """下载模型到本地
-    
+
     Args:
         model_name: 模型名称
     """
     print(f"\n{'='*60}")
     print(f"正在下载模型: {model_name}")
-    print(f"这可能需要几分钟时间,请耐心等待...")
+    print("这可能需要几分钟时间,请耐心等待...")
     print(f"{'='*60}\n")
-    
+
     # 确保使用镜像站点(在文件开头已设置,这里再次确认)
     os.environ.pop('HF_HUB_OFFLINE', None)
     os.environ.pop('TRANSFORMERS_OFFLINE', None)
-    
+
     print(f"📡 使用镜像站点: {os.environ.get('HF_HUB_ENDPOINT', 'https://hf-mirror.com')}\n")
-    
+
     try:
         from transformers import AutoTokenizer, AutoConfig, AutoModel
-        
+
         # 下载配置
         print("📥 下载模型配置...")
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
-        
+
         # 下载tokenizer/processor
         print("📥 下载tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-        
+
         # 下载模型权重
         print("📥 下载模型权重...")
         model = AutoModel.from_pretrained(
@@ -198,10 +198,10 @@ def download_model(model_name: str):
             low_cpu_mem_usage=True,
             trust_remote_code=True
         )
-        
+
         print(f"\n✅ 模型下载完成: {model_name}")
         del model  # 释放内存
-                
+
     except Exception as e:
         print(f"\n❌ 模型下载失败: {e}")
         print("请检查网络连接和HuggingFace访问")
@@ -213,7 +213,7 @@ def main():
     # 加载配置
     from mindnlp.ocr.config.settings import get_settings
     settings = get_settings()
-    
+
     # 检查模型是否存在,不存在则下载
     print(f"🔍 检查模型: {settings.default_model}")
     if not check_model_exists(settings.default_model):
@@ -221,18 +221,18 @@ def main():
         download_model(settings.default_model)
     else:
         print(f"✅ 模型已存在,将使用本地缓存")
-    
+
     # 模型下载或确认后,设置离线模式
     os.environ['HF_HUB_OFFLINE'] = '1'
     os.environ['TRANSFORMERS_OFFLINE'] = '1'
     print("🔒 已启用离线模式\n")
-    
+
     # 创建应用
     app = create_app()
-    
+
     # 启动服务器
     print(f"\n{'='*60}")
-    print(f"启动 OCR API 服务...")
+    print("启动 OCR API 服务...")
     print(f"  - Host: {settings.api_host}")
     print(f"  - Port: {settings.api_port}")
     print(f"  - 设备: {settings.device}")
@@ -248,9 +248,9 @@ def main():
     print(f"  - OCR预测 (POST):    http://localhost:{settings.api_port}/api/v1/ocr/predict")
     print(f"  - 批量OCR (POST):    http://localhost:{settings.api_port}/api/v1/ocr/predict_batch")
     print(f"  - URL OCR (POST):    http://localhost:{settings.api_port}/api/v1/ocr/predict_url")
-    print(f"\n💡 提示: POST 端点请使用 API 文档页面进行交互式测试")
+    print("💡 提示: POST 端点请使用 API 文档页面进行交互式测试")
     print(f"{'='*60}\n")
-    
+
     uvicorn.run(
         app,
         host=settings.api_host,

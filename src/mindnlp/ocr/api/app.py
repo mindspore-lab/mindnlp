@@ -1,4 +1,4 @@
-"""
+﻿"""
 FastAPI应用入口
 """
 
@@ -33,7 +33,7 @@ async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
     get_settings.cache_clear()
     # 重新获取settings
     fresh_settings = get_settings()
-    
+
     # 启动时初始化引擎
     logger.info("Initializing OCR engine...")
     try:
@@ -62,22 +62,22 @@ async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
         logger.error(f"Failed to initialize OCR engine: {e}", exc_info=True)
         _engine = None
         raise
-    
+
     # 初始化并发管理器（包含动态批处理、限流、熔断等功能）
     logger.info("Initializing concurrency manager...")
     try:
         from mindnlp.ocr.core.concurrency.manager import ConcurrencyManager
-        
+
         # 创建并发管理器（内部会自动配置批处理器、限流器等）
         _service_manager = ConcurrencyManager(engine=_engine)
-        
+
         # 启动并发管理器
         await _service_manager.start()
-        
+
         logger.info("Concurrency manager initialized and started successfully")
         logger.info(f"  - Batch size: {getattr(fresh_settings, 'max_batch_size', 8)}")
         logger.info(f"  - QPS limit: {getattr(fresh_settings, 'qps_limit', 10)}")
-        
+
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error(f"Failed to initialize concurrency manager: {e}", exc_info=True)
         _service_manager = None
@@ -178,7 +178,7 @@ def create_app() -> FastAPI:
     app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["ocr"])
     app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["monitor"])
     app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
-    
+
     # 添加根路径重定向
     @app.get("/", include_in_schema=False)
     async def root():

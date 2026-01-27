@@ -1,4 +1,4 @@
-"""
+﻿"""
 模型加载器
 根据模型名称加载对应的VLM模型
 """
@@ -27,7 +27,7 @@ class ModelLoader:
         # 'got': GOTOCRModel,
     }
 
-    def __init__(self, model_name: str, device: str = "cuda", 
+    def __init__(self, model_name: str, device: str = "cuda",
                  quantization_mode: str = "none", quantization_config: dict = None,
                  lora_weights_path: str = None):
         """
@@ -68,7 +68,7 @@ class ModelLoader:
         # 实例化并加载模型（传递量化参数）
         logger.info(f"Loading model with {model_class.__name__}")
         self.model_instance = model_class(
-            self.model_name, 
+            self.model_name,
             self.device,
             quantization_mode=self.quantization_mode,
             quantization_config=self.quantization_config,

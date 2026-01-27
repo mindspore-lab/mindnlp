@@ -1,3 +1,4 @@
+﻿# -*- coding: utf-8 -*-
 """
 OCR Fine-tuning Module
 支持 LoRA、QLoRA 和全参数微调
@@ -23,7 +24,7 @@ from .prepare_dataset import (
 )
 
 __all__ = [
-    # 数据集
+    # 数据
     'OCRDataset',
     'OCRDataCollator',
     # 训练函数
@@ -45,4 +46,3 @@ __all__ = [
     'convert_custom_format',
     'merge_and_split_datasets',
 ]
-

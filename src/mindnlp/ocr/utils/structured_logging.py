@@ -1,4 +1,4 @@
-"""
+﻿"""
 结构化日志系统 - JSON格式日志记录
 
 使用 structlog 实现结构化日志,支持:
@@ -10,11 +10,9 @@
 
 import sys
 import logging
-import structlog
-from typing import Optional, Dict, Any
+from typing import Optional
 from pathlib import Path
-import json
-from datetime import datetime
+import structlog
 
 
 def setup_structured_logging(
@@ -25,7 +23,7 @@ def setup_structured_logging(
 ) -> None:
     """
     配置结构化日志系统
-    
+
     Args:
         log_level: 日志级别 (DEBUG/INFO/WARNING/ERROR/CRITICAL)
         log_file: 日志文件路径 (可选)
@@ -36,13 +34,13 @@ def setup_structured_logging(
     global _request_logger, _performance_logger
     _request_logger = None
     _performance_logger = None
-    
+
     # 清除之前的配置
     structlog.reset_defaults()
-    
+
     # 配置 structlog
     timestamper = structlog.processors.TimeStamper(fmt="iso")
-    
+
     # 处理器链
     shared_processors = [
         structlog.contextvars.merge_contextvars,
@@ -53,7 +51,7 @@ def setup_structured_logging(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
-    
+
     if json_format:
         # JSON 格式
         structlog.configure(
@@ -76,23 +74,23 @@ def setup_structured_logging(
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
-    
+
     # 配置标准 logging
     # 清除所有旧的handlers
     logging.root.handlers.clear()
-    
+
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout if enable_console else None,
         level=getattr(logging, log_level.upper()),
         force=True  # 强制重新配置
     )
-    
+
     # 配置文件输出
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(getattr(logging, log_level.upper()))
         logging.root.addHandler(file_handler)
@@ -101,10 +99,10 @@ def setup_structured_logging(
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     """
     获取结构化日志器
-    
+
     Args:
         name: 日志器名称 (通常是模块名)
-    
+
     Returns:
         structlog 日志器
     """
@@ -114,15 +112,15 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
 class LogContext:
     """
     日志上下文管理器
-    
+
     用于在特定代码块中绑定额外的日志字段
-    
+
     Example:
         with LogContext(request_id="123", user_id="456"):
             logger.info("processing request")
             # 自动包含 request_id 和 user_id
     """
-    
+
     def __init__(self, **kwargs):
         """
         Args:
@@ -130,14 +128,14 @@ class LogContext:
         """
         self.context = kwargs
         self.tokens = []
-    
+
     def __enter__(self):
         # 绑定上下文变量
         for key, value in self.context.items():
             token = structlog.contextvars.bind_contextvars(**{key: value})
             self.tokens.append(token)
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         # 清除上下文变量
         for token in reversed(self.tokens):
@@ -147,17 +145,17 @@ class LogContext:
 class RequestLogger:
     """
     请求日志记录器
-    
+
     自动记录HTTP请求的关键信息
     """
-    
+
     def __init__(self, logger_name: str = "ocr.api"):
         """
         Args:
             logger_name: 日志器名称
         """
         self.logger = get_logger(logger_name)
-    
+
     def log_request(
         self,
         method: str,
@@ -170,7 +168,7 @@ class RequestLogger:
     ):
         """
         记录HTTP请求
-        
+
         Args:
             method: HTTP方法
             endpoint: 请求端点
@@ -189,7 +187,7 @@ class RequestLogger:
             "latency_ms": latency_ms,
             **extra_fields
         }
-        
+
         if error:
             log_data["error"] = error
             self.logger.error(**log_data)
@@ -199,7 +197,7 @@ class RequestLogger:
             self.logger.warning(**log_data)
         else:
             self.logger.info(**log_data)
-    
+
     def log_inference(
         self,
         request_id: str,
@@ -212,7 +210,7 @@ class RequestLogger:
     ):
         """
         记录模型推理
-        
+
         Args:
             request_id: 请求ID
             model_name: 模型名称
@@ -231,7 +229,7 @@ class RequestLogger:
             "success": success,
             **extra_fields
         }
-        
+
         if error:
             log_data["error"] = error
             self.logger.error(**log_data)
@@ -242,17 +240,17 @@ class RequestLogger:
 class PerformanceLogger:
     """
     性能日志记录器
-    
+
     记录系统资源使用和性能指标
     """
-    
+
     def __init__(self, logger_name: str = "ocr.performance"):
         """
         Args:
             logger_name: 日志器名称
         """
         self.logger = get_logger(logger_name)
-    
+
     def log_resource_usage(
         self,
         cpu_percent: float,
@@ -263,7 +261,7 @@ class PerformanceLogger:
     ):
         """
         记录资源使用情况
-        
+
         Args:
             cpu_percent: CPU使用率(百分比)
             memory_mb: 内存使用(MB)
@@ -277,14 +275,14 @@ class PerformanceLogger:
             "memory_mb": memory_mb,
             **extra_fields
         }
-        
+
         if gpu_utilization is not None:
             log_data["gpu_utilization"] = gpu_utilization
         if gpu_memory_mb is not None:
             log_data["gpu_memory_mb"] = gpu_memory_mb
-        
+
         self.logger.info(**log_data)
-    
+
     def log_queue_metrics(
         self,
         queue_size: int,
@@ -294,7 +292,7 @@ class PerformanceLogger:
     ):
         """
         记录队列指标
-        
+
         Args:
             queue_size: 当前队列大小
             queue_capacity: 队列容量
@@ -309,7 +307,7 @@ class PerformanceLogger:
             "avg_wait_time_ms": avg_wait_time_ms,
             **extra_fields
         }
-        
+
         self.logger.info(**log_data)
 
 

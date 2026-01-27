@@ -1,4 +1,4 @@
-"""
+﻿"""
 VLM-OCR主引擎
 协调各个组件完成端到端的OCR流程
 """
@@ -50,7 +50,7 @@ class VLMOCREngine:
 
         # 保存模型名称
         self.model_name = model_name
-        
+
         # 性能监控
         self.enable_monitoring = enable_monitoring
         if enable_monitoring:
@@ -58,11 +58,11 @@ class VLMOCREngine:
             logger.info("Performance monitoring enabled")
         else:
             self.monitor = None
-        
+
         # 加载模型（传递量化参数和LoRA路径）
         self.model_loader = ModelLoader(
-            model_name, 
-            device, 
+            model_name,
+            device,
             quantization_mode=quantization_mode,
             quantization_config=quantization_config,
             lora_weights_path=lora_weights_path
@@ -163,7 +163,7 @@ class VLMOCREngine:
                     message=f"Failed to encode image: {str(e)}",
                     details={"image_size": pil_image.size, "mode": pil_image.mode}
                 ) from e
-            
+
             # 5. 构建消息格式并进行推理
             logger.info("Running model inference...")
             try:
@@ -176,7 +176,7 @@ class VLMOCREngine:
                         ]
                     }
                 ]
-                
+
                 # 使用 model_instance 的 batch_generate 方法（已包含输入准备和解码）
                 # 推理加速优化：根据任务类型动态调整 max_new_tokens
                 task_type = request.task_type.lower() if request.task_type else "general"
@@ -186,7 +186,7 @@ class VLMOCREngine:
                     max_tokens = 256  # 复杂文档使用256（2x加速）
                 else:
                     max_tokens = 512  # 其他任务保持512
-                
+
                 outputs = self.model_instance.batch_generate(
                     batch_messages=[messages],
                     max_new_tokens=max_tokens,
@@ -201,7 +201,7 @@ class VLMOCREngine:
 
             # 6. 获取解码后的文本（batch_generate 已返回解码文本）
             logger.info(f"Batch generate returned: {type(outputs)}, value: {outputs}")
-            
+
             try:
                 if outputs is None:
                     raise ModelInferenceError(
@@ -219,7 +219,7 @@ class VLMOCREngine:
                         message="Model returned empty output",
                         model_name=self.model_name
                     )
-                    
+
                 decoded_text = outputs[0]
                 logger.info(f"Decoded text: {decoded_text[:100] if decoded_text else 'None'}...")
             except ModelInferenceError:
@@ -260,7 +260,7 @@ class VLMOCREngine:
 
             # 构建响应
             processing_time = time.time() - start_time
-            
+
             # 记录性能指标
             if self.monitor:
                 self.monitor.record_inference(
@@ -268,7 +268,7 @@ class VLMOCREngine:
                     image_count=1,
                     success=True
                 )
-            
+
             # 提取文本列表和置信度
             texts = []
             confidences = []
@@ -285,7 +285,7 @@ class VLMOCREngine:
             elif isinstance(formatted_result, str):
                 texts = [formatted_result]
                 confidences = [1.0]
-            
+
             return OCRResponse(
                 success=True,
                 texts=texts if texts else [decoded_text],
@@ -343,7 +343,7 @@ class VLMOCREngine:
                     del messages
                 if 'outputs' in locals():
                     del outputs
-                
+
                 # NPU 内存清理
                 if "npu" in self.device:
                     import gc
@@ -371,7 +371,7 @@ class VLMOCREngine:
         """
         logger.info(f"Processing batch of {len(request.images)} images...")
         batch_start_time = time.time()
-        
+
         if not request.images:
             raise ValidationError(
                 message="Empty batch: no images provided",
@@ -420,7 +420,7 @@ class VLMOCREngine:
                 success=(len(errors) == 0),
                 error_message=f"Batch: {len(errors)} failures" if errors else None
             )
-        
+
         # 如果所有图像都失败，抛出批处理异常
         if len(errors) == len(request.images):
             raise BatchProcessingError(
@@ -429,7 +429,7 @@ class VLMOCREngine:
                 failed=len(errors),
                 errors=errors
             )
-        
+
         # 如果部分失败，记录警告但返回结果
         if errors:
             logger.warning(f"Batch processing completed with {len(errors)} failures out of {len(request.images)} images")
@@ -453,21 +453,21 @@ class VLMOCREngine:
             ModelInferenceError: 模型推理失败
         """
         logger.info(f"Downloading image from URL: {request.image_url}")
-        
+
         # 验证URL格式
         if not request.image_url:
             raise ValidationError(
                 message="Empty image URL",
                 field="image_url"
             )
-        
+
         if not request.image_url.startswith(('http://', 'https://')):
             raise ValidationError(
                 message=f"Invalid URL scheme: {request.image_url}",
                 field="image_url",
                 value=request.image_url
             )
-        
+
         # 下载图像
         try:
             image_bytes = download_image_from_url(str(request.image_url))
@@ -561,15 +561,15 @@ class VLMOCREngine:
     def process_batch(self, batch_items: List[OCRRequest]) -> List[OCRResponse]:
         """
         批处理接口（适配DynamicBatcher）
-        
+
         Args:
             batch_items: OCR请求列表
-            
+
         Returns:
             List[OCRResponse]: OCR响应列表
         """
         logger.info(f"Processing batch of {len(batch_items)} requests via process_batch")
-        
+
         # 转换为OCRBatchRequest并调用predict_batch
         batch_request = OCRBatchRequest(
             images=[item.image for item in batch_items],
@@ -579,5 +579,5 @@ class VLMOCREngine:
             confidence_threshold=batch_items[0].confidence_threshold if batch_items else 0.5,
             custom_prompt=batch_items[0].custom_prompt if batch_items else None
         )
-        
+
         return self.predict_batch(batch_request)
