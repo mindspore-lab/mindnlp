@@ -15,19 +15,19 @@ modules_to_remove = [key for key in sys.modules.keys() if key.startswith('mindnl
 for module in modules_to_remove:
     del sys.modules[module]
 
-import argparse
-import json
-import logging
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from collections import defaultdict
-import re
+import argparse  # pylint: disable=wrong-import-position
+import json  # pylint: disable=wrong-import-position
+import logging  # pylint: disable=wrong-import-position
+from pathlib import Path  # pylint: disable=wrong-import-position
+from typing import Dict, List, Optional  # pylint: disable=wrong-import-position
+from collections import defaultdict  # pylint: disable=wrong-import-position
+import re  # pylint: disable=wrong-import-position
 
-import torch
-from tqdm import tqdm
-from PIL import Image
-from transformers import AutoProcessor
-import editdistance
+import torch  # pylint: disable=wrong-import-position
+from tqdm import tqdm  # pylint: disable=wrong-import-position
+from PIL import Image  # pylint: disable=wrong-import-position
+from transformers import AutoProcessor  # pylint: disable=wrong-import-position
+import editdistance  # pylint: disable=import-error,wrong-import-position
 
 logging.basicConfig(
     level=logging.INFO,
@@ -293,13 +293,12 @@ def load_lora_model(base_model_path: str, lora_path: str, device: Optional[str] 
         (model, processor)
     """
     from transformers import Qwen2VLForConditionalGeneration
-    from peft import LoraConfig, get_peft_model, PeftModel
-    import numpy as np
+    from peft import PeftModel  # pylint: disable=import-error
 
-    # 自动检测设
+    # 自动检测设备
     if device is None:
         try:
-            import torch_npu
+            import torch_npu  # pylint: disable=import-error,unused-import
             if torch.npu.is_available():
                 device = "npu:0"
                 logger.info("Auto-detected NPU device")

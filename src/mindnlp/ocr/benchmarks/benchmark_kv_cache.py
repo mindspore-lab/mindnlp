@@ -16,8 +16,8 @@ from PIL import Image
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from mindnlp.ocr.models.qwen2vl import Qwen2VLModel
-from mindnlp.ocr.utils.cache_manager import CacheConfig
+from mindnlp.ocr.models.qwen2vl import Qwen2VLModel  # pylint: disable=wrong-import-position
+from mindnlp.ocr.utils.cache_manager import CacheConfig  # pylint: disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -35,8 +35,7 @@ def create_test_image(width: int = 800, height: int = 600) -> Image.Image:
         PIL图像对象
     """
     # 创建包含文本的测试图像
-    import numpy as np
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import ImageDraw, ImageFont  # pylint: disable=reimported
 
     # 创建白色背景
     img = Image.new('RGB', (width, height), color='white')
@@ -85,7 +84,7 @@ def measure_memory_usage():
         memory_info['cuda_max_allocated'] = torch.cuda.max_memory_allocated() / (1024**2)
 
     try:
-        import torch_npu
+        import torch_npu  # pylint: disable=import-error
         memory_info['npu_allocated'] = torch_npu.npu.memory_allocated() / (1024**2)
         memory_info['npu_reserved'] = torch_npu.npu.memory_reserved() / (1024**2)
     except:

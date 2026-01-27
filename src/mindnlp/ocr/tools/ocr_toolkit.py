@@ -11,20 +11,19 @@ import sys
 import argparse
 import json
 import logging
-import re
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional
 
 import torch
 import numpy as np
 from PIL import Image
 from transformers import AutoProcessor, Qwen2VLForConditionalGeneration, TrainingArguments, Trainer
-from peft import LoraConfig, get_peft_model, TaskType, PeftModel
+from peft import LoraConfig, get_peft_model, TaskType  # pylint: disable=import-error
 
 # 添加 src Python 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
-from mindnlp.ocr.finetune.dataset_preextracted import PreExtractedOCRDataset, PreExtractedDataCollator
+from mindnlp.ocr.finetune.dataset_preextracted import PreExtractedOCRDataset, PreExtractedDataCollator  # pylint: disable=import-error,no-name-in-module,wrong-import-position
 
 logging.basicConfig(
     level=logging.INFO,

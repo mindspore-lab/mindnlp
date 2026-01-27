@@ -15,13 +15,13 @@ if '--cpu_offload' in sys.argv:
     print("⚠️  CPU offload mode: NPU hidden before module imports")
 # ============================================================
 
-import argparse
-import logging
-from pathlib import Path
-from typing import Optional
-import gc
-import types
-from importlib.machinery import ModuleSpec
+import argparse  # pylint: disable=wrong-import-position
+import logging  # pylint: disable=wrong-import-position
+from pathlib import Path  # pylint: disable=wrong-import-position
+from typing import Optional  # pylint: disable=wrong-import-position
+import gc  # pylint: disable=wrong-import-position
+import types  # pylint: disable=wrong-import-position
+from importlib.machinery import ModuleSpec  # pylint: disable=wrong-import-position
 
 # 在导入peft之前创建假的bitsandbytes模块（避免mindtorch兼容性问题）
 if 'bitsandbytes' not in sys.modules:
@@ -46,8 +46,8 @@ if 'bitsandbytes' not in sys.modules:
     sys.modules['bitsandbytes.research'] = fake_bnb.research
     sys.modules['bitsandbytes.utils'] = fake_bnb.utils
 
-import torch
-import torch.distributed as dist
+import torch  # pylint: disable=wrong-import-position
+import torch.distributed as dist  # pylint: disable=wrong-import-position,unused-import
 
 # CPU offload模式：在导入transformers前强制mindspore使用CPU
 if '--cpu_offload' in sys.argv:
@@ -152,15 +152,15 @@ if '--cpu_offload' in sys.argv:
     except Exception as e:
         print(f"⚠️  Failed to set CPU-only mode: {e}")
 
-from transformers import (
+from transformers import (  # pylint: disable=wrong-import-position
     AutoProcessor,
     Qwen2VLForConditionalGeneration,
     TrainingArguments,
     Trainer,
 )
-from peft import LoraConfig, TaskType, get_peft_model, PeftModel
+from peft import LoraConfig, TaskType, get_peft_model, PeftModel  # pylint: disable=import-error,wrong-import-position
 
-from .dataset import OCRDataset, OCRDataCollator, split_dataset
+from .dataset import OCRDataset, OCRDataCollator, split_dataset  # pylint: disable=wrong-import-position
 
 
 # 自定义Trainer：CPU offload模式下禁止移动base model

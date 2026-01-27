@@ -5,17 +5,16 @@ Convert PyTorch-saved features to NumPy format
 PyTorch 保存的特征文件转换为 NumPy 格式，避torch_npu 序列化兼容性问
 """
 import os
-import sys
 import json
 import logging
 from pathlib import Path
 
-# 必须在导mindtorch 之前设置环境，使用纯 PyTorch
+# 必须在导入mindtorch 之前设置环境，使用纯 PyTorch
 os.environ['OPENBLAS_NUM_THREADS'] = '4'
 
-import torch
-import numpy as np
-from tqdm import tqdm
+import torch  # pylint: disable=wrong-import-position
+import numpy as np  # pylint: disable=wrong-import-position
+from tqdm import tqdm  # pylint: disable=wrong-import-position
 
 logging.basicConfig(
     level=logging.INFO,
@@ -139,7 +138,7 @@ def convert_pt_to_npy(input_dir: Path, output_dir: Path):
 
     # 总结
     logger.info("="*80)
-    logger.info(f"Conversion completed!")
+    logger.info("Conversion completed!")
     logger.info(f"Converted: {converted_count}")
     logger.info(f"Skipped (already exist): {skipped_count}")
     logger.info(f"Errors: {error_count}")

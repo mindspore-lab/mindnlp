@@ -99,13 +99,13 @@ def setup_tracing(config: TracingConfig) -> Optional[TracerProvider]:
         logger.info(f"Using OTLP exporter: {config.otlp_endpoint}")
 
     elif config.exporter_type == "console":
-        from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+        from opentelemetry.sdk.trace.export import ConsoleSpanExporter  # pylint: disable=import-error
         exporter = ConsoleSpanExporter()
         logger.info("Using Console exporter (for debugging)")
 
     else:
         logger.warning(f"Unknown exporter type: {config.exporter_type}, using console")
-        from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+        from opentelemetry.sdk.trace.export import ConsoleSpanExporter  # pylint: disable=import-error
         exporter = ConsoleSpanExporter()
 
     # 添加批处理器

@@ -13,14 +13,13 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from benchmark_kv_cache import (
+from benchmark_kv_cache import (  # pylint: disable=import-error
     create_test_image,
     benchmark_single_inference,
     benchmark_batch_inference,
     benchmark_long_sequence,
-    measure_memory_usage
 )
-from mindnlp.ocr.utils.cache_manager import CacheConfig
+from mindnlp.ocr.utils.cache_manager import CacheConfig  # pylint: disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -60,9 +59,9 @@ def run_comparison_benchmark(model_path: str,
     }
 
     # ========== Test 1: KV Cache DISABLED ==========
-    logger.info("\n" + "="*80)
+    logger.info("%s", "\n" + "="*80)
     logger.info("Scenario 1: KV Cache DISABLED")
-    logger.info("="*80)
+    logger.info("%s", "="*80)
 
     cache_config_disabled = CacheConfig(
         enable_kv_cache=False,
@@ -94,9 +93,9 @@ def run_comparison_benchmark(model_path: str,
         torch.cuda.empty_cache()
 
     # ========== Test 2: KV Cache ENABLED ==========
-    logger.info("\n" + "="*80)
+    logger.info("%s", "\n" + "="*80)
     logger.info("Scenario 2: KV Cache ENABLED")
-    logger.info("="*80)
+    logger.info("%s", "="*80)
 
     cache_config_enabled = CacheConfig(
         enable_kv_cache=True,
@@ -209,13 +208,13 @@ def print_comparison_summary(results: Dict[str, Any]):
     improvement = results['improvement']
 
     # 单图推理对比
-    print(f"\n📊 Single Image Inference:")
+    print("\n📊 Single Image Inference:")
     print(f"  KV Cache Disabled: {baseline['single_inference']['latency_mean_ms']:.2f} ms")
     print(f"  KV Cache Enabled:  {optimized['single_inference']['latency_mean_ms']:.2f} ms")
     print(f"  ⚡ Speedup: {improvement['single_inference_speedup']:.1f}%")
 
     # 批量推理对比
-    print(f"\n📊 Batch Inference (batch=4):")
+    print("\n📊 Batch Inference (batch=4):")
     if 'batch_4' in baseline['batch_inference']:
         baseline_b4 = baseline['batch_inference']['batch_4']
         optimized_b4 = optimized['batch_inference']['batch_4']
@@ -225,20 +224,20 @@ def print_comparison_summary(results: Dict[str, Any]):
             print(f"  ⚡ Throughput Improvement: {improvement['batch4_throughput_improvement']:.1f}%")
 
     # 长序列对比
-    print(f"\n📊 Long Sequence Generation:")
+    print("\n📊 Long Sequence Generation:")
     print(f"  KV Cache Disabled: {baseline['long_sequence']['tokens_per_second']:.2f} tokens/s")
     print(f"  KV Cache Enabled:  {optimized['long_sequence']['tokens_per_second']:.2f} tokens/s")
     print(f"  ⚡ Speedup: {improvement['long_sequence_speedup']:.1f}%")
 
     # 内存对比
     if 'memory_reduction' in improvement:
-        print(f"\n💾 Memory Usage:")
+        print("\n💾 Memory Usage:")
         print(f"  KV Cache Disabled: {baseline['single_inference']['memory_peak_mb']:.2f} MB")
         print(f"  KV Cache Enabled:  {optimized['single_inference']['memory_peak_mb']:.2f} MB")
         print(f"  💾 Memory Reduction: {improvement['memory_reduction']:.1f}%")
 
     # 验收标准检查
-    print(f"\n✅ Acceptance Criteria Check:")
+    print("\n✅ Acceptance Criteria Check:")
     criteria_passed = 0
     criteria_total = 0
 

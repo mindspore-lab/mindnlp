@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Dict
 import requests
 from tqdm import tqdm
-import editdistance
+import editdistance  # pylint: disable=import-error
 
 logging.basicConfig(
     level=logging.INFO,

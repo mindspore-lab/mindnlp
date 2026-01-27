@@ -8,7 +8,7 @@ import sys
 # 添加src到路
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
-from mindnlp.ocr.config.settings import get_settings
+from mindnlp.ocr.config.settings import get_settings  # pylint: disable=wrong-import-position
 
 print("=" * 60)
 print("OCR配置检查")
