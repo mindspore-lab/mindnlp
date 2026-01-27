@@ -34,7 +34,7 @@ def training_step(
         self.optimizer.train()
 
     inputs = self._prepare_inputs(inputs)
-    
+
     # 使用标准 PyTorch backward 而不是 MindSpore autograd（避免 PEFT 兼容性问题）
     with self.compute_loss_context_manager():
         loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
@@ -54,7 +54,7 @@ def training_step(
         kwargs["scale_wrt_gas"] = False
 
     learning_rate = kwargs.get("learning_rate")
-    
+
     if self.use_apex:
         raise RuntimeError('mindspore not support apex.')
     else:

@@ -3,7 +3,7 @@
 提供性能监控和系统状态查询接口
 """
 
-from fastapi import APIRouter, Depends  # pylint: disable=import-error
+from fastapi import APIRouter  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.core.monitor import get_performance_monitor
 

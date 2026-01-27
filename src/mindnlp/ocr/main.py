@@ -240,10 +240,10 @@ def main():
     if settings.lora_weights_path:
         print(f"  - LoRA权重: {settings.lora_weights_path}")
     print(f"  - Mock模式: {settings.use_mock_engine}")
-    print(f"\n📚 API 文档地址 (推荐使用):")
+    print("\n📚 API 文档地址 (推荐使用):")
     print(f"  - Swagger UI:  http://localhost:{settings.api_port}/api/docs")
     print(f"  - ReDoc:       http://localhost:{settings.api_port}/api/redoc")
-    print(f"\n🔍 API 端点:")
+    print("\n🔍 API 端点:")
     print(f"  - 健康检查 (GET):    http://localhost:{settings.api_port}/api/v1/health")
     print(f"  - OCR预测 (POST):    http://localhost:{settings.api_port}/api/v1/ocr/predict")
     print(f"  - 批量OCR (POST):    http://localhost:{settings.api_port}/api/v1/ocr/predict_batch")
