@@ -176,6 +176,23 @@ def patch_tensor_constructors():
 patch_tensor_constructors()
 
 
+# 为 torch.relu 添加补丁，确保在 torch4ms 环境中可拦截
+def patch_torch_relu():
+    original_relu = torch.relu
+
+    @functools.wraps(original_relu)
+    def wrapper(input, *args, **kwargs):
+        env = default_env()
+        if env is not None and env.enabled and isinstance(input, tensor.Tensor):
+            return env.dispatch(original_relu, None, (input,), kwargs)
+        return original_relu(input, *args, **kwargs)
+
+    torch.relu = wrapper
+
+
+patch_torch_relu()
+
+
 def enable_accuracy_mode():
     """Enable high precision mode for MindSpore."""
     set_ms_config(mode=ms.context.GRAPH_MODE)
