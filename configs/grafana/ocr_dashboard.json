@@ -1,0 +1,198 @@
+{
+  "dashboard": {
+    "title": "OCR Service Monitoring",
+    "tags": ["ocr", "api", "performance"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "10s",
+    "panels": [
+      {
+        "title": "Request Rate (QPS)",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "rate(ocr_requests_total[1m])",
+            "legendFormat": "QPS"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "reqps", "label": "Requests/sec" }
+        ]
+      },
+      {
+        "title": "Success Rate",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "rate(ocr_requests_success[5m]) / rate(ocr_requests_total[5m]) * 100",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "percent", "label": "%" }
+        ]
+      },
+      {
+        "title": "Request Latency (P50/P95/P99)",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "s", "label": "Latency" }
+        ]
+      },
+      {
+        "title": "Error Rate",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+        "targets": [
+          {
+            "expr": "rate(ocr_requests_failed[5m])",
+            "legendFormat": "Failed Requests"
+          },
+          {
+            "expr": "rate(ocr_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "5xx Errors"
+          },
+          {
+            "expr": "rate(ocr_requests_total{status=~\"4..\"}[5m])",
+            "legendFormat": "4xx Errors"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "reqps", "label": "Errors/sec" }
+        ]
+      },
+      {
+        "title": "CPU & Memory Usage",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+        "targets": [
+          {
+            "expr": "process_cpu_percent",
+            "legendFormat": "CPU %"
+          },
+          {
+            "expr": "ocr_memory_mb",
+            "legendFormat": "Memory (MB)"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "percent", "label": "CPU / Memory" }
+        ]
+      },
+      {
+        "title": "Batch Processing Metrics",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+        "targets": [
+          {
+            "expr": "ocr_batch_avg_size",
+            "legendFormat": "Avg Batch Size"
+          },
+          {
+            "expr": "ocr_batch_hit_rate * 100",
+            "legendFormat": "Batch Hit Rate %"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Queue Metrics",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+        "targets": [
+          {
+            "expr": "ocr_queue_size",
+            "legendFormat": "Queue Size"
+          },
+          {
+            "expr": "ocr_queue_wait_time_ms",
+            "legendFormat": "Avg Wait Time (ms)"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Rate Limiting & Circuit Breaker",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+        "targets": [
+          {
+            "expr": "rate(ocr_rate_limit_rejected[5m])",
+            "legendFormat": "Rate Limited Requests"
+          },
+          {
+            "expr": "rate(ocr_circuit_breaker_rejected[5m])",
+            "legendFormat": "Circuit Breaker Rejects"
+          },
+          {
+            "expr": "ocr_circuit_breaker_state",
+            "legendFormat": "CB State (0=CLOSED, 1=OPEN, 2=HALF_OPEN)"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Model Inference Time",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(model_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95 Inference Time"
+          },
+          {
+            "expr": "avg(model_inference_duration_seconds_sum / model_inference_duration_seconds_count)",
+            "legendFormat": "Avg Inference Time"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "s", "label": "Inference Time" }
+        ]
+      },
+      {
+        "title": "GPU Utilization",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+        "targets": [
+          {
+            "expr": "gpu_utilization_percent",
+            "legendFormat": "GPU Utilization"
+          },
+          {
+            "expr": "gpu_memory_used_mb / gpu_memory_total_mb * 100",
+            "legendFormat": "GPU Memory %"
+          }
+        ],
+        "type": "graph",
+        "yaxes": [
+          { "format": "percent", "label": "%" }
+        ]
+      },
+      {
+        "title": "Top Error Messages",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+        "targets": [
+          {
+            "expr": "topk(10, count by (error_type) (ocr_errors_total))",
+            "legendFormat": "{{error_type}}"
+          }
+        ],
+        "type": "graph"
+      }
+    ]
+  }
+}

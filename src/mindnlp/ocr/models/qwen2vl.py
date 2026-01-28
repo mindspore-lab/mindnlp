@@ -89,10 +89,11 @@ class Qwen2VLModel(VLMModelBase):
         """
         # 设置默认生成参数
         generation_config = {
-            'max_new_tokens': kwargs.get('max_new_tokens', 512),
+            'max_new_tokens': kwargs.get('max_new_tokens', 2048),
             'do_sample': kwargs.get('do_sample', False),
             'temperature': kwargs.get('temperature', 0.7),
             'top_p': kwargs.get('top_p', 0.9),
+            'eos_token_id': None,  # 禁用EOS token以防止输出截断
         }
 
         logger.info("Generating output with Qwen2-VL...")
