@@ -1,6 +1,7 @@
 """Stub for torch.hub module."""
 
 import os
+from urllib.parse import urlparse
 
 
 def _get_torch_home():
@@ -67,4 +68,6 @@ __all__ = [
     'load',
     'download_url_to_file',
     'load_state_dict_from_url',
+    'urlparse',
+    'HASH_REGEX',
 ]

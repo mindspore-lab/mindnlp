@@ -217,3 +217,31 @@ def _awaitable(fn):
 def _awaitable_wait(fn):
     """Awaitable wait - returns unchanged."""
     return fn
+
+
+# _recursive submodule stub for clear_torch_jit_class_registry
+class _ConcreteTypeStore:
+    """Stub for ConcreteTypeStore used in JIT class registry cleanup."""
+    pass
+
+
+class _recursive_module:
+    """Stub for torch.jit._recursive submodule."""
+    ConcreteTypeStore = _ConcreteTypeStore
+    concrete_type_store = _ConcreteTypeStore()
+
+
+_recursive = _recursive_module()
+
+
+# _state submodule stub
+class _state_module:
+    """Stub for torch.jit._state submodule."""
+
+    @staticmethod
+    def _clear_class_state():
+        """Clear JIT class state - no-op."""
+        pass
+
+
+_state = _state_module()

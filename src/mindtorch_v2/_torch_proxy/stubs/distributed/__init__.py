@@ -180,3 +180,18 @@ class Work:
 
 # Initialize module-level objects
 WORLD = None
+
+
+class DTensor:
+    """Distributed Tensor stub.
+
+    This is a stub class that allows isinstance checks to work
+    without having actual distributed tensor functionality.
+    """
+    pass
+
+
+# Create tensor submodule
+class tensor:
+    """Stub for torch.distributed.tensor submodule."""
+    DTensor = DTensor

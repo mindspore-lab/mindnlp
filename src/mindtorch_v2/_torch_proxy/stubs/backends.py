@@ -33,6 +33,27 @@ class cuda:
     # Prefer channels last
     preferred_linalg_library = lambda lib=None: None
 
+    @staticmethod
+    def sdp_kernel(enable_flash=True, enable_math=True, enable_mem_efficient=True):
+        """Context manager to control which SDPA kernels are enabled.
+
+        This is a no-op stub since we don't have CUDA support.
+        Returns a context manager that does nothing.
+        """
+        class _SDPKernelContext:
+            def __init__(self, enable_flash, enable_math, enable_mem_efficient):
+                self.enable_flash = enable_flash
+                self.enable_math = enable_math
+                self.enable_mem_efficient = enable_mem_efficient
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                return False
+
+        return _SDPKernelContext(enable_flash, enable_math, enable_mem_efficient)
+
 
 class cudnn:
     """cuDNN backend configuration."""

@@ -2,6 +2,7 @@
 """Autograd Node - base class for gradient functions."""
 
 from typing import Tuple, Optional, Any
+import weakref
 
 
 class Node:
@@ -14,15 +15,17 @@ class Node:
         _next_functions: Tuple of (Node, output_idx) pairs linking to input nodes
         _saved_tensors: Tensors saved for backward computation
         _needs_input_grad: Tuple of bools indicating which inputs need gradients
+        _output_tensor_ref: Weak reference to output tensor (for retain_grad support)
     """
 
-    __slots__ = ('_next_functions', '_saved_tensors', '_needs_input_grad', '_name')
+    __slots__ = ('_next_functions', '_saved_tensors', '_needs_input_grad', '_name', '_output_tensor_ref')
 
     def __init__(self):
         self._next_functions: Tuple[Tuple[Optional['Node'], int], ...] = ()
         self._saved_tensors: Tuple[Any, ...] = ()
         self._needs_input_grad: Tuple[bool, ...] = ()
         self._name: str = self.__class__.__name__
+        self._output_tensor_ref: Optional[weakref.ref] = None
 
     @property
     def next_functions(self) -> Tuple[Tuple[Optional['Node'], int], ...]:
@@ -42,6 +45,16 @@ class Node:
     def saved_tensors(self) -> Tuple[Any, ...]:
         """Return tensors saved for backward."""
         return self._saved_tensors
+
+    def register_output_tensor(self, tensor):
+        """Register the output tensor for retain_grad support."""
+        self._output_tensor_ref = weakref.ref(tensor)
+
+    def get_output_tensor(self):
+        """Get the output tensor if registered and still alive."""
+        if self._output_tensor_ref is not None:
+            return self._output_tensor_ref()
+        return None
 
     def backward(self, grad_outputs: Tuple[Any, ...]) -> Tuple[Any, ...]:
         """Compute gradients for inputs given gradients of outputs.

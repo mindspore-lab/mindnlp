@@ -84,6 +84,16 @@ def backward(
             for g in grads[1:]:
                 grad_output = add(grad_output, g)
 
+        # Handle retain_grad: store gradient on tensor if requested
+        output_tensor = node.get_output_tensor()
+        if output_tensor is not None and getattr(output_tensor, '_retain_grad', False):
+            if output_tensor.grad is None:
+                # Clone to avoid issues with in-place operations
+                output_tensor.grad = grad_output.clone() if hasattr(grad_output, 'clone') else grad_output
+            else:
+                from .. import add
+                output_tensor.grad = add(output_tensor.grad, grad_output)
+
         # Handle AccumulateGrad specially
         if isinstance(node, AccumulateGrad):
             variable = node.variable

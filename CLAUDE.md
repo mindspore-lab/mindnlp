@@ -511,3 +511,65 @@ When asked to create a PR, **ALWAYS** follow these steps in order:
    - Meta device context manager not fully implemented
    - Gradient checkpointing with None gradients (SGD optimizer issue)
    - Autograd engine null pointer issues
+
+### Session: 2026-01-27 - mindtorch_v2 A-Class Models Testing
+
+**Test Scope**: Testing 'a' class transformer models with mindtorch_v2 backend
+
+**Methodology**: Created new test runner (run_test_v2.py) that uses mindtorch_v2's torch_proxy to intercept `import torch` and redirect to mindtorch_v2
+
+**Infrastructure Created**:
+1. `tests/run_test_v2.py` - Test runner for mindtorch_v2 with torch proxy
+2. Mock for peft library to avoid import chain issues
+
+**Bugs Fixed / APIs Added in mindtorch_v2**:
+
+| # | API/Module | File | Description |
+|---|------------|------|-------------|
+| 1 | cumsum, cumprod | `_functional.py` | Cumulative sum/product operations |
+| 2 | floor, ceil, trunc, round, sign | `_functional.py` | Rounding operations |
+| 3 | fmod, remainder | `_functional.py` | Modular arithmetic |
+| 4 | log10, log2, log1p, expm1 | `_functional.py` | Log variants |
+| 5 | acos, asin, atan, atan2 | `_functional.py` | Trigonometric functions |
+| 6 | cosh, sinh, acosh, asinh, atanh | `_functional.py` | Hyperbolic functions |
+| 7 | get_default_dtype, set_default_dtype | `__init__.py` | Default dtype management |
+| 8 | ZeroPad1d/2d/3d | `nn/modules/padding.py` | Zero padding modules |
+| 9 | ConstantPad1d/2d/3d | `nn/modules/padding.py` | Constant padding modules |
+| 10 | ReflectionPad1d/2d/3d | `nn/modules/padding.py` | Reflection padding modules |
+| 11 | ReplicationPad1d/2d/3d | `nn/modules/padding.py` | Replication padding modules |
+| 12 | Tensor.type_as() | `_tensor.py` | Cast to same dtype as other tensor |
+| 13 | Tensor.type() | `_tensor.py` | Get/set tensor type |
+| 14 | LRScheduler and variants | `optim/lr_scheduler.py` | Learning rate schedulers |
+| 15 | L1Loss, SmoothL1Loss, etc. | `nn/modules/loss.py` | Additional loss functions |
+| 16 | one_hot | `nn/functional.py` | One-hot encoding |
+| 17 | batch_norm, group_norm, etc. | `nn/functional.py` | Normalization functions |
+| 18 | DistributedSampler | `_torch_proxy/stubs/utils/data/` | Data sampler stub |
+| 19 | DataParallel | `nn/parallel/` | Parallel training stub |
+| 20 | _dynamo module | `_dynamo/` | torch.compile stubs |
+
+**Model Test Results**:
+
+| Model | Status | Notes |
+|-------|--------|-------|
+| AlbertModel | SUCCESS | Forward pass works |
+| ASTModel | SUCCESS | Forward pass works |
+| AltCLIPModel | PARTIAL | Model creates, needs `sigmoid` at module level |
+| AlignModel | PARTIAL | Needs `AdaptiveAvgPool2d` |
+| AriaModel | BLOCKED | Needs more APIs |
+| AyaVisionModel | BLOCKED | Needs more APIs |
+| AutoformerModel | BLOCKED | Needs `torch.distributions` module |
+
+**Remaining APIs Needed for Full Support**:
+1. `torch.sigmoid` (module-level, not just Tensor method)
+2. `nn.AdaptiveAvgPool2d`, `nn.AdaptiveAvgPool1d`
+3. `torch.distributions` module (for time series models)
+4. `torch.fft` module (for signal processing)
+
+**Commits Created**:
+1. `fa18c68b` - fix(mindtorch_v2): add tensor methods for aimv2 model compatibility
+2. `3ae9e2d8` - feat(mindtorch_v2): add test infrastructure and stub expansions
+3. `c7a0dcd8` - feat(mindtorch_v2): add cumsum, padding modules, dtype functions
+
+**Key Achievement**: mindtorch_v2 now successfully runs AlbertModel and ASTModel forward passes using the torch_proxy system, demonstrating the viability of the approach.
+
+---

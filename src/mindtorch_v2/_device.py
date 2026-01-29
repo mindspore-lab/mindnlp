@@ -2,7 +2,22 @@
 
 # Avoid conflict with Python builtins
 import builtins as _builtins
+import threading
+
 _int = _builtins.int
+
+# Thread-local storage for default device context
+_device_context = threading.local()
+
+
+def _get_default_device():
+    """Get the current default device from context, or None."""
+    return getattr(_device_context, 'device', None)
+
+
+def _set_default_device(dev):
+    """Set the current default device in context."""
+    _device_context.device = dev
 
 
 class device:
@@ -14,7 +29,7 @@ class device:
         device("cuda:1")
     """
 
-    __slots__ = ("type", "index")
+    __slots__ = ("type", "index", "_prev_device")
 
     def __init__(self, type_or_str, index=None):
         if isinstance(type_or_str, device):
@@ -56,3 +71,14 @@ class device:
     def __reduce__(self):
         """Support pickling."""
         return (device, (self.type, self.index))
+
+    def __enter__(self):
+        """Enter device context - tensors created inside will use this device."""
+        self._prev_device = _get_default_device()
+        _set_default_device(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit device context - restore previous default device."""
+        _set_default_device(self._prev_device)
+        return False

@@ -133,6 +133,36 @@ class ELU(Module):
         return F.elu(input, alpha=self.alpha, inplace=self.inplace)
 
 
+class CELU(Module):
+    """Applies CELU activation."""
+
+    __constants__ = ['alpha', 'inplace']
+    alpha: float
+    inplace: bool
+
+    def __init__(self, alpha: float = 1.0, inplace: bool = False):
+        super().__init__()
+        self.alpha = alpha
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.celu(input, alpha=self.alpha, inplace=self.inplace)
+
+
+class SELU(Module):
+    """Applies SELU activation."""
+
+    __constants__ = ['inplace']
+    inplace: bool
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.selu(input, inplace=self.inplace)
+
+
 class PReLU(Module):
     """Applies PReLU (Parametric ReLU)."""
 

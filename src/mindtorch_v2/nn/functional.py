@@ -81,6 +81,24 @@ def elu(input, alpha=1.0, inplace=False):
     return Tensor(result.astype(np.float32))
 
 
+def celu(input, alpha=1.0, inplace=False):
+    """Apply CELU activation: max(0,x) + min(0, alpha*(exp(x/alpha)-1))."""
+    import numpy as np
+    x = input.numpy()
+    result = np.maximum(0, x) + np.minimum(0, alpha * (np.exp(x / alpha) - 1))
+    return Tensor(result.astype(np.float32))
+
+
+def selu(input, inplace=False):
+    """Apply SELU activation."""
+    import numpy as np
+    alpha = 1.6732632423543772848170429916717
+    scale = 1.0507009873554804934193349852946
+    x = input.numpy()
+    result = scale * np.where(x > 0, x, alpha * (np.exp(x) - 1))
+    return Tensor(result.astype(np.float32))
+
+
 def prelu(input, weight):
     """Apply PReLU activation."""
     import numpy as np
@@ -285,7 +303,14 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest',
 
 
 def pad(input, pad, mode='constant', value=0):
-    """Pad tensor - basic implementation."""
+    """Pad tensor - supports both positive (padding) and negative (cropping) values.
+
+    Args:
+        input: Input tensor
+        pad: Padding sizes (left, right, top, bottom, ...) - negative values crop
+        mode: 'constant', 'reflect', 'replicate', or 'circular'
+        value: Fill value for constant padding
+    """
     import numpy as np
     x = input.numpy()
 
@@ -295,26 +320,55 @@ def pad(input, pad, mode='constant', value=0):
     ndim = x.ndim
     pad_list = list(pad)
 
-    # Pad is applied from last dimension to first
+    # Separate positive padding and negative cropping
     np_pad = [(0, 0)] * ndim
+    slices = [slice(None)] * ndim
+
     dim_idx = ndim - 1
     for i in range(0, len(pad_list), 2):
         if dim_idx >= 0:
-            np_pad[dim_idx] = (pad_list[i], pad_list[i+1])
+            left_pad = pad_list[i]
+            right_pad = pad_list[i + 1]
+
+            # Handle negative padding (cropping)
+            left_crop = 0
+            right_crop = 0
+            if left_pad < 0:
+                left_crop = -left_pad
+                left_pad = 0
+            if right_pad < 0:
+                right_crop = -right_pad
+                right_pad = 0
+
+            np_pad[dim_idx] = (left_pad, right_pad)
+
+            # Create slice for cropping (if needed)
+            if left_crop > 0 or right_crop > 0:
+                end = x.shape[dim_idx] - right_crop if right_crop > 0 else None
+                slices[dim_idx] = slice(left_crop, end)
+
             dim_idx -= 1
 
-    if mode == 'constant':
-        result = np.pad(x, np_pad, mode='constant', constant_values=value)
-    elif mode == 'reflect':
-        result = np.pad(x, np_pad, mode='reflect')
-    elif mode == 'replicate':
-        result = np.pad(x, np_pad, mode='edge')
-    elif mode == 'circular':
-        result = np.pad(x, np_pad, mode='wrap')
-    else:
-        raise ValueError(f"Unknown padding mode: {mode}")
+    # First crop if needed
+    x = x[tuple(slices)]
 
-    return Tensor(result.astype(x.dtype))
+    # Then pad if any positive padding exists
+    has_padding = any(p[0] > 0 or p[1] > 0 for p in np_pad)
+    if has_padding:
+        if mode == 'constant':
+            result = np.pad(x, np_pad, mode='constant', constant_values=value)
+        elif mode == 'reflect':
+            result = np.pad(x, np_pad, mode='reflect')
+        elif mode == 'replicate':
+            result = np.pad(x, np_pad, mode='edge')
+        elif mode == 'circular':
+            result = np.pad(x, np_pad, mode='wrap')
+        else:
+            raise ValueError(f"Unknown padding mode: {mode}")
+    else:
+        result = x
+
+    return Tensor(result.astype(input.numpy().dtype))
 
 
 def affine_grid(theta, size, align_corners=None):
@@ -337,5 +391,438 @@ def upsample_bilinear(input, size=None, scale_factor=None):
     """Upsample using bilinear interpolation - stub."""
     return interpolate(input, size=size, scale_factor=scale_factor,
                       mode='bilinear', align_corners=True)
+
+
+def one_hot(tensor, num_classes=-1):
+    """Convert tensor to one-hot encoding.
+
+    Args:
+        tensor: LongTensor of shape (*) containing class indices
+        num_classes: Total number of classes. If -1, infer from tensor.
+
+    Returns:
+        Tensor of shape (*, num_classes) with one-hot encoding.
+    """
+    import numpy as np
+    indices = tensor.numpy().astype(np.int64)
+
+    if num_classes < 0:
+        num_classes = int(indices.max()) + 1
+
+    # Flatten indices for easier processing
+    flat_indices = indices.flatten()
+    num_samples = len(flat_indices)
+
+    # Create one-hot encoded array
+    one_hot_array = np.zeros((num_samples, num_classes), dtype=np.float32)
+    one_hot_array[np.arange(num_samples), flat_indices] = 1.0
+
+    # Reshape to match input shape + num_classes
+    output_shape = indices.shape + (num_classes,)
+    result = one_hot_array.reshape(output_shape)
+
+    return Tensor(result)
+
+
+def batch_norm(input, running_mean, running_var, weight=None, bias=None,
+               training=False, momentum=0.1, eps=1e-5):
+    """Batch normalization."""
+    import numpy as np
+
+    x = input.numpy()
+    mean = running_mean.numpy() if running_mean is not None else np.mean(x, axis=(0, 2, 3) if x.ndim == 4 else 0, keepdims=True)
+    var = running_var.numpy() if running_var is not None else np.var(x, axis=(0, 2, 3) if x.ndim == 4 else 0, keepdims=True)
+
+    # Reshape for broadcasting
+    if x.ndim == 4:  # NCHW
+        mean = mean.reshape(1, -1, 1, 1)
+        var = var.reshape(1, -1, 1, 1)
+    elif x.ndim == 3:  # NCL
+        mean = mean.reshape(1, -1, 1)
+        var = var.reshape(1, -1, 1)
+
+    # Normalize
+    x_norm = (x - mean) / np.sqrt(var + eps)
+
+    # Scale and shift
+    if weight is not None:
+        w = weight.numpy()
+        if x.ndim == 4:
+            w = w.reshape(1, -1, 1, 1)
+        elif x.ndim == 3:
+            w = w.reshape(1, -1, 1)
+        x_norm = x_norm * w
+
+    if bias is not None:
+        b = bias.numpy()
+        if x.ndim == 4:
+            b = b.reshape(1, -1, 1, 1)
+        elif x.ndim == 3:
+            b = b.reshape(1, -1, 1)
+        x_norm = x_norm + b
+
+    return Tensor(x_norm.astype(np.float32))
+
+
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    """Group normalization."""
+    import numpy as np
+
+    x = input.numpy()
+    N, C = x.shape[:2]
+    spatial_shape = x.shape[2:]
+
+    # Reshape to (N, num_groups, C // num_groups, *spatial)
+    G = num_groups
+    x_grouped = x.reshape(N, G, C // G, *spatial_shape)
+
+    # Compute mean and var over (C // G, *spatial) for each group
+    axes = tuple(range(2, x_grouped.ndim))
+    mean = np.mean(x_grouped, axis=axes, keepdims=True)
+    var = np.var(x_grouped, axis=axes, keepdims=True)
+
+    # Normalize
+    x_norm = (x_grouped - mean) / np.sqrt(var + eps)
+    x_norm = x_norm.reshape(N, C, *spatial_shape)
+
+    # Scale and shift
+    if weight is not None:
+        w = weight.numpy().reshape(1, C, *([1] * len(spatial_shape)))
+        x_norm = x_norm * w
+
+    if bias is not None:
+        b = bias.numpy().reshape(1, C, *([1] * len(spatial_shape)))
+        x_norm = x_norm + b
+
+    return Tensor(x_norm.astype(np.float32))
+
+
+def instance_norm(input, running_mean=None, running_var=None, weight=None, bias=None,
+                  use_input_stats=True, momentum=0.1, eps=1e-5):
+    """Instance normalization."""
+    import numpy as np
+
+    x = input.numpy()
+    N, C = x.shape[:2]
+    spatial_shape = x.shape[2:]
+
+    # Compute mean and var over spatial dimensions for each sample and channel
+    axes = tuple(range(2, x.ndim))
+    mean = np.mean(x, axis=axes, keepdims=True)
+    var = np.var(x, axis=axes, keepdims=True)
+
+    # Normalize
+    x_norm = (x - mean) / np.sqrt(var + eps)
+
+    # Scale and shift
+    if weight is not None:
+        w = weight.numpy().reshape(1, C, *([1] * len(spatial_shape)))
+        x_norm = x_norm * w
+
+    if bias is not None:
+        b = bias.numpy().reshape(1, C, *([1] * len(spatial_shape)))
+        x_norm = x_norm + b
+
+    return Tensor(x_norm.astype(np.float32))
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-5):
+    """Root mean square layer normalization."""
+    import numpy as np
+
+    x = input.numpy()
+
+    # Compute RMS over normalized dimensions
+    if isinstance(normalized_shape, int):
+        normalized_shape = (normalized_shape,)
+
+    # Normalize over the last len(normalized_shape) dimensions
+    axes = tuple(range(-len(normalized_shape), 0))
+    rms = np.sqrt(np.mean(x ** 2, axis=axes, keepdims=True) + eps)
+    x_norm = x / rms
+
+    # Scale
+    if weight is not None:
+        x_norm = x_norm * weight.numpy()
+
+    return Tensor(x_norm.astype(np.float32))
+
+
+# ============================================================
+# Loss Functions
+# ============================================================
+
+def cross_entropy(input, target, weight=None, size_average=None, ignore_index=-100,
+                  reduce=None, reduction='mean', label_smoothing=0.0):
+    """Cross entropy loss with softmax.
+
+    Args:
+        input: Tensor of shape (N, C) or (N, C, d1, d2, ...) containing logits
+        target: Tensor of shape (N,) or (N, d1, d2, ...) containing class indices,
+                or (N, C) or (N, C, d1, d2, ...) containing probabilities
+        weight: Optional weight tensor of shape (C,) for class weighting
+        ignore_index: Class index to ignore in loss computation
+        reduction: 'none', 'mean', or 'sum'
+        label_smoothing: Label smoothing epsilon
+
+    Returns:
+        Loss tensor
+    """
+    return nll_loss(log_softmax(input, dim=1), target, weight=weight,
+                    ignore_index=ignore_index, reduction=reduction)
+
+
+def nll_loss(input, target, weight=None, size_average=None, ignore_index=-100,
+             reduce=None, reduction='mean'):
+    """Negative log likelihood loss.
+
+    Args:
+        input: Tensor of shape (N, C) containing log-probabilities
+        target: Tensor of shape (N,) containing class indices
+        weight: Optional weight tensor of shape (C,)
+        ignore_index: Class index to ignore
+        reduction: 'none', 'mean', or 'sum'
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    log_probs = input.numpy()
+    targets = target.numpy().astype(np.int64)
+
+    # Handle different input shapes
+    if log_probs.ndim == 2:
+        # Standard case: (N, C)
+        N, C = log_probs.shape
+        # Gather log probs for target classes
+        batch_indices = np.arange(N)
+        losses = -log_probs[batch_indices, targets]
+    elif log_probs.ndim == 1:
+        # Single sample case
+        losses = np.array([-log_probs[targets]])
+    else:
+        # Higher dimensional case: (N, C, d1, d2, ...)
+        N, C = log_probs.shape[:2]
+        spatial_shape = log_probs.shape[2:]
+        # Reshape for easier indexing
+        log_probs_flat = log_probs.transpose(0, *range(2, log_probs.ndim), 1).reshape(-1, C)
+        targets_flat = targets.flatten()
+        losses = -log_probs_flat[np.arange(len(targets_flat)), targets_flat]
+        losses = losses.reshape(N, *spatial_shape)
+
+    # Handle ignore_index
+    if ignore_index >= 0:
+        mask = targets != ignore_index
+        losses = np.where(mask.flatten() if losses.ndim == 1 else mask, losses, 0.0)
+        valid_count = np.sum(mask)
+    else:
+        valid_count = losses.size
+
+    # Apply weight if provided
+    if weight is not None:
+        w = weight.numpy()
+        target_weights = w[targets.flatten()].reshape(losses.shape)
+        losses = losses * target_weights
+
+    # Apply reduction
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    else:  # mean
+        if ignore_index >= 0 and valid_count > 0:
+            return Tensor(np.array(np.sum(losses) / valid_count, dtype=np.float32))
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
+
+def binary_cross_entropy(input, target, weight=None, size_average=None,
+                         reduce=None, reduction='mean'):
+    """Binary cross entropy loss.
+
+    Args:
+        input: Tensor of probabilities (after sigmoid)
+        target: Tensor of binary targets
+        weight: Optional weight tensor
+        reduction: 'none', 'mean', or 'sum'
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    probs = input.numpy()
+    targets = target.numpy()
+
+    # Clamp for numerical stability
+    eps = 1e-7
+    probs = np.clip(probs, eps, 1 - eps)
+
+    # BCE: -target * log(prob) - (1 - target) * log(1 - prob)
+    losses = -targets * np.log(probs) - (1 - targets) * np.log(1 - probs)
+
+    if weight is not None:
+        losses = losses * weight.numpy()
+
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    else:  # mean
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
+
+def binary_cross_entropy_with_logits(input, target, weight=None, size_average=None,
+                                      reduce=None, reduction='mean', pos_weight=None):
+    """Binary cross entropy loss with logits (more numerically stable).
+
+    Args:
+        input: Tensor of logits (before sigmoid)
+        target: Tensor of binary targets
+        weight: Optional weight tensor
+        reduction: 'none', 'mean', or 'sum'
+        pos_weight: Weight for positive examples
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    logits = input.numpy()
+    targets = target.numpy()
+
+    # Numerically stable: max(logits, 0) - logits * targets + log(1 + exp(-abs(logits)))
+    max_val = np.maximum(logits, 0)
+    losses = max_val - logits * targets + np.log(1 + np.exp(-np.abs(logits)))
+
+    if pos_weight is not None:
+        pw = pos_weight.numpy() if hasattr(pos_weight, 'numpy') else pos_weight
+        losses = losses * (1 + (pw - 1) * targets)
+
+    if weight is not None:
+        losses = losses * weight.numpy()
+
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    else:  # mean
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
+
+def mse_loss(input, target, size_average=None, reduce=None, reduction='mean'):
+    """Mean squared error loss.
+
+    Args:
+        input: Predictions tensor
+        target: Target tensor
+        reduction: 'none', 'mean', or 'sum'
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    preds = input.numpy()
+    targets = target.numpy()
+
+    losses = (preds - targets) ** 2
+
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    else:  # mean
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
+
+def l1_loss(input, target, size_average=None, reduce=None, reduction='mean'):
+    """L1 (mean absolute error) loss.
+
+    Args:
+        input: Predictions tensor
+        target: Target tensor
+        reduction: 'none', 'mean', or 'sum'
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    preds = input.numpy()
+    targets = target.numpy()
+
+    losses = np.abs(preds - targets)
+
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    else:  # mean
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
+
+def smooth_l1_loss(input, target, size_average=None, reduce=None, reduction='mean', beta=1.0):
+    """Smooth L1 loss (Huber loss).
+
+    Args:
+        input: Predictions tensor
+        target: Target tensor
+        reduction: 'none', 'mean', or 'sum'
+        beta: Threshold at which to change between L1 and L2 loss
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    preds = input.numpy()
+    targets = target.numpy()
+
+    diff = np.abs(preds - targets)
+    losses = np.where(diff < beta, 0.5 * diff ** 2 / beta, diff - 0.5 * beta)
+
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    else:  # mean
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
+
+def kl_div(input, target, size_average=None, reduce=None, reduction='mean', log_target=False):
+    """Kullback-Leibler divergence loss.
+
+    Args:
+        input: Tensor of log-probabilities
+        target: Tensor of probabilities (or log-probabilities if log_target=True)
+        reduction: 'none', 'mean', 'sum', or 'batchmean'
+        log_target: If True, target is log-probabilities
+
+    Returns:
+        Loss tensor
+    """
+    import numpy as np
+
+    log_p = input.numpy()
+    if log_target:
+        log_q = target.numpy()
+        q = np.exp(log_q)
+    else:
+        q = target.numpy()
+        log_q = np.log(q + 1e-10)
+
+    # KL(q||p) = q * (log_q - log_p)
+    losses = q * (log_q - log_p)
+
+    if reduction == 'none':
+        return Tensor(losses.astype(np.float32))
+    elif reduction == 'sum':
+        return Tensor(np.array(np.sum(losses), dtype=np.float32))
+    elif reduction == 'batchmean':
+        return Tensor(np.array(np.sum(losses) / losses.shape[0], dtype=np.float32))
+    else:  # mean
+        return Tensor(np.array(np.mean(losses), dtype=np.float32))
+
 
 

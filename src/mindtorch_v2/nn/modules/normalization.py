@@ -45,3 +45,46 @@ class LayerNorm(Module):
 
     def __repr__(self):
         return f'LayerNorm({self.extra_repr()})'
+
+
+class GroupNorm(Module):
+    """Applies Group Normalization over a mini-batch of inputs.
+
+    Args:
+        num_groups: number of groups to separate the channels into
+        num_channels: number of channels expected in input
+        eps: a value added to the denominator for numerical stability
+        affine: whether to learn affine parameters
+    """
+
+    __constants__ = ['num_groups', 'num_channels', 'eps', 'affine']
+    num_groups: int
+    num_channels: int
+    eps: float
+    affine: bool
+
+    def __init__(self, num_groups: int, num_channels: int, eps: float = 1e-5,
+                 affine: bool = True, device=None, dtype=None):
+        super().__init__()
+        if num_channels % num_groups != 0:
+            raise ValueError('num_channels must be divisible by num_groups')
+        self.num_groups = num_groups
+        self.num_channels = num_channels
+        self.eps = eps
+        self.affine = affine
+
+        if self.affine:
+            self.weight = Parameter(torch.ones(num_channels))
+            self.bias = Parameter(torch.zeros(num_channels))
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias', None)
+
+    def forward(self, input):
+        return F.group_norm(input, self.num_groups, self.weight, self.bias, self.eps)
+
+    def extra_repr(self) -> str:
+        return f'{self.num_groups}, {self.num_channels}, eps={self.eps}, affine={self.affine}'
+
+    def __repr__(self):
+        return f'GroupNorm({self.extra_repr()})'
