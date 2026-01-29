@@ -1,4 +1,11 @@
-"""Dispatcher routes ops to correct implementations based on dispatch keys."""
+"""Dispatcher routes ops to correct implementations based on dispatch keys.
+
+The dispatch system supports two modes:
+1. New standardized ops (from _ops module) - use op's own backward() method
+2. Legacy dispatch (from registry) - use _autograd.functions backward classes
+
+New ops are tried first for better maintainability and performance.
+"""
 
 from typing import Any, Tuple
 from .keys import DispatchKey
@@ -242,6 +249,152 @@ def _make_grad_fn(op_name: str, args, result, kwargs=None):
     return grad_fn
 
 
+def _dispatch_new_op(op_name: str, op, args, kwargs):
+    """Dispatch using new standardized op.
+
+    Args:
+        op_name: Name of the operation
+        op: Op instance from _ops module
+        args: Positional arguments
+        kwargs: Keyword arguments
+
+    Returns:
+        Result Tensor with autograd set up if needed
+    """
+    from .._tensor import Tensor
+    from .._autograd import is_grad_enabled
+    from .._autograd.node import AccumulateGrad
+    from .._backends.pyboost_cpu import _get_ms_data, _wrap_result
+    import numpy as np
+
+    # Convert Tensor args to MindSpore tensors
+    ms_args = []
+    tensor_args = []
+    for arg in args:
+        if isinstance(arg, Tensor):
+            ms_args.append(_get_ms_data(arg))
+            tensor_args.append(arg)
+        elif isinstance(arg, (np.ndarray, np.floating, np.integer, np.bool_)):
+            # Convert numpy types to MindSpore tensors
+            ms_args.append(_get_ms_data(arg))
+        else:
+            ms_args.append(arg)
+
+    # Execute forward
+    ms_result = op.forward(*ms_args, **kwargs)
+
+    # Wrap result
+    result = _wrap_result(ms_result)
+
+    # Setup autograd if needed
+    requires_grad = any(t.requires_grad for t in tensor_args)
+    if is_grad_enabled() and requires_grad:
+        result._requires_grad = True
+        result._grad_fn = _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result)
+
+    return result
+
+
+def _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result):
+    """Create grad_fn using new op's backward method.
+
+    Args:
+        op_name: Name of the operation
+        op: Op instance with backward() method
+        tensor_args: Original Tensor arguments
+        ms_args: MindSpore tensor arguments
+        ms_result: MindSpore tensor result
+
+    Returns:
+        Node representing the backward function
+    """
+    from .._autograd.node import Node, AccumulateGrad
+    from .._tensor import Tensor
+    from .._backends.pyboost_cpu import _get_ms_data, _wrap_result
+
+    class OpBackward(Node):
+        """Backward node using standardized op's backward method."""
+
+        def __init__(self, op, saved_tensors, saved_ms, ms_result):
+            super().__init__()
+            self._op = op
+            self._saved_tensors = saved_tensors
+            self._saved_ms = saved_ms
+            self._ms_result = ms_result
+            self._name = f"{op.name}Backward"
+
+        def backward(self, grad_outputs):
+            grad_out = grad_outputs[0]
+            ms_grad_out = _get_ms_data(grad_out)
+
+            # Check if op needs forward result for backward (exp, sqrt, etc.)
+            if getattr(self._op, 'needs_forward_result', False):
+                ms_grads = self._op.backward(ms_grad_out, self._ms_result)
+            else:
+                # Pass input args for backward
+                ms_grads = self._op.backward(ms_grad_out, *self._saved_ms)
+
+            # Wrap results
+            grads = []
+            for g in ms_grads:
+                if g is not None:
+                    grads.append(_wrap_result(g))
+                else:
+                    grads.append(None)
+
+            return tuple(grads)
+
+    grad_fn = OpBackward(op, tensor_args, ms_args, ms_result)
+
+    # Build next_functions
+    next_fns = []
+    for t in tensor_args:
+        if t.requires_grad:
+            if t.grad_fn is not None:
+                next_fns.append((t.grad_fn, 0))
+            else:
+                next_fns.append((AccumulateGrad(t), 0))
+        else:
+            next_fns.append((None, 0))
+
+    grad_fn._next_functions = tuple(next_fns)
+
+    return grad_fn
+
+
+def _has_meta_tensor(args) -> bool:
+    """Check if any argument is a meta tensor.
+
+    Meta tensors have device.type == "meta" and are used for shape inference
+    without actual computation.
+    """
+    from .._tensor import Tensor
+
+    for arg in args:
+        if isinstance(arg, Tensor) and arg.device.type == "meta":
+            return True
+    return False
+
+
+def _dispatch_meta(op_name: str, args, kwargs) -> Any:
+    """Dispatch operation to meta backend for shape inference.
+
+    Meta operations compute output shape without actual computation.
+    This is used for model initialization and shape inference.
+
+    Args:
+        op_name: Name of the operation
+        args: Positional arguments
+        kwargs: Keyword arguments
+
+    Returns:
+        Meta tensor with correct output shape
+    """
+    from .._backends.meta import dispatch_meta
+
+    return dispatch_meta(op_name, *args, **kwargs)
+
+
 def dispatch(op_name: str, *args, **kwargs) -> Any:
     """Dispatch an operation to the correct implementation.
 
@@ -255,6 +408,34 @@ def dispatch(op_name: str, *args, **kwargs) -> Any:
 
     Raises:
         NotImplementedError: If no implementation found for the op
+    """
+    from .._tensor import Tensor
+    from .._autograd import is_grad_enabled
+    from .._ops import get_op
+
+    # Check for meta tensors FIRST - route to meta backend for shape inference
+    if _has_meta_tensor(args):
+        return _dispatch_meta(op_name, args, kwargs)
+
+    # Try new standardized op first
+    new_op = get_op(op_name)
+    if new_op is not None:
+        return _dispatch_new_op(op_name, new_op, args, kwargs)
+
+    # Fall back to legacy dispatch
+    return _dispatch_legacy(op_name, args, kwargs)
+
+
+def _dispatch_legacy(op_name: str, args, kwargs) -> Any:
+    """Legacy dispatch using registry and _autograd.functions.
+
+    Args:
+        op_name: Name of the operation
+        args: Positional arguments
+        kwargs: Keyword arguments
+
+    Returns:
+        Result of the operation
     """
     from .._tensor import Tensor
     from .._autograd import is_grad_enabled

@@ -58,3 +58,12 @@ def test_storage_shared():
     assert s2[0] == 1.0
     s2[0] = 99.0
     assert s[0] == 99.0
+
+
+def test_storage_ms_tensor_property():
+    """Storage should expose underlying MindSpore tensor."""
+    import mindspore
+    storage = TypedStorage(10, dtype=torch.float32)
+    ms_tensor = storage.ms_tensor
+    assert isinstance(ms_tensor, mindspore.Tensor)
+    assert ms_tensor.shape == (10,)

@@ -21,6 +21,39 @@ class UntypedStorage:
         else:
             self._data = mindspore.numpy.zeros(1, dtype=mindspore.uint8)
 
+    def _untyped(self):
+        """Return self for untyped storage (safetensors compatibility)."""
+        return self
+
+    def untyped(self):
+        """Return self for untyped storage (safetensors compatibility)."""
+        return self
+
+    @classmethod
+    def from_file(cls, filename, shared=False, size=0, *, nbytes=None):
+        """Create storage from a file.
+
+        Args:
+            filename: Path to file
+            shared: Whether to use shared memory (ignored, always False)
+            size: Size in bytes (0 means entire file)
+            nbytes: Alias for size (for safetensors compatibility)
+
+        Returns:
+            UntypedStorage with file contents
+        """
+        import os
+        if nbytes is not None:
+            size = nbytes
+        if size == 0:
+            size = os.path.getsize(filename)
+
+        storage = cls(size)
+        with open(filename, 'rb') as f:
+            data = f.read(size)
+        storage._data = mindspore.Tensor(np.frombuffer(data, dtype=np.uint8))
+        return storage
+
     def nbytes(self):
         return self._nbytes
 
@@ -30,6 +63,19 @@ class UntypedStorage:
 
     def data_ptr(self):
         return self._data.data_ptr()
+
+    def __getitem__(self, idx):
+        """Get byte(s) at index. Used by safetensors for slicing."""
+        if isinstance(idx, slice):
+            # Handle slice - return new UntypedStorage with sliced data
+            data = self._data.asnumpy()[idx]
+            result = UntypedStorage(len(data))
+            result._data = mindspore.Tensor(data)
+            return result
+        return self._data.asnumpy()[idx]
+
+    def __len__(self):
+        return self._nbytes
 
 
 class TypedStorage:
@@ -81,6 +127,11 @@ class TypedStorage:
         return self._dtype
 
     @property
+    def ms_tensor(self):
+        """Return the underlying MindSpore tensor."""
+        return self._ms_tensor
+
+    @property
     def device(self):
         return self._device
 
@@ -89,6 +140,17 @@ class TypedStorage:
 
     def data_ptr(self):
         return self._ms_tensor.data_ptr()
+
+    def untyped(self):
+        """Return an UntypedStorage view of this storage (safetensors compatibility)."""
+        # Create UntypedStorage with same data
+        us = UntypedStorage(self.nbytes())
+        us._data = self._ms_tensor.view(mindspore.uint8) if self._ms_tensor.size > 0 else mindspore.numpy.zeros(1, dtype=mindspore.uint8)
+        return us
+
+    def _untyped(self):
+        """Return an UntypedStorage view of this storage (safetensors compatibility)."""
+        return self.untyped()
 
     def __getitem__(self, idx):
         return self._ms_tensor[idx].asnumpy().item()

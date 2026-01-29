@@ -91,6 +91,13 @@ class no_grad(set_grad_enabled):
     This context manager is thread local; it will not affect computation
     in other threads.
 
+    Can be used with or without parentheses:
+        @torch.no_grad
+        def func(): ...
+
+        @torch.no_grad()
+        def func(): ...
+
     Example:
         >>> import mindtorch_v2 as torch
         >>> x = torch.tensor([1.], requires_grad=True)
@@ -103,8 +110,34 @@ class no_grad(set_grad_enabled):
         ...     return x * 2
     """
 
-    def __init__(self):
+    def __init__(self, func=None):
         super().__init__(False)
+        self._func = func
+        if func is not None:
+            # Used as @torch.no_grad without parentheses
+            self._wrapped = self._wrap_func(func)
+
+    def _wrap_func(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with self.__class__():
+                return func(*args, **kwargs)
+        return wrapper
+
+    def __call__(self, func_or_args=None, *args, **kwargs):
+        if self._func is not None:
+            # We were used as @torch.no_grad (without parens), now being called
+            return self._wrapped(func_or_args, *args, **kwargs)
+        elif callable(func_or_args):
+            # Used as @torch.no_grad() and now decorating a function
+            @wraps(func_or_args)
+            def wrapper(*args, **kwargs):
+                with self:
+                    return func_or_args(*args, **kwargs)
+            return wrapper
+        else:
+            # Regular call through context manager
+            raise TypeError("no_grad() takes no arguments")
 
 
 class enable_grad(set_grad_enabled):
@@ -116,6 +149,13 @@ class enable_grad(set_grad_enabled):
     This context manager is thread local; it will not affect computation
     in other threads.
 
+    Can be used with or without parentheses:
+        @torch.enable_grad
+        def func(): ...
+
+        @torch.enable_grad()
+        def func(): ...
+
     Example:
         >>> import mindtorch_v2 as torch
         >>> x = torch.tensor([1.], requires_grad=True)
@@ -126,5 +166,31 @@ class enable_grad(set_grad_enabled):
         True
     """
 
-    def __init__(self):
+    def __init__(self, func=None):
         super().__init__(True)
+        self._func = func
+        if func is not None:
+            # Used as @torch.enable_grad without parentheses
+            self._wrapped = self._wrap_func(func)
+
+    def _wrap_func(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with self.__class__():
+                return func(*args, **kwargs)
+        return wrapper
+
+    def __call__(self, func_or_args=None, *args, **kwargs):
+        if self._func is not None:
+            # We were used as @torch.enable_grad (without parens), now being called
+            return self._wrapped(func_or_args, *args, **kwargs)
+        elif callable(func_or_args):
+            # Used as @torch.enable_grad() and now decorating a function
+            @wraps(func_or_args)
+            def wrapper(*args, **kwargs):
+                with self:
+                    return func_or_args(*args, **kwargs)
+            return wrapper
+        else:
+            # Regular call through context manager
+            raise TypeError("enable_grad() takes no arguments")

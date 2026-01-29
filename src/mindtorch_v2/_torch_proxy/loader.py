@@ -11,6 +11,8 @@ class MindTorchV2Loader:
     Tier 1 (Real): torch -> mindtorch_v2, torch.nn -> mindtorch_v2.nn, etc.
     Tier 2 (Functional stubs): torch.cuda, torch.jit, etc.
     Tier 3 (Import stubs): torch._C, torch._dynamo, etc.
+
+    Also intercepts mindtorch imports and redirects to mindtorch_v2.
     """
 
     # Tier 1: Real implementations - these map to actual mindtorch_v2 modules
@@ -21,7 +23,18 @@ class MindTorchV2Loader:
         'torch.nn.modules': 'mindtorch_v2.nn.modules',
         'torch.nn.parameter': 'mindtorch_v2.nn.parameter',
         'torch.optim': 'mindtorch_v2.optim',
+        'torch.optim.lr_scheduler': 'mindtorch_v2.optim.lr_scheduler',
         'torch.autograd': 'mindtorch_v2._autograd',
+        'torch.autograd.function': 'mindtorch_v2._autograd',  # Function class is in _autograd
+        # Mindtorch -> mindtorch_v2 redirects (for safetensors patch compatibility)
+        'mindtorch': 'mindtorch_v2',
+        'mindtorch.nn': 'mindtorch_v2.nn',
+        'mindtorch.nn.functional': 'mindtorch_v2.nn.functional',
+        'mindtorch.nn.modules': 'mindtorch_v2.nn.modules',
+        'mindtorch.nn.parameter': 'mindtorch_v2.nn.parameter',
+        'mindtorch.optim': 'mindtorch_v2.optim',
+        'mindtorch.autograd': 'mindtorch_v2._autograd',
+        'mindtorch.autograd.function': 'mindtorch_v2._autograd',  # Function class is in _autograd
     }
 
     # Tier 2 & 3: Stub modules - these return stub implementations
@@ -40,16 +53,24 @@ class MindTorchV2Loader:
         'torch.backends.cuda': 'mindtorch_v2._torch_proxy.stubs.backends',
         'torch.backends.cudnn': 'mindtorch_v2._torch_proxy.stubs.backends',
         'torch.distributed': 'mindtorch_v2._torch_proxy.stubs.distributed',
+        'torch.distributed.tensor': 'mindtorch_v2._torch_proxy.stubs.distributed.tensor',
         'torch.distributed.algorithms': 'mindtorch_v2._torch_proxy.stubs.distributed.algorithms',
         'torch.distributed.algorithms.join': 'mindtorch_v2._torch_proxy.stubs.distributed.algorithms.join',
+        'torch.distributions': 'mindtorch_v2._torch_proxy.stubs.distributions',
         'torch.utils': 'mindtorch_v2._torch_proxy.stubs.utils',
         'torch.utils._pytree': 'mindtorch_v2._torch_proxy.stubs.utils._pytree',
         'torch.utils.data': 'mindtorch_v2._torch_proxy.stubs.utils.data',
+        'torch.utils.data.distributed': 'mindtorch_v2._torch_proxy.stubs.utils.data.distributed',
         'torch.amp': 'mindtorch_v2._torch_proxy.stubs.amp',
         'torch.compiler': 'mindtorch_v2._torch_proxy.stubs.compiler',
         'torch.fx': 'mindtorch_v2._torch_proxy.stubs.fx',
+        'torch.fx._compatibility': 'mindtorch_v2._torch_proxy.stubs.fx._compatibility',
+        'torch.fx.node': 'mindtorch_v2._torch_proxy.stubs.fx.node',
         'torch.version': 'mindtorch_v2._torch_proxy.stubs.version',
         'torch.profiler': 'mindtorch_v2._torch_proxy.stubs.profiler',
+        'torch._dynamo': 'mindtorch_v2._dynamo',
+        'torch._dynamo.eval_frame': 'mindtorch_v2._dynamo.eval_frame',
+        'torch.nn.parallel': 'mindtorch_v2.nn.parallel',
     }
 
     def load_module(self, fullname):
@@ -123,11 +144,14 @@ class MindTorchV2Loader:
 
         # Add submodules that should be accessible via torch.xxx
         # Import stubs and add them as attributes
-        from .stubs import cuda, jit, backends, distributed, amp, version, profiler, hub, ops, library, onnx, compiler, fx
+        from .stubs import cuda, jit, backends, distributed, amp, version, profiler, hub, ops, library, onnx, compiler, fx, distributions
+        from .stubs._C import _C  # Import the _C instance, not the module
+        from .. import _dynamo
         module.cuda = cuda
         module.jit = jit
         module.backends = backends
         module.distributed = distributed
+        module.distributions = distributions
         module.amp = amp
         module.version = version
         module.profiler = profiler
@@ -137,6 +161,8 @@ class MindTorchV2Loader:
         module.onnx = onnx
         module.compiler = compiler
         module.fx = fx
+        module._dynamo = _dynamo
+        module._C = _C
 
         # Also register in sys.modules so direct imports work
         import sys
@@ -144,6 +170,7 @@ class MindTorchV2Loader:
         sys.modules['torch.jit'] = jit
         sys.modules['torch.backends'] = backends
         sys.modules['torch.distributed'] = distributed
+        sys.modules['torch.distributions'] = distributions
         sys.modules['torch.amp'] = amp
         sys.modules['torch.version'] = version
         sys.modules['torch.profiler'] = profiler
@@ -153,44 +180,14 @@ class MindTorchV2Loader:
         sys.modules['torch.onnx'] = onnx
         sys.modules['torch.compiler'] = compiler
         sys.modules['torch.fx'] = fx
+        sys.modules['torch._C'] = _C  # Register _C for direct import access
+        sys.modules['torch._dynamo'] = _dynamo
+        sys.modules['torch._dynamo.eval_frame'] = _dynamo.eval_frame
 
-        # Add FloatTensor / LongTensor constructors
-        def FloatTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.float32, **kwargs)
-
-        def LongTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.int64, **kwargs)
-
-        def IntTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.int32, **kwargs)
-
-        def BoolTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.bool, **kwargs)
-
-        def HalfTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.float16, **kwargs)
-
-        def DoubleTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.float64, **kwargs)
-
-        def ByteTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.uint8, **kwargs)
-
-        def ShortTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.int16, **kwargs)
-
-        def CharTensor(*args, **kwargs):
-            return module.tensor(*args, dtype=module.int8, **kwargs)
-
-        module.FloatTensor = FloatTensor
-        module.LongTensor = LongTensor
-        module.IntTensor = IntTensor
-        module.BoolTensor = BoolTensor
-        module.HalfTensor = HalfTensor
-        module.DoubleTensor = DoubleTensor
-        module.ByteTensor = ByteTensor
-        module.ShortTensor = ShortTensor
-        module.CharTensor = CharTensor
+        # Add FloatTensor / LongTensor type classes with isinstance support
+        # These come from the mindtorch_v2 module which has the metaclass versions
+        # The module already has BoolTensor, FloatTensor, etc. defined with _TensorTypeMeta
+        # so we just need to ensure they're accessible (they already are)
 
         # Add from_numpy
         def from_numpy(arr):
@@ -204,9 +201,15 @@ class MindTorchV2Loader:
             return module.Tensor(result.astype(np.float32))
         module.einsum = einsum
 
-        # Add compile (no-op)
-        def compile(fn, *args, **kwargs):
-            return fn
+        # Add compile (no-op) - supports both @compile and @compile(options)
+        def compile(fn=None, *args, **kwargs):
+            if fn is not None:
+                # Called as @compile without arguments
+                return fn
+            # Called as @compile(options) - return a decorator
+            def decorator(f):
+                return f
+            return decorator
         module.compile = compile
 
         # Add Size as tuple alias
@@ -279,6 +282,32 @@ class MindTorchV2Loader:
         # Add inference_mode (context manager, same as no_grad for now)
         module.inference_mode = module.no_grad
 
+        # Add default device management
+        from .._device import _get_default_device, _set_default_device
+
+        def get_default_device():
+            """Get the current default device.
+
+            Returns the device from the device context manager if active,
+            otherwise returns cpu.
+            """
+            ctx_device = _get_default_device()
+            if ctx_device is not None:
+                return ctx_device
+            return module.device('cpu')
+
+        def set_default_device(device):
+            """Set the default device."""
+            if device is None:
+                _set_default_device(None)
+            elif isinstance(device, str):
+                _set_default_device(module.device(device))
+            else:
+                _set_default_device(device)
+
+        module.get_default_device = get_default_device
+        module.set_default_device = set_default_device
+
         # Add Generator class stub
         class Generator:
             """Random number generator stub."""
@@ -348,6 +377,86 @@ class MindTorchV2Loader:
                 pass
 
         module.serialization = serialization
+
+        # Add is_floating_point
+        def is_floating_point(input):
+            """Check if tensor has floating point dtype."""
+            if hasattr(input, 'dtype'):
+                from mindtorch_v2 import _dtype as dt
+                return input.dtype in (dt.float16, dt.float32, dt.float64, dt.bfloat16)
+            return False
+        module.is_floating_point = is_floating_point
+
+        # Add allclose
+        def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+            """Check if two tensors are element-wise close."""
+            a = input.numpy() if hasattr(input, 'numpy') else np.asarray(input)
+            b = other.numpy() if hasattr(other, 'numpy') else np.asarray(other)
+            return bool(np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan))
+        module.allclose = allclose
+
+        # Add testing module
+        class _testing:
+            """torch.testing compatibility module."""
+            @staticmethod
+            def assert_close(actual, expected, rtol=None, atol=None, **kwargs):
+                a = actual.numpy() if hasattr(actual, 'numpy') else np.asarray(actual)
+                b = expected.numpy() if hasattr(expected, 'numpy') else np.asarray(expected)
+                if rtol is None:
+                    rtol = 1e-5
+                if atol is None:
+                    atol = 1e-8
+                if not np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=True):
+                    max_diff = np.max(np.abs(a - b))
+                    raise AssertionError(
+                        f"Tensors are not close!\n"
+                        f"Max absolute difference: {max_diff}\n"
+                        f"Tolerances: rtol={rtol}, atol={atol}"
+                    )
+
+            @staticmethod
+            def assert_allclose(actual, desired, rtol=1e-7, atol=0, **kwargs):
+                a = actual.numpy() if hasattr(actual, 'numpy') else np.asarray(actual)
+                b = desired.numpy() if hasattr(desired, 'numpy') else np.asarray(desired)
+                np.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
+
+        module.testing = _testing
+        sys.modules['torch.testing'] = _testing
+
+        # Add max with out param and no-dim variant
+        _orig_max = module.max
+        def _enhanced_max(input, dim=None, keepdim=False, *, out=None, other=None):
+            if other is not None:
+                # torch.max(input, other) -> element-wise max
+                a = input.numpy() if hasattr(input, 'numpy') else np.asarray(input)
+                b = other.numpy() if hasattr(other, 'numpy') else np.asarray(other)
+                return module.Tensor(np.maximum(a, b))
+            # If dim is a Tensor, treat it as element-wise max: torch.max(a, b)
+            if isinstance(dim, module.Tensor):
+                a = input.numpy() if hasattr(input, 'numpy') else np.asarray(input)
+                b = dim.numpy()
+                return module.Tensor(np.maximum(a, b))
+            return _orig_max(input, dim=dim, keepdim=keepdim)
+        module.max = _enhanced_max
+
+        # Add abs at module level (already in _functional, but ensure it's there)
+        if not hasattr(module, 'abs') or module.abs is None:
+            def _abs(input):
+                return module.Tensor(np.abs(input.numpy()))
+            module.abs = _abs
+
+        # Add is_complex
+        def is_complex(input):
+            if hasattr(input, 'dtype'):
+                from mindtorch_v2 import _dtype as dt
+                return input.dtype in (dt.complex64, dt.complex128)
+            return False
+        module.is_complex = is_complex
+
+        # Add is_nonzero
+        def is_nonzero(input):
+            return bool(input.item() != 0)
+        module.is_nonzero = is_nonzero
 
         return module
 

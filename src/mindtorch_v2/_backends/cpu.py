@@ -1,363 +1,434 @@
-"""CPU backend implementations using NumPy.
+"""CPU backend implementations using MindSpore PyBoost kernels.
 
 All ops here are registered with DispatchKey.Backend_CPU.
-These implementations use NumPy for computation and wrap results in Tensor.
+Strategy: try pyboost first → fallback to legacy primitive → composite from simple ops.
 """
 
 import numpy as np
+import mindspore
 from .._dispatch import register_op, DispatchKey
 from .._tensor import Tensor
-
-
-def _to_numpy(x):
-    """Convert tensor or scalar to numpy array."""
-    if isinstance(x, Tensor):
-        return x.numpy()
-    return np.asarray(x)
-
-
-def _wrap_result(arr, dtype=None, device="cpu"):
-    """Wrap numpy array as Tensor."""
-    return Tensor(arr, dtype=dtype, device=device)
+from .pyboost_cpu import (
+    add_op, sub_op, mul_op, div_op, neg_op, abs_op,
+    pow_op, exp_op, log_op, sqrt_op, rsqrt_op,
+    sin_op, cos_op, tanh_op, sigmoid_op,
+    relu_op, gelu_op, silu_op,
+    matmul_op, bmm_op,
+    sum_op, mean_op, max_op as max_dim_op, min_op as min_dim_op,
+    equal_op, not_equal_op, greater_op, less_op, greater_equal_op, less_equal_op,
+    clone_op, transpose_op,
+    _get_ms_data, _wrap_result,
+)
 
 
 # --- Binary math ops ---
 
 @register_op("add", DispatchKey.Backend_CPU)
 def add_cpu(a, b):
-    """Element-wise addition."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    result = a_np + b_np
-    return _wrap_result(result)
+    return _wrap_result(add_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("sub", DispatchKey.Backend_CPU)
 def sub_cpu(a, b):
-    """Element-wise subtraction."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    result = a_np - b_np
-    return _wrap_result(result)
+    return _wrap_result(sub_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("mul", DispatchKey.Backend_CPU)
 def mul_cpu(a, b):
-    """Element-wise multiplication."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    result = a_np * b_np
-    return _wrap_result(result)
+    return _wrap_result(mul_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("div", DispatchKey.Backend_CPU)
 def div_cpu(a, b):
-    """Element-wise division."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    result = a_np / b_np
-    return _wrap_result(result)
+    return _wrap_result(div_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("neg", DispatchKey.Backend_CPU)
 def neg_cpu(a):
-    """Element-wise negation."""
-    a_np = _to_numpy(a)
-    return _wrap_result(-a_np)
+    return _wrap_result(neg_op(_get_ms_data(a)))
 
 
 @register_op("abs", DispatchKey.Backend_CPU)
 def abs_cpu(a):
-    """Element-wise absolute value."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.abs(a_np))
+    return _wrap_result(abs_op(_get_ms_data(a)))
 
 
 @register_op("pow", DispatchKey.Backend_CPU)
 def pow_cpu(a, exponent):
-    """Element-wise power."""
-    a_np = _to_numpy(a)
-    exp_np = _to_numpy(exponent)
-    return _wrap_result(np.power(a_np, exp_np))
+    return _wrap_result(pow_op(_get_ms_data(a), _get_ms_data(exponent)))
 
 
 # --- Unary math ops ---
 
 @register_op("exp", DispatchKey.Backend_CPU)
 def exp_cpu(a):
-    """Element-wise exponential."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.exp(a_np))
+    return _wrap_result(exp_op(_get_ms_data(a)))
 
 
 @register_op("log", DispatchKey.Backend_CPU)
 def log_cpu(a):
-    """Element-wise natural logarithm."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.log(a_np))
+    return _wrap_result(log_op(_get_ms_data(a)))
 
 
 @register_op("sqrt", DispatchKey.Backend_CPU)
 def sqrt_cpu(a):
-    """Element-wise square root."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.sqrt(a_np))
+    return _wrap_result(sqrt_op(_get_ms_data(a)))
 
+
+@register_op("rsqrt", DispatchKey.Backend_CPU)
+def rsqrt_cpu(a):
+    return _wrap_result(rsqrt_op(_get_ms_data(a)))
+
+
+@register_op("reciprocal", DispatchKey.Backend_CPU)
+def reciprocal_cpu(a):
+    # Composite: 1/x = div(1, x)
+    ms_a = _get_ms_data(a)
+    ones = mindspore.ops.ones_like(ms_a)
+    return _wrap_result(div_op(ones, ms_a))
+
+
+# --- Trigonometric ops ---
 
 @register_op("sin", DispatchKey.Backend_CPU)
 def sin_cpu(a):
-    """Element-wise sine."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.sin(a_np))
+    return _wrap_result(sin_op(_get_ms_data(a)))
 
 
 @register_op("cos", DispatchKey.Backend_CPU)
 def cos_cpu(a):
-    """Element-wise cosine."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.cos(a_np))
+    return _wrap_result(cos_op(_get_ms_data(a)))
 
 
 @register_op("tanh", DispatchKey.Backend_CPU)
 def tanh_cpu(a):
-    """Element-wise hyperbolic tangent."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.tanh(a_np))
+    return _wrap_result(tanh_op(_get_ms_data(a)))
 
+
+# --- Activation ops ---
 
 @register_op("sigmoid", DispatchKey.Backend_CPU)
 def sigmoid_cpu(a):
-    """Element-wise sigmoid."""
-    a_np = _to_numpy(a)
-    return _wrap_result(1.0 / (1.0 + np.exp(-a_np)))
+    return _wrap_result(sigmoid_op(_get_ms_data(a)))
 
 
 @register_op("relu", DispatchKey.Backend_CPU)
 def relu_cpu(a):
-    """Element-wise ReLU."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.maximum(a_np, 0))
+    return _wrap_result(relu_op(_get_ms_data(a)))
+
+
+@register_op("gelu", DispatchKey.Backend_CPU)
+def gelu_cpu(a, approximate='none'):
+    ms_a = _get_ms_data(a)
+    # GeLU pyboost only supports default mode; composite tanh approximate
+    if approximate == 'tanh':
+        import math
+        coef = math.sqrt(2.0 / math.pi)
+        # x * 0.5 * (1 + tanh(coef * (x + 0.044715 * x^3)))
+        x3 = mul_op(mul_op(ms_a, ms_a), ms_a)
+        inner = add_op(ms_a, mul_op(mindspore.Tensor(0.044715, ms_a.dtype), x3))
+        inner = mul_op(mindspore.Tensor(coef, ms_a.dtype), inner)
+        result = mul_op(mul_op(mindspore.Tensor(0.5, ms_a.dtype), ms_a),
+                        add_op(mindspore.Tensor(1.0, ms_a.dtype), tanh_op(inner)))
+        return _wrap_result(result)
+    return _wrap_result(gelu_op(ms_a))
+
+
+@register_op("silu", DispatchKey.Backend_CPU)
+def silu_cpu(a):
+    return _wrap_result(silu_op(_get_ms_data(a)))
+
+
+@register_op("softmax", DispatchKey.Backend_CPU)
+def softmax_cpu(a, dim=None):
+    """Composite softmax: exp(x - max) / sum(exp(x - max))."""
+    ms_a = _get_ms_data(a)
+    if dim is None:
+        dim = -1
+    # Numerical stability: subtract max
+    a_max = mindspore.ops.max(ms_a, axis=dim, keepdims=True)[0]
+    shifted = sub_op(ms_a, a_max)
+    exp_a = exp_op(shifted)
+    sum_exp = mindspore.ops.sum(exp_a, dim=dim, keepdim=True)
+    return _wrap_result(div_op(exp_a, sum_exp))
+
+
+@register_op("log_softmax", DispatchKey.Backend_CPU)
+def log_softmax_cpu(a, dim=None):
+    """Composite log_softmax: x - max - log(sum(exp(x - max)))."""
+    ms_a = _get_ms_data(a)
+    if dim is None:
+        dim = -1
+    a_max = mindspore.ops.max(ms_a, axis=dim, keepdims=True)[0]
+    shifted = sub_op(ms_a, a_max)
+    exp_a = exp_op(shifted)
+    sum_exp = mindspore.ops.sum(exp_a, dim=dim, keepdim=True)
+    log_sum_exp = add_op(a_max, log_op(sum_exp))
+    return _wrap_result(sub_op(ms_a, log_sum_exp))
+
+
+# --- Matrix ops ---
+
+@register_op("matmul", DispatchKey.Backend_CPU)
+def matmul_cpu(a, b):
+    return _wrap_result(matmul_op(_get_ms_data(a), _get_ms_data(b)))
+
+
+@register_op("bmm", DispatchKey.Backend_CPU)
+def bmm_cpu(a, b):
+    return _wrap_result(bmm_op(_get_ms_data(a), _get_ms_data(b)))
+
+
+@register_op("baddbmm", DispatchKey.Backend_CPU)
+def baddbmm_cpu(input, batch1, batch2, beta=1, alpha=1):
+    """Composite: beta*input + alpha*(batch1 @ batch2)."""
+    ms_input = _get_ms_data(input)
+    ms_b1 = _get_ms_data(batch1)
+    ms_b2 = _get_ms_data(batch2)
+    mm_result = bmm_op(ms_b1, ms_b2)
+    if alpha != 1:
+        mm_result = mul_op(mindspore.Tensor(alpha, ms_input.dtype), mm_result)
+    if beta != 1:
+        ms_input = mul_op(mindspore.Tensor(beta, ms_input.dtype), ms_input)
+    return _wrap_result(add_op(ms_input, mm_result))
 
 
 @register_op("transpose", DispatchKey.Backend_CPU)
 def transpose_cpu(a, dim0, dim1):
-    """Transpose two dimensions."""
-    a_np = _to_numpy(a)
-    return _wrap_result(np.swapaxes(a_np, dim0, dim1))
-
-
-@register_op("matmul", DispatchKey.Backend_CPU)
-def matmul_cpu(a, b):
-    """Matrix multiplication."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(np.matmul(a_np, b_np))
+    ms_a = _get_ms_data(a)
+    ndim = ms_a.ndim
+    perm = list(range(ndim))
+    perm[dim0], perm[dim1] = perm[dim1], perm[dim0]
+    return _wrap_result(transpose_op(ms_a, tuple(perm)))
 
 
 # --- Reduction ops ---
 
 @register_op("sum", DispatchKey.Backend_CPU)
 def sum_cpu(a, dim=None, keepdim=False):
-    """Sum reduction."""
-    a_np = _to_numpy(a)
-    result = np.sum(a_np, axis=dim, keepdims=keepdim)
-    return _wrap_result(result)
+    ms_a = _get_ms_data(a)
+    if dim is None:
+        dim = tuple(range(ms_a.ndim))
+    elif isinstance(dim, int):
+        dim = (dim,)
+    return _wrap_result(sum_op(ms_a, dim, keepdim))
 
 
 @register_op("mean", DispatchKey.Backend_CPU)
 def mean_cpu(a, dim=None, keepdim=False):
-    """Mean reduction."""
-    a_np = _to_numpy(a)
-    result = np.mean(a_np, axis=dim, keepdims=keepdim)
-    return _wrap_result(result)
+    ms_a = _get_ms_data(a)
+    if dim is None:
+        dim = tuple(range(ms_a.ndim))
+    elif isinstance(dim, int):
+        dim = (dim,)
+    return _wrap_result(mean_op(ms_a, dim, keepdim))
 
 
 @register_op("max", DispatchKey.Backend_CPU)
 def max_cpu(a, dim=None, keepdim=False):
-    """Max reduction."""
-    a_np = _to_numpy(a)
+    ms_a = _get_ms_data(a)
     if dim is None:
-        result = np.max(a_np)
-        return _wrap_result(np.array(result))
-    else:
-        values = np.max(a_np, axis=dim, keepdims=keepdim)
-        indices = np.argmax(a_np, axis=dim)
-        if keepdim:
-            indices = np.expand_dims(indices, axis=dim)
-        # Return named tuple-like result
-        from collections import namedtuple
-        MaxResult = namedtuple('MaxResult', ['values', 'indices'])
-        return MaxResult(_wrap_result(values), _wrap_result(indices.astype(np.int64)))
+        # Global max - use legacy ops.max which returns (value, index) tuple
+        result = mindspore.ops.max(ms_a)
+        if isinstance(result, tuple):
+            return _wrap_result(result[0])
+        return _wrap_result(result)
+    result = max_dim_op(ms_a, dim, keepdim)
+    from collections import namedtuple
+    MaxResult = namedtuple('MaxResult', ['values', 'indices'])
+    return MaxResult(_wrap_result(result[0]), _wrap_result(result[1]))
 
 
 @register_op("min", DispatchKey.Backend_CPU)
 def min_cpu(a, dim=None, keepdim=False):
-    """Min reduction."""
-    a_np = _to_numpy(a)
+    ms_a = _get_ms_data(a)
     if dim is None:
-        result = np.min(a_np)
-        return _wrap_result(np.array(result))
-    else:
-        values = np.min(a_np, axis=dim, keepdims=keepdim)
-        indices = np.argmin(a_np, axis=dim)
-        if keepdim:
-            indices = np.expand_dims(indices, axis=dim)
-        from collections import namedtuple
-        MinResult = namedtuple('MinResult', ['values', 'indices'])
-        return MinResult(_wrap_result(values), _wrap_result(indices.astype(np.int64)))
+        result = mindspore.ops.min(ms_a)
+        if isinstance(result, tuple):
+            return _wrap_result(result[0])
+        return _wrap_result(result)
+    result = min_dim_op(ms_a, dim, keepdim)
+    from collections import namedtuple
+    MinResult = namedtuple('MinResult', ['values', 'indices'])
+    return MinResult(_wrap_result(result[0]), _wrap_result(result[1]))
 
 
 @register_op("prod", DispatchKey.Backend_CPU)
 def prod_cpu(a, dim=None, keepdim=False):
-    """Product reduction."""
-    a_np = _to_numpy(a)
-    result = np.prod(a_np, axis=dim, keepdims=keepdim)
+    ms_a = _get_ms_data(a)
+    # Use legacy prod
+    if dim is None:
+        result = mindspore.ops.prod(ms_a)
+    else:
+        result = mindspore.ops.prod(ms_a, dim=dim, keepdim=keepdim)
     return _wrap_result(result)
 
 
 @register_op("argmax", DispatchKey.Backend_CPU)
 def argmax_cpu(a, dim=None, keepdim=False):
-    """Argmax."""
-    a_np = _to_numpy(a)
-    result = np.argmax(a_np, axis=dim)
-    if keepdim and dim is not None:
-        result = np.expand_dims(result, axis=dim)
-    return _wrap_result(result.astype(np.int64))
+    ms_a = _get_ms_data(a)
+    from mindspore.ops.auto_generate.gen_ops_prim import ArgMaxExt
+    argmax_ext_op = ArgMaxExt().set_device('CPU')
+    if dim is None:
+        # Flatten then argmax
+        flat = ms_a.reshape(-1)
+        result = argmax_ext_op(flat, 0, keepdim)
+    else:
+        result = argmax_ext_op(ms_a, dim, keepdim)
+    return _wrap_result(result)
 
 
 @register_op("argmin", DispatchKey.Backend_CPU)
 def argmin_cpu(a, dim=None, keepdim=False):
-    """Argmin."""
-    a_np = _to_numpy(a)
-    result = np.argmin(a_np, axis=dim)
-    if keepdim and dim is not None:
-        result = np.expand_dims(result, axis=dim)
-    return _wrap_result(result.astype(np.int64))
+    ms_a = _get_ms_data(a)
+    from mindspore.ops.auto_generate.gen_ops_prim import ArgMinExt
+    argmin_ext_op = ArgMinExt().set_device('CPU')
+    if dim is None:
+        flat = ms_a.reshape(-1)
+        result = argmin_ext_op(flat, 0, keepdim)
+    else:
+        result = argmin_ext_op(ms_a, dim, keepdim)
+    return _wrap_result(result)
+
+
+@register_op("var", DispatchKey.Backend_CPU)
+def var_cpu(a, dim=None, correction=1, keepdim=False):
+    """Composite variance: mean((x - mean)^2) with Bessel correction."""
+    ms_a = _get_ms_data(a)
+    if dim is None:
+        dim = tuple(range(ms_a.ndim))
+    elif isinstance(dim, int):
+        dim = (dim,)
+    # Compute mean
+    ms_mean = mean_op(ms_a, dim, True)
+    # Compute squared deviations
+    diff = sub_op(ms_a, ms_mean)
+    sq_diff = mul_op(diff, diff)
+    # Sum and apply correction
+    sq_sum = sum_op(sq_diff, dim, keepdim)
+    # Count elements
+    n = 1
+    for d in dim:
+        n *= ms_a.shape[d]
+    # Apply Bessel's correction
+    denom = max(1, n - correction)
+    result = div_op(sq_sum, mindspore.Tensor(float(denom), ms_a.dtype))
+    return _wrap_result(result)
+
+
+@register_op("std", DispatchKey.Backend_CPU)
+def std_cpu(a, dim=None, correction=1, keepdim=False):
+    """Composite std: sqrt(var)."""
+    ms_a = _get_ms_data(a)
+    if dim is None:
+        dim = tuple(range(ms_a.ndim))
+    elif isinstance(dim, int):
+        dim = (dim,)
+    # Compute variance first
+    ms_mean = mean_op(ms_a, dim, True)
+    diff = sub_op(ms_a, ms_mean)
+    sq_diff = mul_op(diff, diff)
+    sq_sum = sum_op(sq_diff, dim, keepdim)
+    n = 1
+    for d in dim:
+        n *= ms_a.shape[d]
+    denom = max(1, n - correction)
+    var_result = div_op(sq_sum, mindspore.Tensor(float(denom), ms_a.dtype))
+    # Take sqrt
+    result = sqrt_op(var_result)
+    return _wrap_result(result)
 
 
 # --- Comparison ops ---
 
 @register_op("eq", DispatchKey.Backend_CPU)
 def eq_cpu(a, b):
-    """Element-wise equality."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(a_np == b_np)
+    return _wrap_result(equal_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("ne", DispatchKey.Backend_CPU)
 def ne_cpu(a, b):
-    """Element-wise not equal."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(a_np != b_np)
+    return _wrap_result(not_equal_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("gt", DispatchKey.Backend_CPU)
 def gt_cpu(a, b):
-    """Element-wise greater than."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(a_np > b_np)
+    return _wrap_result(greater_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("lt", DispatchKey.Backend_CPU)
 def lt_cpu(a, b):
-    """Element-wise less than."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(a_np < b_np)
+    return _wrap_result(less_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("ge", DispatchKey.Backend_CPU)
 def ge_cpu(a, b):
-    """Element-wise greater than or equal."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(a_np >= b_np)
+    return _wrap_result(greater_equal_op(_get_ms_data(a), _get_ms_data(b)))
 
 
 @register_op("le", DispatchKey.Backend_CPU)
 def le_cpu(a, b):
-    """Element-wise less than or equal."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    return _wrap_result(a_np <= b_np)
+    return _wrap_result(less_equal_op(_get_ms_data(a), _get_ms_data(b)))
 
 
-# --- Activation ops ---
+# --- Clamp ops ---
 
-@register_op("gelu", DispatchKey.Backend_CPU)
-def gelu_cpu(a, approximate='none'):
-    """GELU activation."""
-    import math
-    a_np = _to_numpy(a)
-    if approximate == 'tanh':
-        # Approximate GELU
-        coef = math.sqrt(2.0 / math.pi)
-        result = 0.5 * a_np * (1.0 + np.tanh(coef * (a_np + 0.044715 * a_np ** 3)))
-    else:
-        # Exact GELU using erf
-        from scipy.special import erf
-        result = 0.5 * a_np * (1.0 + erf(a_np / math.sqrt(2.0)))
-    return _wrap_result(result)
-
-
-@register_op("silu", DispatchKey.Backend_CPU)
-def silu_cpu(a):
-    """SiLU/Swish activation: x * sigmoid(x)."""
-    a_np = _to_numpy(a)
-    result = a_np * (1.0 / (1.0 + np.exp(-a_np)))
-    return _wrap_result(result)
-
-
-@register_op("softmax", DispatchKey.Backend_CPU)
-def softmax_cpu(a, dim=None):
-    """Softmax activation."""
-    a_np = _to_numpy(a)
-    if dim is None:
-        dim = -1
-    # Subtract max for numerical stability
-    a_max = np.max(a_np, axis=dim, keepdims=True)
-    exp_a = np.exp(a_np - a_max)
-    result = exp_a / np.sum(exp_a, axis=dim, keepdims=True)
-    return _wrap_result(result)
-
-
-@register_op("log_softmax", DispatchKey.Backend_CPU)
-def log_softmax_cpu(a, dim=None):
-    """Log softmax."""
-    a_np = _to_numpy(a)
-    if dim is None:
-        dim = -1
-    a_max = np.max(a_np, axis=dim, keepdims=True)
-    log_sum_exp = a_max + np.log(np.sum(np.exp(a_np - a_max), axis=dim, keepdims=True))
-    result = a_np - log_sum_exp
-    return _wrap_result(result)
+@register_op("clamp", DispatchKey.Backend_CPU)
+def clamp_cpu(a, min=None, max=None):
+    """Composite clamp using ClampScalar or ClampTensor."""
+    ms_a = _get_ms_data(a)
+    from mindspore.ops.auto_generate.gen_ops_prim import ClampScalar
+    clamp_scalar_op = ClampScalar().set_device('CPU')
+    # ClampScalar expects (input, min, max) where min/max can be None
+    return _wrap_result(clamp_scalar_op(ms_a, min, max))
 
 
 # --- Neural network ops ---
 
 @register_op("embedding", DispatchKey.Backend_CPU)
 def embedding_cpu(indices, weight):
-    """Embedding lookup."""
-    indices_np = _to_numpy(indices).astype(np.int64)
-    weight_np = _to_numpy(weight)
-    result = weight_np[indices_np]
-    return _wrap_result(result)
+    """Composite embedding lookup using gather."""
+    ms_indices = _get_ms_data(indices)
+    ms_weight = _get_ms_data(weight)
+    # Embedding is just gather along first dimension
+    # weight[indices] - gather rows from weight matrix
+    from mindspore.ops.auto_generate.gen_ops_prim import GatherD
+    gather_op = GatherD().set_device('CPU')
+    try:
+        # Flatten indices, gather, then reshape
+        orig_shape = ms_indices.shape
+        flat_indices = ms_indices.reshape(-1)
+        # Expand indices to match weight embedding dim
+        expanded = flat_indices.reshape(-1, 1).broadcast_to((-1, ms_weight.shape[1]))
+        result = gather_op(ms_weight, 0, expanded.astype(mindspore.int32))
+        # Reshape to original indices shape + embedding dim
+        final_shape = orig_shape + (ms_weight.shape[1],)
+        result = result.reshape(final_shape)
+        return _wrap_result(result)
+    except Exception:
+        # Fallback using numpy indexing
+        weight_np = ms_weight.asnumpy()
+        indices_np = ms_indices.asnumpy().astype(np.int32)
+        result_np = weight_np[indices_np]
+        return _wrap_result(mindspore.Tensor(result_np))
 
 
 @register_op("dropout", DispatchKey.Backend_CPU)
 def dropout_cpu(a, p=0.5, training=True, return_mask=False):
-    """Dropout."""
+    """Composite dropout using random mask."""
     if not training or p == 0:
         if return_mask:
             return a, None
         return a
-    a_np = _to_numpy(a)
-    mask = np.random.binomial(1, 1 - p, a_np.shape) / (1 - p)
-    result = a_np * mask
-    result_tensor = _wrap_result(result.astype(a_np.dtype))
+    ms_a = _get_ms_data(a)
+    # Generate random mask
+    mask = np.random.random(ms_a.shape) > p
+    mask_tensor = mindspore.Tensor(mask.astype(np.float32))
+    # Apply mask and scale
+    scale = 1.0 / (1.0 - p)
+    result = mul_op(ms_a, mask_tensor)
+    result = mul_op(result, mindspore.Tensor(scale, ms_a.dtype))
+    result_tensor = _wrap_result(result)
     if return_mask:
         return result_tensor, mask
     return result_tensor
@@ -365,22 +436,26 @@ def dropout_cpu(a, p=0.5, training=True, return_mask=False):
 
 @register_op("layer_norm", DispatchKey.Backend_CPU)
 def layer_norm_cpu(a, normalized_shape, weight=None, bias=None, eps=1e-5):
-    """Layer normalization."""
-    a_np = _to_numpy(a)
+    """Layer normalization using composite ops."""
+    ms_a = _get_ms_data(a)
+    ms_weight = _get_ms_data(weight) if weight is not None else None
+    ms_bias = _get_ms_data(bias) if bias is not None else None
 
-    # Determine axes to normalize over
+    # Composite implementation using pyboost ops
     ndim = len(normalized_shape)
     axes = tuple(range(-ndim, 0))
-
-    mean = np.mean(a_np, axis=axes, keepdims=True)
-    var = np.var(a_np, axis=axes, keepdims=True)
-    result = (a_np - mean) / np.sqrt(var + eps)
-
-    if weight is not None:
-        result = result * _to_numpy(weight)
-    if bias is not None:
-        result = result + _to_numpy(bias)
-
+    # Use mean_op for mean computation
+    ms_mean = mean_op(ms_a, axes, True)
+    diff = sub_op(ms_a, ms_mean)
+    # variance = mean(diff^2)
+    var = mean_op(mul_op(diff, diff), axes, True)
+    # normalize: diff / sqrt(var + eps)
+    eps_tensor = mindspore.Tensor(eps, ms_a.dtype)
+    result = div_op(diff, sqrt_op(add_op(var, eps_tensor)))
+    if ms_weight is not None:
+        result = mul_op(result, ms_weight)
+    if ms_bias is not None:
+        result = add_op(result, ms_bias)
     return _wrap_result(result)
 
 
@@ -388,231 +463,340 @@ def layer_norm_cpu(a, normalized_shape, weight=None, bias=None, eps=1e-5):
 
 @register_op("cat", DispatchKey.Backend_CPU)
 def cat_cpu(tensors, dim=0):
-    """Concatenate tensors along a dimension."""
-    # Filter out empty tensors that have different dimensions (common in KV cache)
-    non_empty = []
+    ms_tensors = []
     for t in tensors:
-        arr = _to_numpy(t)
-        if arr.size > 0:
-            non_empty.append(arr)
-        elif arr.ndim > 1:
-            # Keep empty tensors only if they have the right shape (just 0 in one dim)
-            non_empty.append(arr)
-
-    if len(non_empty) == 0:
-        # All tensors are empty, return first one
-        return tensors[0] if len(tensors) > 0 else _wrap_result(np.array([]))
-    elif len(non_empty) == 1:
-        # Only one non-empty tensor, return it
-        return _wrap_result(non_empty[0])
-
-    result = np.concatenate(non_empty, axis=dim)
-    return _wrap_result(result)
+        ms_t = _get_ms_data(t)
+        if ms_t.size > 0 or ms_t.ndim > 1:
+            ms_tensors.append(ms_t)
+    if len(ms_tensors) == 0:
+        return tensors[0] if len(tensors) > 0 else _wrap_result(mindspore.Tensor([]))
+    if len(ms_tensors) == 1:
+        return _wrap_result(ms_tensors[0])
+    return _wrap_result(mindspore.ops.cat(ms_tensors, axis=dim))
 
 
 @register_op("stack", DispatchKey.Backend_CPU)
 def stack_cpu(tensors, dim=0):
-    """Stack tensors along a new dimension."""
-    arrays = [_to_numpy(t) for t in tensors]
-    result = np.stack(arrays, axis=dim)
-    return _wrap_result(result)
+    ms_tensors = [_get_ms_data(t) for t in tensors]
+    return _wrap_result(mindspore.ops.stack(ms_tensors, axis=dim))
 
 
 @register_op("split", DispatchKey.Backend_CPU)
 def split_cpu(tensor, split_size_or_sections, dim=0):
-    """Split tensor into chunks."""
-    arr = _to_numpy(tensor)
+    from .._tensor import Tensor
+    from .._autograd import is_grad_enabled
+    from .._autograd.node import Node, AccumulateGrad
+
+    ms_t = _get_ms_data(tensor)
+    from mindspore.ops.auto_generate.gen_ops_prim import SplitWithSize, SplitTensor
+
+    # Compute split boundaries
     if isinstance(split_size_or_sections, int):
-        # Split into chunks of given size
-        size = arr.shape[dim]
-        indices = list(range(split_size_or_sections, size, split_size_or_sections))
-        splits = np.split(arr, indices, axis=dim)
+        size = ms_t.shape[dim]
+        num_splits = (size + split_size_or_sections - 1) // split_size_or_sections
+        split_sizes = []
+        for i in range(num_splits):
+            start = i * split_size_or_sections
+            end = min(start + split_size_or_sections, size)
+            split_sizes.append(end - start)
     else:
-        # Split at given section sizes
-        indices = np.cumsum(split_size_or_sections[:-1])
-        splits = np.split(arr, indices, axis=dim)
-    return tuple(_wrap_result(s) for s in splits)
+        split_sizes = list(split_size_or_sections)
+
+    # Compute start positions
+    starts = [0]
+    for sz in split_sizes[:-1]:
+        starts.append(starts[-1] + sz)
+
+    # Use slicing for each split - this handles autograd through narrow/slice
+    results = []
+    for i, (start, sz) in enumerate(zip(starts, split_sizes)):
+        # Use tensor's __getitem__ which has autograd support
+        slices = [slice(None)] * tensor.dim()
+        slices[dim] = slice(start, start + sz)
+        result = tensor[tuple(slices)]
+        results.append(result)
+
+    return tuple(results)
 
 
 @register_op("chunk", DispatchKey.Backend_CPU)
 def chunk_cpu(input, chunks, dim=0):
-    """Split tensor into specified number of chunks."""
-    arr = _to_numpy(input)
-    splits = np.array_split(arr, chunks, axis=dim)
-    return tuple(_wrap_result(s) for s in splits)
+    ms_t = _get_ms_data(input)
+    from mindspore.ops.auto_generate.gen_ops_prim import Chunk
+    chunk_op = Chunk().set_device('CPU')
+    try:
+        results = chunk_op(ms_t, chunks, dim)
+        return tuple(_wrap_result(r) for r in results)
+    except Exception:
+        # Composite fallback
+        size = ms_t.shape[dim]
+        chunk_size = (size + chunks - 1) // chunks
+        results = []
+        for i in range(chunks):
+            start = i * chunk_size
+            end = min(start + chunk_size, size)
+            if start >= size:
+                break
+            slices = [slice(None)] * ms_t.ndim
+            slices[dim] = slice(start, end)
+            results.append(ms_t[tuple(slices)])
+        return tuple(_wrap_result(r) for r in results)
 
 
 @register_op("clone", DispatchKey.Backend_CPU)
 def clone_cpu(input):
-    """Create a copy of tensor with new storage."""
-    arr = _to_numpy(input)
-    return _wrap_result(arr.copy())
+    """Composite clone: copy tensor data."""
+    ms_a = _get_ms_data(input)
+    # Clone by adding zero - creates new tensor with same values
+    result = add_op(ms_a, mindspore.Tensor(0.0, ms_a.dtype))
+    return _wrap_result(result)
 
 
 @register_op("where", DispatchKey.Backend_CPU)
 def where_cpu(condition, input, other):
-    """Select elements based on condition."""
-    cond_np = _to_numpy(condition).astype(bool)
-    input_np = _to_numpy(input)
-    other_np = _to_numpy(other)
-    result = np.where(cond_np, input_np, other_np)
-    return _wrap_result(result)
+    """Composite where: cond*input + (1-cond)*other."""
+    ms_cond = _get_ms_data(condition).astype(mindspore.float32)
+    ms_input = _get_ms_data(input)
+    ms_other = _get_ms_data(other)
+    # where = cond * input + (1 - cond) * other
+    one = mindspore.Tensor(1.0, ms_cond.dtype)
+    inv_cond = sub_op(one, ms_cond)
+    term1 = mul_op(ms_cond, ms_input.astype(ms_cond.dtype))
+    term2 = mul_op(inv_cond, ms_other.astype(ms_cond.dtype))
+    result = add_op(term1, term2)
+    return _wrap_result(result.astype(ms_input.dtype))
 
 
-# --- Additional math ops ---
-
-@register_op("var", DispatchKey.Backend_CPU)
-def var_cpu(a, dim=None, correction=1, keepdim=False):
-    """Variance reduction."""
-    a_np = _to_numpy(a)
-    # Use ddof for Bessel's correction
-    result = np.var(a_np, axis=dim, ddof=correction, keepdims=keepdim)
-    return _wrap_result(result)
-
-
-@register_op("std", DispatchKey.Backend_CPU)
-def std_cpu(a, dim=None, correction=1, keepdim=False):
-    """Standard deviation reduction."""
-    a_np = _to_numpy(a)
-    result = np.std(a_np, axis=dim, ddof=correction, keepdims=keepdim)
-    return _wrap_result(result)
-
-
-@register_op("clamp", DispatchKey.Backend_CPU)
-def clamp_cpu(a, min=None, max=None):
-    """Clamp values to range [min, max]."""
-    a_np = _to_numpy(a)
-    result = np.clip(a_np, min, max)
-    return _wrap_result(result)
-
-
-@register_op("rsqrt", DispatchKey.Backend_CPU)
-def rsqrt_cpu(a):
-    """Reciprocal square root element-wise."""
-    a_np = _to_numpy(a)
-    result = 1.0 / np.sqrt(a_np)
-    return _wrap_result(result)
-
-
-@register_op("reciprocal", DispatchKey.Backend_CPU)
-def reciprocal_cpu(a):
-    """Reciprocal (1/x) element-wise."""
-    a_np = _to_numpy(a)
-    result = 1.0 / a_np
-    return _wrap_result(result)
-
-
-@register_op("bmm", DispatchKey.Backend_CPU)
-def bmm_cpu(a, b):
-    """Batched matrix multiplication."""
-    a_np = _to_numpy(a)
-    b_np = _to_numpy(b)
-    result = np.matmul(a_np, b_np)
-    return _wrap_result(result)
-
-
-@register_op("baddbmm", DispatchKey.Backend_CPU)
-def baddbmm_cpu(input, batch1, batch2, beta=1, alpha=1):
-    """Batched matrix multiply with add: beta*input + alpha*(batch1 @ batch2)."""
-    input_np = _to_numpy(input)
-    batch1_np = _to_numpy(batch1)
-    batch2_np = _to_numpy(batch2)
-    result = beta * input_np + alpha * np.matmul(batch1_np, batch2_np)
-    return _wrap_result(result)
-
+# --- all/any ops ---
 
 @register_op("all", DispatchKey.Backend_CPU)
 def all_cpu(input, dim=None, keepdim=False):
-    """Test if all elements evaluate to True."""
-    arr = _to_numpy(input)
-    if dim is None:
-        result = np.all(arr)
-    else:
-        result = np.all(arr, axis=dim, keepdims=keepdim)
-    return _wrap_result(result)
+    """Composite all: reduce using logical AND."""
+    ms_a = _get_ms_data(input)
+    ms_bool = ms_a.astype(mindspore.bool_)
+    from mindspore.ops.auto_generate.gen_ops_prim import ReduceAll
+    reduce_all_op = ReduceAll().set_device('CPU')
+    try:
+        if dim is None:
+            # Reduce all dims
+            result = reduce_all_op(ms_bool, tuple(range(ms_a.ndim)), keepdim)
+        else:
+            if isinstance(dim, int):
+                dim = (dim,)
+            result = reduce_all_op(ms_bool, dim, keepdim)
+        return _wrap_result(result)
+    except Exception:
+        # Fallback: use numpy
+        arr = ms_bool.asnumpy()
+        if dim is None:
+            result = np.all(arr, keepdims=keepdim)
+        else:
+            result = np.all(arr, axis=dim, keepdims=keepdim)
+        return _wrap_result(mindspore.Tensor(result))
 
 
 @register_op("any", DispatchKey.Backend_CPU)
 def any_cpu(input, dim=None, keepdim=False):
-    """Test if any element evaluates to True."""
-    arr = _to_numpy(input)
-    if dim is None:
-        result = np.any(arr)
-    else:
-        result = np.any(arr, axis=dim, keepdims=keepdim)
-    return _wrap_result(result)
+    """Composite any: reduce using logical OR."""
+    ms_a = _get_ms_data(input)
+    ms_bool = ms_a.astype(mindspore.bool_)
+    from mindspore.ops.auto_generate.gen_ops_prim import ReduceAny
+    try:
+        reduce_any_op = ReduceAny().set_device('CPU')
+        if dim is None:
+            result = reduce_any_op(ms_bool, tuple(range(ms_a.ndim)), keepdim)
+        else:
+            if isinstance(dim, int):
+                dim = (dim,)
+            result = reduce_any_op(ms_bool, dim, keepdim)
+        return _wrap_result(result)
+    except Exception:
+        # Fallback: use numpy
+        arr = ms_bool.asnumpy()
+        if dim is None:
+            result = np.any(arr, keepdims=keepdim)
+        else:
+            result = np.any(arr, axis=dim, keepdims=keepdim)
+        return _wrap_result(mindspore.Tensor(result))
 
 
 @register_op("isin", DispatchKey.Backend_CPU)
 def isin_cpu(elements, test_elements, *, assume_unique=False, invert=False):
-    """Test if each element is in test_elements."""
-    elements_np = _to_numpy(elements)
-    test_np = _to_numpy(test_elements)
-    result = np.isin(elements_np, test_np, assume_unique=assume_unique, invert=invert)
+    # Composite: broadcast comparison
+    ms_elem = _get_ms_data(elements)
+    ms_test = _get_ms_data(test_elements).reshape(-1)
+    # Compare each element against all test elements
+    elem_flat = ms_elem.reshape(-1)
+    # Use broadcasting: elem_flat[:, None] == ms_test[None, :]
+    expanded = elem_flat.reshape(-1, 1)
+    test_expanded = ms_test.reshape(1, -1)
+    matches = equal_op(expanded, test_expanded)
+    result = mindspore.ops.any(matches, dim=1, keepdim=False)
+    result = result.reshape(ms_elem.shape)
+    if invert:
+        from mindspore.ops.auto_generate.gen_ops_prim import LogicalNot
+        logical_not_op = LogicalNot().set_device('CPU')
+        result = logical_not_op(result)
     return _wrap_result(result)
 
 
 @register_op("topk", DispatchKey.Backend_CPU)
 def topk_cpu(input, k, dim=-1, largest=True, sorted=True):
-    """Return the k largest/smallest elements along a dimension."""
-    arr = _to_numpy(input)
-    if dim < 0:
-        dim = arr.ndim + dim
-
-    # Use partition for efficiency
-    if largest:
-        # Get indices of top k
-        indices = np.argpartition(arr, -k, axis=dim)
-        # Take the top k indices
-        indices = np.take(indices, range(-k, 0), axis=dim)
-        # Get the values at those indices
-        values = np.take_along_axis(arr, indices, axis=dim)
-        # Sort if needed
-        if sorted:
-            sort_indices = np.argsort(-values, axis=dim)
-            values = np.take_along_axis(values, sort_indices, axis=dim)
-            indices = np.take_along_axis(indices, sort_indices, axis=dim)
-    else:
-        # Get indices of bottom k
-        indices = np.argpartition(arr, k, axis=dim)
-        indices = np.take(indices, range(k), axis=dim)
-        values = np.take_along_axis(arr, indices, axis=dim)
-        if sorted:
-            sort_indices = np.argsort(values, axis=dim)
-            values = np.take_along_axis(values, sort_indices, axis=dim)
-            indices = np.take_along_axis(indices, sort_indices, axis=dim)
-
-    from collections import namedtuple
-    TopKResult = namedtuple('TopKResult', ['values', 'indices'])
-    return TopKResult(_wrap_result(values), _wrap_result(indices.astype(np.int64)))
+    ms_a = _get_ms_data(input)
+    from mindspore.ops.auto_generate.gen_ops_prim import TopkExt
+    topk_ext_op = TopkExt().set_device('CPU')
+    try:
+        values, indices = topk_ext_op(ms_a, k, dim, largest, sorted)
+        from collections import namedtuple
+        TopKResult = namedtuple('TopKResult', ['values', 'indices'])
+        return TopKResult(_wrap_result(values), _wrap_result(indices))
+    except Exception:
+        # Fallback to numpy
+        arr = ms_a.asnumpy()
+        if dim < 0:
+            dim = arr.ndim + dim
+        if largest:
+            indices = np.argpartition(arr, -k, axis=dim)
+            indices = np.take(indices, range(-k, 0), axis=dim)
+            values = np.take_along_axis(arr, indices, axis=dim)
+            if sorted:
+                sort_idx = np.argsort(-values, axis=dim)
+                values = np.take_along_axis(values, sort_idx, axis=dim)
+                indices = np.take_along_axis(indices, sort_idx, axis=dim)
+        else:
+            indices = np.argpartition(arr, k, axis=dim)
+            indices = np.take(indices, range(k), axis=dim)
+            values = np.take_along_axis(arr, indices, axis=dim)
+            if sorted:
+                sort_idx = np.argsort(values, axis=dim)
+                values = np.take_along_axis(values, sort_idx, axis=dim)
+                indices = np.take_along_axis(indices, sort_idx, axis=dim)
+        from collections import namedtuple
+        TopKResult = namedtuple('TopKResult', ['values', 'indices'])
+        return TopKResult(
+            _wrap_result(mindspore.Tensor(values)),
+            _wrap_result(mindspore.Tensor(indices.astype(np.int64)))
+        )
 
 
 @register_op("multinomial", DispatchKey.Backend_CPU)
 def multinomial_cpu(input, num_samples, replacement=False, *, generator=None):
-    """Draw samples from a multinomial distribution."""
-    probs = _to_numpy(input)
-
-    # Handle 1D case
-    if probs.ndim == 1:
-        probs = probs.reshape(1, -1)
-        squeeze_result = True
-    else:
-        squeeze_result = False
-
-    # Normalize probabilities
-    probs = probs / probs.sum(axis=-1, keepdims=True)
-
-    # Sample for each row
-    results = []
-    for row in probs:
-        if replacement:
-            samples = np.random.choice(len(row), size=num_samples, replace=True, p=row)
+    ms_a = _get_ms_data(input)
+    from mindspore.ops.auto_generate.gen_ops_prim import MultinomialExt
+    multinomial_ext_op = MultinomialExt().set_device('CPU')
+    try:
+        result = multinomial_ext_op(ms_a, num_samples, replacement)
+        return _wrap_result(result)
+    except Exception:
+        # Fallback to numpy
+        probs = ms_a.asnumpy()
+        if probs.ndim == 1:
+            probs = probs.reshape(1, -1)
+            squeeze = True
         else:
-            samples = np.random.choice(len(row), size=num_samples, replace=False, p=row)
-        results.append(samples)
+            squeeze = False
+        probs = probs / probs.sum(axis=-1, keepdims=True)
+        results = []
+        for row in probs:
+            samples = np.random.choice(len(row), size=num_samples, replace=replacement, p=row)
+            results.append(samples)
+        result = np.array(results, dtype=np.int64)
+        if squeeze:
+            result = result.squeeze(0)
+        return _wrap_result(mindspore.Tensor(result))
 
-    result = np.array(results, dtype=np.int64)
-    if squeeze_result:
-        result = result.squeeze(0)
 
-    return _wrap_result(result)
+# --- In-place operations ---
+# Note: PyBoost InplaceAddExt/SubExt/Mul/Div are not registered on CPU.
+# Use composite implementation that modifies the underlying tensor directly.
+
+
+@register_op("add_", DispatchKey.Backend_CPU)
+def add_inplace_cpu(a, b):
+    """In-place add using composite ops."""
+    ms_a = a._storage.ms_tensor
+    ms_b = _get_ms_data(b)
+    if ms_b.shape != ms_a.shape:
+        ms_b = ms_b.broadcast_to(ms_a.shape)
+    # Compute result and update storage in-place
+    result = add_op(ms_a, ms_b)
+    a._storage._ms_tensor = result
+    a._version += 1
+    return a
+
+
+@register_op("sub_", DispatchKey.Backend_CPU)
+def sub_inplace_cpu(a, b):
+    """In-place sub using composite ops."""
+    ms_a = a._storage.ms_tensor
+    ms_b = _get_ms_data(b)
+    if ms_b.shape != ms_a.shape:
+        ms_b = ms_b.broadcast_to(ms_a.shape)
+    result = sub_op(ms_a, ms_b)
+    a._storage._ms_tensor = result
+    a._version += 1
+    return a
+
+
+@register_op("mul_", DispatchKey.Backend_CPU)
+def mul_inplace_cpu(a, b):
+    """In-place mul using composite ops."""
+    ms_a = a._storage.ms_tensor
+    ms_b = _get_ms_data(b)
+    if ms_b.shape != ms_a.shape:
+        ms_b = ms_b.broadcast_to(ms_a.shape)
+    result = mul_op(ms_a, ms_b)
+    a._storage._ms_tensor = result
+    a._version += 1
+    return a
+
+
+@register_op("div_", DispatchKey.Backend_CPU)
+def div_inplace_cpu(a, b):
+    """In-place div using composite ops."""
+    ms_a = a._storage.ms_tensor
+    ms_b = _get_ms_data(b)
+    if ms_b.shape != ms_a.shape:
+        ms_b = ms_b.broadcast_to(ms_a.shape)
+    result = div_op(ms_a, ms_b)
+    a._storage._ms_tensor = result
+    a._version += 1
+    return a
+
+
+@register_op("zero_", DispatchKey.Backend_CPU)
+def zero_inplace_cpu(a):
+    """In-place zero using composite ops."""
+    ms_a = a._storage.ms_tensor
+    # Create zeros by multiplying with 0
+    result = mul_op(ms_a, mindspore.Tensor(0.0, ms_a.dtype))
+    a._storage._ms_tensor = result
+    a._version += 1
+    return a
+
+
+@register_op("fill_", DispatchKey.Backend_CPU)
+def fill_inplace_cpu(a, value):
+    """In-place fill using composite ops."""
+    ms_a = a._storage.ms_tensor
+    # Create filled tensor: zeros + value
+    zeros = mul_op(ms_a, mindspore.Tensor(0.0, ms_a.dtype))
+    result = add_op(zeros, mindspore.Tensor(value, ms_a.dtype))
+    a._storage._ms_tensor = result
+    a._version += 1
+    return a
+
+
+@register_op("copy_", DispatchKey.Backend_CPU)
+def copy_inplace_cpu(a, src, non_blocking=False):
+    """In-place copy using composite ops."""
+    ms_a = a._storage.ms_tensor
+    ms_src = _get_ms_data(src)
+    if ms_src.shape != ms_a.shape:
+        ms_src = ms_src.broadcast_to(ms_a.shape)
+    # Cast to same dtype if needed
+    if ms_src.dtype != ms_a.dtype:
+        ms_src = ms_src.astype(ms_a.dtype)
+    a._storage._ms_tensor = ms_src
+    a._version += 1
+    return a

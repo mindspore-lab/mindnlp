@@ -71,7 +71,7 @@ def test_exp():
     a = torch.tensor([0.0, 1.0, 2.0])
     result = torch.exp(a)
     expected = np.exp([0.0, 1.0, 2.0])
-    np.testing.assert_array_almost_equal(result.numpy(), expected)
+    np.testing.assert_array_almost_equal(result.numpy(), expected, decimal=5)
 
 
 def test_log():

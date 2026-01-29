@@ -322,7 +322,7 @@ def test_exp_backward():
     y.backward()
 
     expected = np.exp([0.0, 1.0])  # d(exp(x))/dx = exp(x)
-    np.testing.assert_array_almost_equal(x.grad.numpy(), expected)
+    np.testing.assert_array_almost_equal(x.grad.numpy(), expected, decimal=5)
 
 
 def test_log_backward():

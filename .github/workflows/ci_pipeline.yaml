@@ -134,7 +134,7 @@ jobs:
         pip install mindspore
     - name: Test with pytest
       run: |
-        pip install "transformers<5.0.0"
+        pip install transformers
         TRANSFORMERS_VERSION=$(python -c "import transformers; print(transformers.__version__)")
         echo "Installed transformers version: $TRANSFORMERS_VERSION"
         cd tests

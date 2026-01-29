@@ -181,7 +181,23 @@ class Tensor:
 
     @property
     def device(self):
+        """Return the device of this tensor.
+
+        For meta tensors, returns the meta device.
+        For regular tensors, returns the device from _device attribute.
+        """
+        # Check if this is a meta tensor (storage has no actual data)
+        if hasattr(self._storage, '_ms_tensor') and self._storage._ms_tensor is None:
+            # This is a meta tensor, return meta device
+            if hasattr(self, '_device'):
+                return self._device
         return self._device
+
+    @property
+    def layout(self):
+        """Return tensor layout. MindTorch only supports strided tensors."""
+        from . import strided
+        return strided
 
     @property
     def ndim(self):
@@ -244,6 +260,26 @@ class Tensor:
     def storage(self):
         return self._storage
 
+    def data_ptr(self):
+        """Return pointer to this tensor's data start.
+
+        This includes the storage offset, so tensors viewing the same storage
+        at different offsets will return different pointers.
+        This is critical for safetensors shared tensor detection.
+        """
+        base_ptr = self._storage.data_ptr()
+        # Add offset in bytes
+        offset_bytes = self._storage_offset * self._dtype.itemsize
+        return base_ptr + offset_bytes
+
+    def untyped_storage(self):
+        """Return the underlying untyped storage.
+
+        This is needed for compatibility with safetensors which calls
+        tensor.untyped_storage().nbytes() to determine storage size.
+        """
+        return self._storage
+
     def dim(self):
         return len(self._shape)
 
@@ -253,8 +289,17 @@ class Tensor:
             result *= s
         return result
 
+    # Alias for numel (PyTorch compatibility)
+    nelement = numel
+
     def element_size(self):
         return self._dtype.itemsize
+
+    def is_floating_point(self):
+        """Check if tensor is of a floating point dtype."""
+        floating_point_dtypes = {'float16', 'float32', 'float64', 'bfloat16',
+                                 'half', 'float', 'double'}
+        return str(self._dtype).split('.')[-1] in floating_point_dtypes
 
     def is_contiguous(self, memory_format=None):
         """Check if tensor is contiguous in row-major order."""
@@ -298,6 +343,9 @@ class Tensor:
 
     def numpy(self):
         """Convert to numpy array. Must not require grad."""
+        # Check if this is a meta tensor
+        if self.device.type == "meta":
+            raise RuntimeError("Cannot access data of tensor on meta device")
         flat = self._to_numpy_flat()
         if self.is_contiguous() and self._storage_offset == 0:
             return flat[:self.numel()].reshape(self._shape)
@@ -307,10 +355,16 @@ class Tensor:
     def _strided_numpy(self, flat):
         """Extract data via strides from flat buffer."""
         result = np.empty(self._shape, dtype=flat.dtype)
+        max_idx = len(flat) - 1
         for idx in np.ndindex(*self._shape):
             flat_idx = self._storage_offset + sum(i * s for i, s in zip(idx, self._stride))
+            flat_idx = min(flat_idx, max_idx)
             result[idx] = flat[flat_idx]
         return result
+
+    def asnumpy(self):
+        """Convert to numpy array (alias for numpy() for MindSpore compatibility)."""
+        return self.numpy()
 
     def item(self):
         """Extract scalar value."""
@@ -329,6 +383,9 @@ class Tensor:
     # --- Repr ---
 
     def __repr__(self):
+        # Handle meta tensors specially
+        if self.device.type == "meta":
+            return f"tensor(..., device='{self.device}', size={self.shape})"
         arr = self.numpy()
         data_str = np.array2string(arr, separator=', ', prefix='tensor(')
         if self._requires_grad:
@@ -364,8 +421,81 @@ class Tensor:
 
     # --- View operations ---
 
-    def view(self, *shape):
-        """Return a view with a different shape. Must be contiguous."""
+    def view(self, *shape, dtype=None):
+        """Return a view with a different shape or dtype.
+
+        If dtype is provided (or shape[0] is a dtype), reinterprets the raw bytes
+        as the new dtype without copying data. This is used by safetensors.
+
+        Args:
+            *shape: New shape dimensions, or a single dtype for reinterpretation
+            dtype: New dtype for reinterpretation (alternative to passing as shape[0])
+
+        Returns:
+            Tensor with new shape or dtype
+        """
+        from . import _dtype as dtype_mod
+
+        # Check if first argument is a dtype (for dtype reinterpretation)
+        if len(shape) == 1 and isinstance(shape[0], dtype_mod.DType):
+            dtype = shape[0]
+            shape = None
+        elif dtype is not None:
+            shape = None
+
+        # Handle dtype reinterpretation (view as different dtype)
+        if dtype is not None:
+            if not self.is_contiguous():
+                raise RuntimeError("view() with dtype requires contiguous tensor")
+
+            # Get raw bytes and reinterpret
+            old_dtype = self._dtype
+            new_dtype = dtype
+
+            # Calculate new shape based on element sizes
+            old_size = old_dtype.itemsize
+            new_size = new_dtype.itemsize
+            total_bytes = self.numel() * old_size
+
+            if total_bytes % new_size != 0:
+                raise RuntimeError(
+                    f"view dtype from {old_dtype} to {new_dtype} is not supported: "
+                    f"total bytes ({total_bytes}) must be divisible by new element size ({new_size})"
+                )
+
+            new_numel = total_bytes // new_size
+
+            # Handle meta tensors - return meta tensor with new dtype
+            if self._storage._ms_tensor is None:
+                from ._creation import empty
+                result = empty((new_numel,), dtype=new_dtype, device='meta')
+                return result
+
+            # Get raw bytes from storage
+            storage_data = self._storage._ms_tensor.asnumpy()
+            raw_bytes = storage_data.tobytes()
+
+            # Reinterpret as new dtype
+            np_dtype = dtype_mod.dtype_to_numpy(new_dtype)
+            if np_dtype is not None:
+                new_arr = np.frombuffer(raw_bytes, dtype=np_dtype)
+            else:
+                # Handle bfloat16
+                if new_dtype == dtype_mod.bfloat16:
+                    try:
+                        import ml_dtypes
+                        new_arr = np.frombuffer(raw_bytes, dtype=ml_dtypes.bfloat16)
+                    except ImportError:
+                        new_arr = np.frombuffer(raw_bytes, dtype=np.uint16)
+                else:
+                    raise TypeError(f"Unsupported dtype for view: {new_dtype}")
+
+            # Create new tensor with reinterpreted data
+            from ._creation import Tensor as TensorCreate
+            return Tensor(new_arr.copy(), dtype=new_dtype, device=str(self._device),
+                         requires_grad=self._requires_grad)
+
+        # Original shape-based view logic
         if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
             shape = tuple(shape[0])
 
@@ -512,6 +642,9 @@ class Tensor:
 
     def unsqueeze(self, dim):
         """Insert a dimension of size 1."""
+        from ._autograd import is_grad_enabled
+        from ._autograd.node import Node, AccumulateGrad
+
         if dim < 0:
             dim += self.dim() + 1
 
@@ -525,7 +658,7 @@ class Tensor:
         else:
             new_stride.insert(dim, 1)
 
-        return Tensor(
+        result = Tensor(
             _storage=self._storage,
             _shape=tuple(new_shape),
             _stride=tuple(new_stride),
@@ -534,8 +667,33 @@ class Tensor:
             requires_grad=self._requires_grad,
         )
 
+        # Set up autograd if needed
+        if is_grad_enabled() and self._requires_grad:
+            class UnsqueezeBackward(Node):
+                def __init__(self, squeeze_dim):
+                    super().__init__()
+                    self._dim = squeeze_dim
+                    self._name = "UnsqueezeBackward"
+
+                def backward(self, grad_outputs):
+                    grad = grad_outputs[0]
+                    # Squeeze back to original shape
+                    return (grad.squeeze(self._dim),)
+
+            grad_fn = UnsqueezeBackward(dim)
+            if self.grad_fn is not None:
+                grad_fn._next_functions = ((self.grad_fn, 0),)
+            else:
+                grad_fn._next_functions = ((AccumulateGrad(self), 0),)
+            result._grad_fn = grad_fn
+
+        return result
+
     def squeeze(self, dim=None):
         """Remove dimensions of size 1."""
+        from ._autograd import is_grad_enabled
+        from ._autograd.node import Node, AccumulateGrad
+
         if dim is not None:
             if dim < 0:
                 dim += self.dim()
@@ -545,15 +703,19 @@ class Tensor:
             new_stride = list(self._stride)
             new_shape.pop(dim)
             new_stride.pop(dim)
+            squeezed_dims = [dim]
         else:
             new_shape = []
             new_stride = []
-            for s, st in zip(self._shape, self._stride):
+            squeezed_dims = []
+            for i, (s, st) in enumerate(zip(self._shape, self._stride)):
                 if s != 1:
                     new_shape.append(s)
                     new_stride.append(st)
+                else:
+                    squeezed_dims.append(i)
 
-        return Tensor(
+        result = Tensor(
             _storage=self._storage,
             _shape=tuple(new_shape),
             _stride=tuple(new_stride),
@@ -561,6 +723,31 @@ class Tensor:
             device=str(self._device),
             requires_grad=self._requires_grad,
         )
+
+        # Set up autograd if needed
+        if is_grad_enabled() and self._requires_grad and squeezed_dims:
+            class SqueezeBackward(Node):
+                def __init__(self, original_shape, dims):
+                    super().__init__()
+                    self._original_shape = original_shape
+                    self._dims = dims
+                    self._name = "SqueezeBackward"
+
+                def backward(self, grad_outputs):
+                    grad = grad_outputs[0]
+                    # Unsqueeze back to original shape
+                    for d in sorted(self._dims):
+                        grad = grad.unsqueeze(d)
+                    return (grad,)
+
+            grad_fn = SqueezeBackward(self._shape, squeezed_dims)
+            if self.grad_fn is not None:
+                grad_fn._next_functions = ((self.grad_fn, 0),)
+            else:
+                grad_fn._next_functions = ((AccumulateGrad(self), 0),)
+            result._grad_fn = grad_fn
+
+        return result
 
     def expand(self, *sizes):
         """Expand tensor to a larger size. Returns a view with stride 0 for expanded dims."""
@@ -624,13 +811,35 @@ class Tensor:
         if not isinstance(key, tuple):
             key = (key,)
 
-        # Check for advanced indexing (bool/int tensors, lists, numpy arrays)
-        has_advanced = any(
-            isinstance(k, (Tensor, list, np.ndarray)) for k in key
-        )
+        # Check for advanced indexing (bool/int tensors, lists of ints, numpy arrays)
+        # Lists of slices are not advanced indexing - they're basic indexing
+        def is_advanced_index(k):
+            if isinstance(k, Tensor):
+                return True
+            elif isinstance(k, np.ndarray):
+                return True
+            elif isinstance(k, list):
+                # A list of ONLY slices is basic indexing (unpack to tuple)
+                # A list with any integers is advanced indexing (integer array)
+                if all(isinstance(item, slice) for item in k):
+                    return False  # List of slices only - basic indexing
+                return True  # List contains integers or other - advanced indexing
+            return False
+
+        has_advanced = any(is_advanced_index(k) for k in key)
 
         if has_advanced:
             return self._advanced_getitem(key)
+
+        # Convert any list of slices to tuple for basic indexing
+        processed_key = []
+        for k in key:
+            if isinstance(k, list) and all(isinstance(item, slice) for item in k):
+                # This is a list of slices only - unpack it into the key
+                processed_key.extend(k)
+            else:
+                processed_key.append(k)
+        key = tuple(processed_key)
 
         # Use gradient-tracking version if requires_grad
         if self._requires_grad:
@@ -658,8 +867,11 @@ class Tensor:
                     new_stride.append(1)
             elif isinstance(k, builtins_int):
                 # Select one index along this dim - removes the dim
+                dim_size = self._shape[src_dim]
+                if k < -dim_size or k >= dim_size:
+                    raise IndexError(f"index {k} is out of bounds for dimension {src_dim} with size {dim_size}")
                 if k < 0:
-                    k += self._shape[src_dim]
+                    k += dim_size
                 offset += k * self._stride[src_dim]
                 src_dim += 1
             elif isinstance(k, slice):
@@ -718,15 +930,80 @@ class Tensor:
         return result
 
     def _advanced_getitem(self, key):
-        """Advanced indexing: bool/int tensors. Returns a copy."""
+        """Advanced indexing: bool/int tensors, lists, numpy arrays. Returns a copy."""
+        from ._autograd import is_grad_enabled
+        from ._autograd.node import Node, AccumulateGrad
+
         # Convert to numpy for advanced indexing
         arr = self.numpy()
-        np_key = tuple(
-            k.numpy() if isinstance(k, Tensor) else k
-            for k in key
-        )
-        result = arr[np_key]
-        return Tensor(result, dtype=self._dtype, device=str(self._device))
+        np_key = []
+        original_key = key  # Keep original for backward
+        for k in key:
+            if isinstance(k, Tensor):
+                k_np = k.numpy()
+                # Handle different dtype kinds
+                if k_np.dtype.kind == 'b':
+                    # Boolean indexing - use as-is
+                    np_key.append(k_np)
+                elif k_np.dtype.kind == 'f':
+                    # Float to integer index
+                    k_np = k_np.astype(np.intp)
+                    np_key.append(k_np)
+                elif k_np.dtype.kind == 'i' or k_np.dtype.kind == 'u':
+                    # Integer types - convert to numpy integer
+                    k_np = k_np.astype(np.intp)
+                    np_key.append(k_np)
+                else:
+                    np_key.append(k_np)
+            elif isinstance(k, np.ndarray):
+                # NumPy array indexing
+                if k.dtype.kind == 'b':
+                    np_key.append(k)
+                elif k.dtype.kind in ('i', 'u'):
+                    np_key.append(k.astype(np.intp))
+                elif k.dtype.kind == 'f':
+                    np_key.append(k.astype(np.intp))
+                else:
+                    np_key.append(k)
+            elif isinstance(k, list):
+                # Convert list to numpy array for indexing
+                k_np = np.array(k)
+                if k_np.dtype.kind in ('i', 'u', 'f'):
+                    k_np = k_np.astype(np.intp)
+                np_key.append(k_np)
+            else:
+                # Slices, integers, None, Ellipsis - pass through
+                np_key.append(k)
+        result_arr = arr[tuple(np_key)]
+        result = Tensor(result_arr, dtype=self._dtype, device=str(self._device),
+                       requires_grad=self._requires_grad)
+
+        # Set up autograd for embedding-style indexing
+        if is_grad_enabled() and self._requires_grad:
+            class IndexBackward(Node):
+                def __init__(self, input_shape, indices, input_dtype):
+                    super().__init__()
+                    self._input_shape = input_shape
+                    self._indices = indices
+                    self._input_dtype = input_dtype
+                    self._name = "IndexBackward"
+
+                def backward(self, grad_outputs):
+                    grad = grad_outputs[0]
+                    # Create zero gradient of input shape
+                    grad_input = np.zeros(self._input_shape, dtype=np.float32)
+                    # Scatter add the gradient
+                    np.add.at(grad_input, tuple(self._indices), grad.numpy())
+                    return (Tensor(grad_input, dtype=self._input_dtype),)
+
+            grad_fn = IndexBackward(self._shape, np_key, self._dtype)
+            if self.grad_fn is not None:
+                grad_fn._next_functions = ((self.grad_fn, 0),)
+            else:
+                grad_fn._next_functions = ((AccumulateGrad(self), 0),)
+            result._grad_fn = grad_fn
+
+        return result
 
     def __setitem__(self, key, value):
         """Set elements by index. Mutates in-place."""
@@ -771,6 +1048,10 @@ class Tensor:
     def mul(self, other):
         from . import mul as torch_mul
         return torch_mul(self, other)
+
+    def baddbmm(self, batch1, batch2, *, beta=1, alpha=1):
+        from . import baddbmm as torch_baddbmm
+        return torch_baddbmm(self, batch1, batch2, beta=beta, alpha=alpha)
 
     def div(self, other, *, rounding_mode=None):
         from . import div as torch_div
@@ -900,8 +1181,10 @@ class Tensor:
         from . import sum as torch_sum
         return torch_sum(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
-    def mean(self, dim=None, keepdim=False, *, dtype=None):
+    def mean(self, dim=None, keepdim=False, *, dtype=None, axis=None):
         from . import mean as torch_mean
+        if axis is not None and dim is None:
+            dim = axis
         return torch_mean(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
     def max(self, dim=None, keepdim=False):
@@ -911,6 +1194,30 @@ class Tensor:
     def min(self, dim=None, keepdim=False):
         from . import min as torch_min
         return torch_min(self, dim=dim, keepdim=keepdim)
+
+    def amax(self, dim=None, keepdim=False):
+        """Returns the maximum value along the specified dimension(s).
+
+        Unlike max(), only returns values, not indices.
+        """
+        arr = self.numpy()
+        if dim is None:
+            result = np.max(arr)
+        else:
+            result = np.max(arr, axis=dim, keepdims=keepdim)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def amin(self, dim=None, keepdim=False):
+        """Returns the minimum value along the specified dimension(s).
+
+        Unlike min(), only returns values, not indices.
+        """
+        arr = self.numpy()
+        if dim is None:
+            result = np.min(arr)
+        else:
+            result = np.min(arr, axis=dim, keepdims=keepdim)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
 
     def prod(self, dim=None, keepdim=False, *, dtype=None):
         from . import prod as torch_prod
@@ -957,6 +1264,15 @@ class Tensor:
 
     def __ne__(self, other):
         return self.ne(other)
+
+    def __hash__(self):
+        """Enable hashing based on object identity.
+
+        Note: This makes tensors hashable but only by identity,
+        not by value. Two tensors with identical values will have
+        different hashes if they are different objects.
+        """
+        return id(self)
 
     def __gt__(self, other):
         return self.gt(other)
@@ -1022,6 +1338,9 @@ class Tensor:
         """Fill tensor with values from normal distribution N(mean, std) in-place."""
         import numpy as np
         import mindspore
+        # Meta tensors have no actual storage - just return self
+        if self._storage._ms_tensor is None:
+            return self
         # Get current data and modify in place
         arr = np.random.normal(mean, std, self._shape).astype(np.float32)
         # Calculate the storage indices we need to update
@@ -1043,6 +1362,9 @@ class Tensor:
         """Fill tensor with values from uniform distribution U(a, b) in-place."""
         import numpy as np
         import mindspore
+        # Meta tensors have no actual storage - just return self
+        if self._storage._ms_tensor is None:
+            return self
         arr = np.random.uniform(a, b, self._shape).astype(np.float32)
         storage_arr = self._storage._ms_tensor.asnumpy().copy()
         required_size = self._storage_offset + self.numel()
@@ -1057,27 +1379,46 @@ class Tensor:
 
     def fill_(self, value):
         """Fill tensor with a constant value in-place."""
-        import numpy as np
-        import mindspore
-        arr = np.full(self._shape, value, dtype=np.float32)
-        storage_arr = self._storage._ms_tensor.asnumpy().copy()
-        required_size = self._storage_offset + self.numel()
-        if len(storage_arr) < required_size:
-            new_storage = np.zeros(required_size, dtype=np.float32)
-            new_storage[:len(storage_arr)] = storage_arr
-            storage_arr = new_storage
-        storage_arr[self._storage_offset:self._storage_offset + self.numel()] = arr.ravel()
-        self._storage._ms_tensor = mindspore.Tensor(storage_arr)
-        self._version += 1
-        return self
+        from ._dispatch import dispatch
+        return dispatch("fill_", self, value)
 
     def zero_(self):
         """Fill tensor with zeros in-place."""
-        return self.fill_(0.0)
+        from ._dispatch import dispatch
+        return dispatch("zero_", self)
 
     def ones_(self):
         """Fill tensor with ones in-place."""
         return self.fill_(1.0)
+
+    def add_(self, other, *, alpha=1):
+        """In-place element-wise addition."""
+        from ._dispatch import dispatch
+        if alpha != 1:
+            other = other * alpha
+        return dispatch("add_", self, other)
+
+    def sub_(self, other, *, alpha=1):
+        """In-place element-wise subtraction."""
+        from ._dispatch import dispatch
+        if alpha != 1:
+            other = other * alpha
+        return dispatch("sub_", self, other)
+
+    def mul_(self, other):
+        """In-place element-wise multiplication."""
+        from ._dispatch import dispatch
+        return dispatch("mul_", self, other)
+
+    def div_(self, other, *, rounding_mode=None):
+        """In-place element-wise division."""
+        from ._dispatch import dispatch
+        return dispatch("div_", self, other)
+
+    def copy_(self, src, non_blocking=False):
+        """Copy data from src tensor into self."""
+        from ._dispatch import dispatch
+        return dispatch("copy_", self, src, non_blocking)
 
     def bernoulli_(self, p=0.5):
         """Fill tensor with values from Bernoulli distribution in-place."""
@@ -1260,6 +1601,9 @@ class Tensor:
 
     def to(self, *args, **kwargs):
         """Move tensor to device and/or change dtype."""
+        from ._autograd import is_grad_enabled
+        from ._autograd.node import Node, AccumulateGrad
+
         # Parse args: can be (device), (dtype), (device, dtype), or keyword args
         dtype = kwargs.get('dtype', None)
         device = kwargs.get('device', None)
@@ -1280,13 +1624,84 @@ class Tensor:
 
         # Apply dtype conversion if needed
         if dtype is not None:
+            # If same dtype, return self (no conversion needed)
+            if dtype == self._dtype:
+                return self
+
             np_dtype = dtype_mod.dtype_to_numpy(dtype)
             arr = self.numpy().astype(np_dtype)
-            return Tensor(arr, dtype=dtype, device=str(device or self._device),
-                          requires_grad=self._requires_grad)
+            result = Tensor(arr, dtype=dtype, device=str(device or self._device),
+                            requires_grad=self._requires_grad)
+
+            # Set up autograd if needed
+            if is_grad_enabled() and self._requires_grad:
+                class ToBackward(Node):
+                    def __init__(self, input_tensor, orig_dtype):
+                        super().__init__()
+                        self._input = input_tensor
+                        self._orig_dtype = orig_dtype
+                        self._name = "ToBackward"
+
+                    def backward(self, grad_outputs):
+                        grad = grad_outputs[0]
+                        # Convert gradient back to original dtype
+                        np_dtype = dtype_mod.dtype_to_numpy(self._orig_dtype)
+                        grad_arr = grad.numpy().astype(np_dtype)
+                        return (Tensor(grad_arr, dtype=self._orig_dtype),)
+
+                grad_fn = ToBackward(self, self._dtype)
+                if self.grad_fn is not None:
+                    grad_fn._next_functions = ((self.grad_fn, 0),)
+                else:
+                    grad_fn._next_functions = ((AccumulateGrad(self), 0),)
+                result._grad_fn = grad_fn
+
+            return result
 
         # Device only change (no-op for CPU backend)
         return self
+
+    def type_as(self, other):
+        """Cast tensor to the same dtype as another tensor.
+
+        Args:
+            other: Tensor whose dtype to match
+
+        Returns:
+            Tensor with same dtype as other
+        """
+        return self.to(dtype=other.dtype)
+
+    def type(self, dtype=None):
+        """Return or set tensor type.
+
+        Args:
+            dtype: If provided, convert to this dtype. If None, return type string.
+
+        Returns:
+            String type name if dtype is None, else converted tensor.
+        """
+        if dtype is None:
+            # Return type string
+            dtype_name = str(self._dtype).replace('torch.', '')
+            return f'torch.{dtype_name.capitalize()}Tensor'
+
+        # Convert to dtype
+        if isinstance(dtype, str):
+            # Parse string like 'torch.FloatTensor'
+            dtype_map = {
+                'torch.FloatTensor': dtype_mod.float32,
+                'torch.DoubleTensor': dtype_mod.float64,
+                'torch.HalfTensor': dtype_mod.float16,
+                'torch.LongTensor': dtype_mod.int64,
+                'torch.IntTensor': dtype_mod.int32,
+                'torch.ShortTensor': dtype_mod.int16,
+                'torch.ByteTensor': dtype_mod.uint8,
+                'torch.BoolTensor': dtype_mod.bool,
+            }
+            dtype = dtype_map.get(dtype, dtype_mod.float32)
+
+        return self.to(dtype=dtype)
 
     # --- Factory methods (new_*) ---
 
@@ -1335,3 +1750,311 @@ class Tensor:
         target_dtype = dtype if dtype is not None else self._dtype
         target_device = device if device is not None else str(self._device)
         return Tensor(data, dtype=target_dtype, device=target_device, requires_grad=requires_grad)
+
+    # --- Memory management methods (stubs for compatibility) ---
+
+    def pin_memory(self, device=None):
+        """Pin tensor to CPU memory (no-op for CPU backend).
+
+        This is a no-op since MindSpore handles memory management internally.
+        Returns self for compatibility with PyTorch API.
+        """
+        return self
+
+    def is_pinned(self, device=None):
+        """Check if tensor is pinned (always False for CPU backend)."""
+        return False
+
+    def cuda(self, device=None, non_blocking=False, memory_format=None):
+        """Move tensor to CUDA device (no-op for CPU backend)."""
+        # MindSpore handles device placement automatically
+        return self
+
+    def cpu(self, memory_format=None):
+        """Move tensor to CPU (no-op since we're already on CPU)."""
+        return self
+
+    def is_cuda(self):
+        """Check if tensor is on CUDA device."""
+        return False
+
+    def is_cpu(self):
+        """Check if tensor is on CPU."""
+        return True
+
+    def retain_grad(self):
+        """Retain gradient for non-leaf tensors.
+
+        This allows the gradient to be retained for non-leaf tensors
+        during backward pass.
+        """
+        if self.is_leaf():
+            return  # Leaf tensors automatically retain gradient
+
+        if not self.requires_grad:
+            raise RuntimeError(
+                "can only retain gradients on tensors that require grad"
+            )
+
+        # Track this via a flag
+        self._retain_grad = True
+
+        # Register this tensor with its grad_fn for gradient retention
+        if self._grad_fn is not None:
+            self._grad_fn.register_output_tensor(self)
+
+    def is_leaf(self):
+        """Check if tensor is a leaf in the computation graph.
+
+        A tensor is a leaf if it was not created by an operation
+        (i.e., it has no grad_fn).
+        """
+        return self._grad_fn is None
+
+    # --- Shape info methods ---
+
+    @property
+    def T(self):
+        """Transpose of tensor (swaps last two dimensions)."""
+        if self.dim() < 2:
+            return self
+        return self.permute(*range(self.dim() - 2), self.dim() - 1, self.dim() - 2)
+
+    @property
+    def mT(self):
+        """Transpose of last two dimensions (matrix transpose)."""
+        return self.transpose(-2, -1)
+
+    @property
+    def mH(self):
+        """Conjugate transpose of last two dimensions (Hermitian transpose)."""
+        # For real tensors, this is the same as mT
+        return self.transpose(-2, -1)
+
+    def nbytes(self):
+        """Return total bytes consumed by the tensor."""
+        return self.numel() * self.element_size()
+
+    def tobytes(self):
+        """Return tensor data as bytes (for safetensors compatibility)."""
+        return self.numpy().tobytes()
+
+    def itemsize(self):
+        """Alias for element_size()."""
+        return self.element_size()
+
+    # --- Additional math methods ---
+
+    def tanh(self):
+        """Element-wise hyperbolic tangent."""
+        from . import tanh as torch_tanh
+        return torch_tanh(self)
+
+    def sigmoid(self):
+        """Element-wise sigmoid."""
+        arr = self.numpy()
+        result = 1 / (1 + np.exp(-arr))
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def softmax(self, dim):
+        """Softmax along a dimension."""
+        arr = self.numpy()
+        exp_arr = np.exp(arr - np.max(arr, axis=dim, keepdims=True))
+        result = exp_arr / np.sum(exp_arr, axis=dim, keepdims=True)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def log_softmax(self, dim):
+        """Log-softmax along a dimension."""
+        arr = self.numpy()
+        max_arr = np.max(arr, axis=dim, keepdims=True)
+        shifted = arr - max_arr
+        log_sum_exp = max_arr + np.log(np.sum(np.exp(shifted), axis=dim, keepdims=True))
+        result = arr - log_sum_exp
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def relu(self):
+        """Element-wise ReLU."""
+        arr = self.numpy()
+        result = np.maximum(arr, 0)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    # --- Additional operations ---
+
+    def flip(self, dims):
+        """Flip tensor along specified dimensions."""
+        arr = self.numpy()
+        if isinstance(dims, builtins_int):
+            dims = [dims]
+        result = np.flip(arr, axis=dims)
+        return Tensor(result.copy(), dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def roll(self, shifts, dims=None):
+        """Roll tensor along specified dimensions."""
+        arr = self.numpy()
+        result = np.roll(arr, shifts, axis=dims)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def unfold(self, dimension, size, step):
+        """Return a view with dimension unfolded."""
+        arr = self.numpy()
+
+        # Get dimension size
+        dim_size = arr.shape[dimension]
+
+        # Calculate number of windows
+        n_windows = (dim_size - size) // step + 1
+
+        # Create unfolded array
+        shape = list(arr.shape)
+        shape[dimension] = n_windows
+        shape.append(size)
+
+        result = np.empty(shape, dtype=arr.dtype)
+
+        for i in range(n_windows):
+            idx = [slice(None)] * len(arr.shape)
+            idx[dimension] = slice(i * step, i * step + size)
+            result_idx = [slice(None)] * len(shape)
+            result_idx[dimension] = i
+            result[tuple(result_idx)] = np.take(arr, range(i * step, i * step + size), axis=dimension)
+
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def gather(self, dim, index):
+        """Gather values along an axis."""
+        arr = self.numpy()
+        index_arr = index.numpy() if isinstance(index, Tensor) else np.asarray(index)
+        result = np.take_along_axis(arr, index_arr, axis=dim)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def scatter(self, dim, index, src):
+        """Scatter values into tensor."""
+        arr = self.numpy().copy()
+        index_arr = index.numpy() if isinstance(index, Tensor) else np.asarray(index)
+        src_arr = src.numpy() if isinstance(src, Tensor) else np.full(index_arr.shape, src)
+        np.put_along_axis(arr, index_arr, src_arr, axis=dim)
+        return Tensor(arr, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def scatter_(self, dim, index, src, reduce=None):
+        """Scatter values into tensor in-place."""
+        import mindspore
+        arr = self.numpy().copy()
+        index_arr = index.numpy() if isinstance(index, Tensor) else np.asarray(index)
+        src_arr = src.numpy() if isinstance(src, Tensor) else np.full(index_arr.shape, src)
+        np.put_along_axis(arr, index_arr, src_arr, axis=dim)
+        self._storage._ms_tensor = mindspore.Tensor(arr.ravel())
+        self._version += 1
+        return self
+
+    def index_select(self, dim, index):
+        """Select values along a dimension using indices."""
+        arr = self.numpy()
+        index_arr = index.numpy() if isinstance(index, Tensor) else np.asarray(index)
+        result = np.take(arr, index_arr, axis=dim)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def narrow(self, dim, start, length):
+        """Return a narrowed version of tensor."""
+        arr = self.numpy()
+        slices = [slice(None)] * arr.ndim
+        slices[dim] = slice(start, start + length)
+        result = arr[tuple(slices)]
+        return Tensor(result.copy(), dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def split(self, split_size, dim=0):
+        """Split tensor into chunks."""
+        from . import split as torch_split
+        return torch_split(self, split_size, dim=dim)
+
+    def chunk(self, chunks, dim=0):
+        """Split tensor into specified number of chunks."""
+        from . import chunk as torch_chunk
+        return torch_chunk(self, chunks, dim=dim)
+
+    def topk(self, k, dim=-1, largest=True, sorted=True):
+        """Return top k values and indices."""
+        from . import topk as torch_topk
+        return torch_topk(self, k, dim=dim, largest=largest, sorted=sorted)
+
+    def sort(self, dim=-1, descending=False):
+        """Sort tensor along a dimension."""
+        arr = self.numpy()
+        if descending:
+            sorted_indices = np.argsort(-arr, axis=dim)
+        else:
+            sorted_indices = np.argsort(arr, axis=dim)
+        sorted_values = np.take_along_axis(arr, sorted_indices, axis=dim)
+        return (
+            Tensor(sorted_values, dtype=self._dtype, device=str(self._device)),
+            Tensor(sorted_indices.astype(np.int64), dtype=dtype_mod.int64, device=str(self._device))
+        )
+
+    def argsort(self, dim=-1, descending=False):
+        """Return indices that would sort the tensor."""
+        arr = self.numpy()
+        if descending:
+            result = np.argsort(-arr, axis=dim)
+        else:
+            result = np.argsort(arr, axis=dim)
+        return Tensor(result.astype(np.int64), dtype=dtype_mod.int64, device=str(self._device))
+
+    def unique(self, sorted=True, return_inverse=False, return_counts=False, dim=None):
+        """Return unique elements."""
+        arr = self.numpy()
+        result = np.unique(arr, return_inverse=return_inverse, return_counts=return_counts, axis=dim)
+        if return_inverse or return_counts:
+            outputs = [Tensor(result[0], dtype=self._dtype, device=str(self._device))]
+            for i, r in enumerate(result[1:]):
+                outputs.append(Tensor(r.astype(np.int64), dtype=dtype_mod.int64, device=str(self._device)))
+            return tuple(outputs)
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def nonzero(self, as_tuple=False):
+        """Return indices of non-zero elements."""
+        arr = self.numpy()
+        indices = np.nonzero(arr)
+        if as_tuple:
+            return tuple(Tensor(idx.astype(np.int64), dtype=dtype_mod.int64, device=str(self._device))
+                        for idx in indices)
+        result = np.stack(indices, axis=1)
+        return Tensor(result.astype(np.int64), dtype=dtype_mod.int64, device=str(self._device))
+
+    def where(self, condition, other):
+        """Return elements selected from self or other based on condition."""
+        from . import where as torch_where
+        return torch_where(condition, self, other)
+
+    def norm(self, p=2, dim=None, keepdim=False, dtype=None):
+        """Return the matrix norm or vector norm of a given tensor.
+
+        Args:
+            p: Order of norm (default: 2)
+            dim: Dimension(s) to reduce over
+            keepdim: Whether to keep the reduced dimensions
+            dtype: Data type of output tensor
+        """
+        arr = self.numpy()
+        if dtype is not None:
+            arr = arr.astype(dtype_mod.dtype_to_numpy(dtype))
+
+        if dim is None:
+            result = np.linalg.norm(arr.flatten(), ord=p)
+            if keepdim:
+                result = np.array(result).reshape([1] * arr.ndim)
+        else:
+            result = np.linalg.norm(arr, ord=p, axis=dim, keepdims=keepdim)
+
+        out_dtype = dtype if dtype is not None else dtype_mod.float32
+        return Tensor(np.atleast_1d(result).astype(np.float32), dtype=out_dtype,
+                      device=str(self._device), requires_grad=self._requires_grad)

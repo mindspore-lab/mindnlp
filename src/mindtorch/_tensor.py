@@ -2226,6 +2226,14 @@ class TensorPlaceHolder:
 
     @property
     def T(self):
+        """Returns the transpose of tensor.
+
+        For 2D tensors, this swaps the two dimensions.
+        For 0D or 1D tensors, returns self.
+
+        Note: For tensors with more than 2 dimensions, use permute()
+        or mT for matrix transpose of the last two dimensions.
+        """
         return self.t()
 
     # Tensor.t
@@ -2564,10 +2572,16 @@ class TensorPlaceHolder:
 
     @property
     def is_cuda(self):
+        """Returns True if the tensor is stored on a CUDA/NPU device."""
         device_type = 'cuda'
         if DEVICE_TARGET == 'Ascend':
             device_type = 'npu'
         return self.device.type == device_type
+
+    @property
+    def is_cpu(self):
+        """Returns True if the tensor is stored on the CPU."""
+        return self.device.type == 'cpu'
 
     def tobytes(self):
         return self.get_bytes()

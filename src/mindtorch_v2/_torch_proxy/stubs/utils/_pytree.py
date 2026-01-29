@@ -147,3 +147,39 @@ def tree_all(fn, tree):
 def tree_any(fn, tree):
     """Check if fn returns True for any leaf."""
     return any(fn(leaf) for leaf in tree_leaves(tree))
+
+
+def _dict_flatten(d):
+    """Flatten a dictionary into (values, keys) tuple.
+
+    This is used by diffusers/transformers internally.
+    """
+    keys = list(d.keys())
+    values = [d[k] for k in keys]
+    return values, keys
+
+
+def _dict_unflatten(values, keys):
+    """Unflatten values back into a dict using keys."""
+    return dict(zip(keys, values))
+
+
+# Leaf spec for simple values
+LeafSpec = namedtuple('LeafSpec', [])
+
+
+def _is_leaf(obj):
+    """Check if an object is a leaf (not a container)."""
+    return not isinstance(obj, (list, tuple, dict))
+
+
+# Additional compatibility functions
+def optree_flatten(tree, namespace=None):
+    """Compatibility with optree API."""
+    return tree_flatten(tree)
+
+
+def optree_unflatten(treespec, leaves):
+    """Compatibility with optree API (note: reversed arg order from tree_unflatten)."""
+    return tree_unflatten(leaves, treespec)
+

@@ -136,3 +136,143 @@ class NLLLoss(_Loss):
 
         loss = Tensor(loss_np)
         return self._reduce(loss)
+
+
+class L1Loss(_Loss):
+    """L1 (Mean Absolute Error) loss."""
+
+    def __init__(self, reduction='mean'):
+        super().__init__(reduction)
+
+    def forward(self, input, target):
+        diff = input - target
+        # Absolute value
+        loss = diff.abs() if hasattr(diff, 'abs') else Tensor(np.abs(diff.numpy()))
+        return self._reduce(loss)
+
+
+class SmoothL1Loss(_Loss):
+    """Smooth L1 loss (Huber loss)."""
+
+    def __init__(self, reduction='mean', beta=1.0):
+        super().__init__(reduction)
+        self.beta = beta
+
+    def forward(self, input, target):
+        input_np = input.numpy()
+        target_np = target.numpy()
+        diff = np.abs(input_np - target_np)
+
+        # Smooth L1: 0.5 * x^2 / beta if |x| < beta, else |x| - 0.5 * beta
+        loss_np = np.where(
+            diff < self.beta,
+            0.5 * diff ** 2 / self.beta,
+            diff - 0.5 * self.beta
+        )
+        loss = Tensor(loss_np.astype(np.float32))
+        return self._reduce(loss)
+
+
+class HuberLoss(_Loss):
+    """Huber loss (alias for SmoothL1Loss with delta parameter)."""
+
+    def __init__(self, reduction='mean', delta=1.0):
+        super().__init__(reduction)
+        self.delta = delta
+
+    def forward(self, input, target):
+        input_np = input.numpy()
+        target_np = target.numpy()
+        diff = np.abs(input_np - target_np)
+
+        loss_np = np.where(
+            diff < self.delta,
+            0.5 * diff ** 2,
+            self.delta * (diff - 0.5 * self.delta)
+        )
+        loss = Tensor(loss_np.astype(np.float32))
+        return self._reduce(loss)
+
+
+class KLDivLoss(_Loss):
+    """Kullback-Leibler divergence loss."""
+
+    def __init__(self, reduction='mean', log_target=False):
+        super().__init__(reduction)
+        self.log_target = log_target
+
+    def forward(self, input, target):
+        """
+        Args:
+            input: Log probabilities
+            target: Target probabilities (or log probabilities if log_target=True)
+        """
+        input_np = input.numpy()
+        target_np = target.numpy()
+
+        if self.log_target:
+            loss_np = np.exp(target_np) * (target_np - input_np)
+        else:
+            # Avoid log(0) by adding small epsilon
+            loss_np = target_np * (np.log(target_np + 1e-10) - input_np)
+
+        loss = Tensor(loss_np.astype(np.float32))
+        return self._reduce(loss)
+
+
+class BCELoss(_Loss):
+    """Binary Cross Entropy loss (expects probabilities as input)."""
+
+    def __init__(self, weight=None, reduction='mean'):
+        super().__init__(reduction)
+        self.weight = weight
+
+    def forward(self, input, target):
+        input_np = input.numpy()
+        target_np = target.numpy()
+
+        # Clamp for numerical stability
+        eps = 1e-7
+        input_np = np.clip(input_np, eps, 1 - eps)
+
+        loss_np = -(target_np * np.log(input_np) + (1 - target_np) * np.log(1 - input_np))
+
+        if self.weight is not None:
+            loss_np = loss_np * self.weight.numpy()
+
+        loss = Tensor(loss_np.astype(np.float32))
+        return self._reduce(loss)
+
+
+class CosineEmbeddingLoss(_Loss):
+    """Cosine embedding loss."""
+
+    def __init__(self, margin=0.0, reduction='mean'):
+        super().__init__(reduction)
+        self.margin = margin
+
+    def forward(self, input1, input2, target):
+        """
+        Args:
+            input1, input2: Tensors of shape (N, D)
+            target: 1 or -1 for each pair
+        """
+        input1_np = input1.numpy()
+        input2_np = input2.numpy()
+        target_np = target.numpy()
+
+        # Cosine similarity
+        dot = np.sum(input1_np * input2_np, axis=-1)
+        norm1 = np.sqrt(np.sum(input1_np ** 2, axis=-1))
+        norm2 = np.sqrt(np.sum(input2_np ** 2, axis=-1))
+        cos_sim = dot / (norm1 * norm2 + 1e-8)
+
+        # Loss: for y=1, 1-cos; for y=-1, max(0, cos-margin)
+        loss_np = np.where(
+            target_np == 1,
+            1 - cos_sim,
+            np.maximum(0, cos_sim - self.margin)
+        )
+
+        loss = Tensor(loss_np.astype(np.float32))
+        return self._reduce(loss)

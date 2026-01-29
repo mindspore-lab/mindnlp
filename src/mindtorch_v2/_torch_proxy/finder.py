@@ -4,11 +4,17 @@ import sys
 
 
 class MindTorchV2Finder:
-    """Meta path finder that intercepts all torch.* imports.
+    """Meta path finder that intercepts all torch.* and mindtorch.* imports.
 
     When installed in sys.meta_path, this finder will catch any
-    import of torch or torch.* and delegate to MindTorchV2Loader.
+    import of torch or torch.* (and mindtorch or mindtorch.*) and
+    delegate to MindTorchV2Loader.
     """
+
+    def _should_intercept(self, fullname):
+        """Check if this module should be intercepted."""
+        return (fullname == 'torch' or fullname.startswith('torch.') or
+                fullname == 'mindtorch' or fullname.startswith('mindtorch.'))
 
     def find_module(self, fullname, path=None):
         """Find module hook for the import system.
@@ -18,9 +24,9 @@ class MindTorchV2Finder:
             path: Optional path for the module
 
         Returns:
-            MindTorchV2Loader if this is a torch import, None otherwise
+            MindTorchV2Loader if this is a torch/mindtorch import, None otherwise
         """
-        if fullname == 'torch' or fullname.startswith('torch.'):
+        if self._should_intercept(fullname):
             from .loader import MindTorchV2Loader
             return MindTorchV2Loader()
         return None
@@ -30,7 +36,7 @@ class MindTorchV2Finder:
 
         Returns None to indicate we handle this via find_module/load_module.
         """
-        if fullname == 'torch' or fullname.startswith('torch.'):
+        if self._should_intercept(fullname):
             from importlib.machinery import ModuleSpec
             from .loader import MindTorchV2Loader
             return ModuleSpec(fullname, MindTorchV2Loader())
