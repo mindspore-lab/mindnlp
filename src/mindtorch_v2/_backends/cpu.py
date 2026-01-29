@@ -17,6 +17,10 @@ from .pyboost_cpu import (
     sum_op, mean_op, max_op as max_dim_op, min_op as min_dim_op,
     equal_op, not_equal_op, greater_op, less_op, greater_equal_op, less_equal_op,
     clone_op, transpose_op,
+    maximum_op, minimum_op, log1p_op, erfinv_op, conj_op,
+    ones_like_op, zeros_like_op,
+    max_global_op, min_global_op, prod_op,
+    reduce_all_op, reduce_any_op, logical_not_op,
     _get_ms_data, _wrap_result,
 )
 
@@ -84,8 +88,33 @@ def rsqrt_cpu(a):
 def reciprocal_cpu(a):
     # Composite: 1/x = div(1, x)
     ms_a = _get_ms_data(a)
-    ones = mindspore.ops.ones_like(ms_a)
+    ones = ones_like_op(ms_a)
     return _wrap_result(div_op(ones, ms_a))
+
+
+@register_op("maximum", DispatchKey.Backend_CPU)
+def maximum_cpu(a, b):
+    return _wrap_result(maximum_op(_get_ms_data(a), _get_ms_data(b)))
+
+
+@register_op("minimum", DispatchKey.Backend_CPU)
+def minimum_cpu(a, b):
+    return _wrap_result(minimum_op(_get_ms_data(a), _get_ms_data(b)))
+
+
+@register_op("log1p", DispatchKey.Backend_CPU)
+def log1p_cpu(a):
+    return _wrap_result(log1p_op(_get_ms_data(a)))
+
+
+@register_op("erfinv", DispatchKey.Backend_CPU)
+def erfinv_cpu(a):
+    return _wrap_result(erfinv_op(_get_ms_data(a)))
+
+
+@register_op("conj", DispatchKey.Backend_CPU)
+def conj_cpu(a):
+    return _wrap_result(conj_op(_get_ms_data(a)))
 
 
 # --- Trigonometric ops ---
@@ -146,10 +175,10 @@ def softmax_cpu(a, dim=None):
     if dim is None:
         dim = -1
     # Numerical stability: subtract max
-    a_max = mindspore.ops.max(ms_a, axis=dim, keepdims=True)[0]
+    a_max = max_dim_op(ms_a, dim, True)[0]
     shifted = sub_op(ms_a, a_max)
     exp_a = exp_op(shifted)
-    sum_exp = mindspore.ops.sum(exp_a, dim=dim, keepdim=True)
+    sum_exp = sum_op(exp_a, dim, True)
     return _wrap_result(div_op(exp_a, sum_exp))
 
 
@@ -159,10 +188,10 @@ def log_softmax_cpu(a, dim=None):
     ms_a = _get_ms_data(a)
     if dim is None:
         dim = -1
-    a_max = mindspore.ops.max(ms_a, axis=dim, keepdims=True)[0]
+    a_max = max_dim_op(ms_a, dim, True)[0]
     shifted = sub_op(ms_a, a_max)
     exp_a = exp_op(shifted)
-    sum_exp = mindspore.ops.sum(exp_a, dim=dim, keepdim=True)
+    sum_exp = sum_op(exp_a, dim, True)
     log_sum_exp = add_op(a_max, log_op(sum_exp))
     return _wrap_result(sub_op(ms_a, log_sum_exp))
 
@@ -228,10 +257,8 @@ def mean_cpu(a, dim=None, keepdim=False):
 def max_cpu(a, dim=None, keepdim=False):
     ms_a = _get_ms_data(a)
     if dim is None:
-        # Global max - use legacy ops.max which returns (value, index) tuple
-        result = mindspore.ops.max(ms_a)
-        if isinstance(result, tuple):
-            return _wrap_result(result[0])
+        # Global max - use max_global_op
+        result = max_global_op(ms_a)
         return _wrap_result(result)
     result = max_dim_op(ms_a, dim, keepdim)
     from collections import namedtuple
@@ -243,9 +270,8 @@ def max_cpu(a, dim=None, keepdim=False):
 def min_cpu(a, dim=None, keepdim=False):
     ms_a = _get_ms_data(a)
     if dim is None:
-        result = mindspore.ops.min(ms_a)
-        if isinstance(result, tuple):
-            return _wrap_result(result[0])
+        # Global min - use min_global_op
+        result = min_global_op(ms_a)
         return _wrap_result(result)
     result = min_dim_op(ms_a, dim, keepdim)
     from collections import namedtuple
@@ -256,39 +282,42 @@ def min_cpu(a, dim=None, keepdim=False):
 @register_op("prod", DispatchKey.Backend_CPU)
 def prod_cpu(a, dim=None, keepdim=False):
     ms_a = _get_ms_data(a)
-    # Use legacy prod
     if dim is None:
-        result = mindspore.ops.prod(ms_a)
+        # Global prod - flatten and reduce
+        result = prod_op(ms_a.reshape(-1), 0, False)
     else:
-        result = mindspore.ops.prod(ms_a, dim=dim, keepdim=keepdim)
+        result = prod_op(ms_a, dim, keepdim)
     return _wrap_result(result)
 
 
 @register_op("argmax", DispatchKey.Backend_CPU)
 def argmax_cpu(a, dim=None, keepdim=False):
     ms_a = _get_ms_data(a)
-    from mindspore.ops.auto_generate.gen_ops_prim import ArgMaxExt
-    argmax_ext_op = ArgMaxExt().set_device('CPU')
+    # Use NumPy fallback since ArgMaxExt is not registered on CPU
+    import numpy as np
+    arr = ms_a.asnumpy()
     if dim is None:
-        # Flatten then argmax
-        flat = ms_a.reshape(-1)
-        result = argmax_ext_op(flat, 0, keepdim)
+        result = np.argmax(arr)
     else:
-        result = argmax_ext_op(ms_a, dim, keepdim)
-    return _wrap_result(result)
+        result = np.argmax(arr, axis=dim)
+        if keepdim:
+            result = np.expand_dims(result, axis=dim)
+    return _wrap_result(mindspore.Tensor(result))
 
 
 @register_op("argmin", DispatchKey.Backend_CPU)
 def argmin_cpu(a, dim=None, keepdim=False):
     ms_a = _get_ms_data(a)
-    from mindspore.ops.auto_generate.gen_ops_prim import ArgMinExt
-    argmin_ext_op = ArgMinExt().set_device('CPU')
+    # Use NumPy fallback since ArgMinExt is not registered on CPU
+    import numpy as np
+    arr = ms_a.asnumpy()
     if dim is None:
-        flat = ms_a.reshape(-1)
-        result = argmin_ext_op(flat, 0, keepdim)
+        result = np.argmin(arr)
     else:
-        result = argmin_ext_op(ms_a, dim, keepdim)
-    return _wrap_result(result)
+        result = np.argmin(arr, axis=dim)
+        if keepdim:
+            result = np.expand_dims(result, axis=dim)
+    return _wrap_result(mindspore.Tensor(result))
 
 
 @register_op("var", DispatchKey.Backend_CPU)
@@ -472,13 +501,21 @@ def cat_cpu(tensors, dim=0):
         return tensors[0] if len(tensors) > 0 else _wrap_result(mindspore.Tensor([]))
     if len(ms_tensors) == 1:
         return _wrap_result(ms_tensors[0])
-    return _wrap_result(mindspore.ops.cat(ms_tensors, axis=dim))
+    # Concat primitive requires axis set at creation time, use numpy fallback
+    import numpy as np
+    np_tensors = [t.asnumpy() for t in ms_tensors]
+    result = np.concatenate(np_tensors, axis=dim)
+    return _wrap_result(mindspore.Tensor(result))
 
 
 @register_op("stack", DispatchKey.Backend_CPU)
 def stack_cpu(tensors, dim=0):
     ms_tensors = [_get_ms_data(t) for t in tensors]
-    return _wrap_result(mindspore.ops.stack(ms_tensors, axis=dim))
+    # Stack primitive requires axis set at creation time, use numpy fallback
+    import numpy as np
+    np_tensors = [t.asnumpy() for t in ms_tensors]
+    result = np.stack(np_tensors, axis=dim)
+    return _wrap_result(mindspore.Tensor(result))
 
 
 @register_op("split", DispatchKey.Backend_CPU)
@@ -631,11 +668,9 @@ def isin_cpu(elements, test_elements, *, assume_unique=False, invert=False):
     expanded = elem_flat.reshape(-1, 1)
     test_expanded = ms_test.reshape(1, -1)
     matches = equal_op(expanded, test_expanded)
-    result = mindspore.ops.any(matches, dim=1, keepdim=False)
+    result = reduce_any_op(matches, 1, False)
     result = result.reshape(ms_elem.shape)
     if invert:
-        from mindspore.ops.auto_generate.gen_ops_prim import LogicalNot
-        logical_not_op = LogicalNot().set_device('CPU')
         result = logical_not_op(result)
     return _wrap_result(result)
 
@@ -682,28 +717,28 @@ def topk_cpu(input, k, dim=-1, largest=True, sorted=True):
 @register_op("multinomial", DispatchKey.Backend_CPU)
 def multinomial_cpu(input, num_samples, replacement=False, *, generator=None):
     ms_a = _get_ms_data(input)
-    from mindspore.ops.auto_generate.gen_ops_prim import MultinomialExt
-    multinomial_ext_op = MultinomialExt().set_device('CPU')
-    try:
-        result = multinomial_ext_op(ms_a, num_samples, replacement)
-        return _wrap_result(result)
-    except Exception:
-        # Fallback to numpy
-        probs = ms_a.asnumpy()
-        if probs.ndim == 1:
-            probs = probs.reshape(1, -1)
-            squeeze = True
-        else:
-            squeeze = False
+    # Use NumPy fallback directly as MultinomialExt has API issues
+    probs = ms_a.asnumpy()
+    if probs.ndim == 1:
+        probs = probs.reshape(1, -1)
+        squeeze = True
+    else:
+        squeeze = False
+    # Normalize probabilities
+    probs = probs / probs.sum(axis=-1, keepdims=True)
+    # Handle NaN - replace with uniform
+    nan_mask = np.isnan(probs)
+    if nan_mask.any():
+        probs = np.where(nan_mask, 1.0 / probs.shape[-1], probs)
         probs = probs / probs.sum(axis=-1, keepdims=True)
-        results = []
-        for row in probs:
-            samples = np.random.choice(len(row), size=num_samples, replace=replacement, p=row)
-            results.append(samples)
-        result = np.array(results, dtype=np.int64)
-        if squeeze:
-            result = result.squeeze(0)
-        return _wrap_result(mindspore.Tensor(result))
+    results = []
+    for row in probs:
+        samples = np.random.choice(len(row), size=num_samples, replace=replacement, p=row)
+        results.append(samples)
+    result = np.array(results, dtype=np.int64)
+    if squeeze:
+        result = result.squeeze(0)
+    return _wrap_result(mindspore.Tensor(result))
 
 
 # --- In-place operations ---

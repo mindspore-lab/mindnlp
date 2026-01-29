@@ -57,8 +57,10 @@ class MindTorchV2Loader:
         'torch.distributed.algorithms': 'mindtorch_v2._torch_proxy.stubs.distributed.algorithms',
         'torch.distributed.algorithms.join': 'mindtorch_v2._torch_proxy.stubs.distributed.algorithms.join',
         'torch.distributions': 'mindtorch_v2._torch_proxy.stubs.distributions',
+        'torch.fft': 'mindtorch_v2._torch_proxy.stubs.fft',
         'torch.utils': 'mindtorch_v2._torch_proxy.stubs.utils',
         'torch.utils._pytree': 'mindtorch_v2._torch_proxy.stubs.utils._pytree',
+        'torch.utils.checkpoint': 'mindtorch_v2._torch_proxy.stubs.utils.checkpoint',
         'torch.utils.data': 'mindtorch_v2._torch_proxy.stubs.utils.data',
         'torch.utils.data.distributed': 'mindtorch_v2._torch_proxy.stubs.utils.data.distributed',
         'torch.amp': 'mindtorch_v2._torch_proxy.stubs.amp',
@@ -153,6 +155,7 @@ class MindTorchV2Loader:
         module.distributed = distributed
         module.distributions = distributions
         module.amp = amp
+        module.autocast = amp.autocast  # Add torch.autocast (same as torch.amp.autocast)
         module.version = version
         module.profiler = profiler
         module.hub = hub
@@ -236,6 +239,19 @@ class MindTorchV2Loader:
                     self.max = np.finfo(np.float16).max
                     self.eps = np.finfo(np.float16).eps
                     self.tiny = np.finfo(np.float16).tiny
+                elif dtype == module.bfloat16:
+                    # bfloat16: 1 sign bit, 8 exponent bits, 7 mantissa bits
+                    # Similar to float32 range but less precision
+                    self.min = -3.38953e+38  # Approximate min for bfloat16
+                    self.max = 3.38953e+38   # Approximate max for bfloat16
+                    self.eps = 0.0078125     # 2^-7 (7 mantissa bits)
+                    self.tiny = 1.17549e-38  # Same as float32 denorm
+                else:
+                    # Default fallback to float32
+                    self.min = np.finfo(np.float32).min
+                    self.max = np.finfo(np.float32).max
+                    self.eps = np.finfo(np.float32).eps
+                    self.tiny = np.finfo(np.float32).tiny
 
         class iinfo:
             def __init__(self, dtype):
@@ -394,6 +410,13 @@ class MindTorchV2Loader:
             b = other.numpy() if hasattr(other, 'numpy') else np.asarray(other)
             return bool(np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan))
         module.allclose = allclose
+
+        # Add softmax at module level (delegates to nn.functional.softmax)
+        def softmax(input, dim, *, dtype=None):
+            """Apply softmax to input tensor along dim."""
+            from mindtorch_v2.nn.functional import softmax as F_softmax
+            return F_softmax(input, dim=dim, dtype=dtype)
+        module.softmax = softmax
 
         # Add testing module
         class _testing:

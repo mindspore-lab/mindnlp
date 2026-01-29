@@ -219,6 +219,47 @@ When asked to create a PR, **ALWAYS** follow these steps in order:
 - The commit must be rebased on top of the latest ms/master
 - Use `--force-with-lease` after rebasing to update the branch safely
 
+## mindtorch_v2 Development Rules
+
+### CRITICAL: Never Use mindspore.ops or mindspore.mint Directly
+
+**Rule**: In mindtorch_v2 code, NEVER use `mindspore.ops.*` or `mindspore.mint.*` directly. Only use PyBoost primitives or gen_ops_prim because they support `set_device()` for our dispatch mechanism.
+
+**Why**: The dispatch system needs to set device targets (CPU/GPU/Ascend). `mindspore.ops` and `mindspore.mint` don't support device targeting, but primitives from `gen_ops_prim` do via `.set_device('CPU')`.
+
+**Correct Pattern**:
+```python
+# In pyboost_cpu.py - import and instantiate primitives
+from mindspore.ops.auto_generate.gen_ops_prim import Maximum, Minimum
+maximum_op = Maximum().set_device('CPU')
+minimum_op = Minimum().set_device('CPU')
+
+# In cpu.py - register ops using the primitives
+from .pyboost_cpu import maximum_op, _get_ms_data, _wrap_result
+
+@register_op("maximum", DispatchKey.Backend_CPU)
+def maximum_cpu(a, b):
+    return _wrap_result(maximum_op(_get_ms_data(a), _get_ms_data(b)))
+
+# In _functional.py - use dispatch
+def maximum(input, other):
+    from ._dispatch import dispatch
+    return dispatch("maximum", input, other)
+```
+
+**Wrong Pattern**:
+```python
+# NEVER do this in mindtorch_v2:
+result = mindspore.ops.maximum(a, b)  # NO!
+result = mindspore.mint.maximum(a, b)  # NO!
+result = mindspore.ops.ones_like(x)   # NO!
+```
+
+**Allowed Exceptions**:
+- Importing primitive classes from `mindspore.ops.auto_generate.gen_ops_prim` is OK
+- Using `mindspore.Tensor()` for data conversion is OK
+- Code in stubs/ for compatibility layers may use mindspore.ops if needed
+
 ## Hooks
 
 ### Pre-Tool Hooks

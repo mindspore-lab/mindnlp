@@ -26,6 +26,9 @@ from mindspore.ops.auto_generate.gen_ops_prim import (
     ClampScalar, ClampTensor,
     Embedding, DropoutExt,
     TopkExt, MultinomialExt,
+    # Element-wise ops
+    Maximum, Minimum,
+    Log1p, Erfinv, Conj,
     # In-place ops
     InplaceAddExt, InplaceSubExt, InplaceMul, InplaceDiv,
     InplaceCopy, InplaceFillScalar, InplaceZero,
@@ -107,6 +110,13 @@ argmax_ext_op = ArgMaxExt().set_device('CPU')
 argmin_ext_op = ArgMinExt().set_device('CPU')
 var_op = Var().set_device('CPU')
 std_op = Std().set_device('CPU')
+
+# Element-wise ops
+maximum_op = Maximum().set_device('CPU')
+minimum_op = Minimum().set_device('CPU')
+log1p_op = Log1p().set_device('CPU')
+erfinv_op = Erfinv().set_device('CPU')
+conj_op = Conj().set_device('CPU')
 
 # In-place ops
 inplace_add_op = InplaceAddExt().set_device('CPU')

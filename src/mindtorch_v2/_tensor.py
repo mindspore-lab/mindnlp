@@ -394,6 +394,18 @@ class Tensor:
             return f"tensor({data_str}, dtype={self._dtype})"
         return f"tensor({data_str})"
 
+    def __format__(self, format_spec):
+        """Support format strings for scalar tensors."""
+        if self.numel() == 1:
+            # For scalar tensors, format the scalar value
+            return format(self.item(), format_spec)
+        else:
+            # For non-scalar tensors, just return repr if no format spec
+            if format_spec == '':
+                return repr(self)
+            else:
+                raise TypeError(f"unsupported format string passed to Tensor.__format__")
+
     def __len__(self):
         if self.ndim == 0:
             raise TypeError("len() of a 0-d tensor")
@@ -417,6 +429,13 @@ class Tensor:
         return builtins_float(self.item())
 
     def __int__(self):
+        return builtins_int(self.item())
+
+    def __index__(self):
+        """Allow tensor to be used as an index (e.g., in list indexing or slicing).
+
+        Only works for 0-d tensors with integral dtype.
+        """
         return builtins_int(self.item())
 
     # --- View operations ---
@@ -689,10 +708,27 @@ class Tensor:
 
         return result
 
-    def squeeze(self, dim=None):
-        """Remove dimensions of size 1."""
+    def squeeze(self, *dims):
+        """Remove dimensions of size 1.
+
+        Args:
+            dims: Optional dimension(s) to squeeze. Can be a single int, multiple ints,
+                  or None to squeeze all dimensions of size 1.
+        """
         from ._autograd import is_grad_enabled
         from ._autograd.node import Node, AccumulateGrad
+
+        # Handle different calling conventions
+        if len(dims) == 0:
+            dim = None
+        elif len(dims) == 1:
+            dim = dims[0]
+        else:
+            # Multiple dimensions specified - squeeze each in turn
+            result = self
+            for d in sorted(dims, reverse=True):  # reverse to avoid index shifting
+                result = result.squeeze(d)
+            return result
 
         if dim is not None:
             if dim < 0:
@@ -785,6 +821,17 @@ class Tensor:
             requires_grad=self._requires_grad,
         )
 
+    def expand_as(self, other):
+        """Expand this tensor to the same size as other.
+
+        Args:
+            other: The tensor whose shape to expand to.
+
+        Returns:
+            A tensor expanded to the shape of other.
+        """
+        return self.expand(other.shape)
+
     def flatten(self, start_dim=0, end_dim=-1):
         """Flatten dimensions from start_dim to end_dim."""
         ndim = self.dim()
@@ -852,6 +899,14 @@ class Tensor:
         # Expand Ellipsis
         key = _expand_ellipsis(key, self.dim())
 
+        # Helper to convert tensor indices to int
+        def _to_int(val):
+            if val is None:
+                return None
+            if isinstance(val, Tensor):
+                return int(val.item())
+            return val
+
         new_shape = []
         new_stride = []
         offset = self._storage_offset
@@ -875,6 +930,11 @@ class Tensor:
                 offset += k * self._stride[src_dim]
                 src_dim += 1
             elif isinstance(k, slice):
+                # Convert tensor slice bounds to ints
+                start = _to_int(k.start)
+                stop = _to_int(k.stop)
+                step = _to_int(k.step)
+                k = slice(start, stop, step)
                 start, stop, step = k.indices(self._shape[src_dim])
                 length = max(0, (stop - start + (step - (1 if step > 0 else -1))) // step)
                 offset += start * self._stride[src_dim]
@@ -1077,6 +1137,21 @@ class Tensor:
         from . import log as torch_log
         return torch_log(self)
 
+    def log1p(self):
+        """Compute log(1 + x) with better precision for small x."""
+        from ._dispatch import dispatch
+        return dispatch("log1p", self)
+
+    def log2(self):
+        """Compute log base 2."""
+        from . import log2 as torch_log2
+        return torch_log2(self)
+
+    def log10(self):
+        """Compute log base 10."""
+        from . import log10 as torch_log10
+        return torch_log10(self)
+
     def sqrt(self):
         from . import sqrt as torch_sqrt
         return torch_sqrt(self)
@@ -1115,6 +1190,34 @@ class Tensor:
         from . import div as torch_div
         return torch_div(other, self)
 
+    def __floordiv__(self, other):
+        """Floor division: self // other"""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = arr // other_arr
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __rfloordiv__(self, other):
+        """Reverse floor division: other // self"""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = other_arr // arr
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __mod__(self, other):
+        """Modulo: self % other"""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = arr % other_arr
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
+    def __rmod__(self, other):
+        """Reverse modulo: other % self"""
+        arr = self.numpy()
+        other_arr = other.numpy() if isinstance(other, Tensor) else np.asarray(other)
+        result = other_arr % arr
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
+
     def __neg__(self):
         return self.neg()
 
@@ -1123,6 +1226,13 @@ class Tensor:
 
     def __pow__(self, exponent):
         return self.pow(exponent)
+
+    def __rpow__(self, base):
+        """Reverse power: base ** self"""
+        # Convert base to numpy array if needed
+        base_arr = base.numpy() if isinstance(base, Tensor) else np.asarray(base)
+        result = np.power(base_arr, self.numpy())
+        return Tensor(result, dtype=self._dtype, device=str(self._device))
 
     def __matmul__(self, other):
         return self.matmul(other)
@@ -1377,6 +1487,20 @@ class Tensor:
         self._version += 1
         return self
 
+    def erfinv_(self):
+        """Apply inverse error function in-place."""
+        from ._dispatch import dispatch
+        import mindspore
+        # Meta tensors have no actual storage - just return self
+        if self._storage._ms_tensor is None:
+            return self
+        result = dispatch("erfinv", self)
+        storage_arr = self._storage._ms_tensor.asnumpy().copy()
+        storage_arr[self._storage_offset:self._storage_offset + self.numel()] = result.numpy().ravel()
+        self._storage._ms_tensor = mindspore.Tensor(storage_arr)
+        self._version += 1
+        return self
+
     def fill_(self, value):
         """Fill tensor with a constant value in-place."""
         from ._dispatch import dispatch
@@ -1536,6 +1660,22 @@ class Tensor:
         self._storage._ms_tensor = mindspore.Tensor(flat)
         self._version += 1
         return self
+
+    def clamp_min(self, min):
+        """Clamp values to be at least min."""
+        return self.clamp(min=min)
+
+    def clamp_max(self, max):
+        """Clamp values to be at most max."""
+        return self.clamp(max=max)
+
+    def clamp_min_(self, min):
+        """Clamp values to be at least min, in-place."""
+        return self.clamp_(min=min)
+
+    def clamp_max_(self, max):
+        """Clamp values to be at most max, in-place."""
+        return self.clamp_(max=max)
 
     def all(self, dim=None, keepdim=False):
         """Test if all elements evaluate to True."""
@@ -1850,6 +1990,16 @@ class Tensor:
         from . import tanh as torch_tanh
         return torch_tanh(self)
 
+    def cos(self):
+        """Element-wise cosine."""
+        from . import cos as torch_cos
+        return torch_cos(self)
+
+    def sin(self):
+        """Element-wise sine."""
+        from . import sin as torch_sin
+        return torch_sin(self)
+
     def sigmoid(self):
         """Element-wise sigmoid."""
         arr = self.numpy()
@@ -1935,6 +2085,11 @@ class Tensor:
         return Tensor(result, dtype=self._dtype, device=str(self._device),
                       requires_grad=self._requires_grad)
 
+    def repeat_interleave(self, repeats, dim=None, *, output_size=None):
+        """Repeat elements of the tensor."""
+        from . import repeat_interleave as torch_repeat_interleave
+        return torch_repeat_interleave(self, repeats, dim=dim, output_size=output_size)
+
     def scatter(self, dim, index, src):
         """Scatter values into tensor."""
         arr = self.numpy().copy()
@@ -1955,6 +2110,43 @@ class Tensor:
         self._version += 1
         return self
 
+    def masked_scatter(self, mask, source):
+        """Copies elements from source into self where mask is True.
+
+        Args:
+            mask: Boolean tensor of same shape as self
+            source: 1D tensor containing values to scatter
+
+        Returns:
+            Tensor with values scattered from source where mask is True
+        """
+        arr = self.numpy().copy()
+        mask_arr = mask.numpy() if isinstance(mask, Tensor) else np.asarray(mask)
+        source_arr = source.numpy() if isinstance(source, Tensor) else np.asarray(source)
+
+        # Flatten source for sequential access
+        source_flat = source_arr.flatten()
+
+        # Get indices where mask is True
+        mask_indices = np.where(mask_arr.flatten())[0]
+
+        # Copy values from source to arr at mask positions
+        arr_flat = arr.flatten()
+        num_values = min(len(mask_indices), len(source_flat))
+        arr_flat[mask_indices[:num_values]] = source_flat[:num_values]
+
+        result = arr_flat.reshape(arr.shape)
+        return Tensor(result, dtype=self._dtype, device=str(self._device),
+                      requires_grad=self._requires_grad)
+
+    def masked_scatter_(self, mask, source):
+        """In-place version of masked_scatter."""
+        import mindspore
+        result = self.masked_scatter(mask, source)
+        self._storage._ms_tensor = mindspore.Tensor(result.numpy().ravel())
+        self._version += 1
+        return self
+
     def index_select(self, dim, index):
         """Select values along a dimension using indices."""
         arr = self.numpy()
@@ -1962,6 +2154,27 @@ class Tensor:
         result = np.take(arr, index_arr, axis=dim)
         return Tensor(result, dtype=self._dtype, device=str(self._device),
                       requires_grad=self._requires_grad)
+
+    def index_copy_(self, dim, index, source):
+        """Copy values from source into self at positions specified by index.
+
+        Args:
+            dim: Dimension along which to index
+            index: Indices of elements to copy
+            source: Source tensor to copy from
+        """
+        import mindspore
+        arr = self.numpy().copy()
+        index_arr = index.numpy() if isinstance(index, Tensor) else np.asarray(index)
+        source_arr = source.numpy() if isinstance(source, Tensor) else np.asarray(source)
+
+        # Build index for assignment
+        idx = [slice(None)] * arr.ndim
+        idx[dim] = index_arr
+        arr[tuple(idx)] = source_arr
+        self._storage._ms_tensor = mindspore.Tensor(arr.ravel())
+        self._version += 1
+        return self
 
     def narrow(self, dim, start, length):
         """Return a narrowed version of tensor."""

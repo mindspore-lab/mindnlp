@@ -404,3 +404,18 @@ def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad
     dt = dtype or dtype_mod.int64
     arr = np.random.randint(low, high, size=size)
     return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+
+
+def rand_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
+    """Create tensor with random values [0, 1) with same shape as input.
+
+    Args:
+        input: Input tensor to get shape from
+        dtype: Optional dtype (defaults to input dtype)
+        device: Optional device (defaults to input device)
+        requires_grad: If True, tensor will track gradients
+        memory_format: Memory format (ignored)
+    """
+    dt = dtype if dtype is not None else input.dtype
+    dev = device if device is not None else str(input.device)
+    return rand(*input.shape, dtype=dt, device=dev, requires_grad=requires_grad)

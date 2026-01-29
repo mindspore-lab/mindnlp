@@ -1,5 +1,7 @@
 """Stub for torch.compiler module."""
 
+from contextlib import contextmanager
+
 
 def disable(fn=None, recursive=True):
     """Disable compiler on a function - returns identity decorator."""
@@ -40,6 +42,18 @@ def reset():
     pass
 
 
+@contextmanager
+def set_stance(stance):
+    """Context manager to set compiler stance.
+
+    Args:
+        stance: The compilation stance (e.g., "force_eager", "default")
+
+    This is a no-op context manager since we don't use torch.compile.
+    """
+    yield
+
+
 __all__ = [
     'disable',
     'is_compiling',
@@ -48,4 +62,5 @@ __all__ = [
     'assume_constant_result',
     'cudagraph_mark_step_begin',
     'reset',
+    'set_stance',
 ]
