@@ -62,6 +62,11 @@ def sqrt(input, *, out=None):
     return dispatch("sqrt", input)
 
 
+def square(input, *, out=None):
+    """Square each element of the tensor."""
+    return mul(input, input)
+
+
 def sin(input, *, out=None):
     """Sine element-wise."""
     return dispatch("sin", input)
@@ -155,8 +160,11 @@ def le(input, other, *, out=None):
 
 # --- Tensor manipulation ops ---
 
-def cat(tensors, dim=0, *, out=None):
+def cat(tensors, dim=0, *, out=None, axis=None):
     """Concatenate tensors along a dimension."""
+    # Support axis as alias for dim (numpy compatibility)
+    if axis is not None and dim == 0:
+        dim = axis
     return dispatch("cat", tensors, dim=dim)
 
 
@@ -226,13 +234,25 @@ def baddbmm(input, batch1, batch2, *, beta=1, alpha=1, out=None):
     return dispatch("baddbmm", input, batch1, batch2, beta=beta, alpha=alpha)
 
 
-def all(input, dim=None, keepdim=False, *, out=None):
+def all(input, dim=None, keepdim=False, *, out=None, axis=None, keepdims=None):
     """Test if all elements evaluate to True."""
+    # Support axis as alias for dim (numpy compatibility)
+    if axis is not None and dim is None:
+        dim = axis
+    # Support keepdims as alias for keepdim (numpy compatibility)
+    if keepdims is not None:
+        keepdim = keepdims
     return dispatch("all", input, dim=dim, keepdim=keepdim)
 
 
-def any(input, dim=None, keepdim=False, *, out=None):
+def any(input, dim=None, keepdim=False, *, out=None, axis=None, keepdims=None):
     """Test if any element evaluates to True."""
+    # Support axis as alias for dim (numpy compatibility)
+    if axis is not None and dim is None:
+        dim = axis
+    # Support keepdims as alias for keepdim (numpy compatibility)
+    if keepdims is not None:
+        keepdim = keepdims
     return dispatch("any", input, dim=dim, keepdim=keepdim)
 
 
@@ -351,10 +371,8 @@ def log2(input, *, out=None):
 
 def log1p(input, *, out=None):
     """Natural log of (1 + x) element-wise."""
-    import numpy as np
-    from ._tensor import Tensor
-    result = np.log1p(input.numpy())
-    return Tensor(result.astype(np.float32))
+    from ._dispatch import dispatch
+    return dispatch("log1p", input)
 
 
 def expm1(input, *, out=None):
@@ -736,3 +754,219 @@ def svd_lowrank(A, q=6, niter=2, M=None):
     V = Vt[..., :q, :].swapaxes(-2, -1)
 
     return Tensor(U), Tensor(S), Tensor(V)
+
+
+def diff(input, n=1, dim=-1, prepend=None, append=None):
+    """Computes the n-th forward difference along the given dimension.
+
+    Args:
+        input: Input tensor
+        n: Number of times to recursively compute the difference
+        dim: Dimension to compute the difference along
+        prepend: Values to prepend before computing the difference
+        append: Values to append before computing the difference
+
+    Returns:
+        Tensor of differences
+    """
+    import numpy as np
+    from ._tensor import Tensor
+
+    arr = input.numpy()
+
+    if prepend is not None:
+        prepend_arr = prepend.numpy() if hasattr(prepend, 'numpy') else np.asarray(prepend)
+        arr = np.concatenate([prepend_arr, arr], axis=dim)
+    if append is not None:
+        append_arr = append.numpy() if hasattr(append, 'numpy') else np.asarray(append)
+        arr = np.concatenate([arr, append_arr], axis=dim)
+
+    result = np.diff(arr, n=n, axis=dim)
+    return Tensor(result)
+
+
+def maximum(input, other, *, out=None):
+    """Compute element-wise maximum of input and other.
+
+    Args:
+        input: First tensor
+        other: Second tensor or scalar
+        out: Optional output tensor (ignored)
+
+    Returns:
+        Element-wise maximum
+    """
+    from ._dispatch import dispatch
+    return dispatch("maximum", input, other)
+
+
+def minimum(input, other, *, out=None):
+    """Compute element-wise minimum of input and other.
+
+    Args:
+        input: First tensor
+        other: Second tensor or scalar
+        out: Optional output tensor (ignored)
+
+    Returns:
+        Element-wise minimum
+    """
+    from ._dispatch import dispatch
+    return dispatch("minimum", input, other)
+
+
+def take_along_dim(input, indices, dim):
+    """Select values from input at positions given by indices along dim.
+
+    Args:
+        input: Input tensor
+        indices: Index tensor (same dims as input, or broadcastable)
+        dim: Dimension to index along
+
+    Returns:
+        Tensor with values gathered from input
+    """
+    import numpy as np
+    from ._tensor import Tensor
+
+    arr = input.numpy()
+    idx = indices.numpy() if hasattr(indices, 'numpy') else np.asarray(indices)
+    result = np.take_along_axis(arr, idx, axis=dim)
+    return Tensor(result)
+
+
+def conj(input):
+    """Return the complex conjugate of input tensor.
+
+    Args:
+        input: Input tensor (can be complex or real)
+
+    Returns:
+        Complex conjugate of input
+    """
+    from ._dispatch import dispatch
+    return dispatch("conj", input)
+
+
+def conj_physical(input):
+    """Return the complex conjugate of input tensor (physical conjugate).
+
+    Args:
+        input: Input tensor
+
+    Returns:
+        Complex conjugate of input
+    """
+    return conj(input)
+
+
+def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
+    """Return the indices of the buckets to which each value in input belongs.
+
+    Args:
+        input: Input tensor of values to bucketize
+        boundaries: 1-D tensor of sorted boundaries
+        out_int32: If True, return indices as int32 instead of int64
+        right: If False, return the bucket i where boundaries[i-1] < x <= boundaries[i].
+               If True, return bucket i where boundaries[i-1] <= x < boundaries[i].
+        out: Optional output tensor
+
+    Returns:
+        Tensor of bucket indices
+    """
+    import numpy as np
+    from ._tensor import Tensor
+
+    arr = input.numpy()
+    bounds = boundaries.numpy() if hasattr(boundaries, 'numpy') else np.asarray(boundaries)
+
+    # numpy.searchsorted is similar to bucketize but with opposite 'side' semantics
+    # when right=False in torch, we want side='right' in numpy (find first bound > x)
+    # when right=True in torch, we want side='left' in numpy (find first bound >= x)
+    side = 'left' if right else 'right'
+    result = np.searchsorted(bounds, arr, side=side)
+
+    dtype = np.int32 if out_int32 else np.int64
+    return Tensor(result.astype(dtype))
+
+
+def histc(input, bins=100, min=0, max=0, *, out=None):
+    """Compute the histogram of a tensor.
+
+    Args:
+        input: Input tensor
+        bins: Number of histogram bins
+        min: Lower bound of the histogram range
+        max: Upper bound of the histogram range
+        out: Optional output tensor
+
+    Returns:
+        Tensor containing the histogram
+    """
+    import numpy as np
+    from ._tensor import Tensor
+
+    arr = input.numpy().flatten()
+
+    # Handle default min/max (0, 0 means use data range)
+    if min == 0 and max == 0:
+        min_val = float(arr.min())
+        max_val = float(arr.max())
+    else:
+        min_val = float(min)
+        max_val = float(max)
+
+    # Compute histogram
+    hist, _ = np.histogram(arr, bins=bins, range=(min_val, max_val))
+    return Tensor(hist.astype(np.float32))
+
+
+def nonzero(input, *, as_tuple=False):
+    """Return indices of non-zero elements.
+
+    Args:
+        input: Input tensor
+        as_tuple: If False (default), returns 2-D tensor of shape (N, ndim).
+                  If True, returns tuple of 1-D tensors.
+
+    Returns:
+        Tensor or tuple of tensors containing indices of non-zero elements
+    """
+    import numpy as np
+    from ._tensor import Tensor
+
+    arr = input.numpy()
+    indices = np.nonzero(arr)
+
+    if as_tuple:
+        return tuple(Tensor(idx) for idx in indices)
+    else:
+        # Stack indices into (N, ndim) array
+        if len(indices[0]) == 0:
+            # No non-zero elements
+            return Tensor(np.empty((0, arr.ndim), dtype=np.int64))
+        stacked = np.stack(indices, axis=1)
+        return Tensor(stacked)
+
+
+def argsort(input, dim=-1, descending=False, stable=False):
+    """Return the indices that would sort a tensor.
+
+    Args:
+        input: Input tensor
+        dim: Dimension to sort along (default: -1, last dim)
+        descending: If True, sort in descending order
+        stable: If True, use stable sorting algorithm
+
+    Returns:
+        Tensor of indices that would sort the input tensor
+    """
+    import numpy as np
+    from ._tensor import Tensor
+
+    arr = input.numpy()
+    if descending:
+        indices = np.argsort(-arr, axis=dim, kind='stable' if stable else 'quicksort')
+    else:
+        indices = np.argsort(arr, axis=dim, kind='stable' if stable else 'quicksort')
+    return Tensor(indices)

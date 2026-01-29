@@ -158,8 +158,12 @@ def relu6(input, inplace=False):
 
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
-                                  is_causal=False, scale=None):
-    """Scaled dot product attention with autograd support."""
+                                  is_causal=False, scale=None, enable_gqa=False):
+    """Scaled dot product attention with autograd support.
+
+    Args:
+        enable_gqa: Enable grouped query attention optimization (ignored, provided for compatibility)
+    """
     import math
     from .._functional import matmul
 
@@ -205,7 +209,18 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     w = weight.numpy()
 
     stride = stride[0] if isinstance(stride, tuple) else stride
-    padding = padding[0] if isinstance(padding, tuple) else padding
+
+    # Handle string padding values
+    if isinstance(padding, str):
+        if padding == 'valid':
+            padding = 0
+        elif padding == 'same':
+            _, _, k_len = w.shape
+            padding = (k_len - 1) // 2
+        else:
+            raise ValueError(f"Unknown padding mode: {padding}")
+    elif isinstance(padding, tuple):
+        padding = padding[0]
 
     # Pad input
     if padding > 0:
@@ -231,36 +246,88 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    """2D convolution."""
+    """2D convolution with groups support using scipy for efficiency."""
     import numpy as np
+    from scipy.ndimage import convolve
 
     x = input.numpy()
     w = weight.numpy()
 
     stride = stride if isinstance(stride, tuple) else (stride, stride)
-    padding = padding if isinstance(padding, tuple) else (padding, padding)
+    dilation = dilation if isinstance(dilation, tuple) else (dilation, dilation)
+
+    # Handle string padding values (can be single string or tuple of strings)
+    if isinstance(padding, str):
+        if padding == 'valid':
+            padding = (0, 0)
+        elif padding == 'same':
+            _, _, k_h, k_w = w.shape
+            padding = ((k_h - 1) // 2, (k_w - 1) // 2)
+        else:
+            raise ValueError(f"Unknown padding mode: {padding}")
+    elif isinstance(padding, tuple) and len(padding) > 0 and isinstance(padding[0], str):
+        # Handle tuple of strings like ('valid', 'valid')
+        _, _, k_h, k_w = w.shape
+        pad_h = 0 if padding[0] == 'valid' else (k_h - 1) // 2
+        pad_w = 0 if padding[1] == 'valid' else (k_w - 1) // 2
+        padding = (pad_h, pad_w)
+    elif not isinstance(padding, tuple):
+        padding = (padding, padding)
 
     # Pad input
     if padding[0] > 0 or padding[1] > 0:
         x = np.pad(x, ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])), mode='constant')
 
     batch, in_ch, in_h, in_w = x.shape
-    out_ch, _, k_h, k_w = w.shape
+    out_ch, ch_per_group, k_h, k_w = w.shape
+
+    # Handle dilation
+    if dilation[0] > 1 or dilation[1] > 1:
+        dilated_k_h = (k_h - 1) * dilation[0] + 1
+        dilated_k_w = (k_w - 1) * dilation[1] + 1
+        dilated_w = np.zeros((out_ch, ch_per_group, dilated_k_h, dilated_k_w), dtype=w.dtype)
+        dilated_w[:, :, ::dilation[0], ::dilation[1]] = w
+        w = dilated_w
+        k_h, k_w = dilated_k_h, dilated_k_w
+
     out_h = (in_h - k_h) // stride[0] + 1
     out_w = (in_w - k_w) // stride[1] + 1
 
+    # Calculate channels per group
+    in_ch_per_group = in_ch // groups
+    out_ch_per_group = out_ch // groups
+
     output = np.zeros((batch, out_ch, out_h, out_w), dtype=np.float32)
 
-    for b in range(batch):
-        for oc in range(out_ch):
-            for ic in range(in_ch):
-                for i in range(out_h):
-                    for j in range(out_w):
-                        h_start = i * stride[0]
-                        w_start = j * stride[1]
-                        output[b, oc, i, j] += np.sum(
-                            x[b, ic, h_start:h_start+k_h, w_start:w_start+k_w] * w[oc, ic]
-                        )
+    # Use im2col approach for efficiency
+    # Extract patches and reshape for matrix multiplication
+    for g in range(groups):
+        in_start = g * in_ch_per_group
+        in_end = in_start + in_ch_per_group
+        out_start = g * out_ch_per_group
+        out_end = out_start + out_ch_per_group
+
+        # Weight for this group: (out_ch_per_group, in_ch_per_group, k_h, k_w)
+        w_group = w[out_start:out_end]
+
+        for b in range(batch):
+            # Extract patches: for each output position, extract the input patch
+            patches = np.zeros((out_h * out_w, in_ch_per_group * k_h * k_w), dtype=np.float32)
+            for i in range(out_h):
+                for j in range(out_w):
+                    h_start = i * stride[0]
+                    w_start = j * stride[1]
+                    patch = x[b, in_start:in_end, h_start:h_start+k_h, w_start:w_start+k_w]
+                    patches[i * out_w + j] = patch.flatten()
+
+            # Reshape weight: (out_ch_per_group, in_ch_per_group * k_h * k_w)
+            w_reshaped = w_group.reshape(out_ch_per_group, -1)
+
+            # Matrix multiply: (out_h * out_w, out_ch_per_group)
+            result = patches @ w_reshaped.T
+
+            # Reshape to output
+            output[b, out_start:out_end] = result.T.reshape(out_ch_per_group, out_h, out_w)
 
     if bias is not None:
         output += bias.numpy().reshape(1, -1, 1, 1)
@@ -591,33 +658,37 @@ def nll_loss(input, target, weight=None, size_average=None, ignore_index=-100,
     log_probs = input.numpy()
     targets = target.numpy().astype(np.int64)
 
+    # Create mask for valid (non-ignored) indices BEFORE computing loss
+    # This handles both positive and negative ignore_index values
+    ignore_mask = targets == ignore_index
+
+    # Replace ignore_index values with 0 temporarily for safe indexing
+    # The losses at these positions will be masked out anyway
+    safe_targets = np.where(ignore_mask, 0, targets)
+
     # Handle different input shapes
     if log_probs.ndim == 2:
         # Standard case: (N, C)
         N, C = log_probs.shape
         # Gather log probs for target classes
         batch_indices = np.arange(N)
-        losses = -log_probs[batch_indices, targets]
+        losses = -log_probs[batch_indices, safe_targets]
     elif log_probs.ndim == 1:
         # Single sample case
-        losses = np.array([-log_probs[targets]])
+        losses = np.array([-log_probs[safe_targets]])
     else:
         # Higher dimensional case: (N, C, d1, d2, ...)
         N, C = log_probs.shape[:2]
         spatial_shape = log_probs.shape[2:]
         # Reshape for easier indexing
         log_probs_flat = log_probs.transpose(0, *range(2, log_probs.ndim), 1).reshape(-1, C)
-        targets_flat = targets.flatten()
+        targets_flat = safe_targets.flatten()
         losses = -log_probs_flat[np.arange(len(targets_flat)), targets_flat]
         losses = losses.reshape(N, *spatial_shape)
 
-    # Handle ignore_index
-    if ignore_index >= 0:
-        mask = targets != ignore_index
-        losses = np.where(mask.flatten() if losses.ndim == 1 else mask, losses, 0.0)
-        valid_count = np.sum(mask)
-    else:
-        valid_count = losses.size
+    # Apply ignore_index mask - zero out losses for ignored indices
+    losses = np.where(ignore_mask.flatten() if losses.ndim == 1 else ignore_mask, 0.0, losses)
+    valid_count = np.sum(~ignore_mask)
 
     # Apply weight if provided
     if weight is not None:

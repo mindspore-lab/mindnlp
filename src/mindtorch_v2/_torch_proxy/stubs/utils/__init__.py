@@ -3,22 +3,8 @@
 from types import ModuleType
 import sys
 
-
-class checkpoint:
-    """Stub for torch.utils.checkpoint."""
-
-    @staticmethod
-    def checkpoint(fn, *args, use_reentrant=True, **kwargs):
-        """Run function without gradient checkpointing."""
-        return fn(*args, **kwargs)
-
-    @staticmethod
-    def checkpoint_sequential(functions, segments, *inputs, **kwargs):
-        """Run sequential functions without checkpointing."""
-        for fn in functions:
-            inputs = fn(*inputs) if isinstance(inputs, tuple) else fn(inputs)
-        return inputs
-
+# Import checkpoint as proper submodule
+from . import checkpoint
 
 # Import data as proper submodule
 from . import data

@@ -49,6 +49,7 @@ class AvgPool2d(Module):
         if isinstance(self.stride, int):
             self.stride = (self.stride, self.stride)
         self.padding = padding if isinstance(padding, tuple) else (padding, padding)
+        self.ceil_mode = ceil_mode
 
     def forward(self, input):
         x = input.numpy()
@@ -60,13 +61,25 @@ class AvgPool2d(Module):
             x = np.pad(x, [(0, 0), (0, 0), (ph, ph), (pw, pw)], mode='constant', constant_values=0)
 
         N, C, H, W = x.shape
-        out_h = (H - kh) // sh + 1
-        out_w = (W - kw) // sw + 1
+        if self.ceil_mode:
+            import math
+            out_h = math.ceil((H - kh) / sh) + 1
+            out_w = math.ceil((W - kw) / sw) + 1
+            # Ensure at least 1 output when input is smaller than kernel
+            out_h = max(out_h, 1) if H > 0 else 0
+            out_w = max(out_w, 1) if W > 0 else 0
+        else:
+            out_h = (H - kh) // sh + 1
+            out_w = (W - kw) // sw + 1
 
         out = np.zeros((N, C, out_h, out_w), dtype=x.dtype)
         for i in range(out_h):
             for j in range(out_w):
-                out[:, :, i, j] = np.mean(x[:, :, i*sh:i*sh+kh, j*sw:j*sw+kw], axis=(2, 3))
+                h_start = i * sh
+                w_start = j * sw
+                h_end = min(h_start + kh, H)
+                w_end = min(w_start + kw, W)
+                out[:, :, i, j] = np.mean(x[:, :, h_start:h_end, w_start:w_end], axis=(2, 3))
 
         return torch.Tensor(out)
 

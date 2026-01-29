@@ -36,4 +36,24 @@ def forbid_in_graph(fn):
     return fn
 
 
-__all__ = ['OptimizedModule', 'eval_frame', 'allow_in_graph', 'disable', 'forbid_in_graph']
+def mark_static_address(tensor, guard=True):
+    """Mark a tensor's memory address as static for compilation.
+
+    This is a no-op stub since we don't have torch.compile.
+
+    Args:
+        tensor: The tensor to mark
+        guard: Whether to guard on the tensor's address
+    """
+    pass
+
+
+def reset():
+    """Reset the dynamo state.
+
+    This is a no-op stub since we don't have torch.compile.
+    """
+    pass
+
+
+__all__ = ['OptimizedModule', 'eval_frame', 'allow_in_graph', 'disable', 'forbid_in_graph', 'mark_static_address', 'reset']

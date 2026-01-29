@@ -26,13 +26,13 @@ from ._tensor import Tensor
 from ._creation import (
     tensor, zeros, ones, empty, full, full_like,
     arange, linspace, eye,
-    randn, rand, randint,
+    randn, rand, randint, rand_like,
     zeros_like, ones_like, empty_like,
     from_numpy, as_tensor, frombuffer, asarray,
 )
 from ._functional import (
     add, sub, mul, div, neg, abs, pow,
-    exp, log, sqrt, sin, cos, tanh,
+    exp, log, sqrt, square, sin, cos, tanh,
     matmul,
     sum, mean, max, min, prod, argmax, argmin,
     eq, ne, gt, lt, ge, le,
@@ -72,6 +72,14 @@ from ._functional import (
     equal,
     # Linear algebra
     svd_lowrank,
+    # Difference operations
+    diff, maximum, minimum, take_along_dim,
+    # Complex number operations
+    conj, conj_physical,
+    # Binning and histogram
+    bucketize, histc,
+    # Index operations
+    nonzero, argsort,
 )
 from ._autograd import (
     is_grad_enabled,
@@ -87,6 +95,9 @@ from ._backends import cpu
 from . import nn
 from . import optim
 from . import _autograd as autograd
+
+# Aliases for API compatibility
+concat = cat  # torch.concat is an alias for torch.cat
 
 # Memory format constants (for PyTorch API compatibility)
 class memory_format:
