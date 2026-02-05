@@ -1,0 +1,196 @@
+# Prometheus 告警规则配置
+# OCR Service Alerting Rules
+
+groups:
+  - name: ocr_service_alerts
+    interval: 30s
+    rules:
+      # 高错误率告警
+      - alert: HighErrorRate
+        expr: |
+          (rate(ocr_requests_failed[5m]) / rate(ocr_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: ocr-api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+      
+      # 高延迟告警
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "P95 latency exceeds threshold"
+          description: "P95 latency is {{ $value }}s (threshold: 2s)"
+      
+      # 极高延迟告警
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5.0
+        for: 5m
+        labels:
+          severity: critical
+          service: ocr-api
+        annotations:
+          summary: "P99 latency exceeds threshold"
+          description: "P99 latency is {{ $value }}s (threshold: 5s)"
+      
+      # 服务不可用告警
+      - alert: ServiceDown
+        expr: up{job="ocr-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ocr-api
+        annotations:
+          summary: "OCR service is down"
+          description: "OCR API service has been down for more than 1 minute"
+      
+      # 低成功率告警
+      - alert: LowSuccessRate
+        expr: |
+          (rate(ocr_requests_success[10m]) / rate(ocr_requests_total[10m])) < 0.90
+        for: 10m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "Low success rate"
+          description: "Success rate is {{ $value | humanizePercentage }} (threshold: 90%)"
+      
+      # 熔断器打开告警
+      - alert: CircuitBreakerOpen
+        expr: ocr_circuit_breaker_state == 1
+        for: 2m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Circuit breaker has been open for more than 2 minutes"
+      
+      # 队列接近满载告警
+      - alert: QueueNearlyFull
+        expr: |
+          (ocr_queue_size / ocr_queue_capacity) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "Request queue nearly full"
+          description: "Queue utilization is {{ $value | humanizePercentage }} (threshold: 80%)"
+      
+      # 队列已满告警
+      - alert: QueueFull
+        expr: ocr_queue_is_full == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: ocr-api
+        annotations:
+          summary: "Request queue is full"
+          description: "Request queue has been full for more than 1 minute, requests are being rejected"
+      
+      # 高限流拒绝率告警
+      - alert: HighRateLimitRejects
+        expr: |
+          (rate(ocr_rate_limit_rejected[5m]) / rate(ocr_requests_total[5m])) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "High rate limit rejection rate"
+          description: "{{ $value | humanizePercentage }} of requests are being rate limited (threshold: 10%)"
+      
+      # CPU使用率过高告警
+      - alert: HighCPUUsage
+        expr: process_cpu_percent > 90
+        for: 10m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% (threshold: 90%)"
+      
+      # 内存使用率过高告警
+      - alert: HighMemoryUsage
+        expr: |
+          (process_memory_bytes / process_memory_max_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 85%)"
+      
+      # GPU利用率过低告警 (可能表示性能问题)
+      - alert: LowGPUUtilization
+        expr: |
+          gpu_utilization_percent < 20 and rate(ocr_requests_total[5m]) > 1
+        for: 15m
+        labels:
+          severity: info
+          service: ocr-api
+        annotations:
+          summary: "Low GPU utilization despite traffic"
+          description: "GPU utilization is {{ $value }}% but service is receiving traffic"
+      
+      # GPU显存不足告警
+      - alert: HighGPUMemoryUsage
+        expr: |
+          (gpu_memory_used_mb / gpu_memory_total_mb) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "GPU memory usage high"
+          description: "GPU memory usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+      
+      # 批处理命中率过低告警
+      - alert: LowBatchHitRate
+        expr: |
+          ocr_batch_hit_rate < 0.30 and rate(ocr_requests_total[5m]) > 2
+        for: 10m
+        labels:
+          severity: info
+          service: ocr-api
+        annotations:
+          summary: "Low batch processing hit rate"
+          description: "Batch hit rate is {{ $value | humanizePercentage }} (threshold: 30%)"
+      
+      # 推理时间异常增加告警
+      - alert: InferenceTimeSpike
+        expr: |
+          avg(model_inference_duration_seconds) > 
+          (avg_over_time(model_inference_duration_seconds[1h]) * 1.5)
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "Inference time spike detected"
+          description: "Current inference time is 50% higher than 1h average"
+      
+      # 磁盘空间不足告警 (用于日志)
+      - alert: LowDiskSpace
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/var/log"} / 
+           node_filesystem_size_bytes{mountpoint="/var/log"}) < 0.10
+        for: 5m
+        labels:
+          severity: warning
+          service: ocr-api
+        annotations:
+          summary: "Low disk space for logs"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining on /var/log"

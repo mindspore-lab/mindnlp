@@ -1,0 +1,44 @@
+[
+  {
+    "image_path": "images/receipt_001.jpg",
+    "conversations": [
+      {
+        "role": "user",
+        "content": "请识别这张收据中的所有文字"
+      },
+      {
+        "role": "assistant",
+        "content": "收据内容:\n商店: 便利店\n日期: 2024-01-15\n商品:\n  - 苹果 x5  25.00元\n  - 牛奶 x2  18.00元\n合计: 43.00元"
+      }
+    ],
+    "task_type": "general"
+  },
+  {
+    "image_path": "images/table_001.jpg",
+    "conversations": [
+      {
+        "role": "user",
+        "content": "提取表格中的数据"
+      },
+      {
+        "role": "assistant",
+        "content": "| 姓名 | 年龄 | 部门 | 工资 |\n| 张三 | 25 | 技术部 | 8000 |\n| 李四 | 30 | 市场部 | 9000 |\n| 王五 | 28 | 人事部 | 7500 |"
+      }
+    ],
+    "task_type": "table"
+  },
+  {
+    "image_path": "images/formula_001.jpg",
+    "conversations": [
+      {
+        "role": "user",
+        "content": "识别这个数学公式"
+      },
+      {
+        "role": "assistant",
+        "content": "$$E = mc^2$$"
+      }
+    ],
+    "task_type": "formula"
+  }
+]

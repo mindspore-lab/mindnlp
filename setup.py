@@ -154,17 +154,14 @@ setup(
         'Issue Tracker': 'https://github.com/mindlab-ai/mindnlp/issues',
     },
     description=get_description(),
-    license='Apache 2.0',
-    packages=find_packages(where='src', include=['mindnlp', 'mindtorch', 'torch4ms']),
+    license='Apache-2.0',
+    packages=find_packages(where='src', include=['mindnlp*', 'mindtorch*', 'torch4ms*']),
     include_package_data=True,
-    package_dir={
-        "mindnlp": "src/mindnlp",
-        "mindtorch": "src/mindtorch",
-        "torch4ms": "src/torch4ms",
-    },
+    package_dir={'': 'src'},
     package_data={
         'mindnlp': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py'],
         'mindtorch': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py'],
+        'mindtorch_v2': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py'],
         'torch4ms': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py']
     },
     cmdclass={
@@ -211,8 +208,6 @@ setup(
             'diffusers',
         ],
     },
-    classifiers=[
-        'License :: OSI Approved :: Apache Software License'
-    ]
+    python_requires='>=3.8',
 )
 print(find_packages(where='src'))
