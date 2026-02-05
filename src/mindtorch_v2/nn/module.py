@@ -140,20 +140,23 @@ class Module:
         for name, buf in self.named_buffers(recurse=recurse):
             yield buf
 
-    def named_buffers(self, prefix: str = '', recurse: bool = True) -> Iterator[Tuple[str, Tensor]]:
+    def named_buffers(self, prefix: str = '', recurse: bool = True, remove_duplicate: bool = True) -> Iterator[Tuple[str, Tensor]]:
         """Return an iterator over module buffers with names."""
-        memo: Set[int] = set()
+        memo: Set[int] = set() if remove_duplicate else None
         for name, b in self._buffers.items():
-            if b is not None and id(b) not in memo:
-                memo.add(id(b))
-                yield prefix + name, b
+            if b is not None:
+                if memo is None or id(b) not in memo:
+                    if memo is not None:
+                        memo.add(id(b))
+                    yield prefix + name, b
         if recurse:
             for module_name, module in self._modules.items():
                 if module is not None:
                     submodule_prefix = prefix + module_name + '.'
-                    for name, b in module.named_buffers(prefix=submodule_prefix, recurse=True):
-                        if id(b) not in memo:
-                            memo.add(id(b))
+                    for name, b in module.named_buffers(prefix=submodule_prefix, recurse=True, remove_duplicate=remove_duplicate):
+                        if memo is None or id(b) not in memo:
+                            if memo is not None:
+                                memo.add(id(b))
                             yield name, b
 
     def children(self) -> Iterator['Module']:
@@ -173,13 +176,19 @@ class Module:
         for name, module in self.named_modules():
             yield module
 
-    def named_modules(self, prefix: str = '') -> Iterator[Tuple[str, 'Module']]:
+    def named_modules(self, memo: Optional[Set['Module']] = None, prefix: str = '', remove_duplicate: bool = True) -> Iterator[Tuple[str, 'Module']]:
         """Return an iterator over all modules with names."""
+        if memo is None:
+            memo = set()
+        if remove_duplicate:
+            if self in memo:
+                return
+            memo.add(self)
         yield prefix, self
         for name, module in self._modules.items():
             if module is not None:
                 submodule_prefix = prefix + ('.' if prefix else '') + name
-                for m in module.named_modules(prefix=submodule_prefix):
+                for m in module.named_modules(memo=memo, prefix=submodule_prefix, remove_duplicate=remove_duplicate):
                     yield m
 
     def train(self, mode: bool = True) -> 'Module':
@@ -208,42 +217,147 @@ class Module:
                 else:
                     p.grad.zero_grad_()
 
-    def to(self, device=None, dtype=None):
-        """Move module to device/dtype (placeholder - returns self)."""
-        # TODO: Implement actual device/dtype conversion
+    def to(self, *args, **kwargs):
+        """Move module to device and/or change dtype.
+
+        Args:
+            device: Target device ('cpu', 'cuda', 'npu', etc.)
+            dtype: Target dtype
+
+        Can be called as:
+            module.to(device)
+            module.to(dtype)
+            module.to(device, dtype)
+            module.to(device=device, dtype=dtype)
+        """
+        from .._device import device as device_cls
+        from .. import dtype as dtype_mod
+
+        # Parse args
+        device = kwargs.get('device', None)
+        dtype = kwargs.get('dtype', None)
+
+        for arg in args:
+            if isinstance(arg, device_cls):
+                device = arg
+            elif isinstance(arg, str):
+                if arg in ('cpu', 'cuda', 'npu', 'mps') or ':' in arg:
+                    device = device_cls(arg)
+                else:
+                    # Might be dtype string
+                    try:
+                        dtype = getattr(dtype_mod, arg, None)
+                    except:
+                        pass
+            elif isinstance(arg, dtype_mod.DType):
+                dtype = arg
+
+        # Move all parameters
+        for name, param in self._parameters.items():
+            if param is not None:
+                new_param = param.to(device=device, dtype=dtype)
+                # Preserve Parameter type
+                if hasattr(param, 'requires_grad'):
+                    new_param.requires_grad_(param.requires_grad)
+                self._parameters[name] = new_param
+                object.__setattr__(self, name, new_param)
+
+        # Move all buffers
+        for name, buf in self._buffers.items():
+            if buf is not None:
+                # Handle meta buffers specially - they need proper initialization
+                if hasattr(buf, 'device') and hasattr(buf.device, 'type') and buf.device.type == 'meta':
+                    if device is not None and (not hasattr(device, 'type') or device.type != 'meta'):
+                        # Meta → real: reinitialize based on buffer name
+                        import numpy as np
+                        from .._dtype import dtype_to_numpy
+                        np_dtype = dtype_to_numpy(buf.dtype)
+                        if 'position_ids' in name:
+                            # position_ids should be arange(0, seq_len)
+                            total = 1
+                            for d in buf.shape:
+                                total *= d
+                            arr = np.arange(total, dtype=np_dtype).reshape(buf.shape)
+                        else:
+                            arr = np.zeros(buf.shape, dtype=np_dtype)
+                        from .._tensor import Tensor
+                        new_buf = Tensor(arr, dtype=buf.dtype, device=str(device))
+                        self._buffers[name] = new_buf
+                        object.__setattr__(self, name, new_buf)
+                        continue
+                new_buf = buf.to(device=device, dtype=dtype)
+                self._buffers[name] = new_buf
+                object.__setattr__(self, name, new_buf)
+
+        # Recursively apply to child modules
+        for module in self._modules.values():
+            if module is not None:
+                module.to(*args, **kwargs)
+
         return self
 
     def cuda(self, device=None):
-        """Move module to CUDA (no-op in mindtorch_v2, returns self)."""
-        return self
+        """Move module to CUDA/NPU device."""
+        if device is None:
+            device = 'npu:0'  # Default to first NPU
+        elif isinstance(device, int):
+            device = f'npu:{device}'
+        return self.to(device=device)
 
     def cpu(self):
-        """Move module to CPU (no-op in mindtorch_v2, returns self)."""
-        return self
+        """Move module to CPU."""
+        return self.to(device='cpu')
 
     def xpu(self, device=None):
-        """Move module to XPU (no-op in mindtorch_v2, returns self)."""
-        return self
+        """Move module to XPU (maps to NPU in mindtorch_v2)."""
+        return self.cuda(device)
 
     def type(self, dst_type):
-        """Cast module parameters to dst_type (placeholder - returns self)."""
+        """Cast module parameters to dst_type."""
+        from .. import dtype as dtype_mod
+        if isinstance(dst_type, str):
+            dtype_map = {
+                'torch.FloatTensor': dtype_mod.float32,
+                'torch.DoubleTensor': dtype_mod.float64,
+                'torch.HalfTensor': dtype_mod.float16,
+                'torch.BFloat16Tensor': dtype_mod.bfloat16,
+                'torch.LongTensor': dtype_mod.int64,
+                'torch.IntTensor': dtype_mod.int32,
+                'torch.cuda.FloatTensor': dtype_mod.float32,
+                'torch.cuda.DoubleTensor': dtype_mod.float64,
+                'torch.cuda.HalfTensor': dtype_mod.float16,
+            }
+            dtype = dtype_map.get(dst_type)
+            if dtype is not None:
+                return self.to(dtype=dtype)
         return self
 
     def float(self):
-        """Cast module to float32 (placeholder - returns self)."""
-        return self
+        """Cast module to float32."""
+        from .. import float32
+        return self.to(dtype=float32)
 
     def double(self):
-        """Cast module to float64 (placeholder - returns self)."""
-        return self
+        """Cast module to float64."""
+        from .. import float64
+        return self.to(dtype=float64)
 
     def half(self):
-        """Cast module to float16 (placeholder - returns self)."""
-        return self
+        """Cast module to float16."""
+        from .. import float16
+        return self.to(dtype=float16)
 
     def bfloat16(self):
-        """Cast module to bfloat16 (placeholder - returns self)."""
-        return self
+        """Cast module to bfloat16."""
+        from .. import bfloat16
+        return self.to(dtype=bfloat16)
+
+    def to_empty(self, *, device=None, recurse=True):
+        """Move module to device with empty parameters/buffers.
+
+        This is used for meta device initialization - parameters are empty but have correct shape/dtype.
+        """
+        return self.to(device=device)
 
     def __repr__(self) -> str:
         lines = [self.__class__.__name__ + '(']
@@ -306,6 +420,9 @@ class Module:
             missing_keys = list(expected_keys - loaded_keys)
             unexpected_keys = list(loaded_keys - expected_keys)
 
+        # Track which modules had parameters loaded
+        loaded_modules = set()
+
         # Load parameters and buffers
         for key in state_dict.keys():
             if key in expected_keys:
@@ -330,6 +447,8 @@ class Module:
                             module.__dict__[param_name] = new_value
                     else:
                         param.data = new_value
+                    # Mark the module as having loaded weights
+                    loaded_modules.add(id(module))
                 elif param_name in module._buffers and module._buffers[param_name] is not None:
                     buf = module._buffers[param_name]
                     new_value = state_dict[key]
@@ -341,8 +460,19 @@ class Module:
                         module._buffers[param_name] = new_value
                     else:
                         module._buffers[param_name].data = new_value
+                    loaded_modules.add(id(module))
 
-        # Raise error for size mismatches first (this is what transformers checks for)
+        # Mark all modules that had parameters loaded as initialized
+        # This prevents _init_weights from overwriting them
+        def mark_loaded_modules(m):
+            if id(m) in loaded_modules:
+                m._skip_init = True
+            for child in m.children():
+                mark_loaded_modules(child)
+
+        mark_loaded_modules(self)
+
+        # Raise error for size mismatches first
         if size_mismatch_keys:
             error_msgs = []
             for key, expected_shape, loaded_shape in size_mismatch_keys:

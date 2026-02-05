@@ -9,7 +9,7 @@ from ...import zeros, empty
 class MultiheadAttention(Module):
     """Multi-head attention module (stub implementation).
 
-    This is a minimal implementation for compatibility with transformers
+    This is a minimal implementation for compatibility with libraries
     that check isinstance(module, nn.MultiheadAttention).
 
     For actual attention computations in transformer models, the models

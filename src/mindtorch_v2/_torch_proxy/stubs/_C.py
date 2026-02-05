@@ -1,7 +1,7 @@
 """Stub for torch._C - PyTorch's C++ extension module.
 
-This is a Tier 3 stub - imported by transformers but not actually
-used for BERT forward/backward passes.
+This is a Tier 3 stub - imported by PyTorch-based libraries but not
+actually used for model forward/backward passes.
 """
 
 from types import ModuleType
@@ -19,13 +19,13 @@ class _CStub(ModuleType):
         return None
 
 
-# Create module-level attributes that transformers might check
+# Create module-level attributes that libraries might check
 _C = _CStub('torch._C')
 
 # Common attributes that might be accessed - set directly on __dict__ to bypass __getattr__
 _C.__dict__['_get_tracing_state'] = lambda: None
 _C.__dict__['_is_tracing'] = lambda: False
-_C.__dict__['_jit_clear_class_registry'] = lambda: None  # Used by transformers tests for cleanup
+_C.__dict__['_jit_clear_class_registry'] = lambda: None  # Used by some test frameworks for cleanup
 _C.__dict__['ScriptModule'] = type('ScriptModule', (), {})
 _C.__dict__['ScriptFunction'] = type('ScriptFunction', (), {})
 _C.__dict__['Graph'] = type('Graph', (), {})

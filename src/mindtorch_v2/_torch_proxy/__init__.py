@@ -1,14 +1,14 @@
 """Torch proxy system for mindtorch_v2.
 
 This module provides a proxy loader that intercepts `import torch`
-and returns mindtorch_v2 instead, enabling HuggingFace transformers
+and returns mindtorch_v2 instead, enabling PyTorch-based libraries
 to work with mindtorch_v2 as the backend.
 
 Usage:
     from mindtorch_v2._torch_proxy import install
     install()  # Now `import torch` returns mindtorch_v2
 
-    from transformers import BertModel  # Uses mindtorch_v2
+    # PyTorch-based libraries now use mindtorch_v2
 """
 
 from .finder import MindTorchV2Finder

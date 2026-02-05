@@ -1,7 +1,7 @@
 """Stub for torch.utils._pytree - Tree utilities.
 
 This is a Tier 3 stub that provides minimal tree_flatten/tree_unflatten
-functionality that transformers may use.
+functionality that PyTorch-based libraries may use.
 """
 
 from collections import namedtuple
@@ -126,7 +126,7 @@ class _TreeContext:
     pass
 
 
-# Additional utilities that transformers might use
+# Additional utilities for pytree operations
 def tree_leaves(tree):
     """Get all leaves from a tree."""
     leaves, _ = tree_flatten(tree)
@@ -150,10 +150,7 @@ def tree_any(fn, tree):
 
 
 def _dict_flatten(d):
-    """Flatten a dictionary into (values, keys) tuple.
-
-    This is used by diffusers/transformers internally.
-    """
+    """Flatten a dictionary into (values, keys) tuple."""
     keys = list(d.keys())
     values = [d[k] for k in keys]
     return values, keys

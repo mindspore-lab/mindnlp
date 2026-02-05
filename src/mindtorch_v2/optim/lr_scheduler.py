@@ -7,7 +7,7 @@ import math
 class LRScheduler:
     """Base class for learning rate schedulers.
 
-    This is a minimal implementation to allow transformers to inherit from it.
+    This is a minimal implementation following PyTorch's interface.
     """
 
     def __init__(self, optimizer, last_epoch=-1, verbose="deprecated"):
