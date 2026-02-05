@@ -71,14 +71,6 @@ class Tensor(torch.Tensor):
     def __new__(cls, elem, env, requires_grad=False):
         """
         创建新的Tensor实例，使用 torch.Tensor._make_wrapper_subclass
-
-        Args:
-            elem: MindSpore张量或可以转换为MindSpore张量的数据
-            env: Environment对象，包含转换环境
-            requires_grad: 是否需要梯度计算
-
-        Returns:
-            新的Tensor实例
         """
         # 确保 elem 是 MindSpore Tensor
         if not isinstance(elem, ms_Tensor):
@@ -88,7 +80,6 @@ class Tensor(torch.Tensor):
         shape = elem.shape
         dtype = elem.dtype
         
-        # 使用 torch.Tensor._make_wrapper_subclass 创建子类实例（参考 torchax 和 View 的实现）
         # 将 MindSpore dtype 转换为 PyTorch dtype
         torch_dtype = mappings.ms2t_dtype(dtype)
         return torch.Tensor._make_wrapper_subclass(
@@ -109,20 +100,48 @@ class Tensor(torch.Tensor):
             requires_grad: 是否需要梯度计算
         """
         super().__init__()
-        if not isinstance(elem, ms_Tensor):
-            elem = ms_Tensor(elem)
+        # IMPORTANT: For torch.Tensor wrapper subclasses, even attribute assignment can be
+        # routed through torch internals and hit TorchFunctionMode as "__set__".
+        # Guard all internal attribute writes with DisableTorchFunction.
+        with torch._C.DisableTorchFunction():
+            object.__setattr__(self, "_env", env)
+            object.__setattr__(self, "_requires_grad", requires_grad)
+            # torch4ms-side accumulated grad (Tensor or None).
+            # NOTE: do NOT use name "_grad" here: PyTorch uses it internally for autograd,
+            # and writing it can trigger type checks like "assigned grad expected Tensor".
+            object.__setattr__(self, "_t4ms_grad", None)
 
-        self._elem = elem
-        self._env = env
-        self._requires_grad = requires_grad
-
+        # 在 MindSpore 中，使用 Parameter 来标记需要梯度的张量
         if requires_grad:
-            self._elem = Parameter(elem)
+            if not isinstance(elem, ms_Tensor):
+                elem = ms_Tensor(elem)
+            with torch._C.DisableTorchFunction():
+                object.__setattr__(self, "_elem", Parameter(elem))
+        else:
+            if not isinstance(elem, ms_Tensor):
+                elem = ms_Tensor(elem)
+            with torch._C.DisableTorchFunction():
+                object.__setattr__(self, "_elem", elem)
 
     def __str__(self):
         return f'torch4ms.Tensor({self._elem})'
 
     __repr__ = __str__
+
+    def __format__(self, format_spec: str) -> str:
+        # torch.Tensor defines __format__ for 0-dim tensors and may print bare numbers.
+        # For torch4ms debugging, prefer our explicit string form.
+        if format_spec:
+            return format(str(self), format_spec)
+        return str(self)
+
+    def __getattribute__(self, name: str):
+        # Ensure `.grad` is always readable in torch4ms even when torch modes are enabled.
+        # PyTorch's native `.grad` slot may not be visible/reliable for wrapper subclasses.
+        if name == "grad":
+            with torch._C.DisableTorchFunction():
+                return object.__getattribute__(self, "_t4ms_grad")
+        return super().__getattribute__(name)
 
     @property
     def shape(self):
@@ -132,18 +151,29 @@ class Tensor(torch.Tensor):
     def ndim(self):
         return self._elem.ndim
 
+    def size(self, dim=None):
+        """
+        返回张量的大小，兼容 PyTorch 的 size() 方法。
+        """
+        if dim is None:
+            return torch.Size(self._elem.shape)
+        return self._elem.shape[dim]
+
     def flatten(self, start_dim=0, end_dim=-1):
         # 使用MindSpore的reshape操作
         return self._env.ms2t_iso(mnp.reshape(self._elem, (-1,)))
 
     # ========= 基本算术运算支持 =========
-    def _binary_op(self, other, ms_op):
+    def _binary_op(self, other, ms_op, op_name=None):
         """
         通用二元运算封装，使用MindSpore算子在内部张量上计算。
+        记录操作历史以便 backward 时重建 forward 函数（路线2）。
         """
         # 解包对端张量 / 标量，尽量兼容 PyTorch / NumPy / Python 原生类型
+        other_tensor = None
         if isinstance(other, Tensor):
             other_elem = other._elem
+            other_tensor = other
         elif isinstance(other, ms_Tensor):
             other_elem = other
         elif isinstance(other, torch.Tensor):
@@ -156,44 +186,81 @@ class Tensor(torch.Tensor):
             other_elem = ms_Tensor(other)
 
         res = ms_op(self._elem, other_elem)
-        return self._env.ms2t_iso(res)
+        # 结果是否需要梯度
+        result_requires_grad = bool(self._requires_grad) or (
+            isinstance(other, Tensor) and bool(other._requires_grad)
+        )
+
+        # 尝试在 MindSpore 层面标记 requires_grad（若可用）
+        if result_requires_grad and not isinstance(res, Parameter):
+            try:
+                if hasattr(res, "requires_grad"):
+                    res.requires_grad = True
+            except (AttributeError, TypeError):
+                pass
+
+        result = self._env.ms2t_iso(res)
+        if result_requires_grad:
+            result._requires_grad = True
+
+        # 记录操作历史
+        if result_requires_grad:
+            try:
+                from torch4ms.autograd.graph_tracker import get_computation_graph
+
+                graph = get_computation_graph()
+                inputs = [self]
+                if other_tensor is not None:
+                    inputs.append(other_tensor)
+                else:
+                    inputs.append(other_elem)
+                op_name_final = (
+                    op_name
+                    or (ms_op.__name__ if hasattr(ms_op, "__name__") else str(ms_op))
+                )
+                graph.record_operation(op_name_final, ms_op, tuple(inputs), result)
+            except Exception:
+                # 记录失败不影响正常执行
+                pass
+
+        return result
 
     def __add__(self, other):
         """支持 x + y 形式的加法运算。"""
-        return self._binary_op(other, ops.add)
+        return self._binary_op(other, ops.add, op_name="add")
 
     def __radd__(self, other):
         """支持 y + x 形式的加法运算。"""
-        return self._binary_op(other, ops.add)
+        return self._binary_op(other, ops.add, op_name="add")
 
     def __sub__(self, other):
         """支持 x - y。"""
-        return self._binary_op(other, ops.sub)
+        return self._binary_op(other, ops.sub, op_name="sub")
 
     def __rsub__(self, other):
         """支持 y - x。"""
         # 交换顺序：other - self == -(self - other)，这里直接用 MindSpore sub 反向计算
         if isinstance(other, Tensor):
-            return other._binary_op(self, ops.sub)
-        return self._binary_op(other, lambda a, b: ops.sub(b, a))
+            return other._binary_op(self, ops.sub, op_name="sub")
+        return self._binary_op(other, lambda a, b: ops.sub(b, a), op_name="sub")
 
     def __mul__(self, other):
         """支持 x * y（逐元素乘法）。"""
-        return self._binary_op(other, ops.mul)
+        return self._binary_op(other, ops.mul, op_name="mul")
 
     def __rmul__(self, other):
         """支持 y * x。"""
-        return self._binary_op(other, ops.mul)
+        return self._binary_op(other, ops.mul, op_name="mul")
 
     def __truediv__(self, other):
         """支持 x / y。"""
-        return self._binary_op(other, ops.div)
+        return self._binary_op(other, ops.div, op_name="div")
 
     def __rtruediv__(self, other):
         """支持 y / x。"""
         if isinstance(other, Tensor):
-            return other._binary_op(self, ops.div)
-        return self._binary_op(other, lambda a, b: ops.div(b, a))
+            return other._binary_op(self, ops.div, op_name="div")
+        return self._binary_op(other, lambda a, b: ops.div(b, a), op_name="div")
 
     def __floordiv__(self, other):
         """支持 x // y。"""
@@ -281,6 +348,90 @@ class Tensor(torch.Tensor):
         detached_elem = ops.stop_gradient(self._elem)
         return Tensor(detached_elem, self._env, requires_grad=False)
 
+    @property
+    def grad_fn(self):
+        """Get the gradient function from MindSpore Tensor (if available)."""
+        if hasattr(self._elem, "grad_fn"):
+            return self._elem.grad_fn
+        return None
+
+    @property
+    def requires_grad(self):
+        """Get requires_grad status."""
+        # torch4ms side flag is the source of truth for autograd.backward gating.
+        # Some MindSpore objects may expose requires_grad=False even though we want grads.
+        if bool(getattr(self, "_requires_grad", False)):
+            return True
+        if hasattr(self._elem, "requires_grad"):
+            try:
+                return bool(self._elem.requires_grad)
+            except Exception:
+                pass
+        return False
+
+    @requires_grad.setter
+    def requires_grad(self, value):
+        """Set requires_grad status."""
+        with torch._C.DisableTorchFunction():
+            object.__setattr__(self, "_requires_grad", bool(value))
+        if hasattr(self._elem, "requires_grad"):
+            try:
+                self._elem.requires_grad = bool(value)
+            except Exception:
+                pass
+
+    @property
+    def grad(self):
+        """Get the gradient tensor."""
+        # Prefer explicitly accumulated grad
+        if getattr(self, "_t4ms_grad", None) is not None:
+            return self._t4ms_grad
+        # Fallback to MindSpore Tensor's grad if it exists
+        if hasattr(self._elem, "grad") and self._elem.grad is not None:
+            return Tensor(self._elem.grad, self._env, requires_grad=False)
+        return None
+
+    @grad.setter
+    def grad(self, value):
+        """Set the gradient tensor."""
+        if value is not None and not isinstance(value, Tensor):
+            if isinstance(value, ms_Tensor):
+                value = Tensor(value, self._env, requires_grad=False)
+            else:
+                value = Tensor(ms_Tensor(value), self._env, requires_grad=False)
+        with torch._C.DisableTorchFunction():
+            object.__setattr__(self, "_t4ms_grad", value)
+        # Try to also mirror onto MindSpore Tensor if supported
+        if hasattr(self._elem, "grad"):
+            try:
+                self._elem.grad = value._elem if value is not None else None
+            except Exception:
+                pass
+
+    def backward(
+        self,
+        gradient=None,
+        retain_graph=False,
+        create_graph=False,
+        inputs=None,
+        forward_fn=None,
+        module=None,
+    ):
+        """
+        Computes gradients via torch4ms.autograd.backward (MindSpore GradOperation path).
+        """
+        from torch4ms.autograd import backward as _ms_backward
+
+        _ms_backward(
+            self,
+            grad_tensors=gradient,
+            retain_graph=retain_graph,
+            create_graph=create_graph,
+            inputs=inputs,
+            forward_fn=forward_fn,
+            module=module,
+        )
+
     def numpy(self) -> np.ndarray:
         return self._elem.asnumpy()
 
@@ -344,6 +495,51 @@ class Tensor(torch.Tensor):
 
     def tolist(self):
         return self._elem.asnumpy().tolist()
+
+    def sum(self, dim=None, keepdim=False, dtype=None):
+        """
+        计算张量的和（带计算图记录，用于 backward 重建 forward）。
+        """
+        if dim is not None:
+            reduce_sum_op = ops.ReduceSum(keep_dims=keepdim)
+            res = reduce_sum_op(self._elem, axis=dim)
+        else:
+            reduce_sum_op = ops.ReduceSum(keep_dims=keepdim)
+            res = reduce_sum_op(self._elem)
+
+        if dtype is not None:
+            from torch4ms.ops import mappings as _mappings
+
+            if dtype in _mappings.TORCH_DTYPE_TO_MINDSPORE:
+                res = res.astype(_mappings.TORCH_DTYPE_TO_MINDSPORE[dtype])
+
+        if self._requires_grad and not isinstance(res, Parameter):
+            try:
+                if hasattr(res, "requires_grad"):
+                    res.requires_grad = True
+            except (AttributeError, TypeError):
+                pass
+
+        result = self._env.ms2t_iso(res)
+        if self._requires_grad:
+            result._requires_grad = True
+
+        if self._requires_grad:
+            try:
+                from torch4ms.autograd.graph_tracker import get_computation_graph
+
+                graph = get_computation_graph()
+
+                def sum_op(x):
+                    if dim is not None:
+                        return reduce_sum_op(x, axis=dim)
+                    return reduce_sum_op(x)
+
+                graph.record_operation("sum", sum_op, (self,), result)
+            except Exception:
+                pass
+
+        return result
 
 
 def debug_accuracy(func, args, kwargs, current_output):
@@ -1014,13 +1210,29 @@ class Environment(contextlib.ContextDecorator):
                     res = the_tensor
 
         # 处理数据类型转换
-        if new_dtype is not None and hasattr(res, 'dtype') and res.dtype != new_dtype:
-            if isinstance(res, Tensor):
-                # 对torch4ms张量使用astype
-                res = res.apply_mindspore(ops.cast, new_dtype)
-            elif hasattr(res, 'astype'):
-                # 对其他张量类型使用astype
-                res = res.astype(new_dtype)
+        if new_dtype is not None:
+            # 将 torch dtype 转换为 mindspore dtype
+            ms_dtype = new_dtype
+            # 检查是否是 torch dtype（通过检查是否在映射字典中）
+            if new_dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                ms_dtype = mappings.TORCH_DTYPE_TO_MINDSPORE[new_dtype]
+            
+            # 检查是否需要转换
+            if hasattr(res, 'dtype'):
+                current_dtype = res.dtype
+                # 将当前 dtype 也转换为 mindspore dtype 进行比较
+                current_ms_dtype = current_dtype
+                if current_dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                    current_ms_dtype = mappings.TORCH_DTYPE_TO_MINDSPORE[current_dtype]
+                
+                # 比较转换后的 dtype
+                if current_ms_dtype != ms_dtype:
+                    if isinstance(res, Tensor):
+                        # 对torch4ms张量使用astype，传入 mindspore dtype
+                        res = res.apply_mindspore(ops.cast, ms_dtype)
+                    elif hasattr(res, 'astype'):
+                        # 对其他张量类型使用astype
+                        res = res.astype(ms_dtype)
 
         return res
 

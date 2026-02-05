@@ -6,6 +6,7 @@ import mindspore.numpy as mnp
 from enum import Enum
 from typing import Union, List, Tuple, Optional, Any, cast
 from abc import ABC, abstractmethod
+from torch4ms.ops import mappings
 
 
 class ViewInfoType(Enum):
@@ -160,11 +161,17 @@ class View(torch.Tensor):
                 view_info: ViewInfo,
                 env: Any) -> "View":
         shape = view_info.calculate_output_shape(parent.ms())
+        # 将 mindspore dtype 转换为 torch dtype
+        parent_dtype = parent.dtype
+        torch_dtype = parent_dtype
+        # 检查是否是 mindspore dtype，如果是则转换为 torch dtype
+        if parent_dtype in mappings.MINDSPORE_DTYPE_TO_TORCH:
+            torch_dtype = mappings.MINDSPORE_DTYPE_TO_TORCH[parent_dtype]
         return torch.Tensor._make_wrapper_subclass(
             cls,
             shape,
             device="meta",
-            dtype=parent.dtype,
+            dtype=torch_dtype,
             requires_grad=False,
         )
 
