@@ -171,6 +171,18 @@ The test runner:
 
 ## Important Constraints
 
+### Core Design Principle: No Transformers-Specific Customization
+
+**CRITICAL**: MindTorch (both v1 and v2) must remain a **general-purpose PyTorch compatibility layer**.
+
+- **NEVER** add transformers-specific hacks, workarounds, or special cases to mindtorch code
+- **NEVER** check for `transformers` or model-specific classes in mindtorch implementations
+- All fixes must be generic PyTorch API implementations, not transformers accommodations
+- If a test fails due to transformers-specific behavior, document it as "not supported" rather than adding special cases
+- The goal is PyTorch compatibility, not transformers compatibility
+
+**Why**: Coupling mindtorch to transformers creates maintenance burden and breaks other PyTorch codebases. Keep mindtorch clean and general.
+
 ### For Test Runner Agent
 - Only modify files in `./src/mindnlp/` or `./src/mindtorch/`
 - **NEVER** modify test files in `./tests/transformers/`
@@ -259,6 +271,82 @@ result = mindspore.ops.ones_like(x)   # NO!
 - Importing primitive classes from `mindspore.ops.auto_generate.gen_ops_prim` is OK
 - Using `mindspore.Tensor()` for data conversion is OK
 - Code in stubs/ for compatibility layers may use mindspore.ops if needed
+- Creation functions (zeros, ones, etc.) may use `mindspore.ops.zeros()` for simplicity
+
+### CRITICAL: Kernel Implementation Priority
+
+**Rule**: For GPU/NPU devices, NEVER use numpy for computation. Follow this priority order:
+
+1. **PyBoost kernels** (gen_ops_prim with `.set_device()`) - Best performance, device-aware
+2. **Legacy primitives** (mindspore.nn.Cell based) - Fallback for missing PyBoost ops
+3. **Composite of existing kernels** - Build complex ops from simpler dispatched ops
+4. **NumPy fallback** - ONLY for CPU backend when no MindSpore kernel exists
+
+**Example - Correct**:
+```python
+# In ascend.py - use pyboost primitive
+@register_op("relu", DispatchKey.Backend_Ascend)
+def relu_ascend(a):
+    return _wrap_result(relu_op(_get_ms_data(a)))
+```
+
+**Example - Wrong**:
+```python
+# NEVER use numpy on NPU/GPU:
+def relu(input):
+    result = np.maximum(input.numpy(), 0)  # NO! This runs on CPU!
+    return Tensor(result)
+```
+
+### Ascend NPU Backend Migration Guide
+
+When adding support for a new device (e.g., migrating from CPU to Ascend), follow these steps:
+
+**1. Create `pyboost_<device>.py`**:
+```python
+# src/mindtorch_v2/_backends/pyboost_ascend.py
+from mindspore.ops.auto_generate.gen_ops_prim import Add, Sub, ...
+
+add_op = Add().set_device('Ascend')
+sub_op = Sub().set_device('Ascend')
+# ... instantiate all needed primitives
+```
+
+**2. Create `<device>.py` with op registrations**:
+```python
+# src/mindtorch_v2/_backends/ascend.py
+from .._dispatch import register_op, DispatchKey
+from .pyboost_ascend import add_op, _get_ms_data, _wrap_result
+
+@register_op("add", DispatchKey.Backend_Ascend)
+def add_ascend(a, b):
+    return _wrap_result(add_op(_get_ms_data(a), _get_ms_data(b)))
+```
+
+**3. Update `configs.py`** to detect device from MindSpore context:
+```python
+DEVICE_TARGET = mindspore.get_context('device_target')
+SOC = MSContext.get_instance().get_ascend_soc_version()
+```
+
+**4. Update `__init__.py`** to conditionally import backend:
+```python
+from .configs import DEVICE_TARGET
+from ._backends import cpu
+if DEVICE_TARGET == 'Ascend':
+    from ._backends import ascend
+```
+
+**5. Device naming convention**:
+- Use `"npu"` as device.type (matches torch_npu convention)
+- MindSpore uses `"Ascend"` for context and `.set_device()`
+- Dispatch keys: `DispatchKey.Backend_Ascend`
+
+**6. Test on target device**:
+```bash
+source ~/miniconda3/bin/activate mindspore  # Ascend environment
+python -c "import mindtorch_v2 as torch; print(torch.get_default_device())"  # Should print: npu
+```
 
 ## Hooks
 

@@ -1,7 +1,7 @@
 """Stub _dynamo module for compatibility.
 
 This provides dummy implementations for torch._dynamo APIs
-that are checked by libraries like accelerate and transformers.
+that are checked by various PyTorch-based libraries.
 """
 
 from .eval_frame import OptimizedModule

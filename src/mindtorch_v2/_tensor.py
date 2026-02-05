@@ -10,7 +10,7 @@ import numpy as np
 import mindspore
 from . import _dtype as dtype_mod
 from ._storage import TypedStorage
-from ._device import device as device_cls
+from ._device import device as device_cls, _get_default_device
 
 import builtins as _builtins
 builtins_bool = _builtins.bool
@@ -161,13 +161,25 @@ class Tensor:
         else:
             raise ValueError("Must provide either data or _storage")
 
-        self._device = device_cls(device or "cpu")
+        # Resolve device from argument or context
+        if device is not None:
+            self._device = device_cls(device) if isinstance(device, str) else device
+        else:
+            ctx_device = _get_default_device()
+            if ctx_device is not None:
+                self._device = ctx_device
+            else:
+                # Import here to avoid circular import
+                from .configs import DEVICE_TARGET
+                self._device = device_cls("npu" if DEVICE_TARGET == 'Ascend' else "cpu")
+
         self._requires_grad = requires_grad
         self._grad_fn = None
         self._grad = None
         self._version = 0
         self._hooks = {}  # Dict of hook_id -> hook_fn
         self._hook_counter = 0
+        self._retain_grad = False  # For retain_grad() support
 
     # --- Shape / metadata ---
 
@@ -226,13 +238,19 @@ class Tensor:
     @property
     def data(self):
         """Returns a Tensor sharing storage but detached from autograd."""
-        return Tensor(
+        t = Tensor(
             _storage=self._storage,
             _shape=self._shape,
             _stride=self._stride,
             _storage_offset=self._storage_offset,
             device=str(self._device),
         )
+        # Ensure dtype is preserved (critical for save/load)
+        t._dtype = self._dtype
+        # Preserve _skip_init flag if present
+        if hasattr(self, '_skip_init'):
+            t._skip_init = self._skip_init
+        return t
 
     @data.setter
     def data(self, value):
@@ -310,11 +328,10 @@ class Tensor:
         """Return contiguous tensor (copy if not already contiguous)."""
         if self.is_contiguous():
             return self
-        # Force a contiguous copy
-        arr = self.numpy()
-        arr = np.ascontiguousarray(arr)
-        result = Tensor(arr, dtype=self._dtype, device=str(self._device),
-                      requires_grad=self._requires_grad)
+
+        # Use dispatch to stay on device (avoid numpy round-trip)
+        from ._dispatch import dispatch
+        result = dispatch("contiguous", self)
 
         # Track autograd if needed
         if self._requires_grad:
@@ -1297,6 +1314,20 @@ class Tensor:
             dim = axis
         return torch_mean(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
+    def std(self, dim=None, unbiased=True, keepdim=False, *, correction=None):
+        """Return the standard deviation of the tensor."""
+        from . import std as torch_std
+        if correction is not None:
+            unbiased = correction != 0
+        return torch_std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+    def var(self, dim=None, unbiased=True, keepdim=False, *, correction=None):
+        """Return the variance of the tensor."""
+        from . import var as torch_var
+        if correction is not None:
+            unbiased = correction != 0
+        return torch_var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
     def max(self, dim=None, keepdim=False):
         from . import max as torch_max
         return torch_max(self, dim=dim, keepdim=keepdim)
@@ -1747,59 +1778,100 @@ class Tensor:
         # Parse args: can be (device), (dtype), (device, dtype), or keyword args
         dtype = kwargs.get('dtype', None)
         device = kwargs.get('device', None)
+        copy = kwargs.get('copy', False)
+        non_blocking = kwargs.get('non_blocking', False)
 
         for arg in args:
             if isinstance(arg, device_cls):
                 device = arg
             elif isinstance(arg, str):
-                if arg in ('cpu', 'cuda', 'mps'):
+                # Check if it's a device string
+                if arg in ('cpu', 'cuda', 'npu', 'mps') or arg.startswith('cuda:') or arg.startswith('npu:'):
                     device = device_cls(arg)
                 else:
-                    # Might be a dtype string
-                    pass
+                    # Might be a dtype string like 'float32'
+                    try:
+                        dtype = getattr(dtype_mod, arg, None)
+                    except:
+                        pass
             elif isinstance(arg, dtype_mod.DType):
                 dtype = arg
             elif arg is None:
                 pass
+            elif hasattr(arg, 'dtype') and hasattr(arg, 'device'):
+                # Another tensor - copy its dtype and device
+                dtype = arg.dtype if dtype is None else dtype
+                device = arg.device if device is None else device
+
+        # Normalize device to Device object
+        if isinstance(device, str):
+            device = device_cls(device)
+
+        # Determine if we need to do anything
+        need_dtype_change = dtype is not None and dtype != self._dtype
+        need_device_change = device is not None and str(device) != str(self._device)
+
+        # If nothing to change and no copy requested, return self
+        if not need_dtype_change and not need_device_change and not copy:
+            return self
+
+        # Handle meta tensors - they can't be moved but we can change device attribute
+        if self._device.type == 'meta':
+            if need_device_change and device.type != 'meta':
+                # Moving from meta to real device - create real tensor
+                import numpy as np
+                np_dtype = dtype_mod.dtype_to_numpy(dtype or self._dtype)
+                # Create zeros for the shape (meta tensors have shape but no data)
+                arr = np.zeros(self._shape, dtype=np_dtype)
+                return Tensor(arr, dtype=dtype or self._dtype, device=str(device),
+                             requires_grad=self._requires_grad)
+            elif dtype is not None:
+                # Just dtype change on meta tensor
+                from ._backends.meta import _create_meta_tensor
+                return _create_meta_tensor(self._shape, dtype, self._device)
+            return self
+
+        # Get current data - use numpy() to properly handle shape/stride
+        np_data = self.numpy()
 
         # Apply dtype conversion if needed
-        if dtype is not None:
-            # If same dtype, return self (no conversion needed)
-            if dtype == self._dtype:
-                return self
-
+        if need_dtype_change:
             np_dtype = dtype_mod.dtype_to_numpy(dtype)
-            arr = self.numpy().astype(np_dtype)
-            result = Tensor(arr, dtype=dtype, device=str(device or self._device),
-                            requires_grad=self._requires_grad)
+            np_data = np_data.astype(np_dtype)
+        else:
+            dtype = self._dtype
 
-            # Set up autograd if needed
-            if is_grad_enabled() and self._requires_grad:
-                class ToBackward(Node):
-                    def __init__(self, input_tensor, orig_dtype):
-                        super().__init__()
-                        self._input = input_tensor
-                        self._orig_dtype = orig_dtype
-                        self._name = "ToBackward"
+        # Determine target device
+        target_device = device if device is not None else self._device
 
-                    def backward(self, grad_outputs):
-                        grad = grad_outputs[0]
-                        # Convert gradient back to original dtype
-                        np_dtype = dtype_mod.dtype_to_numpy(self._orig_dtype)
-                        grad_arr = grad.numpy().astype(np_dtype)
-                        return (Tensor(grad_arr, dtype=self._orig_dtype),)
+        # Create new tensor on target device
+        result = Tensor(np_data, dtype=dtype, device=str(target_device),
+                        requires_grad=self._requires_grad)
 
-                grad_fn = ToBackward(self, self._dtype)
-                if self.grad_fn is not None:
-                    grad_fn._next_functions = ((self.grad_fn, 0),)
-                else:
-                    grad_fn._next_functions = ((AccumulateGrad(self), 0),)
-                result._grad_fn = grad_fn
+        # Set up autograd if needed for dtype changes
+        if is_grad_enabled() and self._requires_grad and need_dtype_change:
+            class ToBackward(Node):
+                def __init__(self, input_tensor, orig_dtype):
+                    super().__init__()
+                    self._input = input_tensor
+                    self._orig_dtype = orig_dtype
+                    self._name = "ToBackward"
 
-            return result
+                def backward(self, grad_outputs):
+                    grad = grad_outputs[0]
+                    # Convert gradient back to original dtype
+                    np_dtype = dtype_mod.dtype_to_numpy(self._orig_dtype)
+                    grad_arr = grad.numpy().astype(np_dtype)
+                    return (Tensor(grad_arr, dtype=self._orig_dtype),)
 
-        # Device only change (no-op for CPU backend)
-        return self
+            grad_fn = ToBackward(self, self._dtype)
+            if self.grad_fn is not None:
+                grad_fn._next_functions = ((self.grad_fn, 0),)
+            else:
+                grad_fn._next_functions = ((AccumulateGrad(self), 0),)
+            result._grad_fn = grad_fn
+
+        return result
 
     def type_as(self, other):
         """Cast tensor to the same dtype as another tensor.

@@ -1,7 +1,7 @@
 """Stub for torch.fx module.
 
-This provides a minimal FX implementation that passes HuggingFace tests
-by wrapping the original model rather than doing true symbolic tracing.
+This provides a minimal FX implementation that wraps the original model
+rather than doing true symbolic tracing.
 """
 
 from . import node
@@ -204,7 +204,7 @@ class Tracer:
     """
 
     def __init__(self, autowrap_modules=(), autowrap_functions=(), param_shapes_constant=False):
-        """Initialize Tracer with HuggingFace-compatible signature."""
+        """Initialize Tracer with PyTorch-compatible signature."""
         self.autowrap_modules = autowrap_modules
         self.autowrap_functions = autowrap_functions
         self.param_shapes_constant = param_shapes_constant
