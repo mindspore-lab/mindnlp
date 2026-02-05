@@ -349,6 +349,7 @@ class Tensor:
                     grad_fn._next_functions = ((acc_grad, 0),)
 
                 result._grad_fn = grad_fn
+                result._requires_grad = True  # Propagate requires_grad
 
         return result
 

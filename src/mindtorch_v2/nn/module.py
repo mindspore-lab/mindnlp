@@ -442,11 +442,13 @@ class Module:
                         continue
                     if assign:
                         # Update both _parameters and __dict__ to handle tied weights
+                        new_value._skip_init = True  # Mark tensor to skip reinitialization
                         module._parameters[param_name] = new_value
                         if param_name in module.__dict__:
                             module.__dict__[param_name] = new_value
                     else:
                         param.data = new_value
+                        param._skip_init = True  # Mark tensor to skip reinitialization
                     # Mark the module as having loaded weights
                     loaded_modules.add(id(module))
                 elif param_name in module._buffers and module._buffers[param_name] is not None:
