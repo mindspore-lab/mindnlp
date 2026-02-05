@@ -129,8 +129,21 @@ class Generator:
 
         self._seed = mindspore.Tensor(0)
         self._offset = mindspore.Tensor(0)
-        self._generator = GeneratorOp().set_device("CPU")
+        try:
+            self._generator = GeneratorOp().set_device("CPU")
+        except TypeError:
+            self._generator = GeneratorOp(self._seed, self._offset)
+            if hasattr(self._generator, "set_device"):
+                self._generator = self._generator.set_device("CPU")
         self._generator.add_prim_attr("manual_seed", False)
+
+    def _generator_call(self, mode, args):
+        try:
+            return self._generator(mode, args)
+        except TypeError:
+            if isinstance(args, (tuple, list)) and len(args) >= 2:
+                return self._generator(mode, args[2:])
+            raise
 
 
     @property
@@ -146,7 +159,7 @@ class Generator:
         Args:
             state (tensor): target state of the generator.
         """
-        self._generator(SET_STATE, (self._seed, self._offset, state))
+        self._generator_call(SET_STATE, (self._seed, self._offset, state))
 
     def get_state(self):
         """
@@ -155,7 +168,7 @@ class Generator:
         Returns:
             Tensor, generator state.
         """
-        return self._generator(GET_STATE, (self._seed, self._offset))[2]
+        return self._generator_call(GET_STATE, (self._seed, self._offset))[2]
 
     def seed(self):  # pylint: disable=redefined-outer-name
         """
@@ -164,7 +177,7 @@ class Generator:
         Returns:
             Randomly generated seeds, the type is int.
         """
-        current_seed = self._generator(
+        current_seed = self._generator_call(
             SEED, (self._seed, self._offset))[0]
         return current_seed.item()
 
@@ -181,7 +194,7 @@ class Generator:
         if not isinstance(seed, int):
             raise TypeError("Seed must be an integer.")
         seed = mindspore.Tensor(seed, mindspore.int64)
-        self._generator(MANUAL_SEED, (self._seed, self._offset, seed))
+        self._generator_call(MANUAL_SEED, (self._seed, self._offset, seed))
         self._generator.add_prim_attr("manual_seed", True)
         return self
 
@@ -192,7 +205,7 @@ class Generator:
         Returns:
             The initial seed of generator.
         """
-        current_seed = self._generator(
+        current_seed = self._generator_call(
             INITIAL_SEED, (self._seed, self._offset))[0]
         return current_seed.item()
 
@@ -207,7 +220,7 @@ class Generator:
         Returns:
             Current seed and offset.
         """
-        outs = self._generator(STEP, (self._seed, self._offset, step,))[:2]
+        outs = self._generator_call(STEP, (self._seed, self._offset, step,))[:2]
         return outs
 
 default_generator = Generator()

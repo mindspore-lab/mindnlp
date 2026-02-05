@@ -108,6 +108,11 @@ def setup_metadata_patch():
                 locate_file=lambda p: None,
                 _normalized_name="torch",
                 entry_points=[],
+                read_text=lambda f: (
+                    "torch\n" if f == "top_level.txt" else (
+                        f"Name: torch\nVersion: {TORCH_VERSION}" if f == "METADATA" else None
+                    )
+                ),
             )
         )
         return dists
