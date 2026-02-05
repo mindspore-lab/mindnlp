@@ -16,7 +16,7 @@ from .pyboost_cpu import (
     matmul_op, bmm_op,
     sum_op, mean_op, max_op as max_dim_op, min_op as min_dim_op,
     equal_op, not_equal_op, greater_op, less_op, greater_equal_op, less_equal_op,
-    clone_op, transpose_op,
+    clone_op, transpose_op, contiguous_op,
     maximum_op, minimum_op, log1p_op, erfinv_op, conj_op,
     ones_like_op, zeros_like_op,
     max_global_op, min_global_op, prod_op,
@@ -587,6 +587,19 @@ def clone_cpu(input):
     # Clone by adding zero - creates new tensor with same values
     result = add_op(ms_a, mindspore.Tensor(0.0, ms_a.dtype))
     return _wrap_result(result)
+
+
+@register_op("contiguous", DispatchKey.Backend_CPU)
+def contiguous_cpu(input):
+    """Make tensor contiguous using native CPU op."""
+    from .._tensor import Tensor
+    if isinstance(input, Tensor):
+        if input.is_contiguous():
+            return input
+        ms_data = _get_ms_data(input)
+        result = contiguous_op(ms_data)
+        return _wrap_result(result)
+    return input
 
 
 @register_op("where", DispatchKey.Backend_CPU)
