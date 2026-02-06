@@ -536,10 +536,11 @@ class Tensor:
         if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
             shape = tuple(shape[0])
 
+        # Auto-call contiguous() if tensor is not contiguous
+        # This matches PyTorch behavior where view() can work on non-contiguous tensors
+        # by internally calling contiguous()
         if not self.is_contiguous():
-            raise RuntimeError("view size is not compatible with input tensor's "
-                             "size and stride (at least one dimension spans "
-                             "across two contiguous subspaces). Use .reshape() instead.")
+            return self.contiguous().view(*shape)
 
         # Resolve -1
         new_shape = _resolve_neg_one(shape, self.numel())

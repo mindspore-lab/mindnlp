@@ -8,6 +8,12 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
 import mindtorch_v2 as torch
+from mindtorch_v2 import get_default_device
+
+
+def _get_default_device_type():
+    """Get the default device type (cpu or npu depending on backend)."""
+    return get_default_device().type
 
 
 def test_tensor_creation_respects_device_context():
@@ -19,10 +25,11 @@ def test_tensor_creation_respects_device_context():
         assert t.dtype == torch.int64  # Integer list creates int64 tensor
 
 
-def test_tensor_creation_outside_context_uses_cpu():
-    """Test that tensor creation outside context uses cpu."""
+def test_tensor_creation_outside_context_uses_default():
+    """Test that tensor creation outside context uses default device (cpu or npu)."""
+    default_type = _get_default_device_type()
     t = torch.tensor([1, 2, 3])
-    assert t.device.type == "cpu"
+    assert t.device.type == default_type
     assert t.shape == (3,)
 
 

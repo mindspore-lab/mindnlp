@@ -16,6 +16,7 @@ def _get_backend_key(args: Tuple) -> DispatchKey:
     """Determine backend dispatch key from arguments.
 
     Looks at tensor arguments to determine which backend to use.
+    Also checks tensors inside lists/tuples (e.g., for cat/stack).
     """
     from .._tensor import Tensor
 
@@ -28,6 +29,17 @@ def _get_backend_key(args: Tuple) -> DispatchKey:
                 return DispatchKey.Backend_CUDA
             elif device_type in ("npu", "ascend"):
                 return DispatchKey.Backend_Ascend
+        elif isinstance(arg, (list, tuple)):
+            # Check tensors inside lists/tuples (for cat, stack, etc.)
+            for item in arg:
+                if isinstance(item, Tensor):
+                    device_type = item.device.type
+                    if device_type == "cpu":
+                        return DispatchKey.Backend_CPU
+                    elif device_type == "cuda":
+                        return DispatchKey.Backend_CUDA
+                    elif device_type in ("npu", "ascend"):
+                        return DispatchKey.Backend_Ascend
 
     # Default to CPU
     return DispatchKey.Backend_CPU
@@ -39,6 +51,10 @@ def _requires_grad(args) -> bool:
     for arg in args:
         if isinstance(arg, Tensor) and arg.requires_grad:
             return True
+        elif isinstance(arg, (list, tuple)):
+            for item in arg:
+                if isinstance(item, Tensor) and item.requires_grad:
+                    return True
     return False
 
 
@@ -76,6 +92,8 @@ def _make_grad_fn(op_name: str, args, result, kwargs=None):
         'softmax': F.SoftmaxBackward,
         'clone': F.CloneBackward,
         'dropout': F.DropoutBackward,
+        'cat': F.CatBackward,
+        'stack': F.StackBackward,
     }
 
     BackwardClass = backward_classes.get(op_name)
@@ -151,6 +169,24 @@ def _make_grad_fn(op_name: str, args, result, kwargs=None):
             next_fns.append((None, 0))
 
         tensors_to_save = [indices, weight]
+
+    elif op_name in ('cat', 'stack'):
+        # cat/stack args: (tensors_list, dim)
+        # First arg is a list/tuple of tensors
+        tensor_list = args[0]
+        dim = kwargs.get('dim', 0)
+        if len(args) > 1:
+            dim = args[1]
+
+        for t in tensor_list:
+            if isinstance(t, Tensor) and t.requires_grad:
+                if t.grad_fn is not None:
+                    next_fns.append((t.grad_fn, 0))
+                else:
+                    acc_grad = AccumulateGrad(t)
+                    next_fns.append((acc_grad, 0))
+            else:
+                next_fns.append((None, 0))
 
     else:
         # Default handling for other ops
@@ -236,6 +272,20 @@ def _make_grad_fn(op_name: str, args, result, kwargs=None):
         grad_fn._dim = kwargs.get('dim', -1)
     elif op_name == 'clone':
         pass  # No tensors to save for clone
+    elif op_name == 'cat':
+        # Save shapes and dim for cat backward
+        tensor_list = args[0]
+        grad_fn._input_shapes = [t.shape for t in tensor_list]
+        grad_fn._dim = kwargs.get('dim', 0)
+        if len(args) > 1:
+            grad_fn._dim = args[1]
+    elif op_name == 'stack':
+        # Save num inputs and dim for stack backward
+        tensor_list = args[0]
+        grad_fn._num_inputs = len(tensor_list)
+        grad_fn._dim = kwargs.get('dim', 0)
+        if len(args) > 1:
+            grad_fn._dim = args[1]
     elif op_name in ('add', 'sub'):
         # Save shapes for broadcasting gradient reduction
         if len(tensors_to_save) >= 2:
@@ -264,8 +314,21 @@ def _dispatch_new_op(op_name: str, op, args, kwargs):
     from .._tensor import Tensor
     from .._autograd import is_grad_enabled
     from .._autograd.node import AccumulateGrad
-    from .._backends.pyboost_cpu import _get_ms_data, _wrap_result
+    from ..configs import DEVICE_TARGET
     import numpy as np
+
+    # Determine device from input tensors
+    device_str = "cpu"
+    for arg in args:
+        if isinstance(arg, Tensor):
+            device_str = str(arg.device)
+            break
+
+    # Get correct backend based on device/context
+    if DEVICE_TARGET == 'Ascend':
+        from .._backends.pyboost_ascend import _get_ms_data, _wrap_result
+    else:
+        from .._backends.pyboost_cpu import _get_ms_data, _wrap_result
 
     # Convert Tensor args to MindSpore tensors
     ms_args = []
@@ -283,19 +346,19 @@ def _dispatch_new_op(op_name: str, op, args, kwargs):
     # Execute forward
     ms_result = op.forward(*ms_args, **kwargs)
 
-    # Wrap result
-    result = _wrap_result(ms_result)
+    # Wrap result with correct device
+    result = _wrap_result(ms_result, device=device_str)
 
     # Setup autograd if needed
     requires_grad = any(t.requires_grad for t in tensor_args)
     if is_grad_enabled() and requires_grad:
         result._requires_grad = True
-        result._grad_fn = _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result)
+        result._grad_fn = _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result, device_str)
 
     return result
 
 
-def _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result):
+def _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result, device_str="cpu"):
     """Create grad_fn using new op's backward method.
 
     Args:
@@ -304,23 +367,31 @@ def _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result):
         tensor_args: Original Tensor arguments
         ms_args: MindSpore tensor arguments
         ms_result: MindSpore tensor result
+        device_str: Device string for output tensors
 
     Returns:
         Node representing the backward function
     """
     from .._autograd.node import Node, AccumulateGrad
     from .._tensor import Tensor
-    from .._backends.pyboost_cpu import _get_ms_data, _wrap_result
+    from ..configs import DEVICE_TARGET
+
+    # Get correct backend based on device/context
+    if DEVICE_TARGET == 'Ascend':
+        from .._backends.pyboost_ascend import _get_ms_data, _wrap_result
+    else:
+        from .._backends.pyboost_cpu import _get_ms_data, _wrap_result
 
     class OpBackward(Node):
         """Backward node using standardized op's backward method."""
 
-        def __init__(self, op, saved_tensors, saved_ms, ms_result):
+        def __init__(self, op, saved_tensors, saved_ms, ms_result, device):
             super().__init__()
             self._op = op
             self._saved_tensors = saved_tensors
             self._saved_ms = saved_ms
             self._ms_result = ms_result
+            self._device = device
             self._name = f"{op.name}Backward"
 
         def backward(self, grad_outputs):
@@ -334,17 +405,17 @@ def _make_new_grad_fn(op_name, op, tensor_args, ms_args, ms_result):
                 # Pass input args for backward
                 ms_grads = self._op.backward(ms_grad_out, *self._saved_ms)
 
-            # Wrap results
+            # Wrap results with correct device
             grads = []
             for g in ms_grads:
                 if g is not None:
-                    grads.append(_wrap_result(g))
+                    grads.append(_wrap_result(g, device=self._device))
                 else:
                     grads.append(None)
 
             return tuple(grads)
 
-    grad_fn = OpBackward(op, tensor_args, ms_args, ms_result)
+    grad_fn = OpBackward(op, tensor_args, ms_args, ms_result, device_str)
 
     # Build next_functions
     next_fns = []
@@ -411,18 +482,12 @@ def dispatch(op_name: str, *args, **kwargs) -> Any:
     """
     from .._tensor import Tensor
     from .._autograd import is_grad_enabled
-    from .._ops import get_op
 
     # Check for meta tensors FIRST - route to meta backend for shape inference
     if _has_meta_tensor(args):
         return _dispatch_meta(op_name, args, kwargs)
 
-    # Try new standardized op first
-    new_op = get_op(op_name)
-    if new_op is not None:
-        return _dispatch_new_op(op_name, new_op, args, kwargs)
-
-    # Fall back to legacy dispatch
+    # Use legacy dispatch - backends handle device-specific implementations
     return _dispatch_legacy(op_name, args, kwargs)
 
 

@@ -33,7 +33,7 @@ from ._creation import (
 from ._functional import (
     add, sub, mul, div, neg, abs, pow,
     exp, log, sqrt, square, sin, cos, tanh,
-    matmul,
+    matmul, addmm,
     sum, mean, max, min, prod, argmax, argmin,
     eq, ne, gt, lt, ge, le,
     # Tensor manipulation
@@ -88,13 +88,25 @@ from ._autograd import (
     enable_grad,
 )
 
-# Import backends to register ops
+# Import backends to register ops based on device target
+from .configs import DEVICE_TARGET
+
+# Always import CPU backend as fallback
 from ._backends import cpu
+
+# Conditionally import Ascend backend when running on Ascend NPU
+if DEVICE_TARGET == 'Ascend':
+    from ._backends import ascend
 
 # Import submodules
 from . import nn
 from . import optim
 from . import _autograd as autograd
+from . import npu  # NPU (Ascend) device support
+
+# Import fft and distributions modules from stubs
+from ._torch_proxy.stubs import fft
+from ._torch_proxy.stubs import distributions
 
 # Aliases for API compatibility
 concat = cat  # torch.concat is an alias for torch.cat
@@ -140,16 +152,37 @@ def set_default_dtype(dtype):
 
 
 # Default device management
+from ._device import _set_default_device
+
 def get_default_device():
     """Get the current default device.
 
     Returns the device from the device context manager if active,
-    otherwise returns cpu. Matches PyTorch 2.3+ API.
+    otherwise returns the device based on MindSpore context.
+    Matches PyTorch 2.3+ API.
     """
     ctx_device = _get_default_device()
     if ctx_device is not None:
         return ctx_device
+    # Return device based on MindSpore context
+    if DEVICE_TARGET == 'Ascend':
+        return device("npu")
     return device("cpu")
+
+
+def set_default_device(dev):
+    """Set the default device for tensor creation.
+
+    Args:
+        dev: Device to set as default. Can be a device object, string, or None.
+            If None, resets to the default based on MindSpore context.
+    """
+    if dev is None:
+        _set_default_device(None)
+    elif isinstance(dev, str):
+        _set_default_device(device(dev))
+    else:
+        _set_default_device(dev)
 
 
 # Tensor type classes (for isinstance checks and type creation)

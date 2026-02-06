@@ -14,7 +14,8 @@ class MindTorchV2Finder:
     def _should_intercept(self, fullname):
         """Check if this module should be intercepted."""
         return (fullname == 'torch' or fullname.startswith('torch.') or
-                fullname == 'mindtorch' or fullname.startswith('mindtorch.'))
+                fullname == 'mindtorch' or fullname.startswith('mindtorch.') or
+                fullname == 'torch_npu' or fullname.startswith('torch_npu.'))
 
     def find_module(self, fullname, path=None):
         """Find module hook for the import system.

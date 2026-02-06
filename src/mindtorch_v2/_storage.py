@@ -17,9 +17,10 @@ class UntypedStorage:
         self._device = device_cls(device or "cpu")
         self._nbytes = size_bytes
         if size_bytes > 0:
-            self._data = mindspore.numpy.zeros(size_bytes, dtype=mindspore.uint8)
+            # Use numpy + Tensor to avoid GE initialization issues with mindspore.numpy
+            self._data = mindspore.Tensor(np.zeros(size_bytes, dtype=np.uint8))
         else:
-            self._data = mindspore.numpy.zeros(1, dtype=mindspore.uint8)
+            self._data = mindspore.Tensor(np.zeros(1, dtype=np.uint8))
 
     def _untyped(self):
         """Return self for untyped storage (safetensors compatibility)."""

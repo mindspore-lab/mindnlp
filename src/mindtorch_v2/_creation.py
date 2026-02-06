@@ -1,4 +1,7 @@
-"""PyTorch-compatible tensor creation functions."""
+"""PyTorch-compatible tensor creation functions.
+
+Uses MindSpore pyboost primitives for tensor creation instead of numpy.
+"""
 
 import numpy as np
 import mindspore
@@ -6,6 +9,7 @@ from . import _dtype as dtype_mod
 from ._tensor import Tensor, _data_to_numpy, _compute_strides
 from ._storage import TypedStorage, UntypedStorage
 from ._device import _get_default_device, device as device_cls
+from .configs import DEVICE_TARGET
 
 
 def _resolve_dtype(dtype, default=None):
@@ -23,7 +27,7 @@ def _resolve_shape(args):
 
 
 def _resolve_device(device):
-    """Resolve device from argument or context, defaulting to cpu."""
+    """Resolve device from argument or context, defaulting based on MindSpore context."""
     if device is not None:
         if isinstance(device, str):
             return device_cls(device)
@@ -32,7 +36,41 @@ def _resolve_device(device):
     ctx_device = _get_default_device()
     if ctx_device is not None:
         return ctx_device
+    # Default based on MindSpore device target
+    if DEVICE_TARGET == 'Ascend':
+        return device_cls("npu")
     return device_cls("cpu")
+
+
+def _get_ms_device():
+    """Get MindSpore device string ('CPU' or 'Ascend')."""
+    return DEVICE_TARGET
+
+
+def _get_wrap_result():
+    """Get the appropriate _wrap_result function for the current device."""
+    if DEVICE_TARGET == 'Ascend':
+        from ._backends.pyboost_ascend import _wrap_result
+    else:
+        from ._backends.pyboost_cpu import _wrap_result
+    return _wrap_result
+
+
+def _dtype_to_ms(dtype):
+    """Convert mindtorch dtype to mindspore dtype."""
+    _map = {
+        dtype_mod.float16: mindspore.float16,
+        dtype_mod.float32: mindspore.float32,
+        dtype_mod.float64: mindspore.float64,
+        dtype_mod.bfloat16: mindspore.bfloat16,
+        dtype_mod.int8: mindspore.int8,
+        dtype_mod.int16: mindspore.int16,
+        dtype_mod.int32: mindspore.int32,
+        dtype_mod.int64: mindspore.int64,
+        dtype_mod.uint8: mindspore.uint8,
+        dtype_mod.bool: mindspore.bool_,
+    }
+    return _map.get(dtype, mindspore.float32)
 
 
 def _create_meta_tensor(data, dtype, device, requires_grad):
@@ -78,25 +116,35 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
 
 
 def zeros(*size, dtype=None, device=None, requires_grad=False, out=None):
-    """Create tensor filled with zeros."""
+    """Create tensor filled with zeros using MindSpore kernel."""
     shape = _resolve_shape(size)
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.zeros(shape, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    ms_tensor = mindspore.ops.zeros(shape, ms_dtype)
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def ones(*size, dtype=None, device=None, requires_grad=False, out=None):
-    """Create tensor filled with ones."""
+    """Create tensor filled with ones using MindSpore kernel."""
     shape = _resolve_shape(size)
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.ones(shape, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    ms_tensor = mindspore.ops.ones(shape, ms_dtype)
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def empty(*size, dtype=None, device=None, requires_grad=False, out=None, memory_format=None, pin_memory=False, **kwargs):
-    """Create uninitialized tensor. Supports empty(3,4) and empty(size=(3,4))."""
+    """Create uninitialized tensor using MindSpore kernel."""
     # Handle size= keyword argument
     if 'size' in kwargs:
         shape = tuple(kwargs['size'])
@@ -105,17 +153,33 @@ def empty(*size, dtype=None, device=None, requires_grad=False, out=None, memory_
     else:
         shape = _resolve_shape(size)
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.empty(shape, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    # Use zeros as empty (MindSpore doesn't have uninitialized allocation)
+    ms_tensor = mindspore.ops.zeros(shape, ms_dtype)
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def full(size, fill_value, *, dtype=None, device=None, requires_grad=False):
-    """Create tensor filled with fill_value."""
+    """Create tensor filled with fill_value using MindSpore kernel."""
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.full(size, fill_value, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    try:
+        ms_tensor = mindspore.ops.full(size, fill_value, dtype=ms_dtype)
+    except RuntimeError:
+        # Fallback to numpy when MindSpore graph ops unavailable
+        np_dtype = dtype_mod.dtype_to_numpy(dt) or np.float32
+        ms_tensor = mindspore.Tensor(np.full(size, fill_value, dtype=np_dtype))
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def full_like(input, fill_value, *, dtype=None, device=None, requires_grad=False):
@@ -125,93 +189,119 @@ def full_like(input, fill_value, *, dtype=None, device=None, requires_grad=False
     return full(input.shape, fill_value, dtype=dt, device=dev, requires_grad=requires_grad)
 
 
-def zeros_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create tensor filled with zeros, with same shape as input."""
-    dt = dtype if dtype is not None else input.dtype
-    dev = device if device is not None else str(input.device)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.zeros(input.shape, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=dev, requires_grad=requires_grad)
-
-
-def ones_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create tensor filled with ones, with same shape as input."""
-    dt = dtype if dtype is not None else input.dtype
-    dev = device if device is not None else str(input.device)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.ones(input.shape, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=dev, requires_grad=requires_grad)
-
-
-def empty_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create uninitialized tensor, with same shape as input."""
-    dt = dtype if dtype is not None else input.dtype
-    dev = device if device is not None else str(input.device)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.empty(input.shape, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=dev, requires_grad=requires_grad)
-
-
 def arange(*args, dtype=None, device=None, requires_grad=False):
     """arange(end), arange(start, end), arange(start, end, step)."""
-    arr = np.arange(*args)
-    if dtype is not None:
-        np_dtype = dtype_mod.dtype_to_numpy(dtype)
-        arr = arr.astype(np_dtype)
-    return Tensor(arr, dtype=dtype, device=device, requires_grad=requires_grad)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    # Parse args: arange(end), arange(start, end), arange(start, end, step)
+    if len(args) == 1:
+        start, end, step = 0, args[0], 1
+    elif len(args) == 2:
+        start, end, step = args[0], args[1], 1
+    else:
+        start, end, step = args[0], args[1], args[2]
+
+    ms_dtype = _dtype_to_ms(dtype) if dtype is not None else None
+    try:
+        ms_tensor = mindspore.ops.arange(start, end, step, dtype=ms_dtype)
+    except RuntimeError:
+        # Fallback to numpy when MindSpore graph ops unavailable
+        np_dtype = dtype_mod.dtype_to_numpy(dtype) if dtype is not None else None
+        ms_tensor = mindspore.Tensor(np.arange(start, end, step, dtype=np_dtype))
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def linspace(start, end, steps, *, dtype=None, device=None, requires_grad=False):
-    """Create evenly spaced tensor."""
+    """Create evenly spaced tensor using MindSpore kernel."""
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.linspace(start, end, steps, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    try:
+        ms_tensor = mindspore.ops.linspace(mindspore.Tensor(start, ms_dtype),
+                                            mindspore.Tensor(end, ms_dtype),
+                                            steps)
+    except RuntimeError:
+        # Fallback to numpy when MindSpore graph ops unavailable
+        np_dtype = dtype_mod.dtype_to_numpy(dt) or np.float32
+        ms_tensor = mindspore.Tensor(np.linspace(start, end, steps, dtype=np_dtype))
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def eye(n, m=None, *, dtype=None, device=None, requires_grad=False):
-    """Create identity matrix."""
+    """Create identity matrix using MindSpore kernel."""
     if m is None:
         m = n
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt)
-    arr = np.eye(n, m, dtype=np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    ms_tensor = mindspore.ops.eye(n, m, ms_dtype)
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
-def randn(*size, dtype=None, device=None, requires_grad=False):
-    """Create tensor with random normal values."""
+def randn(*size, dtype=None, device=None, requires_grad=False, generator=None):
+    """Create tensor with random normal values using MindSpore kernel."""
     shape = _resolve_shape(size)
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt) or np.float32
-    arr = np.random.randn(*shape).astype(np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    try:
+        ms_tensor = mindspore.ops.randn(shape, dtype=ms_dtype)
+    except RuntimeError:
+        # Fallback to numpy when MindSpore graph ops unavailable
+        np_dtype = dtype_mod.dtype_to_numpy(dt) or np.float32
+        ms_tensor = mindspore.Tensor(np.random.randn(*shape).astype(np_dtype))
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
-def rand(*size, dtype=None, device=None, requires_grad=False):
-    """Create tensor with random uniform [0, 1) values."""
+def rand(*size, dtype=None, device=None, requires_grad=False, generator=None):
+    """Create tensor with random uniform [0, 1) values using MindSpore kernel."""
     shape = _resolve_shape(size)
     dt = _resolve_dtype(dtype)
-    np_dtype = dtype_mod.dtype_to_numpy(dt) or np.float32
-    arr = np.random.rand(*shape).astype(np_dtype)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    try:
+        ms_tensor = mindspore.ops.rand(shape, dtype=ms_dtype)
+    except RuntimeError:
+        # Fallback to numpy when MindSpore graph ops unavailable
+        np_dtype = dtype_mod.dtype_to_numpy(dt) or np.float32
+        ms_tensor = mindspore.Tensor(np.random.rand(*shape).astype(np_dtype))
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
-def zeros_like(input, *, dtype=None, device=None, requires_grad=False):
+def zeros_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
     """Create zero tensor with same shape/dtype as input."""
     dt = dtype or input.dtype
     return zeros(*input.shape, dtype=dt, device=device or str(input.device),
                  requires_grad=requires_grad)
 
 
-def ones_like(input, *, dtype=None, device=None, requires_grad=False):
+def ones_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
     """Create ones tensor with same shape/dtype as input."""
     dt = dtype or input.dtype
     return ones(*input.shape, dtype=dt, device=device or str(input.device),
                 requires_grad=requires_grad)
 
 
-def empty_like(input, *, dtype=None, device=None, requires_grad=False):
+def empty_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):
     """Create empty tensor with same shape/dtype as input."""
     dt = dtype or input.dtype
     return empty(*input.shape, dtype=dt, device=device or str(input.device),
@@ -222,7 +312,8 @@ def from_numpy(ndarray):
     """Create tensor from numpy array (shares memory where possible)."""
     arr = np.ascontiguousarray(ndarray)
     dt = dtype_mod.numpy_to_dtype(arr.dtype)
-    return Tensor(arr, dtype=dt)
+    resolved_device = _resolve_device(None)
+    return Tensor(arr, dtype=dt, device=str(resolved_device))
 
 
 def as_tensor(data, dtype=None, device=None):
@@ -240,6 +331,7 @@ def as_tensor(data, dtype=None, device=None):
     Returns:
         Tensor: The resulting tensor
     """
+    resolved_device = _resolve_device(device)
     # If already a tensor, check if we need to convert
     if isinstance(data, Tensor):
         if dtype is None and device is None:
@@ -259,17 +351,17 @@ def as_tensor(data, dtype=None, device=None):
         np_target = dtype_mod.dtype_to_numpy(target_dtype)
         if np_target is not None and data.dtype == np_target:
             # Can share memory
-            return Tensor(data, dtype=target_dtype, device=device)
+            return Tensor(data, dtype=target_dtype, device=str(resolved_device))
         else:
             # Need to convert dtype
             if np_target is not None:
                 arr = data.astype(np_target)
             else:
                 arr = data
-            return Tensor(arr, dtype=target_dtype, device=device)
+            return Tensor(arr, dtype=target_dtype, device=str(resolved_device))
 
     # For other types (lists, scalars, etc.), create a new tensor
-    return Tensor(data, dtype=dtype, device=device)
+    return Tensor(data, dtype=dtype, device=str(resolved_device))
 
 
 def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
@@ -288,6 +380,9 @@ def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
     Returns:
         Tensor: The resulting tensor
     """
+    resolved_device = _resolve_device(device)
+    dev_str = str(resolved_device)
+
     # Handle Storage objects (needed for safetensors)
     if isinstance(obj, (UntypedStorage, TypedStorage)):
         # Get raw data from storage
@@ -313,12 +408,12 @@ def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
                         arr = np.frombuffer(raw_data.tobytes(), dtype=np.uint16, count=count)
                 else:
                     raise TypeError(f"Unsupported dtype: {dtype}")
-            return Tensor(arr.copy(), dtype=dtype, device=device, requires_grad=requires_grad)
+            return Tensor(arr.copy(), dtype=dtype, device=dev_str, requires_grad=requires_grad)
         else:
             # TypedStorage - dtype is already known
             target_dtype = dtype if dtype is not None else obj.dtype
             arr = obj._ms_tensor.asnumpy()
-            return Tensor(arr.copy(), dtype=target_dtype, device=device, requires_grad=requires_grad)
+            return Tensor(arr.copy(), dtype=target_dtype, device=dev_str, requires_grad=requires_grad)
 
     # Handle Tensor
     if isinstance(obj, Tensor):
@@ -335,10 +430,10 @@ def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
             target_dtype = dtype_mod.numpy_to_dtype(obj.dtype)
         if copy is True:
             obj = obj.copy()
-        return Tensor(obj, dtype=target_dtype, device=device, requires_grad=requires_grad)
+        return Tensor(obj, dtype=target_dtype, device=dev_str, requires_grad=requires_grad)
 
     # Handle other types (lists, scalars, etc.)
-    return Tensor(obj, dtype=dtype, device=device, requires_grad=requires_grad)
+    return Tensor(obj, dtype=dtype, device=dev_str, requires_grad=requires_grad)
 
 
 def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
@@ -354,6 +449,9 @@ def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
     Returns:
         Tensor: A 1-D tensor containing the buffer data
     """
+    resolved_device = _resolve_device(None)
+    dev_str = str(resolved_device)
+
     # Handle bfloat16 specially since numpy doesn't natively support it
     if dtype == dtype_mod.bfloat16:
         try:
@@ -361,7 +459,7 @@ def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
             # Use ml_dtypes bfloat16 which MindSpore can convert
             arr = np.frombuffer(buffer, dtype=ml_dtypes.bfloat16, count=count, offset=offset)
             arr = arr.copy()
-            return Tensor(arr, dtype=dtype, requires_grad=requires_grad)
+            return Tensor(arr, dtype=dtype, device=dev_str, requires_grad=requires_grad)
         except ImportError:
             # Fallback: read as uint16 and convert through float32
             arr = np.frombuffer(buffer, dtype=np.uint16, count=count, offset=offset)
@@ -369,8 +467,8 @@ def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
             # Convert bfloat16 bits to float32: bf16 is upper 16 bits of f32
             arr_f32 = np.zeros(arr.shape, dtype=np.float32)
             arr_f32.view(np.uint32)[:] = arr.astype(np.uint32) << 16
-            tensor = Tensor(arr_f32, dtype=dtype_mod.float32, requires_grad=requires_grad)
-            return tensor.to(dtype)
+            t = Tensor(arr_f32, dtype=dtype_mod.float32, device=dev_str, requires_grad=requires_grad)
+            return t.to(dtype)
 
     # Convert dtype to numpy dtype
     np_dtype = dtype_mod.dtype_to_numpy(dtype)
@@ -382,7 +480,7 @@ def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
 
     # Create tensor (don't share memory since buffer might be temporary)
     arr = arr.copy()
-    return Tensor(arr, dtype=dtype, requires_grad=requires_grad)
+    return Tensor(arr, dtype=dtype, device=dev_str, requires_grad=requires_grad)
 
 
 def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False):
@@ -402,8 +500,19 @@ def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad
         size = (size,)
 
     dt = dtype or dtype_mod.int64
-    arr = np.random.randint(low, high, size=size)
-    return Tensor(arr, dtype=dt, device=device, requires_grad=requires_grad)
+    ms_dtype = _dtype_to_ms(dt)
+    resolved_device = _resolve_device(device)
+    _wrap_result = _get_wrap_result()
+
+    try:
+        ms_tensor = mindspore.ops.randint(low, high, size, dtype=ms_dtype)
+    except RuntimeError:
+        # Fallback to numpy when MindSpore graph ops unavailable
+        np_dtype = dtype_mod.dtype_to_numpy(dt) or np.int64
+        ms_tensor = mindspore.Tensor(np.random.randint(low, high, size=size).astype(np_dtype))
+    result = _wrap_result(ms_tensor, device=str(resolved_device))
+    result._requires_grad = requires_grad
+    return result
 
 
 def rand_like(input, *, dtype=None, device=None, requires_grad=False, memory_format=None):

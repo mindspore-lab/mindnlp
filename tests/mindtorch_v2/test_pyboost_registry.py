@@ -1,31 +1,32 @@
-"""Test pyboost op registry."""
+"""Test pyboost backend ops work via dispatch."""
 import pytest
 
 
 def test_get_pyboost_op():
-    """Can get pyboost op by name."""
-    from mindtorch_v2._ops.pyboost import get_pyboost_op
+    """Ops are accessible via the dispatch system."""
+    import mindtorch_v2 as torch
 
-    add_op = get_pyboost_op('add')
-    assert add_op is not None
+    # Test that add operation works (uses pyboost internally)
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    result = torch.add(a, b)
+    assert list(result.numpy()) == [4.0, 6.0]
 
 
 def test_pyboost_op_works():
-    """Pyboost op can execute."""
-    from mindtorch_v2._ops.pyboost import get_pyboost_op
-    import mindspore
+    """Pyboost ops execute correctly via dispatch."""
+    import mindtorch_v2 as torch
 
-    add_op = get_pyboost_op('add')
-    a = mindspore.Tensor([1.0, 2.0])
-    b = mindspore.Tensor([3.0, 4.0])
-    result = add_op(a, b)
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    result = torch.add(a, b)
 
-    assert list(result.asnumpy()) == [4.0, 6.0]
+    assert list(result.numpy()) == [4.0, 6.0]
 
 
-def test_unknown_op_returns_none():
-    """Unknown op name returns None."""
-    from mindtorch_v2._ops.pyboost import get_pyboost_op
+def test_unknown_op_raises():
+    """Unknown ops raise NotImplementedError."""
+    from mindtorch_v2._dispatch import dispatch
 
-    result = get_pyboost_op('nonexistent_op')
-    assert result is None
+    with pytest.raises(NotImplementedError):
+        dispatch('nonexistent_op_xyz')

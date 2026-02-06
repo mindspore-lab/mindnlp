@@ -17,22 +17,30 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
 import mindtorch_v2 as torch
+from mindtorch_v2 import get_default_device
+
+
+def _get_default_device_type():
+    """Get the default device type (cpu or npu depending on backend)."""
+    return get_default_device().type
 
 
 class TestTransformersMetaDetection:
     """Test transformers-style meta device detection."""
 
     def test_transformers_can_detect_meta_context(self):
-        """Test that empty tensor in meta context has meta device, outside has cpu.
+        """Test that empty tensor in meta context has meta device, outside has default.
 
         This is the exact pattern transformers uses to detect if we're in a meta
         device context manager:
             device_in_context = torch.tensor([]).device
         """
-        # Outside any context - should be cpu
+        default_type = _get_default_device_type()
+
+        # Outside any context - should be default device (cpu or npu)
         device_outside = torch.tensor([]).device
-        assert device_outside.type == "cpu", \
-            f"Expected 'cpu' outside context, got '{device_outside.type}'"
+        assert device_outside.type == default_type, \
+            f"Expected '{default_type}' outside context, got '{device_outside.type}'"
 
         # Inside meta context - should be meta
         with torch.device("meta"):
@@ -40,10 +48,10 @@ class TestTransformersMetaDetection:
             assert device_inside.type == "meta", \
                 f"Expected 'meta' inside context, got '{device_inside.type}'"
 
-        # After exiting context - should be cpu again
+        # After exiting context - should be default again
         device_after = torch.tensor([]).device
-        assert device_after.type == "cpu", \
-            f"Expected 'cpu' after context, got '{device_after.type}'"
+        assert device_after.type == default_type, \
+            f"Expected '{default_type}' after context, got '{device_after.type}'"
 
     def test_meta_context_nested(self):
         """Test that nested device contexts work correctly.
@@ -52,10 +60,12 @@ class TestTransformersMetaDetection:
         1. Outer meta context sets device to meta
         2. Inner cpu context overrides to cpu
         3. Exiting inner restores outer (meta)
-        4. Exiting outer restores default (cpu)
+        4. Exiting outer restores default
         """
-        # Start: cpu
-        assert torch.tensor([]).device.type == "cpu"
+        default_type = _get_default_device_type()
+
+        # Start: default device
+        assert torch.tensor([]).device.type == default_type
 
         with torch.device("meta"):
             # Inside meta: meta
@@ -68,8 +78,8 @@ class TestTransformersMetaDetection:
             # After exiting nested cpu: back to meta
             assert torch.tensor([]).device.type == "meta"
 
-        # After exiting all: back to cpu
-        assert torch.tensor([]).device.type == "cpu"
+        # After exiting all: back to default
+        assert torch.tensor([]).device.type == default_type
 
     def test_explicit_device_overrides_context(self):
         """Test that explicit device='cpu' overrides the meta context.
@@ -102,8 +112,10 @@ class TestMetaContextManagerProtocol:
 
     def test_context_manager_exception_handling(self):
         """Test that context manager properly restores device on exception."""
+        default_type = _get_default_device_type()
+
         # Verify initial state
-        assert torch.tensor([]).device.type == "cpu"
+        assert torch.tensor([]).device.type == default_type
 
         try:
             with torch.device("meta"):
@@ -112,8 +124,8 @@ class TestMetaContextManagerProtocol:
         except ValueError:
             pass
 
-        # Should be restored to cpu after exception
-        assert torch.tensor([]).device.type == "cpu"
+        # Should be restored to default after exception
+        assert torch.tensor([]).device.type == default_type
 
     def test_device_str_and_repr(self):
         """Test device string representations."""

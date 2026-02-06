@@ -18,7 +18,7 @@ class Node:
         _output_tensor_ref: Weak reference to output tensor (for retain_grad support)
     """
 
-    __slots__ = ('_next_functions', '_saved_tensors', '_needs_input_grad', '_name', '_output_tensor_ref')
+    __slots__ = ('_next_functions', '_saved_tensors', '_needs_input_grad', '_name', '_output_tensor_ref', '_retain_grad_flag')
 
     def __init__(self):
         self._next_functions: Tuple[Tuple[Optional['Node'], int], ...] = ()
@@ -26,6 +26,7 @@ class Node:
         self._needs_input_grad: Tuple[bool, ...] = ()
         self._name: str = self.__class__.__name__
         self._output_tensor_ref: Optional[weakref.ref] = None
+        self._retain_grad_flag: bool = False  # Store retain_grad flag on node itself
 
     @property
     def next_functions(self) -> Tuple[Tuple[Optional['Node'], int], ...]:
@@ -49,6 +50,7 @@ class Node:
     def register_output_tensor(self, tensor):
         """Register the output tensor for retain_grad support."""
         self._output_tensor_ref = weakref.ref(tensor)
+        self._retain_grad_flag = True  # Store flag on node as backup
 
     def get_output_tensor(self):
         """Get the output tensor if registered and still alive."""

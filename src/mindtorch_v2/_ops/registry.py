@@ -51,21 +51,8 @@ def execute_op(name: str, *args, return_backward_info: bool = False, **kwargs) -
 
 
 def _register_builtins():
-    """Register all built-in ops."""
-    from .math_ops import AddOp, SubOp, MulOp, DivOp, NegOp, ExpOp, LogOp, SqrtOp, RsqrtOp
-    from .linalg_ops import MatmulOp, BmmOp
+    """Register all built-in ops.
 
-    _OP_REGISTRY['add'] = AddOp
-    _OP_REGISTRY['sub'] = SubOp
-    _OP_REGISTRY['mul'] = MulOp
-    _OP_REGISTRY['div'] = DivOp
-    _OP_REGISTRY['neg'] = NegOp
-    _OP_REGISTRY['exp'] = ExpOp
-    _OP_REGISTRY['log'] = LogOp
-    _OP_REGISTRY['sqrt'] = SqrtOp
-    _OP_REGISTRY['rsqrt'] = RsqrtOp
-    _OP_REGISTRY['matmul'] = MatmulOp
-    _OP_REGISTRY['bmm'] = BmmOp
-
-
-_register_builtins()
+    Currently unused - all ops go through backend dispatch (ascend.py / cpu.py).
+    """
+    pass

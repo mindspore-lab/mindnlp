@@ -87,6 +87,19 @@ def matmul(input, other, *, out=None):
     return dispatch("matmul", input, other)
 
 
+def addmm(input, mat1, mat2, *, beta=1, alpha=1, out=None):
+    """Performs a matrix multiplication of mat1 and mat2, adds input, and returns the result.
+
+    out = beta * input + alpha * (mat1 @ mat2)
+    """
+    result = matmul(mat1, mat2)
+    if alpha != 1:
+        result = mul(result, alpha)
+    if beta != 1:
+        input = mul(input, beta)
+    return add(input, result)
+
+
 # --- Reduction ops ---
 
 def sum(input, dim=None, keepdim=False, *, dtype=None, out=None):
@@ -460,19 +473,12 @@ def atanh(input, *, out=None):
 # Activation functions at module level
 def relu(input, inplace=False):
     """Applies ReLU element-wise."""
-    import numpy as np
-    from ._tensor import Tensor
-    result = np.maximum(input.numpy(), 0)
-    return Tensor(result)
+    return dispatch("relu", input)
 
 
 def sigmoid(input):
     """Applies sigmoid element-wise."""
-    import numpy as np
-    from ._tensor import Tensor
-    x = input.numpy().astype(np.float64)
-    result = 1.0 / (1.0 + np.exp(-x))
-    return Tensor(result.astype(np.float32))
+    return dispatch("sigmoid", input)
 
 
 # Tensor manipulation ops
@@ -527,7 +533,7 @@ def gather(input, dim, index):
     import numpy as np
     from ._tensor import Tensor
     src = input.numpy()
-    idx = index.numpy()
+    idx = index.numpy().astype(np.int64)  # Ensure indices are integers
     out = np.take_along_axis(src, idx, axis=dim)
     return Tensor(out)
 

@@ -225,10 +225,11 @@ def _wrap_result(ms_tensor, device="cpu"):
     storage._dtype = dtype_mod.from_mindspore_dtype(flat.dtype)
     storage._device = device_cls(device)
 
-    # Create tensor with proper shape
+    # Create tensor with proper shape and device
     return Tensor(
         _storage=storage,
         _shape=tuple(ms_tensor.shape),
         _stride=None,
-        _storage_offset=0
+        _storage_offset=0,
+        device=device
     )

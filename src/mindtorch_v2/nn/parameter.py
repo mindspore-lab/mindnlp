@@ -55,3 +55,40 @@ class Parameter(Tensor):
 
     def __repr__(self):
         return f"Parameter containing:\n{super().__repr__()}"
+
+    def __deepcopy__(self, memo):
+        """Support deepcopy for Parameter."""
+        if id(self) in memo:
+            return memo[id(self)]
+
+        # Create a deep copy of the underlying data
+        import copy
+        # Clone the tensor data
+        data_copy = self.clone().detach()
+
+        # Create new Parameter with copied data
+        result = Parameter(data_copy, requires_grad=self.requires_grad)
+        memo[id(self)] = result
+        return result
+
+    def __reduce_ex__(self, protocol):
+        """Support pickling for Parameter."""
+        # Return a tuple (callable, args) for reconstruction
+        # We use the class constructor with the tensor data
+        return (
+            _rebuild_parameter,
+            (self.detach().numpy(), self.requires_grad, str(self.dtype), str(self.device))
+        )
+
+
+def _rebuild_parameter(data, requires_grad, dtype_str, device_str):
+    """Helper function to rebuild Parameter from pickled state."""
+    import numpy as np
+    from .._tensor import Tensor
+    from .._creation import tensor as create_tensor
+
+    # Reconstruct the tensor
+    t = create_tensor(data, requires_grad=False)
+
+    # Create Parameter
+    return Parameter(t, requires_grad=requires_grad)

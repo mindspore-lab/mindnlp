@@ -86,9 +86,9 @@ def rsqrt_cpu(a):
 
 @register_op("reciprocal", DispatchKey.Backend_CPU)
 def reciprocal_cpu(a):
-    # Composite: 1/x = div(1, x)
+    # Composite: 1/x using numpy fallback (OnesLikeExt not available on CPU)
     ms_a = _get_ms_data(a)
-    ones = ones_like_op(ms_a)
+    ones = mindspore.Tensor(np.ones(ms_a.shape, dtype=ms_a.asnumpy().dtype))
     return _wrap_result(div_op(ones, ms_a))
 
 
@@ -596,6 +596,7 @@ def contiguous_cpu(input):
     if isinstance(input, Tensor):
         if input.is_contiguous():
             return input
+        # Use native contiguous op to stay on device
         ms_data = _get_ms_data(input)
         result = contiguous_op(ms_data)
         return _wrap_result(result)

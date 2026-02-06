@@ -313,6 +313,243 @@ def ones_meta(a):
     return a
 
 
+# --- Embedding and other common ops ---
+
+def embedding_meta(indices, weight, **kwargs):
+    """Meta embedding: output shape is indices.shape + (embedding_dim,)."""
+    embedding_dim = weight.shape[1]
+    output_shape = indices.shape + (embedding_dim,)
+    return _create_meta_tensor(output_shape, weight.dtype, weight.device)
+
+
+def layer_norm_meta(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    """Meta layer_norm: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def dropout_meta(input, p=0.5, training=True, inplace=False, **kwargs):
+    """Meta dropout: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def sum_meta(input, dim=None, keepdim=False, dtype=None):
+    """Meta sum: compute output shape based on reduction."""
+    if dim is None:
+        return _create_meta_tensor((), dtype or input.dtype, input.device)
+    if isinstance(dim, int):
+        dim = (dim,)
+    shape = list(input.shape)
+    for d in sorted(dim, reverse=True):
+        if keepdim:
+            shape[d] = 1
+        else:
+            shape.pop(d)
+    return _create_meta_tensor(tuple(shape), dtype or input.dtype, input.device)
+
+
+def mean_meta(input, dim=None, keepdim=False, dtype=None):
+    """Meta mean: compute output shape based on reduction."""
+    return sum_meta(input, dim=dim, keepdim=keepdim, dtype=dtype)
+
+
+def softmax_meta(input, dim=-1, **kwargs):
+    """Meta softmax: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def relu_meta(input):
+    """Meta relu: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def gelu_meta(input, **kwargs):
+    """Meta gelu: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def tanh_meta(input):
+    """Meta tanh: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def contiguous_meta(input):
+    """Meta contiguous: shape stays the same."""
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+
+def all_meta(input, dim=None, keepdim=False):
+    """Meta all: compute output shape based on reduction."""
+    from .. import bool as torch_bool
+    if dim is None:
+        return _create_meta_tensor((), torch_bool, input.device)
+    if isinstance(dim, int):
+        dim = (dim,)
+    shape = list(input.shape)
+    for d in sorted(dim, reverse=True):
+        if keepdim:
+            shape[d] = 1
+        else:
+            shape.pop(d)
+    return _create_meta_tensor(tuple(shape), torch_bool, input.device)
+
+
+def any_meta(input, dim=None, keepdim=False):
+    """Meta any: compute output shape based on reduction."""
+    return all_meta(input, dim=dim, keepdim=keepdim)
+
+
+def _elementwise_meta(a, b=None):
+    """Meta elementwise binary op: broadcast shapes."""
+    if b is None or not hasattr(b, 'shape'):
+        return _create_meta_tensor(a.shape, a.dtype, a.device)
+    # Broadcast
+    import numpy as np
+    out_shape = np.broadcast_shapes(a.shape, b.shape)
+    return _create_meta_tensor(out_shape, a.dtype, a.device)
+
+
+def _comparison_meta(a, b=None):
+    """Meta comparison op: broadcast shapes, return bool."""
+    from .. import bool as torch_bool
+    if b is None or not hasattr(b, 'shape'):
+        return _create_meta_tensor(a.shape, torch_bool, a.device)
+    import numpy as np
+    out_shape = np.broadcast_shapes(a.shape, b.shape)
+    return _create_meta_tensor(out_shape, torch_bool, a.device)
+
+
+def eq_meta(a, b=None):
+    return _comparison_meta(a, b)
+
+def ne_meta(a, b=None):
+    return _comparison_meta(a, b)
+
+def gt_meta(a, b=None):
+    return _comparison_meta(a, b)
+
+def lt_meta(a, b=None):
+    return _comparison_meta(a, b)
+
+def ge_meta(a, b=None):
+    return _comparison_meta(a, b)
+
+def le_meta(a, b=None):
+    return _comparison_meta(a, b)
+
+
+def pow_meta(a, exponent=None):
+    return _elementwise_meta(a, exponent)
+
+def silu_meta(a):
+    return _create_meta_tensor(a.shape, a.dtype, a.device)
+
+def sigmoid_meta(a):
+    return _create_meta_tensor(a.shape, a.dtype, a.device)
+
+def rsqrt_meta(a):
+    return _create_meta_tensor(a.shape, a.dtype, a.device)
+
+def sin_meta(a):
+    return _create_meta_tensor(a.shape, a.dtype, a.device)
+
+def cos_meta(a):
+    return _create_meta_tensor(a.shape, a.dtype, a.device)
+
+def maximum_meta(a, b):
+    return _elementwise_meta(a, b)
+
+def minimum_meta(a, b):
+    return _elementwise_meta(a, b)
+
+def cat_meta(tensors, dim=0):
+    """Meta cat: concatenate along dim."""
+    shapes = [t.shape for t in tensors]
+    out_shape = list(shapes[0])
+    out_shape[dim] = sum(s[dim] for s in shapes)
+    return _create_meta_tensor(tuple(out_shape), tensors[0].dtype, tensors[0].device)
+
+def stack_meta(tensors, dim=0):
+    """Meta stack: stack along new dim."""
+    shape = list(tensors[0].shape)
+    shape.insert(dim, len(tensors))
+    return _create_meta_tensor(tuple(shape), tensors[0].dtype, tensors[0].device)
+
+def unsqueeze_meta(input, dim):
+    shape = list(input.shape)
+    if dim < 0:
+        dim = len(shape) + 1 + dim
+    shape.insert(dim, 1)
+    return _create_meta_tensor(tuple(shape), input.dtype, input.device)
+
+def squeeze_meta(input, dim=None):
+    shape = list(input.shape)
+    if dim is not None:
+        if isinstance(dim, int):
+            dim = [dim]
+        for d in sorted(dim, reverse=True):
+            if shape[d] == 1:
+                shape.pop(d)
+    else:
+        shape = [s for s in shape if s != 1]
+    return _create_meta_tensor(tuple(shape), input.dtype, input.device)
+
+def where_meta(condition, x=None, y=None):
+    if x is None:
+        return _create_meta_tensor(condition.shape, condition.dtype, condition.device)
+    import numpy as np
+    out_shape = np.broadcast_shapes(condition.shape, x.shape, y.shape)
+    return _create_meta_tensor(out_shape, x.dtype, x.device)
+
+def index_select_meta(input, dim, index):
+    shape = list(input.shape)
+    shape[dim] = index.shape[0]
+    return _create_meta_tensor(tuple(shape), input.dtype, input.device)
+
+def masked_fill_meta(input, mask, value):
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+def expand_meta(input, *sizes):
+    if len(sizes) == 1 and isinstance(sizes[0], (list, tuple)):
+        sizes = sizes[0]
+    shape = list(input.shape)
+    # Expand -1 means keep original size
+    out = []
+    for i, s in enumerate(sizes):
+        if s == -1:
+            out.append(shape[i])
+        else:
+            out.append(s)
+    return _create_meta_tensor(tuple(out), input.dtype, input.device)
+
+def repeat_meta(input, *sizes):
+    if len(sizes) == 1 and isinstance(sizes[0], (list, tuple)):
+        sizes = sizes[0]
+    shape = list(input.shape)
+    out = [s * r for s, r in zip(shape, sizes)]
+    return _create_meta_tensor(tuple(out), input.dtype, input.device)
+
+def triu_meta(input, diagonal=0):
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+def tril_meta(input, diagonal=0):
+    return _create_meta_tensor(input.shape, input.dtype, input.device)
+
+def arange_meta(*args, **kwargs):
+    """Meta arange - compute length from args."""
+    from .. import float32
+    if len(args) == 1:
+        length = args[0]
+    elif len(args) == 2:
+        length = args[1] - args[0]
+    elif len(args) == 3:
+        import math
+        length = math.ceil((args[1] - args[0]) / args[2])
+    else:
+        length = 0
+    dtype = kwargs.get('dtype', float32)
+    return _create_meta_tensor((int(length),), dtype, 'meta')
+
+
 # --- Dispatch table ---
 
 META_OPS = {
@@ -336,6 +573,48 @@ META_OPS = {
     'zero_': zero_meta,
     'fill_': fill_meta,
     'ones_': ones_meta,
+    # Model execution ops
+    'embedding': embedding_meta,
+    'layer_norm': layer_norm_meta,
+    'dropout': dropout_meta,
+    'sum': sum_meta,
+    'mean': mean_meta,
+    'softmax': softmax_meta,
+    'relu': relu_meta,
+    'gelu': gelu_meta,
+    'tanh': tanh_meta,
+    'contiguous': contiguous_meta,
+    'all': all_meta,
+    'any': any_meta,
+    # Comparison ops
+    'eq': eq_meta,
+    'ne': ne_meta,
+    'gt': gt_meta,
+    'lt': lt_meta,
+    'ge': ge_meta,
+    'le': le_meta,
+    # More elementwise ops
+    'pow': pow_meta,
+    'silu': silu_meta,
+    'sigmoid': sigmoid_meta,
+    'rsqrt': rsqrt_meta,
+    'sin': sin_meta,
+    'cos': cos_meta,
+    'maximum': maximum_meta,
+    'minimum': minimum_meta,
+    # Shape ops
+    'cat': cat_meta,
+    'stack': stack_meta,
+    'unsqueeze': unsqueeze_meta,
+    'squeeze': squeeze_meta,
+    'where': where_meta,
+    'index_select': index_select_meta,
+    'masked_fill': masked_fill_meta,
+    'expand': expand_meta,
+    'repeat': repeat_meta,
+    'triu': triu_meta,
+    'tril': tril_meta,
+    'arange': arange_meta,
 }
 
 

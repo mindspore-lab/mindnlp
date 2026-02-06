@@ -645,6 +645,56 @@ class DropoutBackward(Node):
         return (Tensor(grad_input.astype(np.float32)),)
 
 
+class CatBackward(Node):
+    """Backward for concatenation."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "CatBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_np = grad_output.numpy()
+        dim = self._dim
+        input_shapes = self._input_shapes
+
+        # Split gradient along dim according to input sizes
+        splits = [s[dim] for s in input_shapes]
+        grads_np = np.split(grad_np, np.cumsum(splits)[:-1], axis=dim)
+
+        grads = []
+        for g in grads_np:
+            grads.append(Tensor(g.astype(np.float32)))
+        return tuple(grads)
+
+
+class StackBackward(Node):
+    """Backward for stack."""
+
+    def __init__(self):
+        super().__init__()
+        self._name = "StackBackward"
+
+    def backward(self, grad_outputs):
+        grad_output = grad_outputs[0]
+        import numpy as np
+        from .._tensor import Tensor
+
+        grad_np = grad_output.numpy()
+        dim = self._dim
+        num_inputs = self._num_inputs
+
+        # Unstack: split along dim, then squeeze that dim
+        grads_np = np.split(grad_np, num_inputs, axis=dim)
+        grads = []
+        for g in grads_np:
+            grads.append(Tensor(np.squeeze(g, axis=dim).astype(np.float32)))
+        return tuple(grads)
+
+
 class PermuteBackward(Node):
     """Backward for permute."""
 

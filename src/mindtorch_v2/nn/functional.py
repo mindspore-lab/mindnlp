@@ -162,10 +162,21 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     """Scaled dot product attention with autograd support.
 
     Args:
+        query: Query tensor of shape (..., L, E)
+        key: Key tensor of shape (..., S, E)
+        value: Value tensor of shape (..., S, Ev)
+        attn_mask: Attention mask. Can be:
+            - None: No masking
+            - Boolean tensor: True = attend, False = mask out
+            - Float tensor: Additive mask (0 = attend, -inf = mask out)
+        dropout_p: Dropout probability (currently ignored)
+        is_causal: If True, apply causal mask
+        scale: Scale factor for attention (default: 1/sqrt(E))
         enable_gqa: Enable grouped query attention optimization (ignored, provided for compatibility)
     """
     import math
-    from .._functional import matmul
+    from .._functional import matmul, where
+    from .._creation import zeros, full, arange
 
     # Get shapes
     L, S = query.shape[-2], key.shape[-2]
@@ -174,18 +185,49 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     # Compute attention weights: query @ key.T
     # query: (..., L, E), key: (..., S, E) -> key.T: (..., E, S)
     key_t = key.transpose(-2, -1)
-    attn_weights = matmul(query, key_t) * scale_factor
+    attn_weights = matmul(query, key_t)
 
-    # Apply causal mask if needed
+    # Apply scale factor - convert to tensor with matching dtype to avoid float64 promotion
+    scale_tensor = Tensor([scale_factor]).to(query.dtype)
+    attn_weights = attn_weights * scale_tensor
+
+    # Apply causal mask if needed (using tensor operations, not numpy)
     if is_causal:
-        import numpy as np
-        causal_mask = np.triu(np.ones((L, S), dtype=np.float32) * float('-inf'), k=1)
-        causal_mask_tensor = Tensor(causal_mask)
-        attn_weights = attn_weights + causal_mask_tensor
+        # Create upper triangular mask: -inf where col > row (can't attend to future)
+        # row_idx: [[0], [1], [2], ..., [L-1]] shape (L, 1)
+        # col_idx: [[0, 1, 2, ..., S-1]] shape (1, S)
+        # mask where col_idx > row_idx
+        row_idx = arange(L, dtype=query.dtype).reshape(L, 1)
+        col_idx = arange(S, dtype=query.dtype).reshape(1, S)
+        # causal_cond: True where we CAN attend (col <= row), False where we mask
+        causal_cond = col_idx <= row_idx
+        neg_inf = full((), float('-inf'), dtype=query.dtype)
+        zero = full((), 0.0, dtype=query.dtype)
+        # Use where: if causal_cond, use 0, else use -inf
+        causal_mask = where(causal_cond, zero.expand(L, S), neg_inf.expand(L, S))
+        attn_weights = attn_weights + causal_mask
 
     # Apply attention mask if provided
     if attn_mask is not None:
-        attn_weights = attn_weights + attn_mask
+        # Handle boolean masks: True = attend, False = mask out
+        # Check if mask is boolean by looking at dtype string representation
+        dtype_str = str(attn_mask.dtype)
+        is_bool_mask = dtype_str == 'bool' or dtype_str == 'torch.bool'
+
+        if is_bool_mask:
+            # Boolean mask: True = attend, False = mask out
+            # Convert to float: True->1.0, False->0.0
+            mask_float = attn_mask.to(query.dtype)
+            neg_inf_val = full((), float('-inf'), dtype=query.dtype)
+            zero_val = full((), 0.0, dtype=query.dtype)
+            # Use where: if mask_float > 0.5 (was True), use 0, else use -inf
+            additive_mask = where(mask_float > 0.5,
+                                  zero_val.expand(attn_mask.shape),
+                                  neg_inf_val.expand(attn_mask.shape))
+            attn_weights = attn_weights + additive_mask
+        else:
+            # Float mask is already additive
+            attn_weights = attn_weights + attn_mask
 
     # Softmax along last dimension (use local softmax function)
     attn_weights = softmax(attn_weights, dim=-1)
@@ -379,6 +421,19 @@ def pad(input, pad, mode='constant', value=0):
         value: Fill value for constant padding
     """
     import numpy as np
+
+    # Handle meta tensors - compute output shape without actual data
+    if input.device.type == 'meta':
+        shape = list(input.shape)
+        pad_list = list(pad)
+        dim_idx = len(shape) - 1
+        for i in range(0, len(pad_list), 2):
+            if dim_idx >= 0:
+                shape[dim_idx] += pad_list[i] + pad_list[i + 1]
+                dim_idx -= 1
+        from .._backends.meta import _create_meta_tensor
+        return _create_meta_tensor(tuple(shape), input.dtype, input.device)
+
     x = input.numpy()
 
     # Convert pad from (left, right, top, bottom, ...) to numpy format
