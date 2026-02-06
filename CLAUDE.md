@@ -1221,3 +1221,80 @@ These fixes benefit all models using:
 **Conclusion**: mindtorch_v2 is a solid PyTorch compatibility layer with **excellent support for encoder-only models** (79-98% pass rate) and **functional support for decoder-only models** (43.6% pass rate). The torch_proxy system works well, and the implementation remains clean without transformers-specific hacks. Main remaining work is implementing text generation utilities.
 
 ---
+
+### Session: 2026-02-06 - GPT-2 Testing on Ascend NPU
+
+**Test Scope**: Full GPT-2 test suite on Ascend NPU after fixing where() operation
+
+**Bug Fixed**: Ascend where() operation - boolean condition requirement
+
+**Error**:
+```
+RuntimeError: aclnnSWhereGetWorkspaceSize call failed
+AclNN_Parameter_Error: Tensor condition not implemented for DT_FLOAT,
+should be in dtype support list [DT_BOOL,DT_UINT8,]
+```
+
+**Fix**: Cast condition tensor to bool dtype before calling where operation
+```python
+# Ensure condition is boolean (Ascend requires DT_BOOL or DT_UINT8)
+if ms_cond.dtype != mindspore.bool_:
+    ms_cond = cast_op(ms_cond, mindspore.bool_)
+```
+
+**Location**: `src/mindtorch_v2/_backends/ascend.py:618-638`
+
+**Test Results on Ascend NPU**:
+
+| Metric | Count | Percentage |
+|--------|-------|------------|
+| **PASSED** | 62 | 44.3% (of runnable) |
+| **FAILED** | 78 | 55.7% (of runnable) |
+| **SKIPPED** | 115 | 45.1% (of total) |
+| **TOTAL** | 255 | 100% |
+
+**Comparison: CPU vs Ascend**:
+
+| Metric | CPU | Ascend | Change |
+|--------|-----|--------|--------|
+| **Passed** | 61 | 62 | **+1** |
+| **Failed** | 79 | 78 | **-1** |
+| **Pass Rate** | 43.6% | 44.3% | **+0.7%** |
+
+**Key Findings**:
+
+✅ **What Works on Ascend**:
+- Forward pass
+- Backward pass
+- Model loading
+- Basic inference
+- Training (basic)
+- Attention mechanisms
+- Conv1D layers
+- where() operations (after fix)
+
+❌ **What Doesn't Work** (same as CPU):
+- Text generation (not implemented)
+- SDPA (not supported on Ascend)
+- Gradient checkpointing (not implemented)
+- Model offloading (not implemented)
+- Some serialization edge cases
+
+**Remaining Failures (78 tests)**:
+1. **Generation Tests** (~26 failures) - Expected, not yet implemented
+2. **SDPA Tests** (~26 failures) - Expected, SDPA not supported on Ascend
+3. **Serialization Tests** (~9 failures) - Known issues
+4. **Training Tests** (~5 failures) - Gradient checkpointing not implemented
+5. **Offloading Tests** (~3 failures) - Not implemented
+6. **Other Tests** (~9 failures) - Various edge cases
+
+**Conclusion**: GPT-2 on Ascend NPU achieves a **44.3% pass rate** (62/140 runnable tests), which is on par with CPU performance. The where() operation fix successfully resolved Ascend-specific issues with attention mechanisms. Core functionality works on Ascend for non-generation workloads.
+
+**Commit**: 85cb15d2 - fix(mindtorch_v2): fix where operation for Ascend - ensure boolean condition
+
+**Status**:
+- ✅ Core functionality works on Ascend
+- ✅ Ascend-specific issues resolved
+- ⚠️ Same limitations as CPU (generation, checkpointing, etc.)
+
+---
