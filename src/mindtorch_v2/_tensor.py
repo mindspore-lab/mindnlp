@@ -1,7 +1,7 @@
 import numpy as np
 
 from ._storage import Storage
-from ._device import _default_device
+from ._device import _default_device, device as Device
 from ._dtype import float32, to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum
 from ._autograd.engine import backward as _backward
@@ -65,6 +65,12 @@ class Tensor:
 
     def backward(self, gradient=None):
         _backward(self, gradient)
+
+    def to(self, dev):
+        if isinstance(dev, str):
+            dev = Device(dev)
+        new_storage = self.storage.to(dev)
+        return Tensor(new_storage, self.shape, self.stride, self.offset, self.requires_grad)
 
     def __add__(self, other):
         return add(self, other)
