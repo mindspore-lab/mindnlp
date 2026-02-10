@@ -5,6 +5,10 @@ from .._storage import Storage
 from .._tensor import Tensor
 
 
+def _to_numpy(t):
+    return t._numpy_view()
+
+
 def _from_numpy(arr, dtype):
     storage = Storage(arr, dtype=dtype)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
@@ -12,23 +16,23 @@ def _from_numpy(arr, dtype):
 
 
 def add(a, b):
-    return _from_numpy(a.storage.data + b.storage.data, a.dtype)
+    return _from_numpy(_to_numpy(a) + _to_numpy(b), a.dtype)
 
 
 def mul(a, b):
-    return _from_numpy(a.storage.data * b.storage.data, a.dtype)
+    return _from_numpy(_to_numpy(a) * _to_numpy(b), a.dtype)
 
 
 def matmul(a, b):
-    return _from_numpy(a.storage.data @ b.storage.data, a.dtype)
+    return _from_numpy(_to_numpy(a) @ _to_numpy(b), a.dtype)
 
 
 def relu(a):
-    return _from_numpy(np.maximum(a.storage.data, 0), a.dtype)
+    return _from_numpy(np.maximum(_to_numpy(a), 0), a.dtype)
 
 
 def sum_(a, dim=None, keepdim=False):
-    return _from_numpy(a.storage.data.sum(axis=dim, keepdims=keepdim), a.dtype)
+    return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype)
 
 
 registry.register("add", "cpu", add)

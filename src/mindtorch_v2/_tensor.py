@@ -25,6 +25,14 @@ class Tensor:
     def device(self):
         return self.storage.device
 
+    def _numpy_view(self):
+        base = self.storage.data.ravel()
+        itemsize = base.itemsize
+        strides = tuple(s * itemsize for s in self.stride)
+        return np.lib.stride_tricks.as_strided(
+            base[self.offset:], shape=self.shape, strides=strides
+        )
+
     def reshape(self, new_shape):
         size = 1
         for d in self.shape:
