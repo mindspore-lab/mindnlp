@@ -4,6 +4,7 @@ from ._storage import Storage
 from ._device import _default_device
 from ._dtype import float32, to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum
+from ._autograd.engine import backward as _backward
 
 
 class Tensor:
@@ -47,6 +48,15 @@ class Tensor:
         shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
         stride[dim0], stride[dim1] = stride[dim1], stride[dim0]
         return Tensor(self.storage, shape, stride, self.offset, self.requires_grad)
+
+    def _ones_like(self):
+        arr = np.ones(self.shape, dtype=to_numpy_dtype(self.dtype))
+        storage = Storage(arr, device=self.device, dtype=self.dtype)
+        stride = tuple(np.array(arr.strides) // arr.itemsize)
+        return Tensor(storage, arr.shape, stride)
+
+    def backward(self, gradient=None):
+        _backward(self, gradient)
 
     def __add__(self, other):
         return add(self, other)
