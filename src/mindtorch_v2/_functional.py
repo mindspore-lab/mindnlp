@@ -1,13 +1,16 @@
 from ._dispatch.dispatcher import dispatch
 from ._autograd.grad_mode import GradMode, no_grad
 from ._autograd.node import Node
+from ._autograd.utils import reduce_grad
 
 
 def add(a, b):
     out = dispatch("add", a.device.type, a, b)
     if GradMode.enabled and (a.requires_grad or b.requires_grad):
         def _backward(grad):
-            return grad, grad
+            grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
+            grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
+            return grad_a, grad_b
         out.grad_fn = Node(_backward, (a, b))
         out.requires_grad = True
     return out
@@ -20,6 +23,8 @@ def mul(a, b):
             with no_grad():
                 grad_a = dispatch("mul", a.device.type, grad, b) if a.requires_grad else None
                 grad_b = dispatch("mul", a.device.type, grad, a) if b.requires_grad else None
+            grad_a = reduce_grad(grad_a, a.shape) if grad_a is not None else None
+            grad_b = reduce_grad(grad_b, b.shape) if grad_b is not None else None
             return grad_a, grad_b
         out.grad_fn = Node(_backward, (a, b))
         out.requires_grad = True
