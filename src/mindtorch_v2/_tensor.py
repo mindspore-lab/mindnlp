@@ -3,6 +3,7 @@ import numpy as np
 from ._storage import Storage
 from ._device import _default_device
 from ._dtype import float32, to_numpy_dtype
+from ._functional import add, mul, matmul, relu, sum
 
 
 class Tensor:
@@ -47,3 +48,17 @@ class Tensor:
         stride[dim0], stride[dim1] = stride[dim1], stride[dim0]
         return Tensor(self.storage, shape, stride, self.offset, self.requires_grad)
 
+    def __add__(self, other):
+        return add(self, other)
+
+    def __mul__(self, other):
+        return mul(self, other)
+
+    def matmul(self, other):
+        return matmul(self, other)
+
+    def relu(self):
+        return relu(self)
+
+    def sum(self, dim=None, keepdim=False):
+        return sum(self, dim=dim, keepdim=keepdim)

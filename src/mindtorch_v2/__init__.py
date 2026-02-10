@@ -4,3 +4,5 @@ from ._dtype import DType, float32, float16, int64
 from ._device import device as Device, _default_device
 from ._tensor import Tensor
 from ._creation import tensor, zeros, ones
+from ._functional import add, mul, matmul, relu, sum
+from ._backends import cpu
