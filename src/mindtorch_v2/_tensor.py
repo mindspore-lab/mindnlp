@@ -47,10 +47,3 @@ class Tensor:
         stride[dim0], stride[dim1] = stride[dim1], stride[dim0]
         return Tensor(self.storage, shape, stride, self.offset, self.requires_grad)
 
-
-def tensor(data, dtype=float32, device=None):
-    dev = device or _default_device
-    arr = np.array(data, dtype=to_numpy_dtype(dtype))
-    storage = Storage(arr, device=dev, dtype=dtype)
-    stride = tuple(np.array(arr.strides) // arr.itemsize)
-    return Tensor(storage, arr.shape, stride)
