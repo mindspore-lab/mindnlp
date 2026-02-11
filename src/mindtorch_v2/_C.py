@@ -12,3 +12,7 @@ def _npu_model_dir():
 
 def _npu_aclnn_available():
     return ascend_ctypes.is_available()
+
+
+def _npu_aclnn_symbols_ok():
+    return ascend_ctypes.symbols_ok()

@@ -34,6 +34,12 @@ def test_npu_aclnn_available():
     assert torch._C._npu_aclnn_available() is True
 
 
+def test_aclnn_symbols_present():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    assert torch._C._npu_aclnn_symbols_ok() is True
+
+
 def test_npu_add_execute():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
