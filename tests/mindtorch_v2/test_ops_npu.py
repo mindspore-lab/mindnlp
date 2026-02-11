@@ -26,3 +26,18 @@ def test_npu_model_dir_selected():
         "/usr/local/Ascend/ascend-toolkit/latest/opp",
         "/home/lvyufeng/lvyufeng/acl_engine",
     }
+
+
+def test_npu_aclnn_available():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    assert torch._C._npu_aclnn_available() is True
+
+
+def test_npu_add_execute():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([1.0, 2.0], device="npu")
+    b = torch.tensor([3.0, 4.0], device="npu")
+    out = a + b
+    assert out.to("cpu").numpy().tolist() == [4.0, 6.0]
