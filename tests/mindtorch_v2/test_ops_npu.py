@@ -16,3 +16,13 @@ def test_npu_model_dir_probe():
         pytest.skip("NPU not available")
     ok = torch._C._npu_probe_model_dirs()
     assert ok is True
+
+
+def test_npu_model_dir_selected():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    path = torch._C._npu_model_dir()
+    assert path in {
+        "/usr/local/Ascend/ascend-toolkit/latest/opp",
+        "/home/lvyufeng/lvyufeng/acl_engine",
+    }

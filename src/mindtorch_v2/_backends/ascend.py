@@ -89,6 +89,8 @@ def _probe_model_dirs():
 
 def _model_dir():
     if _MODEL_DIR is None:
+        _probe_model_dirs()
+    if _MODEL_DIR is None:
         raise RuntimeError("NPU op model dir not initialized")
     return _MODEL_DIR
 
