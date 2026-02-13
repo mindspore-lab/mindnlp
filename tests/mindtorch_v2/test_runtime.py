@@ -79,13 +79,12 @@ def test_runtime_synchronize_drains_deferred(monkeypatch):
             calls.append(("set_context", ctx))
             return 0
 
-        def synchronize_stream(self, stream):
-            calls.append(("sync", stream))
-            return 0
+    class DummyAlloc:
+        def synchronize(self):
+            calls.append("alloc_sync")
 
         def free(self, ptr):
-            calls.append(("free", ptr))
-            return 0
+            calls.append(("alloc_free", ptr))
 
     dummy_acl = types.SimpleNamespace(rt=DummyRT())
     runtime = ascend._Runtime()
@@ -96,13 +95,18 @@ def test_runtime_synchronize_drains_deferred(monkeypatch):
 
     monkeypatch.setattr(ascend, "acl", dummy_acl)
 
+    from mindtorch_v2._backends.npu import allocator as npu_allocator
+
+    dummy_alloc = DummyAlloc()
+    monkeypatch.setattr(npu_allocator, "get_allocator", lambda device_id=0: dummy_alloc)
+
     runtime.defer_free(111)
     runtime.defer_free(222)
     runtime.synchronize()
 
-    assert ("sync", "stream") in calls
-    assert ("free", 111) in calls
-    assert ("free", 222) in calls
+    assert "alloc_sync" in calls
+    assert ("alloc_free", 111) in calls
+    assert ("alloc_free", 222) in calls
 
 
 def test_acl_launch_blocking_forces_sync(monkeypatch):
@@ -115,12 +119,12 @@ def test_acl_launch_blocking_forces_sync(monkeypatch):
         def set_context(self, ctx):
             return 0
 
-        def synchronize_stream(self, stream):
-            calls.append("sync")
-            return 0
+    class DummyAlloc:
+        def synchronize(self):
+            calls.append("alloc_sync")
 
         def free(self, ptr):
-            return 0
+            return None
 
     class DummyAcl:
         def __init__(self):
@@ -138,11 +142,16 @@ def test_acl_launch_blocking_forces_sync(monkeypatch):
     monkeypatch.setattr(ascend, "acl", dummy_acl)
     monkeypatch.setattr(ascend, "get_runtime", lambda device_id=0: runtime)
 
+    from mindtorch_v2._backends.npu import allocator as npu_allocator
+
+    dummy_alloc = DummyAlloc()
+    monkeypatch.setattr(npu_allocator, "get_allocator", lambda device_id=0: dummy_alloc)
+
     from mindtorch_v2._backends.npu import aclnn
     # call internal helper to trigger sync in op wrapper
     aclnn._maybe_sync(runtime)
 
-    assert calls == ["sync"]
+    assert calls == ["alloc_sync"]
 
 
 def test_npu_synchronize_uses_runtime(monkeypatch):
@@ -166,7 +175,7 @@ def test_npu_synchronize_uses_runtime(monkeypatch):
 
 def test_npu_is_available_verbose_reports_acl_missing(monkeypatch):
     def fake_get_runtime(device_id=0):
-        raise ModuleNotFoundError("No module named 'acl'")
+        raise ModuleNotFoundError("No module named acl")
 
     monkeypatch.setattr(ascend, "get_runtime", fake_get_runtime)
     with warnings.catch_warnings(record=True) as caught:

@@ -97,22 +97,22 @@ def transpose(a, dim0, dim1):
 
 def tensor(data, dtype=None, device=None):
     dev = _as_device(device)
-    return dispatch("tensor", dev, data, dtype=dtype, device=dev)
+    return dispatch("tensor", dev, data, dtype=dtype)
 
 
 def zeros(shape, dtype=None, device=None):
     dev = _as_device(device)
-    return dispatch("zeros", dev, shape, dtype=dtype, device=dev)
+    return dispatch("zeros", dev, shape, dtype=dtype)
 
 
 def ones(shape, dtype=None, device=None):
     dev = _as_device(device)
-    return dispatch("ones", dev, shape, dtype=dtype, device=dev)
+    return dispatch("ones", dev, shape, dtype=dtype)
 
 
 def empty(shape, dtype=None, device=None):
     dev = _as_device(device)
-    return dispatch("empty", dev, shape, dtype=dtype, device=dev)
+    return dispatch("empty", dev, shape, dtype=dtype)
 
 
 def to(a, device):

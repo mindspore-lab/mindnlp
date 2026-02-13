@@ -235,19 +235,30 @@ class NpuAllocator:
         runtime = npu_runtime.get_runtime(self.device_id)
         if stream is None:
             stream = npu_state.current_stream(self.device_id).stream
-        event = runtime.create_event(False, False, False)
-        runtime.record_event(event, stream)
-        return event
+        try:
+            event = runtime.create_event(False, False, False)
+            runtime.record_event(event, stream)
+            return event
+        except Exception:
+            return None
 
     def _event_complete(self, event):
+        if event is None:
+            return True
         from . import runtime as npu_runtime
         runtime = npu_runtime.get_runtime(self.device_id)
-        return runtime.query_event(event)
+        try:
+            return runtime.query_event(event)
+        except Exception:
+            return True
 
     def _sync_device(self):
         from . import runtime as npu_runtime
         runtime = npu_runtime.get_runtime(self.device_id)
-        runtime.synchronize_device()
+        try:
+            runtime.synchronize_device()
+        except Exception:
+            return
 
     def _raw_free(self, ptr):
         from . import runtime as npu_runtime
@@ -302,6 +313,9 @@ class NpuAllocator:
         if stream is None:
             stream = block.stream
         block.event = self._record_event(stream)
+        if block.event is None:
+            self._sync_device()
+            self._stats["num_sync_all_streams"] += 1
         self._pending.append(block)
         self._track_free(block)
 
@@ -314,8 +328,7 @@ class NpuAllocator:
         block = self._active.get(int(ptr))
         if block is None:
             return
-        block.event = self._record_event(stream)
-        self._pending.append(block)
+        block.stream = stream
 
     def empty_cache(self):
         self.synchronize()

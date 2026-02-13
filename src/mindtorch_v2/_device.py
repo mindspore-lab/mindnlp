@@ -8,6 +8,8 @@ class device:
             dev, idx = dev.split(":", 1)
             index = int(idx)
         self.type = str(dev)
+        if self.type == "npu" and index is None:
+            index = 0
         self.index = None if index is None else int(index)
 
     def __repr__(self):

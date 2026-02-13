@@ -42,7 +42,7 @@ def test_tensor_repr_npu_includes_device():
     t = torch.ones((1,))
     t = t.to("npu")
     rep = repr(t)
-    assert "device='npu'" in rep
+    assert "device='npu:0'" in rep
     assert "1" in rep
 
 

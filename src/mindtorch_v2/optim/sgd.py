@@ -12,4 +12,4 @@ class SGD(Optimizer):
             for p in self.params:
                 if p.grad is None:
                     continue
-                p.storage.data = p.storage.data - self.lr * p.grad.storage.data
+                p.storage()._data = p.storage().data - self.lr * p.grad.storage().data

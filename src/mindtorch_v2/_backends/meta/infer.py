@@ -1,8 +1,13 @@
+from dataclasses import dataclass
 import numpy as np
 
-from ..._dtype import to_numpy_dtype
-from ..._storage import meta_typed_storage_from_shape
-from ..._tensor import Tensor
+
+@dataclass(frozen=True)
+class TensorSpec:
+    shape: tuple
+    stride: tuple
+    dtype: object
+    offset: int = 0
 
 
 def _contiguous_stride(shape):
@@ -14,12 +19,6 @@ def _contiguous_stride(shape):
     return tuple(reversed(stride))
 
 
-def _meta_tensor(shape, dtype, device):
-    stride = _contiguous_stride(shape)
-    storage = meta_typed_storage_from_shape(shape, dtype)
-    return Tensor(storage, shape, stride)
-
-
 def _broadcast_shape(a_shape, b_shape):
     try:
         return np.broadcast_shapes(a_shape, b_shape)
@@ -27,16 +26,16 @@ def _broadcast_shape(a_shape, b_shape):
         return np.broadcast(np.empty(a_shape), np.empty(b_shape)).shape
 
 
-def _meta_binary_meta(a, b):
+def infer_binary(a, b):
     shape = _broadcast_shape(a.shape, b.shape)
-    return _meta_tensor(shape, a.dtype, a.device)
+    return TensorSpec(shape=tuple(shape), stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
-def _meta_unary_meta(a):
-    return _meta_tensor(a.shape, a.dtype, a.device)
+def infer_unary(a):
+    return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=a.dtype)
 
 
-def _meta_sum_meta(a, dim=None, keepdim=False):
+def infer_sum(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
         dims = list(range(len(shape)))
@@ -48,20 +47,32 @@ def _meta_sum_meta(a, dim=None, keepdim=False):
         shape[d] = 1
     if not keepdim:
         shape = [s for i, s in enumerate(shape) if i not in dims]
-    return _meta_tensor(tuple(shape), a.dtype, a.device)
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
-def _meta_view_meta(a, shape):
-    return _meta_tensor(tuple(shape), a.dtype, a.device)
+def infer_view(a, shape):
+    shape = tuple(shape)
+    size = 1
+    for d in a.shape:
+        size *= d
+    new_size = 1
+    for d in shape:
+        new_size *= d
+    if size != new_size:
+        raise ValueError("reshape size mismatch")
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype, offset=a.offset)
 
 
-def _meta_transpose_meta(a, dim0, dim1):
+def infer_transpose(a, dim0, dim1):
     shape = list(a.shape)
+    stride = list(a.stride)
     shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
-    return _meta_tensor(tuple(shape), a.dtype, a.device)
+    stride[dim0], stride[dim1] = stride[dim1], stride[dim0]
+    return TensorSpec(shape=tuple(shape), stride=tuple(stride), dtype=a.dtype, offset=a.offset)
 
 
-def _meta_matmul_meta(a, b):
+def infer_matmul(a, b):
     a_shape = a.shape
     b_shape = b.shape
     a_dim = len(a_shape)
@@ -88,14 +99,4 @@ def _meta_matmul_meta(a, b):
             raise ValueError("matmul shape mismatch")
         batch = _broadcast_shape(a_shape[:-2], b_shape[:-2])
         out_shape = batch + (a_shape[-2], b_shape[-1])
-    return _meta_tensor(out_shape, a.dtype, a.device)
-
-
-__all__ = [
-    "_meta_binary_meta",
-    "_meta_matmul_meta",
-    "_meta_sum_meta",
-    "_meta_transpose_meta",
-    "_meta_unary_meta",
-    "_meta_view_meta",
-]
+    return TensorSpec(shape=tuple(out_shape), stride=_contiguous_stride(out_shape), dtype=a.dtype)

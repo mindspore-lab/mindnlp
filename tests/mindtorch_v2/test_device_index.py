@@ -21,3 +21,9 @@ def test_device_parsing_and_repr():
     assert dev.type == "cpu"
     assert dev.index == 1
     assert repr(dev) == "cpu:1"
+
+
+def test_device_npu_default_index_zero():
+    dev = torch.Device("npu")
+    assert dev.index == 0
+    assert repr(dev) == "npu:0"

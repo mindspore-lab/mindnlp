@@ -158,6 +158,11 @@ outputs = model(**inputs)
 </tr>
 </table>
 
+## 🧪 Mindtorch NPU Debugging
+
+Mindtorch NPU ops are async by default. Use `torch.npu.synchronize()` when you need to block on results.
+For debugging, set `ACL_LAUNCH_BLOCKING=1` to force per-op synchronization.
+
 ## 📦 Installation
 
 ```bash

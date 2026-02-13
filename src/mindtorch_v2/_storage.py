@@ -1,3 +1,4 @@
+import weakref
 import numpy as np
 
 from ._device import _default_device, device as Device
@@ -81,6 +82,10 @@ class _NPUUntypedStorage(UntypedStorage):
         super().__init__(device or Device("npu"))
         self._device_ptr = int(device_ptr)
         self._nbytes = int(nbytes)
+        from ._backends.npu import allocator as npu_allocator
+
+        alloc = npu_allocator.get_allocator(self.device.index or 0)
+        self._finalizer = weakref.finalize(self, alloc.free, self._device_ptr, None)
 
     def nbytes(self):
         return self._nbytes

@@ -1,4 +1,17 @@
 import mindtorch_v2 as torch
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_allocator_state():
+    import mindtorch_v2._backends.npu.allocator as npu_allocator
+
+    saved = dict(npu_allocator._ALLOCATORS)
+    npu_allocator._ALLOCATORS.clear()
+    yield
+    npu_allocator._ALLOCATORS.clear()
+    npu_allocator._ALLOCATORS.update(saved)
+
 
 
 def test_allocator_stats_defaults():
@@ -130,8 +143,6 @@ def test_allocator_splits_cached_block(monkeypatch):
 
 
 def test_npu_memory_stats_api(monkeypatch):
-    import mindtorch_v2 as torch
-
     class DummyAlloc:
         def memory_stats(self):
             return {
@@ -173,10 +184,29 @@ def test_allocator_record_stream(monkeypatch):
 
     alloc = allocator.NpuAllocator(device_id=0)
     monkeypatch.setattr(alloc, "_raw_malloc", lambda size: (1234, size))
-    seen = []
-    monkeypatch.setattr(alloc, "_record_event", lambda stream: seen.append(stream) or object())
 
     ptr = alloc.malloc(512, stream="s0")
     alloc.record_stream(ptr, stream="s1")
 
-    assert seen == ["s1"]
+    assert alloc._active[ptr].stream == "s1"
+
+
+def test_npu_storage_free_updates_allocator(monkeypatch):
+    import gc
+
+    from mindtorch_v2._backends.npu import allocator
+    from mindtorch_v2._storage import npu_typed_storage_from_ptr
+
+    alloc = allocator.get_allocator(0)
+    monkeypatch.setattr(alloc, "_raw_malloc", lambda size: (1234, size))
+    monkeypatch.setattr(alloc, "_record_event", lambda stream: object())
+    monkeypatch.setattr(alloc, "_event_complete", lambda event: True)
+    monkeypatch.setattr(alloc, "_sync_device", lambda: None)
+
+    ptr = alloc.malloc(512)
+    storage = npu_typed_storage_from_ptr(ptr, 128, dtype=None)
+    del storage
+    gc.collect()
+
+    alloc.synchronize()
+    assert alloc.memory_stats()["active_bytes.all.current"] == 0

@@ -1,4 +1,5 @@
 import atexit
+import ctypes
 import os
 import numpy as np
 
@@ -48,6 +49,7 @@ class _Runtime:
         self.context = None
         self.stream = None
         self._deferred_frees = []
+        self._deferred_host_frees = []
 
     def init(self, device_id=0):
         if self.initialized:
@@ -174,6 +176,11 @@ class _Runtime:
         if ret != ACL_ERROR_CODE:
             raise RuntimeError(f'acl.rt.synchronize_device failed: {ret}')
 
+    def defer_host_free(self, ptr):
+        if ptr is None:
+            return
+        self._deferred_host_frees.append(ptr)
+
     def defer_free(self, ptr):
         if ptr is None:
             return
@@ -182,19 +189,20 @@ class _Runtime:
     def synchronize(self):
         if not self.initialized:
             return
-        global acl
-        if acl is None:
-            acl = ensure_acl()
         self.activate()
-        ret = acl.rt.synchronize_stream(self.stream)
-        if ret != ACL_ERROR_CODE:
-            raise RuntimeError(f"acl.rt.synchronize_stream failed: {ret}")
+        from . import allocator as npu_allocator
+
+        npu_allocator.get_allocator(self.device_id).synchronize()
         frees = self._deferred_frees
         self._deferred_frees = []
         for ptr in frees:
-            ret = acl.rt.free(ptr)
+            npu_allocator.get_allocator(self.device_id).free(ptr)
+        host_frees = self._deferred_host_frees
+        self._deferred_host_frees = []
+        for ptr in host_frees:
+            ret = acl.rt.free_host(ptr)
             if ret != ACL_ERROR_CODE:
-                raise RuntimeError(f"acl.rt.free failed: {ret}")
+                raise RuntimeError(f"acl.rt.free_host failed: {ret}")
 
     def finalize(self):
         if not self.initialized:
@@ -316,15 +324,15 @@ def _contiguous_stride(shape):
 
 
 def _alloc_device(size, runtime=None):
-    global acl
-    if acl is None:
-        acl = ensure_acl()
+    from . import state as npu_state
+    from . import allocator as npu_allocator
+
+    device_id = 0
     if runtime is not None:
-        runtime.activate()
-    dev_ptr, ret = acl.rt.malloc(size, ACL_MEM_MALLOC_HUGE_FIRST)
-    if ret != ACL_ERROR_CODE:
-        raise RuntimeError(f"acl.rt.malloc failed: {ret}")
-    return dev_ptr
+        device_id = int(runtime.device_id)
+    stream = npu_state.current_stream(device_id).stream
+    alloc = npu_allocator.get_allocator(device_id)
+    return alloc.malloc(int(size), stream=stream)
 
 
 def _memcpy_h2d(dst, size, src_ptr, runtime=None):
@@ -379,8 +387,17 @@ def _copy_cpu_to_npu(arr, runtime=None):
         acl = ensure_acl()
     size = arr.nbytes
     dev_ptr = _alloc_device(size, runtime=runtime)
-    host_ptr, _host_buf = _host_ptr_from_numpy(arr)
-    _memcpy_h2d(dev_ptr, size, host_ptr, runtime=runtime)
+    runtime.activate()
+    host_ptr, ret = acl.rt.malloc_host(size)
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.malloc_host failed: {ret}")
+    try:
+        ctypes.memmove(int(host_ptr), int(arr.ctypes.data), int(size))
+        _memcpy_h2d(dev_ptr, size, host_ptr, runtime=runtime)
+        runtime.defer_host_free(host_ptr)
+    except Exception:
+        acl.rt.free_host(host_ptr)
+        raise
     return dev_ptr, int(size)
 
 

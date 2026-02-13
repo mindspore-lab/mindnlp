@@ -6,20 +6,32 @@ from .registry import registry
 from .pipeline import current_pipeline
 
 
-def _filter_kwargs(func, kwargs):
-    if not kwargs or "device" not in kwargs:
-        return kwargs
+def _accepts_device(func):
     try:
         sig = inspect.signature(func)
     except (TypeError, ValueError):
-        return {k: v for k, v in kwargs.items() if k != "device"}
+        return False
     params = sig.parameters
     if "device" in params:
-        return kwargs
+        return True
     for param in params.values():
         if param.kind == inspect.Parameter.VAR_KEYWORD:
+            return True
+    return False
+
+
+def _prepare_kwargs(func, kwargs, device):
+    if not kwargs:
+        kwargs = {}
+    if "device" in kwargs:
+        if _accepts_device(func):
             return kwargs
-    return {k: v for k, v in kwargs.items() if k != "device"}
+        return {k: v for k, v in kwargs.items() if k != "device"}
+    if _accepts_device(func):
+        merged = dict(kwargs)
+        merged["device"] = device
+        return merged
+    return kwargs
 
 
 
@@ -68,12 +80,14 @@ def dispatch(name, dispatch_device, *args, **kwargs):
     entry = registry.get(name, dev_type)
     pipe = current_pipeline()
     meta = entry.get("meta")
+    impl_kwargs = _prepare_kwargs(entry["impl"], kwargs, device)
     if pipe is None or meta is None:
-        return entry["impl"](*args, **_filter_kwargs(entry["impl"], kwargs))
+        return entry["impl"](*args, **impl_kwargs)
     if (device.type if hasattr(device, "type") else device) == "meta":
-        return entry["impl"](*args, **_filter_kwargs(entry["impl"], kwargs))
-    spec = meta(*args, **_filter_kwargs(meta, kwargs))
+        return entry["impl"](*args, **impl_kwargs)
+    meta_kwargs = _prepare_kwargs(meta, kwargs, device)
+    spec = meta(*args, **meta_kwargs)
     out = _pending_tensor_from_spec(spec, device)
     out._pending = True
-    pipe.record(_PendingOp(entry, args, kwargs, out))
+    pipe.record(_PendingOp(entry, args, impl_kwargs, out))
     return out

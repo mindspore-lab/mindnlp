@@ -4,7 +4,7 @@ from .._tensor import Tensor
 class Parameter(Tensor):
     def __init__(self, data):
         if isinstance(data, Tensor):
-            storage = data.storage
+            storage = data.storage()
             shape = data.shape
             stride = data.stride
             offset = data.offset
