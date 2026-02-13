@@ -1,0 +1,24 @@
+from ..common import convert as convert_backend
+from ..common import view as view_backend
+from ..meta import infer as meta_infer
+from ..._dispatch.registry import registry
+from .creation import empty_create, ones_create, tensor_create, zeros_create
+from .ops import add, mul, relu, sum_
+from .runtime import is_available, _model_dir, _probe_model_dirs
+from . import allocator
+
+registry.register("add", "npu", add, meta=meta_infer.infer_binary)
+registry.register("mul", "npu", mul, meta=meta_infer.infer_binary)
+registry.register("relu", "npu", relu, meta=meta_infer.infer_unary)
+registry.register("sum", "npu", sum_, meta=meta_infer.infer_sum)
+registry.register("reshape", "npu", view_backend.reshape, meta=meta_infer.infer_view)
+registry.register("view", "npu", view_backend.view, meta=meta_infer.infer_view)
+registry.register("transpose", "npu", view_backend.transpose, meta=meta_infer.infer_transpose)
+registry.register("to", "npu", convert_backend.to_device)
+
+registry.register("tensor", "npu", tensor_create)
+registry.register("zeros", "npu", zeros_create)
+registry.register("ones", "npu", ones_create)
+registry.register("empty", "npu", empty_create)
+
+__all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]

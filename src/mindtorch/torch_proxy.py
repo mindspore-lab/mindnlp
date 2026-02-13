@@ -109,9 +109,9 @@ def setup_metadata_patch():
                 _normalized_name="torch",
                 entry_points=[],
                 read_text=lambda f: (
-                    "torch\n" if f == "top_level.txt" else (
-                        f"Name: torch\nVersion: {TORCH_VERSION}" if f == "METADATA" else None
-                    )
+                    f"Name: torch\nVersion: {TORCH_VERSION}" if f == "METADATA"
+                    else "torch\n" if f == "top_level.txt"
+                    else None
                 ),
             )
         )

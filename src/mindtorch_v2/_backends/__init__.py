@@ -1,5 +1,5 @@
-"""Backend implementations for different devices."""
-
 from . import cpu
+from . import meta
+from . import npu
 
-__all__ = ['cpu']
+__all__ = ["cpu", "meta", "npu"]
