@@ -1,6 +1,7 @@
 from ._backends.npu import is_available
 from ._backends.npu import state as npu_state
 from ._backends.npu.runtime import device_count
+from ._backends.npu.streams import Event, Stream
 from ._device import device as Device
 
 __all__ = [
@@ -10,6 +11,11 @@ __all__ = [
     "current_device",
     "set_device",
     "device",
+    "Stream",
+    "Event",
+    "default_stream",
+    "current_stream",
+    "stream",
 ]
 
 
@@ -31,6 +37,7 @@ def _normalize_npu_device(device):
 
 def synchronize(device=None):
     from ._backends.npu import runtime as npu_runtime
+
     dev = _normalize_npu_device(device)
     runtime = npu_runtime.get_runtime(dev.index or 0)
     runtime.synchronize()
@@ -43,6 +50,34 @@ def current_device():
 def set_device(device):
     dev = _normalize_npu_device(device)
     npu_state.set_device(dev.index or 0)
+
+
+def default_stream(device=None):
+    dev = _normalize_npu_device(device)
+    return npu_state.default_stream(dev.index or 0)
+
+
+def current_stream(device=None):
+    dev = _normalize_npu_device(device)
+    return npu_state.current_stream(dev.index or 0)
+
+
+class stream:
+    def __init__(self, s):
+        self.stream = s
+        self._prev = None
+        self._dev_ctx = None
+
+    def __enter__(self):
+        self._prev = npu_state.current_stream(self.stream.device.index or 0)
+        self._dev_ctx = npu_state.device_guard(self.stream.device.index or 0)
+        self._dev_ctx.__enter__()
+        npu_state.set_current_stream(self.stream)
+        return self.stream
+
+    def __exit__(self, exc_type, exc, tb):
+        npu_state.set_current_stream(self._prev)
+        return self._dev_ctx.__exit__(exc_type, exc, tb)
 
 
 class device:
