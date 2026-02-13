@@ -310,6 +310,13 @@ class NpuAllocator:
         self._stats["num_sync_all_streams"] += 1
         self._drain_pending()
 
+    def record_stream(self, ptr, stream):
+        block = self._active.get(int(ptr))
+        if block is None:
+            return
+        block.event = self._record_event(stream)
+        self._pending.append(block)
+
     def empty_cache(self):
         self.synchronize()
         for pool, blocks in self._cached.items():

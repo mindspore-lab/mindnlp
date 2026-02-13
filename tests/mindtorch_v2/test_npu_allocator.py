@@ -127,3 +127,56 @@ def test_allocator_splits_cached_block(monkeypatch):
     assert calls == []
     assert ptr2 == ptr
     assert stats["inactive_split_bytes.all.current"] == 1536
+
+
+def test_npu_memory_stats_api(monkeypatch):
+    import mindtorch_v2 as torch
+
+    class DummyAlloc:
+        def memory_stats(self):
+            return {
+                "allocated_bytes.all.current": 12,
+                "allocated_bytes.all.peak": 34,
+                "reserved_bytes.all.current": 56,
+                "reserved_bytes.all.peak": 78,
+            }
+
+        def reset_peak_memory_stats(self):
+            self.peak_reset = True
+
+        def reset_accumulated_memory_stats(self):
+            self.accum_reset = True
+
+        def empty_cache(self):
+            self.cache_emptied = True
+
+    dummy = DummyAlloc()
+
+    monkeypatch.setattr(torch.npu, "_get_allocator", lambda device=None: dummy)
+
+    assert torch.npu.memory_allocated() == 12
+    assert torch.npu.max_memory_allocated() == 34
+    assert torch.npu.memory_reserved() == 56
+    assert torch.npu.max_memory_reserved() == 78
+
+    torch.npu.reset_peak_memory_stats()
+    torch.npu.reset_accumulated_memory_stats()
+    torch.npu.empty_cache()
+
+    assert dummy.peak_reset is True
+    assert dummy.accum_reset is True
+    assert dummy.cache_emptied is True
+
+
+def test_allocator_record_stream(monkeypatch):
+    from mindtorch_v2._backends.npu import allocator
+
+    alloc = allocator.NpuAllocator(device_id=0)
+    monkeypatch.setattr(alloc, "_raw_malloc", lambda size: (1234, size))
+    seen = []
+    monkeypatch.setattr(alloc, "_record_event", lambda stream: seen.append(stream) or object())
+
+    ptr = alloc.malloc(512, stream="s0")
+    alloc.record_stream(ptr, stream="s1")
+
+    assert seen == ["s1"]

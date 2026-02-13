@@ -71,6 +71,14 @@ class Tensor:
             return tensor.to(self.device)
         return tensor
 
+    def record_stream(self, stream):
+        if self.device.type != "npu":
+            return
+        from ._backends.npu import allocator as npu_allocator
+
+        alloc = npu_allocator.get_allocator(self.device.index or 0)
+        alloc.record_stream(self.storage().data_ptr(), stream.stream)
+
     def numpy(self):
         if self._pending:
             from ._dispatch.pipeline import current_pipeline
