@@ -10,6 +10,7 @@ def _stub_runtime(monkeypatch):
     class FakeRuntime:
         def __init__(self, device_id):
             self.device_id = device_id
+            self.wait_calls = []
 
         def create_stream(self, priority=0):
             return (self.device_id, int(priority))
@@ -32,12 +33,20 @@ def _stub_runtime(monkeypatch):
         def event_elapsed_time(self, start, end):
             return 0.0
 
+        def stream_wait_event(self, stream, event):
+            self.wait_calls.append((stream, event))
+            return None
+
+    runtime = FakeRuntime(0)
+
     def fake_get_runtime(device_id=0):
-        return FakeRuntime(int(device_id))
+        runtime.device_id = int(device_id)
+        return runtime
 
     monkeypatch.setattr(npu_runtime, "get_runtime", fake_get_runtime)
     monkeypatch.setattr(npu_state, "get_runtime", fake_get_runtime)
     monkeypatch.setattr(npu_runtime, "_RUNTIMES", {})
+    return runtime
 
 
 def test_npu_device_guard_restores_device(monkeypatch):
@@ -165,3 +174,11 @@ def test_npu_op_uses_current_stream(monkeypatch):
         npu_ops.add(a, b)
 
     assert seen["stream"] == s.stream
+
+
+def test_npu_stream_wait_event(monkeypatch):
+    runtime = _stub_runtime(monkeypatch)
+    s = torch.npu.Stream()
+    evt = torch.npu.Event()
+    s.wait_event(evt)
+    assert runtime.wait_calls == [(s.stream, evt.event)]
