@@ -1,8 +1,14 @@
-from ._backends.npu import is_available
+from ._backends.npu import is_available as _backend_is_available
 from ._backends.npu import state as npu_state
 from ._backends.npu.runtime import device_count
 from ._backends.npu.streams import Event, Stream
 from ._device import device as Device
+
+
+
+def is_available(verbose=False):
+    return _backend_is_available(verbose=verbose)
+
 
 __all__ = [
     "is_available",

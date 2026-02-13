@@ -1,7 +1,9 @@
 import atexit
 import types
+import warnings
 
 import mindtorch_v2._backends.npu.runtime as ascend
+import mindtorch_v2 as torch
 
 
 def test_runtime_init_registers_cleanup_once(monkeypatch):
@@ -159,3 +161,17 @@ def test_npu_synchronize_uses_runtime(monkeypatch):
     npu.synchronize("npu:0")
 
     assert calls == ["sync"]
+
+
+
+def test_npu_is_available_verbose_reports_acl_missing(monkeypatch):
+    def fake_get_runtime(device_id=0):
+        raise ModuleNotFoundError("No module named 'acl'")
+
+    monkeypatch.setattr(ascend, "get_runtime", fake_get_runtime)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        ok = torch.npu.is_available(verbose=True)
+
+    assert ok is False
+    assert any("acl" in str(w.message) for w in caught)

@@ -20,6 +20,18 @@ _NP_DTYPE = {
 
 _RUNTIME_CLEANUP_REGISTERED = False
 
+def _normalize_priority(priority):
+
+    if isinstance(priority, tuple):
+
+        priority = priority[0] if priority else 0
+
+    if priority is None:
+
+        priority = 0
+
+    return int(priority)
+
 
 def _register_runtime_cleanup(runtime):
     global _RUNTIME_CLEANUP_REGISTERED
@@ -77,9 +89,16 @@ class _Runtime:
         if not self.initialized:
             self.init(self.device_id)
         self.activate()
+        priority = _normalize_priority(priority)
+        stream = None
+        ret = None
         if hasattr(acl.rt, 'create_stream_with_config'):
-            stream, ret = acl.rt.create_stream_with_config(int(priority))
-        else:
+            try:
+                stream, ret = acl.rt.create_stream_with_config(priority, 0)
+            except TypeError:
+                stream = None
+                ret = None
+        if ret != ACL_ERROR_CODE:
             stream, ret = acl.rt.create_stream()
         if ret != ACL_ERROR_CODE:
             raise RuntimeError(f'acl.rt.create_stream failed: {ret}')
@@ -216,13 +235,17 @@ def get_runtime(device_id=0):
     return runtime
 
 
-def is_available():
+def is_available(verbose=False):
     try:
         get_runtime(0)
         from . import aclnn
 
         return aclnn.is_available()
-    except Exception:
+    except Exception as exc:
+        if verbose:
+            import warnings
+
+            warnings.warn(f"NPU unavailable: {exc}")
         return False
 
 
