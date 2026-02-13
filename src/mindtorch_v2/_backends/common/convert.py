@@ -41,6 +41,19 @@ def to_device(a, dev):
         ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
         storage = npu_typed_storage_from_ptr(ptr, arr.size, a.dtype, device=dev)
         return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+
+    if a.device.type == "npu" and dev.type == "npu":
+        from ..npu import runtime as npu_runtime
+
+        src_runtime = npu_runtime.get_runtime(a.device.index or 0)
+        arr = npu_runtime._copy_npu_to_cpu(
+            a.storage().data_ptr(), a.storage().nbytes(), a.shape, a.dtype, runtime=src_runtime
+        )
+        dst_runtime = npu_runtime.get_runtime(dev.index or 0)
+        ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=dst_runtime)
+        storage = npu_typed_storage_from_ptr(ptr, arr.size, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+
     if a.device.type == "npu" and dev.type == "cpu":
         from ..npu import runtime as npu_runtime
 

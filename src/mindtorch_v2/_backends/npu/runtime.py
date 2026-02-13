@@ -10,6 +10,7 @@ ACL_ERROR_CODE = 0
 ACL_MEM_MALLOC_HUGE_FIRST = 0
 ACL_MEMCPY_HOST_TO_DEVICE = 1
 ACL_MEMCPY_DEVICE_TO_HOST = 2
+ACL_ERROR_REPEAT_INITIALIZE = 100002
 
 _NP_DTYPE = {
     "float32": np.float32,
@@ -43,7 +44,7 @@ class _Runtime:
         if acl is None:
             acl = ensure_acl()
         ret = acl.init()
-        if ret != ACL_ERROR_CODE:
+        if ret not in (ACL_ERROR_CODE, ACL_ERROR_REPEAT_INITIALIZE):
             raise RuntimeError(f"acl.init failed: {ret}")
         ret = acl.rt.set_device(device_id)
         if ret != ACL_ERROR_CODE:
@@ -147,6 +148,18 @@ def _model_dir():
     if _MODEL_DIR is None:
         raise RuntimeError("NPU op model dir not initialized")
     return _MODEL_DIR
+
+
+
+
+def device_count():
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    count, ret = acl.rt.get_device_count()
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.get_device_count failed: {ret}")
+    return int(count)
 
 
 def _normalize_dtype(dtype):

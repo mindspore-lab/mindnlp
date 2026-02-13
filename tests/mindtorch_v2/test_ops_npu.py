@@ -88,6 +88,17 @@ def test_npu_device_index_preserved():
     assert out.device.index == 0
 
 
+def test_npu_cross_device_copy():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    if torch._C._npu_device_count() < 2:
+        pytest.skip("Need 2 NPUs")
+    src = torch.ones((2,), device="npu:0")
+    dst = src.to("npu:1")
+    assert dst.device.index == 1
+    assert dst.to("cpu").numpy().tolist() == [1.0, 1.0]
+
+
 def test_npu_ones():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
