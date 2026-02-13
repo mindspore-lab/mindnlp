@@ -1,6 +1,63 @@
+import os
+import warnings
+
 SMALL_POOL_THRESHOLD = 1 << 20
 ROUNDING_BYTES = 512
 MAX_SPLIT_SIZE = 1 << 20
+
+_ALLOC_CONF = None
+
+
+def _reset_alloc_conf_for_test():
+    global _ALLOC_CONF
+    _ALLOC_CONF = None
+
+
+def _load_alloc_conf(force=False):
+    global _ALLOC_CONF
+    if _ALLOC_CONF is not None and not force:
+        return dict(_ALLOC_CONF)
+    raw = os.getenv("MINDTORCH_NPU_ALLOC_CONF")
+    if not raw:
+        raw = os.getenv("PYTORCH_CUDA_ALLOC_CONF", "")
+    conf = {}
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" in item:
+            key, val = item.split(":", 1)
+        elif "=" in item:
+            key, val = item.split("=", 1)
+        else:
+            warnings.warn(f"Ignoring allocator config {item}")
+            continue
+        key = key.strip()
+        val = val.strip()
+        if key == "max_split_size_mb":
+            try:
+                parsed = int(val)
+            except ValueError:
+                warnings.warn(f"Invalid allocator config {key}: {val}")
+                continue
+            if parsed <= 0:
+                warnings.warn(f"Invalid allocator config {key}: {val}")
+                continue
+            conf[key] = parsed
+        elif key == "garbage_collection_threshold":
+            try:
+                parsed = float(val)
+            except ValueError:
+                warnings.warn(f"Invalid allocator config {key}: {val}")
+                continue
+            if parsed < 0.0 or parsed > 1.0:
+                warnings.warn(f"Invalid allocator config {key}: {val}")
+                continue
+            conf[key] = parsed
+        else:
+            warnings.warn(f"Unsupported allocator config key: {key}")
+    _ALLOC_CONF = conf
+    return dict(conf)
 
 
 _ALL_STAT_KEYS = [

@@ -210,3 +210,25 @@ def test_npu_storage_free_updates_allocator(monkeypatch):
 
     alloc.synchronize()
     assert alloc.memory_stats()["active_bytes.all.current"] == 0
+
+
+def test_alloc_conf_precedence(monkeypatch):
+    from mindtorch_v2._backends.npu import allocator
+
+    allocator._reset_alloc_conf_for_test()
+    monkeypatch.setenv("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:4")
+    monkeypatch.setenv("MINDTORCH_NPU_ALLOC_CONF", "max_split_size_mb:8")
+
+    conf = allocator._load_alloc_conf(force=True)
+    assert conf["max_split_size_mb"] == 8
+
+
+def test_alloc_conf_unsupported_key_warns(monkeypatch):
+    from mindtorch_v2._backends.npu import allocator
+
+    allocator._reset_alloc_conf_for_test()
+    monkeypatch.setenv("MINDTORCH_NPU_ALLOC_CONF", "unknown_key:1")
+
+    with pytest.warns(UserWarning):
+        conf = allocator._load_alloc_conf(force=True)
+    assert conf == {}
