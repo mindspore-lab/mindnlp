@@ -77,8 +77,16 @@ def _load_alloc_conf(force=False):
             continue
         key = key.strip()
         val = val.strip()
-        if key in ("max_split_size_mb", "garbage_collection_threshold"):
-            conf[key] = val
+        if key == "max_split_size_mb":
+            try:
+                conf[key] = int(val)
+            except ValueError:
+                warnings.warn(f"Invalid allocator config {key}: {val}")
+        elif key == "garbage_collection_threshold":
+            try:
+                conf[key] = float(val)
+            except ValueError:
+                warnings.warn(f"Invalid allocator config {key}: {val}")
         else:
             warnings.warn(f"Unsupported allocator config key: {key}")
     _ALLOC_CONF = conf
@@ -309,4 +317,3 @@ git commit -m "feat: allocator gc threshold and oom retry"
 **Step 1: Run full tests**
 Run: `source /home/lvyufeng/miniconda3/bin/activate mindspore && pytest -q tests/mindtorch_v2`
 Expected: PASS
-
