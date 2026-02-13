@@ -43,7 +43,7 @@ class Tensor:
         This is needed for compatibility with safetensors which calls
         tensor.untyped_storage().nbytes() to determine storage size.
         """
-        return self._storage
+        return self._storage.untyped_storage()
 
     def dim(self):
         return len(self._shape)
