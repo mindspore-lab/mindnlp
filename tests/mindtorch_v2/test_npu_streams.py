@@ -88,3 +88,25 @@ def test_npu_stream_context_switches_device_and_stream(monkeypatch):
         assert torch.npu.current_stream() is s
         assert torch.npu.current_device() == s.device.index
     assert torch.npu.current_stream() is cur
+
+
+def test_npu_event_record_query(monkeypatch):
+    _stub_runtime(monkeypatch)
+    evt = torch.npu.Event(enable_timing=True)
+    s = torch.npu.current_stream()
+    evt.record(s)
+    assert evt.query() in (True, False)
+
+
+def test_npu_runtime_primitives_exist():
+    import mindtorch_v2._backends.npu.runtime as npu_runtime
+
+    runtime = npu_runtime._Runtime()
+    assert hasattr(runtime, "create_stream")
+    assert hasattr(runtime, "synchronize_stream")
+    assert hasattr(runtime, "create_event")
+    assert hasattr(runtime, "record_event")
+    assert hasattr(runtime, "query_event")
+    assert hasattr(runtime, "event_elapsed_time")
+    assert hasattr(runtime, "stream_wait_event")
+    assert hasattr(runtime, "synchronize_device")
