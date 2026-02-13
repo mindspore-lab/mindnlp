@@ -77,8 +77,8 @@ class _CPUUntypedStorage(UntypedStorage):
 
 
 class _NPUUntypedStorage(UntypedStorage):
-    def __init__(self, device_ptr, nbytes):
-        super().__init__(Device("npu"))
+    def __init__(self, device_ptr, nbytes, device=None):
+        super().__init__(device or Device("npu"))
         self._device_ptr = int(device_ptr)
         self._nbytes = int(nbytes)
 
@@ -141,8 +141,9 @@ class TypedStorage:
             from ._backends.npu import runtime as npu_runtime
 
             size = self.nbytes()
-            npu_runtime._runtime.init(0)
-            dst_ptr = npu_runtime._alloc_device(size)
+            runtime = npu_runtime.get_runtime(self.device.index or 0)
+            dst_ptr = npu_runtime._alloc_device(size, runtime=runtime)
+            runtime.activate()
             ret = npu_runtime.acl.rt.memcpy(
                 dst_ptr,
                 size,
@@ -152,10 +153,10 @@ class TypedStorage:
             )
             if ret != 0:
                 raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
-            untyped = _NPUUntypedStorage(dst_ptr, size)
+            untyped = _NPUUntypedStorage(dst_ptr, size, device=self.device)
             return TypedStorage(untyped, self.dtype, self._size)
         if self.device.type == "meta":
-            return meta_typed_storage_from_size(self._size, self.dtype)
+            return meta_typed_storage_from_size(self._size, self.dtype, device=self.device)
         raise NotImplementedError(f"Unsupported device: {self.device}")
 
     def copy_(self, other):
@@ -168,7 +169,8 @@ class TypedStorage:
             from ._backends.npu import runtime as npu_runtime
 
             size = min(self.nbytes(), other.nbytes())
-            npu_runtime._runtime.init(0)
+            runtime = npu_runtime.get_runtime(self.device.index or 0)
+            runtime.activate()
             ret = npu_runtime.acl.rt.memcpy(
                 self.data_ptr(),
                 size,
@@ -218,9 +220,9 @@ def meta_typed_storage_from_size(size, dtype, device=None):
     return TypedStorage(untyped, dtype, int(size))
 
 
-def npu_typed_storage_from_ptr(device_ptr, size, dtype):
+def npu_typed_storage_from_ptr(device_ptr, size, dtype, device=None):
     itemsize = np.dtype(to_numpy_dtype(dtype)).itemsize
-    untyped = _NPUUntypedStorage(device_ptr, int(size) * itemsize)
+    untyped = _NPUUntypedStorage(device_ptr, int(size) * itemsize, device=device)
     return TypedStorage(untyped, dtype, int(size))
 
 
