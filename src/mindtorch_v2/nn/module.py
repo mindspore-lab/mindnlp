@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .parameter import Parameter
 
 
@@ -5,6 +7,8 @@ class Module:
     def __init__(self):
         self._parameters = {}
         self._modules = {}
+        self._buffers = {}
+        self._non_persistent_buffers_set = set()
 
     def __setattr__(self, name, value):
         if isinstance(value, Parameter):
@@ -13,23 +17,14 @@ class Module:
             self._modules[name] = value
         super().__setattr__(name, value)
 
+    def __call__(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
+
     def parameters(self):
         for p in self._parameters.values():
             yield p
         for m in self._modules.values():
             yield from m.parameters()
-
-        # Only include persistent buffers
-        non_persistent = getattr(self, '_non_persistent_buffers_set', set())
-        for name, buf in self._buffers.items():
-            if buf is not None and name not in non_persistent:
-                destination[prefix + name] = buf if keep_vars else buf.data
-
-        for name, module in self._modules.items():
-            if module is not None:
-                module.state_dict(destination=destination, prefix=prefix + name + '.', keep_vars=keep_vars)
-
-        return destination
 
     def load_state_dict(self, state_dict, strict=True, assign=False):
         """Load a state dictionary into the module.
