@@ -2,6 +2,7 @@ from ._dispatch.dispatcher import dispatch
 from ._autograd.grad_mode import GradMode, no_grad
 from ._autograd.node import Node
 from ._autograd.utils import reduce_grad
+from ._device import device as Device
 from ._dtype import to_numpy_dtype
 
 
@@ -51,7 +52,7 @@ def relu(a):
         def _backward(grad):
             with no_grad():
                 mask = a._ones_like()
-                mask.storage.data = (a.storage.data > 0).astype(to_numpy_dtype(a.dtype))
+                mask.storage()._data = (a.storage().data > 0).astype(to_numpy_dtype(a.dtype))
                 return (dispatch("mul", a.device.type, grad, mask),)
         out.grad_fn = Node(_backward, (a,))
         out.requires_grad = True
@@ -68,3 +69,60 @@ def sum(a, dim=None, keepdim=False):
         out.grad_fn = Node(_backward, (a,))
         out.requires_grad = True
     return out
+
+
+def reshape(a, shape):
+    out = dispatch("reshape", a.device.type, a, shape)
+    if GradMode.enabled and a.requires_grad:
+        def _backward(grad):
+            return (dispatch("reshape", grad.device.type, grad, a.shape),)
+        out.grad_fn = Node(_backward, (a,))
+        out.requires_grad = True
+    return out
+
+
+def view(a, shape):
+    return reshape(a, shape)
+
+
+def transpose(a, dim0, dim1):
+    out = dispatch("transpose", a.device.type, a, dim0, dim1)
+    if GradMode.enabled and a.requires_grad:
+        def _backward(grad):
+            return (dispatch("transpose", grad.device.type, grad, dim0, dim1),)
+        out.grad_fn = Node(_backward, (a,))
+        out.requires_grad = True
+    return out
+
+
+def tensor(data, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("tensor", dev, data, dtype=dtype, device=dev)
+
+
+def zeros(shape, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("zeros", dev, shape, dtype=dtype, device=dev)
+
+
+def ones(shape, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("ones", dev, shape, dtype=dtype, device=dev)
+
+
+def empty(shape, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("empty", dev, shape, dtype=dtype, device=dev)
+
+
+def to(a, device):
+    return dispatch("to", a.device, a, device)
+
+
+
+def _as_device(dev):
+    if dev is None:
+        return Device("cpu")
+    if isinstance(dev, str):
+        return Device(dev)
+    return dev
