@@ -243,3 +243,47 @@ def test_alloc_conf_max_split_size_mb(monkeypatch):
 
     alloc = allocator.NpuAllocator(device_id=0)
     assert alloc.max_split_size == 1 * 1024 * 1024
+
+
+def test_alloc_conf_gc_threshold_triggers(monkeypatch):
+    from mindtorch_v2._backends.npu import allocator
+
+    allocator._reset_alloc_conf_for_test()
+    monkeypatch.setenv("MINDTORCH_NPU_ALLOC_CONF", "garbage_collection_threshold:0.5")
+    allocator._load_alloc_conf(force=True)
+
+    alloc = allocator.NpuAllocator(device_id=0)
+    alloc._stats["reserved_bytes.all.current"] = 80
+    monkeypatch.setattr(alloc, "_mem_get_info", lambda: (20, 100))
+
+    freed = []
+    monkeypatch.setattr(alloc, "_raw_free", lambda ptr: freed.append(ptr))
+
+    block = allocator.Block(1234, 16, 16, "small_pool", None)
+    alloc._cached["small_pool"].append(block)
+
+    alloc._maybe_collect_garbage()
+    assert freed
+
+
+def test_oom_retry_increments_stats(monkeypatch):
+    from mindtorch_v2._backends.npu import allocator
+
+    alloc = allocator.NpuAllocator(device_id=0)
+    calls = []
+
+    def raw_malloc(size):
+        calls.append(size)
+        if len(calls) == 1:
+            raise RuntimeError("acl.rt.malloc failed: 100")
+        return (999, size)
+
+    monkeypatch.setattr(alloc, "_raw_malloc", raw_malloc)
+    monkeypatch.setattr(alloc, "_sync_device", lambda: None)
+    monkeypatch.setattr(alloc, "_record_event", lambda stream: object())
+    monkeypatch.setattr(alloc, "_event_complete", lambda event: True)
+
+    ptr = alloc.malloc(512)
+    assert ptr == 999
+    assert alloc._stats["num_ooms"] == 1
+    assert alloc._stats["num_alloc_retries"] == 1

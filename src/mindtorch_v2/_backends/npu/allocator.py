@@ -220,6 +220,7 @@ class NpuAllocator:
     def __init__(self, device_id):
         conf = _load_alloc_conf()
         self.max_split_size = _parse_max_split_size_mb(conf.get("max_split_size_mb"))
+        self.gc_threshold = conf.get("garbage_collection_threshold")
         self.device_id = int(device_id)
         self._stats = {}
         self._active = {}
@@ -351,18 +352,52 @@ class NpuAllocator:
         runtime.activate()
         ptr, ret = npu_runtime.acl.rt.malloc(size, npu_runtime.ACL_MEM_MALLOC_HUGE_FIRST)
         if ret != 0:
-            self._stats["num_ooms"] += 1
             raise RuntimeError(f"acl.rt.malloc failed: {ret}")
         return int(ptr), int(size)
+
+    def _mem_get_info(self):
+        from . import runtime as npu_runtime
+
+        return npu_runtime.mem_get_info(self.device_id)
+
+    def _maybe_collect_garbage(self):
+        if self.gc_threshold is None:
+            return
+        if not self._cached["small_pool"] and not self._cached["large_pool"]:
+            return
+        try:
+            _, total = self._mem_get_info()
+        except Exception:
+            return
+        if total <= 0:
+            return
+        reserved = self._stats.get("reserved_bytes.all.current", 0)
+        if reserved / float(total) <= self.gc_threshold:
+            return
+        self._drain_pending()
+        self.empty_cache()
+
+    def _oom_retry(self, allocated):
+        self._stats["num_ooms"] += 1
+        self._maybe_collect_garbage()
+        self.synchronize()
+        self.empty_cache()
+        ptr, _ = self._raw_malloc(allocated)
+        self._stats["num_alloc_retries"] += 1
+        return int(ptr)
 
     def malloc(self, size, stream=None):
         requested = int(size)
         allocated = _round_size(requested)
         pool = self._pool_for_size(allocated)
         self._drain_pending()
+        self._maybe_collect_garbage()
         block = self._find_cached(allocated, pool)
         if block is None:
-            ptr, _ = self._raw_malloc(allocated)
+            try:
+                ptr, _ = self._raw_malloc(allocated)
+            except RuntimeError:
+                ptr = self._oom_retry(allocated)
             block = Block(ptr, allocated, requested, pool, stream)
             self._track_alloc(requested, allocated, pool)
         else:
@@ -405,7 +440,6 @@ class NpuAllocator:
         block.stream = stream
 
     def empty_cache(self):
-        self.synchronize()
         for pool, blocks in self._cached.items():
             for block in blocks:
                 self._raw_free(block.ptr)
@@ -433,7 +467,7 @@ class NpuAllocator:
     def _init_stats(self):
         for key in _ALL_STAT_KEYS:
             self._stats[key] = 0
-        self._stats["max_split_size"] = MAX_SPLIT_SIZE
+        self._stats["max_split_size"] = self.max_split_size or 0
 
     def memory_stats(self):
         return dict(self._stats)
