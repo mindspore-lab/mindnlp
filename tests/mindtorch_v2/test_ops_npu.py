@@ -113,3 +113,21 @@ def test_npu_zeros():
     out = torch.zeros((2,), device="npu")
     assert out.device.type == "npu"
     assert out.to("cpu").numpy().tolist() == [0.0, 0.0]
+
+
+def test_npu_to_cpu_synchronizes(monkeypatch):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    calls = []
+
+    from mindtorch_v2._backends.npu import runtime as npu_runtime
+    runtime = npu_runtime.get_runtime(0)
+
+    def fake_sync():
+        calls.append("sync")
+
+    monkeypatch.setattr(runtime, "synchronize", fake_sync)
+
+    t = torch.ones((1,), device="npu")
+    _ = t.to("cpu")
+    assert "sync" in calls

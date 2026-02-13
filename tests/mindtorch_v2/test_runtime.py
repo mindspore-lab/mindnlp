@@ -101,3 +101,61 @@ def test_runtime_synchronize_drains_deferred(monkeypatch):
     assert ("sync", "stream") in calls
     assert ("free", 111) in calls
     assert ("free", 222) in calls
+
+
+def test_acl_launch_blocking_forces_sync(monkeypatch):
+    calls = []
+
+    class DummyRT:
+        def set_device(self, device_id):
+            return 0
+
+        def set_context(self, ctx):
+            return 0
+
+        def synchronize_stream(self, stream):
+            calls.append("sync")
+            return 0
+
+        def free(self, ptr):
+            return 0
+
+    class DummyAcl:
+        def __init__(self):
+            self.rt = DummyRT()
+
+    dummy_acl = DummyAcl()
+    runtime = ascend._Runtime()
+    runtime.initialized = True
+    runtime.stream = "stream"
+    runtime.device_id = 0
+    runtime.context = "ctx"
+    runtime._deferred_frees = []
+
+    monkeypatch.setenv("ACL_LAUNCH_BLOCKING", "1")
+    monkeypatch.setattr(ascend, "acl", dummy_acl)
+    monkeypatch.setattr(ascend, "get_runtime", lambda device_id=0: runtime)
+
+    from mindtorch_v2._backends.npu import aclnn
+    # call internal helper to trigger sync in op wrapper
+    aclnn._maybe_sync(runtime)
+
+    assert calls == ["sync"]
+
+
+def test_npu_synchronize_uses_runtime(monkeypatch):
+    calls = []
+
+    class DummyRuntime:
+        def synchronize(self):
+            calls.append("sync")
+
+    dummy_runtime = DummyRuntime()
+
+    from mindtorch_v2._backends.npu import runtime as npu_runtime
+    monkeypatch.setattr(npu_runtime, "get_runtime", lambda device_id=0: dummy_runtime)
+
+    import mindtorch_v2.npu as npu
+    npu.synchronize("npu:0")
+
+    assert calls == ["sync"]

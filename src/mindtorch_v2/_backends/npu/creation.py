@@ -33,7 +33,7 @@ def zeros_create(shape, dtype=None, device=None):
     out_size = size * np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
     ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
     stride = npu_runtime._contiguous_stride(shape)
-    aclnn.inplace_zero(ptr, shape, stride, dtype, runtime.stream)
+    aclnn.inplace_zero(ptr, shape, stride, dtype, runtime)
     storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
     return _wrap_tensor(storage, shape, stride)
 
@@ -46,7 +46,7 @@ def ones_create(shape, dtype=None, device=None):
     out_size = size * np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
     ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
     stride = npu_runtime._contiguous_stride(shape)
-    aclnn.inplace_one(ptr, shape, stride, dtype, runtime.stream)
+    aclnn.inplace_one(ptr, shape, stride, dtype, runtime)
     storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
     return _wrap_tensor(storage, shape, stride)
 

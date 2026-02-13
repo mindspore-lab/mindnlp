@@ -36,11 +36,8 @@ def add(a, b):
         a.shape,
         a.stride,
         a.dtype,
-        runtime.stream,
+        runtime,
     )
-    ret = npu_runtime.acl.rt.synchronize_stream(runtime.stream)
-    if ret != npu_runtime.ACL_ERROR_CODE:
-        raise RuntimeError(f"acl.rt.synchronize_stream failed: {ret}")
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
     return _wrap_tensor(storage, a.shape, a.stride)
@@ -64,11 +61,8 @@ def mul(a, b):
         a.shape,
         a.stride,
         a.dtype,
-        runtime.stream,
+        runtime,
     )
-    ret = npu_runtime.acl.rt.synchronize_stream(runtime.stream)
-    if ret != npu_runtime.ACL_ERROR_CODE:
-        raise RuntimeError(f"acl.rt.synchronize_stream failed: {ret}")
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
     return _wrap_tensor(storage, a.shape, a.stride)
@@ -88,11 +82,8 @@ def relu(a):
         a.shape,
         a.stride,
         a.dtype,
-        runtime.stream,
+        runtime,
     )
-    ret = npu_runtime.acl.rt.synchronize_stream(runtime.stream)
-    if ret != npu_runtime.ACL_ERROR_CODE:
-        raise RuntimeError(f"acl.rt.synchronize_stream failed: {ret}")
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
     return _wrap_tensor(storage, a.shape, a.stride)
@@ -132,11 +123,8 @@ def sum_(a, dim=None, keepdim=False):
         a.dtype,
         dims_payload,
         keepdim,
-        runtime.stream,
+        runtime,
     )
-    ret = npu_runtime.acl.rt.synchronize_stream(runtime.stream)
-    if ret != npu_runtime.ACL_ERROR_CODE:
-        raise RuntimeError(f"acl.rt.synchronize_stream failed: {ret}")
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(out_shape) if out_shape else 1), a.dtype, device=a.device)
     return _wrap_tensor(storage, out_shape, npu_runtime._contiguous_stride(out_shape))
