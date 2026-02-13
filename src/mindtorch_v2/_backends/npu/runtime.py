@@ -35,6 +35,7 @@ class _Runtime:
         self.device_id = 0
         self.context = None
         self.stream = None
+        self._deferred_frees = []
 
     def init(self, device_id=0):
         if self.initialized:
@@ -66,9 +67,33 @@ class _Runtime:
         ret = acl.rt.set_device(self.device_id)
         if ret != ACL_ERROR_CODE:
             raise RuntimeError(f"acl.rt.set_device failed: {ret}")
-        ret = acl.rt.set_context(self.context)
+        if hasattr(acl.rt, "set_context"):
+            ret = acl.rt.set_context(self.context)
+            if ret != ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.set_context failed: {ret}")
+
+
+    def defer_free(self, ptr):
+        if ptr is None:
+            return
+        self._deferred_frees.append(ptr)
+
+    def synchronize(self):
+        if not self.initialized:
+            return
+        global acl
+        if acl is None:
+            acl = ensure_acl()
+        self.activate()
+        ret = acl.rt.synchronize_stream(self.stream)
         if ret != ACL_ERROR_CODE:
-            raise RuntimeError(f"acl.rt.set_context failed: {ret}")
+            raise RuntimeError(f"acl.rt.synchronize_stream failed: {ret}")
+        frees = self._deferred_frees
+        self._deferred_frees = []
+        for ptr in frees:
+            ret = acl.rt.free(ptr)
+            if ret != ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.free failed: {ret}")
 
     def finalize(self):
         if not self.initialized:
