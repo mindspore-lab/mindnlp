@@ -290,6 +290,22 @@ def _model_dir():
 
 
 
+
+
+def mem_get_info(device_id=0, attr=0):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    runtime = get_runtime(device_id)
+    runtime.activate()
+    if not hasattr(acl.rt, "get_mem_info"):
+        raise RuntimeError("acl.rt.get_mem_info not available")
+    free, total, ret = acl.rt.get_mem_info(attr)
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.get_mem_info failed: {ret}")
+    return int(free), int(total)
+
+
 def device_count():
     global acl
     if acl is None:

@@ -172,6 +172,32 @@ def test_npu_synchronize_uses_runtime(monkeypatch):
     assert calls == ["sync"]
 
 
+def test_npu_mem_get_info(monkeypatch):
+    from mindtorch_v2._backends.npu import runtime as npu_runtime
+
+    class DummyRT:
+        def set_device(self, device_id):
+            return 0
+
+        def set_context(self, ctx):
+            return 0
+
+        def get_mem_info(self, attr):
+            return 10, 20, 0
+
+    dummy_acl = types.SimpleNamespace(rt=DummyRT())
+    monkeypatch.setattr(npu_runtime, "acl", dummy_acl)
+    monkeypatch.setattr(
+        npu_runtime,
+        "get_runtime",
+        lambda device_id=0: types.SimpleNamespace(activate=lambda: None),
+    )
+
+    import mindtorch_v2.npu as npu
+    free, total = npu.mem_get_info("npu:0")
+    assert (free, total) == (10, 20)
+
+
 
 def test_npu_is_available_verbose_reports_acl_missing(monkeypatch):
     def fake_get_runtime(device_id=0):

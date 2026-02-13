@@ -31,6 +31,7 @@ __all__ = [
     "memory_reserved",
     "max_memory_allocated",
     "memory_allocated",
+    "mem_get_info",
 ]
 
 
@@ -66,6 +67,13 @@ def synchronize(device=None):
         runtime.synchronize_device()
     else:
         runtime.synchronize()
+
+
+def mem_get_info(device=None):
+    dev = _normalize_npu_device(device)
+    from ._backends.npu import runtime as npu_runtime
+
+    return npu_runtime.mem_get_info(dev.index or 0)
 
 
 def current_device():
