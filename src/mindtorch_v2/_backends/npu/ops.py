@@ -3,6 +3,7 @@ import numpy as np
 from ..._storage import npu_typed_storage_from_ptr
 from . import aclnn
 from . import runtime as npu_runtime
+from . import state as npu_state
 
 
 def _unwrap_storage(tensor):
@@ -19,6 +20,7 @@ def _wrap_tensor(storage, shape, stride):
 
 def add(a, b):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu" or b.device.type != "npu":
         raise ValueError("NPU add expects NPU tensors")
     if a.dtype != b.dtype:
@@ -37,6 +39,7 @@ def add(a, b):
         a.stride,
         a.dtype,
         runtime,
+        stream=stream.stream,
     )
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
@@ -45,6 +48,7 @@ def add(a, b):
 
 def mul(a, b):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu" or b.device.type != "npu":
         raise ValueError("NPU mul expects NPU tensors")
     if a.dtype != b.dtype:
@@ -62,6 +66,7 @@ def mul(a, b):
         a.stride,
         a.dtype,
         runtime,
+        stream=stream.stream,
     )
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
@@ -70,6 +75,7 @@ def mul(a, b):
 
 def relu(a):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError("NPU relu expects NPU tensors")
 
@@ -83,6 +89,7 @@ def relu(a):
         a.stride,
         a.dtype,
         runtime,
+        stream=stream.stream,
     )
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
@@ -91,6 +98,7 @@ def relu(a):
 
 def sum_(a, dim=None, keepdim=False):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError("NPU sum expects NPU tensors")
 
@@ -124,6 +132,7 @@ def sum_(a, dim=None, keepdim=False):
         dims_payload,
         keepdim,
         runtime,
+        stream=stream.stream,
     )
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(out_shape) if out_shape else 1), a.dtype, device=a.device)

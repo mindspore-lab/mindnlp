@@ -456,7 +456,7 @@ def is_available():
         return False
 
 
-def add(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime):
+def add(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -490,7 +490,7 @@ def add(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime):
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value),
             executor,
-            ctypes.c_void_p(int(runtime.stream)),
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
             raise RuntimeError(f"aclnnAdd failed: {ret}")
@@ -507,7 +507,7 @@ def add(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime):
         _ = (self_keep, other_keep, out_keep, alpha_arr)
 
 
-def mul(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime):
+def mul(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -537,7 +537,7 @@ def mul(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime):
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value),
             executor,
-            ctypes.c_void_p(int(runtime.stream)),
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
             raise RuntimeError(f"aclnnMul failed: {ret}")
@@ -552,7 +552,7 @@ def mul(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime):
         _ = (self_keep, other_keep, out_keep)
 
 
-def relu(self_ptr, out_ptr, shape, stride, dtype, runtime):
+def relu(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -580,7 +580,7 @@ def relu(self_ptr, out_ptr, shape, stride, dtype, runtime):
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value),
             executor,
-            ctypes.c_void_p(int(runtime.stream)),
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
             raise RuntimeError(f"aclnnRelu failed: {ret}")
@@ -596,7 +596,7 @@ def relu(self_ptr, out_ptr, shape, stride, dtype, runtime):
 
 
 
-def inplace_one(out_ptr, shape, stride, dtype, runtime):
+def inplace_one(out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -624,7 +624,7 @@ def inplace_one(out_ptr, shape, stride, dtype, runtime):
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value),
             executor,
-            ctypes.c_void_p(int(runtime.stream)),
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
             raise RuntimeError(f"aclnnInplaceOne failed: {ret}")
@@ -637,7 +637,7 @@ def inplace_one(out_ptr, shape, stride, dtype, runtime):
         _ = out_keep
 
 
-def inplace_zero(out_ptr, shape, stride, dtype, runtime):
+def inplace_zero(out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -665,7 +665,7 @@ def inplace_zero(out_ptr, shape, stride, dtype, runtime):
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value),
             executor,
-            ctypes.c_void_p(int(runtime.stream)),
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
             raise RuntimeError(f"aclnnInplaceZero failed: {ret}")
@@ -678,7 +678,7 @@ def inplace_zero(out_ptr, shape, stride, dtype, runtime):
         _ = out_keep
 
 
-def reduce_sum(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, runtime):
+def reduce_sum(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -718,7 +718,7 @@ def reduce_sum(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, runtime):
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value),
             executor,
-            ctypes.c_void_p(int(runtime.stream)),
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
             raise RuntimeError(f"aclnnReduceSum failed: {ret}")

@@ -110,3 +110,58 @@ def test_npu_runtime_primitives_exist():
     assert hasattr(runtime, "event_elapsed_time")
     assert hasattr(runtime, "stream_wait_event")
     assert hasattr(runtime, "synchronize_device")
+
+
+def test_npu_op_uses_current_stream(monkeypatch):
+    _stub_runtime(monkeypatch)
+    import mindtorch_v2._backends.npu.aclnn as aclnn
+    import mindtorch_v2._backends.npu.ops as npu_ops
+    from mindtorch_v2 import float32
+
+    seen = {}
+
+    def fake_add(*args, **kwargs):
+        seen["stream"] = kwargs.get("stream")
+        return None
+
+    monkeypatch.setattr(aclnn, "add", fake_add)
+
+    class DummyStorage:
+        def __init__(self, ptr, device):
+            self._ptr = ptr
+            self.device = device
+
+        def data_ptr(self):
+            return self._ptr
+
+    class DummyTensor:
+        def __init__(self, device):
+            self.device = device
+            self.shape = (1,)
+            self.stride = (1,)
+            self.dtype = float32
+            self._storage = DummyStorage(123, device)
+
+        def storage(self):
+            return self._storage
+
+    def fake_alloc(size, runtime=None):
+        return 456
+
+    def fake_wrap(storage, shape, stride):
+        return None
+
+    def fake_storage_from_ptr(ptr, size, dtype, device=None):
+        return DummyStorage(ptr, device)
+
+    monkeypatch.setattr(npu_ops.npu_runtime, "_alloc_device", fake_alloc)
+    monkeypatch.setattr(npu_ops, "_wrap_tensor", fake_wrap)
+    monkeypatch.setattr(npu_ops, "npu_typed_storage_from_ptr", fake_storage_from_ptr)
+
+    s = torch.npu.Stream()
+    with torch.npu.stream(s):
+        a = DummyTensor(s.device)
+        b = DummyTensor(s.device)
+        npu_ops.add(a, b)
+
+    assert seen["stream"] == s.stream
