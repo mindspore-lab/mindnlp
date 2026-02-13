@@ -31,3 +31,18 @@ def test_memory_snapshot_schema(monkeypatch):
     snap = torch.npu.memory_snapshot()
     assert "segments" in snap
     assert "device" in snap
+
+
+def test_memory_fraction_enforced(monkeypatch):
+    torch.npu._reset_memory_fraction_for_test()
+    torch.npu.set_per_process_memory_fraction(0.5)
+
+    monkeypatch.setattr(
+        torch.npu,
+        "_get_memory_stats",
+        lambda device=None: {"total_reserved_memory": 100, "total_allocated_memory": 60},
+        raising=False,
+    )
+
+    with pytest.raises(RuntimeError):
+        torch.npu._enforce_memory_fraction(50)

@@ -189,19 +189,16 @@ def _get_memory_stats(device=None):
         return {}
 
 
-def _enforce_memory_fraction(device=None):
+def _enforce_memory_fraction(requested_bytes, device=None):
     if _MEMORY_FRACTION is None:
         return
     stats = _get_memory_stats(device)
-    total = stats.get("total_memory", 0)
+    total = stats.get("total_reserved_memory", 0)
     if total <= 0:
         return
-    limit = total * _MEMORY_FRACTION
-    used = stats.get("used_memory", 0)
-    if used > limit:
-        raise RuntimeError(
-            f"NPU memory usage exceeded per-process limit: {used} > {limit}"
-        )
+    reserved = stats.get("total_allocated_memory", 0)
+    if reserved + requested_bytes > _MEMORY_FRACTION * total:
+        raise RuntimeError("NPU memory fraction exceeded")
 
 
 def set_per_process_memory_fraction(fraction, device=None):
@@ -209,7 +206,6 @@ def set_per_process_memory_fraction(fraction, device=None):
         raise ValueError("fraction must be in (0, 1]")
     global _MEMORY_FRACTION
     _MEMORY_FRACTION = float(fraction)
-    _enforce_memory_fraction(device)
 
 
 def _get_device_name(device=None):
