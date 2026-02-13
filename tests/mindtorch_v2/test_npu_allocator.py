@@ -232,3 +232,14 @@ def test_alloc_conf_unsupported_key_warns(monkeypatch):
     with pytest.warns(UserWarning):
         conf = allocator._load_alloc_conf(force=True)
     assert conf == {}
+
+
+def test_alloc_conf_max_split_size_mb(monkeypatch):
+    from mindtorch_v2._backends.npu import allocator
+
+    allocator._reset_alloc_conf_for_test()
+    monkeypatch.setenv("MINDTORCH_NPU_ALLOC_CONF", "max_split_size_mb:1")
+    allocator._load_alloc_conf(force=True)
+
+    alloc = allocator.NpuAllocator(device_id=0)
+    assert alloc.max_split_size == 1 * 1024 * 1024

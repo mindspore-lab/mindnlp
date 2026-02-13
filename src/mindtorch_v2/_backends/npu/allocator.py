@@ -59,6 +59,19 @@ def _load_alloc_conf(force=False):
     _ALLOC_CONF = conf
     return dict(conf)
 
+def _parse_max_split_size_mb(value):
+    if value is None:
+        return None
+    try:
+        size_mb = int(value)
+    except (TypeError, ValueError):
+        return None
+    if size_mb <= 0:
+        return None
+    return size_mb * 1024 * 1024
+
+
+
 
 _ALL_STAT_KEYS = [
     "allocated.all.current",
@@ -205,6 +218,8 @@ def _round_size(size):
 
 class NpuAllocator:
     def __init__(self, device_id):
+        conf = _load_alloc_conf()
+        self.max_split_size = _parse_max_split_size_mb(conf.get("max_split_size_mb"))
         self.device_id = int(device_id)
         self._stats = {}
         self._active = {}
@@ -263,6 +278,8 @@ class NpuAllocator:
 
     def _split_block(self, block, size):
         if block.size - size <= 0:
+            return block, None
+        if self.max_split_size is not None and block.size > self.max_split_size:
             return block, None
         if block.size > MAX_SPLIT_SIZE:
             return block, None
