@@ -1,6 +1,22 @@
 import threading
 
+import pytest
+
 import mindtorch_v2 as torch
+
+
+@pytest.fixture(autouse=True)
+def _reset_npu_state():
+    import mindtorch_v2._backends.npu.state as npu_state
+
+    state = npu_state._state()
+    state.current_device = 0
+    state.current_streams = {}
+    state.default_streams = {}
+    yield
+    state.current_device = 0
+    state.current_streams = {}
+    state.default_streams = {}
 
 
 def _stub_runtime(monkeypatch):
@@ -13,7 +29,7 @@ def _stub_runtime(monkeypatch):
             self.wait_calls = []
 
         def create_stream(self, priority=0):
-            return (self.device_id, int(priority))
+            return int(self.device_id * 1000 + int(priority))
 
         def synchronize_stream(self, stream):
             return None
