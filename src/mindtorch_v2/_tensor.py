@@ -38,7 +38,65 @@ class Tensor:
         return self._storage
 
     def untyped_storage(self):
-        return self._storage.untyped_storage()
+        """Return the underlying untyped storage.
+
+        This is needed for compatibility with safetensors which calls
+        tensor.untyped_storage().nbytes() to determine storage size.
+        """
+        return self._storage
+
+    def dim(self):
+        return len(self._shape)
+
+    def numel(self):
+        result = 1
+        for s in self._shape:
+            result *= s
+        return result
+
+    # Alias for numel (PyTorch compatibility)
+    nelement = numel
+
+    def element_size(self):
+        return self._dtype.itemsize
+
+    def is_floating_point(self):
+        """Check if tensor is of a floating point dtype."""
+        floating_point_dtypes = {'float16', 'float32', 'float64', 'bfloat16',
+                                 'half', 'float', 'double'}
+        return str(self._dtype).split('.')[-1] in floating_point_dtypes
+
+    def is_contiguous(self, memory_format=None):
+        """Check if tensor is contiguous in row-major order."""
+        expected = _compute_strides(self._shape)
+        return self._stride == expected
+
+    def contiguous(self, memory_format=None):
+        """Return contiguous tensor (copy if not already contiguous)."""
+        if self.is_contiguous():
+            return self
+
+        # Use dispatch to stay on device (avoid numpy round-trip)
+        from ._dispatch import dispatch
+        result = dispatch("contiguous", self)
+
+        # Track autograd if needed
+        if self._requires_grad:
+            from ._autograd import is_grad_enabled
+            from ._autograd.node import AccumulateGrad
+            from ._autograd.functions import ContiguousBackward
+
+            if is_grad_enabled():
+                grad_fn = ContiguousBackward()
+
+                if self._grad_fn is not None:
+                    grad_fn._next_functions = ((self._grad_fn, 0),)
+                else:
+                    acc_grad = AccumulateGrad(self)
+                    grad_fn._next_functions = ((acc_grad, 0),)
+
+                result._grad_fn = grad_fn
+                result._requires_grad = True  # Propagate requires_grad
 
     def _numpy_view(self):
         if self.device.type == "meta":
