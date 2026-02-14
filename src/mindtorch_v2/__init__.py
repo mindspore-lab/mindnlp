@@ -1,7 +1,7 @@
 __version__ = "0.1.0"
 
 from ._dtype import DType, float32, float16, int64
-from ._device import device as Device, _default_device
+from ._device import device as Device, _default_device, get_default_device, set_default_device
 from ._tensor import Tensor
 from ._creation import tensor, zeros, ones
 from ._storage import UntypedStorage, TypedStorage
@@ -16,3 +16,28 @@ from . import _C
 
 def pipeline():
     return pipeline_context()
+
+
+__all__ = [
+    "Device",
+    "Tensor",
+    "DType",
+    "float32",
+    "float16",
+    "int64",
+    "tensor",
+    "zeros",
+    "ones",
+    "add",
+    "mul",
+    "matmul",
+    "relu",
+    "sum",
+    "set_printoptions",
+    "get_printoptions",
+    "pipeline",
+    "pipeline_context",
+    "get_default_device",
+    "set_default_device",
+    "npu",
+]

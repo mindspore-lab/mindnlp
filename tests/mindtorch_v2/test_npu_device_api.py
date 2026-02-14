@@ -18,6 +18,13 @@ def test_peer_access_unsupported():
         torch.npu.enable_peer_access(1)
 
 
+def test_get_device_properties_schema():
+    props = torch.npu.get_device_properties(0)
+    assert props.name
+    assert hasattr(props, "major")
+    assert hasattr(props, "minor")
+
+
 def test_stream_priority_range_fallback():
     assert torch.npu.stream_priority_range() == (0, 0)
 

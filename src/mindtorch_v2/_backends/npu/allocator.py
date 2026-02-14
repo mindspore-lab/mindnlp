@@ -394,6 +394,9 @@ class NpuAllocator:
         self._maybe_collect_garbage()
         block = self._find_cached(allocated, pool)
         if block is None:
+            from ... import npu
+
+            npu._enforce_memory_fraction(allocated, device=self.device_id)
             try:
                 ptr, _ = self._raw_malloc(allocated)
             except RuntimeError:

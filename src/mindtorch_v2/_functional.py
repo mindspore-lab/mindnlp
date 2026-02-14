@@ -2,7 +2,7 @@ from ._dispatch.dispatcher import dispatch
 from ._autograd.grad_mode import GradMode, no_grad
 from ._autograd.node import Node
 from ._autograd.utils import reduce_grad
-from ._device import device as Device
+from ._device import device as Device, get_default_device
 from ._dtype import to_numpy_dtype
 
 
@@ -122,7 +122,7 @@ def to(a, device):
 
 def _as_device(dev):
     if dev is None:
-        return Device("cpu")
+        return get_default_device()
     if isinstance(dev, str):
         return Device(dev)
     return dev
