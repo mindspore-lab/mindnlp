@@ -26,3 +26,46 @@ def test_pinned_memory():
     t = torch.tensor([1.0, 2.0])
     tp = torch.npu.pin_memory(t)
     assert torch.npu.is_pinned(tp) is True
+
+
+def test_npu_is_initialized_and_init(monkeypatch):
+    import mindtorch_v2._backends.npu.runtime as npu_runtime
+
+    torch.npu._reset_init_for_test()
+
+    class DummyRuntime:
+        def __init__(self):
+            self.inited = False
+
+        def init(self, device_id=0):
+            self.inited = True
+
+    runtime = DummyRuntime()
+
+    monkeypatch.setattr(npu_runtime, "get_runtime", lambda device_id=0: runtime)
+
+    assert torch.npu.is_initialized() is False
+    torch.npu.init()
+    assert runtime.inited is True
+    assert torch.npu.is_initialized() is True
+
+
+def test_npu_is_initialized_after_set_device(monkeypatch):
+    import mindtorch_v2._backends.npu.runtime as npu_runtime
+
+    torch.npu._reset_init_for_test()
+
+    class DummyRuntime:
+        def __init__(self):
+            self.inited = False
+
+        def init(self, device_id=0):
+            self.inited = True
+
+    runtime = DummyRuntime()
+
+    monkeypatch.setattr(npu_runtime, "get_runtime", lambda device_id=0: runtime)
+
+    assert torch.npu.is_initialized() is False
+    torch.npu.set_device(0)
+    assert torch.npu.is_initialized() is True

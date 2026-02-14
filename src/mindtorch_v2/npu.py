@@ -6,6 +6,7 @@ from ._backends.npu.streams import Event, Stream
 from ._device import device as Device
 
 _MEMORY_FRACTION = None
+_NPU_INITIALIZED = False
 
 
 
@@ -45,6 +46,8 @@ __all__ = [
     "disable_peer_access",
     "pin_memory",
     "is_pinned",
+    "is_initialized",
+    "init",
 ]
 
 
@@ -76,13 +79,37 @@ def synchronize(device=None):
 
     dev = _normalize_npu_device(device)
     runtime = npu_runtime.get_runtime(dev.index or 0)
+    _set_initialized()
     if hasattr(runtime, "synchronize_device"):
         runtime.synchronize_device()
     else:
         runtime.synchronize()
 
 
+def _set_initialized():
+    global _NPU_INITIALIZED
+    _NPU_INITIALIZED = True
+
+
+def is_initialized():
+    return _NPU_INITIALIZED
+
+
+def init():
+    from ._backends.npu import runtime as npu_runtime
+
+    runtime = npu_runtime.get_runtime(0)
+    runtime.init(0)
+    _set_initialized()
+
+
+def _ensure_initialized():
+    if not _NPU_INITIALIZED:
+        init()
+
+
 def mem_get_info(device=None):
+    _set_initialized()
     dev = _normalize_npu_device(device)
     from ._backends.npu import runtime as npu_runtime
 
@@ -98,16 +125,19 @@ def current_device():
 
 
 def set_device(device):
+    _set_initialized()
     dev = _normalize_npu_device(device)
     npu_state.set_device(dev.index or 0)
 
 
 def default_stream(device=None):
+    _set_initialized()
     dev = _normalize_npu_device(device)
     return npu_state.default_stream(dev.index or 0)
 
 
 def current_stream(device=None):
+    _set_initialized()
     dev = _normalize_npu_device(device)
     return npu_state.current_stream(dev.index or 0)
 
@@ -178,6 +208,11 @@ def empty_cache(device=None):
 def _reset_memory_fraction_for_test():
     global _MEMORY_FRACTION
     _MEMORY_FRACTION = None
+
+
+def _reset_init_for_test():
+    global _NPU_INITIALIZED
+    _NPU_INITIALIZED = False
 
 
 def _get_memory_stats(device=None):
