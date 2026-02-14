@@ -13,6 +13,7 @@ from ._dtype import float32, to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum, reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
+from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
 
 
@@ -26,6 +27,9 @@ class Tensor:
         self.grad = None
         self.grad_fn = None
         self._pending = False
+        self._version_counter = VersionCounter()
+        self._base = None
+        self._view_meta = None
 
     @property
     def dtype(self):
