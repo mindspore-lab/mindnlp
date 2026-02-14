@@ -46,3 +46,21 @@ def test_memory_fraction_enforced(monkeypatch):
 
     with pytest.raises(RuntimeError):
         torch.npu._enforce_memory_fraction(50)
+
+
+def test_allocator_enforces_memory_fraction(monkeypatch):
+    import mindtorch_v2._backends.npu.allocator as allocator
+
+    torch.npu._reset_memory_fraction_for_test()
+    torch.npu.set_per_process_memory_fraction(0.5)
+
+    monkeypatch.setattr(
+        torch.npu,
+        "_get_memory_stats",
+        lambda device=None: {"total_reserved_memory": 100, "total_allocated_memory": 60},
+        raising=False,
+    )
+
+    alloc = allocator.NpuAllocator(device_id=0)
+    with pytest.raises(RuntimeError):
+        alloc.malloc(50)

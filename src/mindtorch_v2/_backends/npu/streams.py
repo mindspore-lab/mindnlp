@@ -22,6 +22,12 @@ class Stream:
         runtime = npu_runtime.get_runtime(self.device.index or 0)
         runtime.stream_wait_event(self._stream, event.event)
 
+    def wait_stream(self, stream):
+        event = Event()
+        event.record(stream)
+        self.wait_event(event)
+        self._event = event
+
 
 class Event:
     def __init__(self, enable_timing=False, blocking=False, interprocess=False):

@@ -77,7 +77,7 @@ def format_tensor(tensor):
     if tensor.device.type != _default_device.type:
         device_label = tensor.device.type
         if tensor.device.type == "npu":
-            device_label = repr(tensor.device)
+            device_label = str(tensor.device)
         suffixes.append(f"device='{device_label}'")
     if tensor.requires_grad:
         suffixes.append("requires_grad=True")

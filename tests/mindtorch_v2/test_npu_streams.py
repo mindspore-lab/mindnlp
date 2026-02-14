@@ -198,3 +198,18 @@ def test_npu_stream_wait_event(monkeypatch):
     evt = torch.npu.Event()
     s.wait_event(evt)
     assert runtime.wait_calls == [(s.stream, evt.event)]
+
+
+def test_npu_set_stream_changes_current(monkeypatch):
+    _stub_runtime(monkeypatch)
+    s = torch.npu.Stream()
+    torch.npu.set_stream(s)
+    assert torch.npu.current_stream() is s
+
+
+def test_npu_stream_wait_stream(monkeypatch):
+    runtime = _stub_runtime(monkeypatch)
+    s0 = torch.npu.Stream()
+    s1 = torch.npu.Stream()
+    s0.wait_stream(s1)
+    assert runtime.wait_calls == [(s0.stream, s0._event.event)]

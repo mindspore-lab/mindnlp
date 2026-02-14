@@ -25,6 +25,7 @@ __all__ = [
     "default_stream",
     "current_stream",
     "stream",
+    "set_stream",
     "stream_priority_range",
     "empty_cache",
     "reset_accumulated_memory_stats",
@@ -40,6 +41,7 @@ __all__ = [
     "set_per_process_memory_fraction",
     "get_device_name",
     "get_device_capability",
+    "get_device_properties",
     "can_device_access_peer",
     "enable_peer_access",
     "disable_peer_access",
@@ -110,6 +112,10 @@ def default_stream(device=None):
 def current_stream(device=None):
     dev = _normalize_npu_device(device)
     return npu_state.current_stream(dev.index or 0)
+
+
+def set_stream(stream):
+    npu_state.set_current_stream(stream)
 
 
 class stream:
@@ -224,6 +230,25 @@ def get_device_name(device=None):
 def get_device_capability(device=None):
     dev = _normalize_npu_device(device)
     return _get_device_capability(dev.index or 0)
+
+
+class _DeviceProperties:
+    def __init__(self, name, major, minor):
+        self.name = name
+        self.major = int(major)
+        self.minor = int(minor)
+
+    def __repr__(self):
+        return (
+            f"DeviceProperties(name='{self.name}', "
+            f"major={self.major}, minor={self.minor})"
+        )
+
+
+def get_device_properties(device=None):
+    name = get_device_name(device)
+    major, minor = get_device_capability(device)
+    return _DeviceProperties(name=name, major=major, minor=minor)
 
 
 def can_device_access_peer(device, peer_device):
