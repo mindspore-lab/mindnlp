@@ -250,10 +250,37 @@ def set_per_process_memory_fraction(fraction, device=None):
 
 
 def _get_device_name(device=None):
+    try:
+        import mindspore
+
+        if mindspore.get_context("device_target") != "Ascend":
+            return "Ascend"
+        from mindspore._c_expression import MSContext
+
+        soc = MSContext.get_instance().get_ascend_soc_version()
+        if soc:
+            return f"Ascend {soc}"
+    except Exception:
+        pass
     return "Ascend"
 
 
 def _get_device_capability(device=None):
+    try:
+        from mindspore._c_expression import MSContext
+
+        soc = MSContext.get_instance().get_ascend_soc_version() or ""
+    except Exception:
+        soc = ""
+    soc = soc.lower()
+    if "910b" in soc:
+        return (9, 1)
+    if "910" in soc:
+        return (9, 0)
+    if "310p" in soc:
+        return (3, 1)
+    if "310" in soc:
+        return (3, 0)
     return (0, 0)
 
 

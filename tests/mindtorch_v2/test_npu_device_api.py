@@ -2,14 +2,38 @@ import pytest
 import mindtorch_v2 as torch
 
 
-def test_get_device_name_stub(monkeypatch):
-    monkeypatch.setattr(torch.npu, "_get_device_name", lambda device=None: "Ascend", raising=False)
-    assert torch.npu.get_device_name("npu:0") == "Ascend"
+def test_get_device_name_from_soc(monkeypatch):
+    import mindspore
+
+    class DummyMSContext:
+        @staticmethod
+        def get_instance():
+            return DummyMSContext()
+
+        def get_ascend_soc_version(self):
+            return "ascend910b"
+
+    monkeypatch.setattr(mindspore, "get_context", lambda key=None: "Ascend")
+    monkeypatch.setattr(mindspore._c_expression, "MSContext", DummyMSContext, raising=False)
+
+    assert torch.npu.get_device_name("npu:0") == "Ascend ascend910b"
 
 
-def test_get_device_capability_stub(monkeypatch):
-    monkeypatch.setattr(torch.npu, "_get_device_capability", lambda device=None: (0, 0), raising=False)
-    assert torch.npu.get_device_capability("npu:0") == (0, 0)
+def test_get_device_capability_from_soc(monkeypatch):
+    import mindspore
+
+    class DummyMSContext:
+        @staticmethod
+        def get_instance():
+            return DummyMSContext()
+
+        def get_ascend_soc_version(self):
+            return "ascend910b"
+
+    monkeypatch.setattr(mindspore, "get_context", lambda key=None: "Ascend")
+    monkeypatch.setattr(mindspore._c_expression, "MSContext", DummyMSContext, raising=False)
+
+    assert torch.npu.get_device_capability("npu:0") == (9, 1)
 
 
 def test_peer_access_unsupported():
