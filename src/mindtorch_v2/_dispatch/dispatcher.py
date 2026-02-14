@@ -1,9 +1,9 @@
-
-
 import inspect
 
 from .registry import registry
 from .pipeline import current_pipeline
+from .keys import DispatchKey, DispatchKeySet
+from .._autograd.grad_mode import is_grad_enabled
 
 
 def _accepts_device(func):
@@ -34,21 +34,6 @@ def _prepare_kwargs(func, kwargs, device):
     return kwargs
 
 
-
-
-def _resolve_device(dispatch_device, args, kwargs):
-    if hasattr(dispatch_device, "type"):
-        dev_type = dispatch_device.type
-    else:
-        dev_type = dispatch_device
-    if dev_type == "meta":
-        return dispatch_device
-    for value in list(args) + list(kwargs.values()):
-        if hasattr(value, "device") and getattr(value.device, "type", None) == "meta":
-            return value.device
-    return dispatch_device
-
-
 class _PendingOp:
     def __init__(self, entry, args, kwargs, out):
         self.entry = entry
@@ -74,20 +59,46 @@ def _pending_tensor_from_spec(spec, device):
     return Tensor(storage, spec.shape, spec.stride, spec.offset)
 
 
+def _kernel_for_entry(entry, key_order):
+    for key in key_order:
+        if key in entry.fallthrough:
+            continue
+        kernel = entry.kernels.get(key)
+        if kernel is not None:
+            return kernel, key
+    return None, None
+
+
+def _key_order(keyset):
+    order = [
+        DispatchKey.Pipeline,
+        DispatchKey.Autograd,
+        DispatchKey.Meta,
+        DispatchKey.NPU,
+        DispatchKey.CPU,
+    ]
+    return [key for key in order if key in keyset]
+
+
+def _extract_tensors(args, kwargs):
+    tensors = []
+    for value in list(args) + list(kwargs.values()):
+        if hasattr(value, "device"):
+            tensors.append(value)
+    return tensors
+
+
 def dispatch(name, dispatch_device, *args, **kwargs):
-    device = _resolve_device(dispatch_device, args, kwargs)
-    dev_type = device.type if hasattr(device, "type") else device
-    entry = registry.get(name, dev_type)
+    tensors = _extract_tensors(args, kwargs)
     pipe = current_pipeline()
-    meta = entry.get("meta")
-    impl_kwargs = _prepare_kwargs(entry["impl"], kwargs, device)
-    if pipe is None or meta is None:
-        return entry["impl"](*args, **impl_kwargs)
-    if (device.type if hasattr(device, "type") else device) == "meta":
-        return entry["impl"](*args, **impl_kwargs)
-    meta_kwargs = _prepare_kwargs(meta, kwargs, device)
-    spec = meta(*args, **meta_kwargs)
-    out = _pending_tensor_from_spec(spec, device)
-    out._pending = True
-    pipe.record(_PendingOp(entry, args, impl_kwargs, out))
-    return out
+    keyset = DispatchKeySet.from_tensors(
+        tensors,
+        grad_enabled=is_grad_enabled(),
+        pipeline_enabled=pipe is not None,
+    )
+    entry = registry.get(name)
+    kernel, key = _kernel_for_entry(entry, _key_order(keyset))
+    if kernel is None:
+        raise RuntimeError(f"could not find kernel for op {name} with keys {sorted(k.name for k in keyset)}")
+    impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
+    return kernel(*args, **impl_kwargs)
