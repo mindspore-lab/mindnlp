@@ -51,11 +51,11 @@ class Tensor:
         return self._storage.untyped_storage()
 
     def dim(self):
-        return len(self._shape)
+        return len(self.shape)
 
     def numel(self):
         result = 1
-        for s in self._shape:
+        for s in self.shape:
             result *= s
         return result
 
@@ -63,18 +63,18 @@ class Tensor:
     nelement = numel
 
     def element_size(self):
-        return self._dtype.itemsize
+        return self.dtype.itemsize
 
     def is_floating_point(self):
         """Check if tensor is of a floating point dtype."""
         floating_point_dtypes = {'float16', 'float32', 'float64', 'bfloat16',
                                  'half', 'float', 'double'}
-        return str(self._dtype).split('.')[-1] in floating_point_dtypes
+        return str(self.dtype).split('.')[-1] in floating_point_dtypes
 
     def is_contiguous(self, memory_format=None):
         """Check if tensor is contiguous in row-major order."""
-        expected = _compute_strides(self._shape)
-        return self._stride == expected
+        expected = _compute_strides(self.shape)
+        return self.stride == expected
 
     def contiguous(self, memory_format=None):
         """Return contiguous tensor (copy if not already contiguous)."""

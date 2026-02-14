@@ -4,6 +4,8 @@ from .._functional import add
 
 def backward(tensor, grad=None):
     if grad is None:
+        if tensor.numel() != 1:
+            raise RuntimeError("grad can be implicitly created only for scalar outputs")
         grad = tensor._ones_like()
     tensor.grad = grad
     if tensor.grad_fn is None:
