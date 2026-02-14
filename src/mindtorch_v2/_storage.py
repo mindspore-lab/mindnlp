@@ -1,3 +1,4 @@
+import ctypes
 import weakref
 import numpy as np
 
@@ -25,12 +26,58 @@ class UntypedStorage:
     def is_shared(self):
         return False
 
+    def is_pinned(self):
+        return False
+
     @classmethod
     def from_file(cls, filename, shared=False):
         return _CPUUntypedStorage.from_file(filename, shared=shared)
 
     def filename(self):
         return None
+
+
+
+class _PinnedCPUUntypedStorage(UntypedStorage):
+    def __init__(self, array, ptr, filename=None, shared=False, device=None):
+        super().__init__(device or Device("cpu"))
+        self._array = array
+        self._shared = shared
+        self._filename = filename
+        self._ptr = int(ptr)
+        from ._backends.npu import runtime as npu_runtime
+
+        self._finalizer = weakref.finalize(self, npu_runtime.free_host, self._ptr)
+
+    def nbytes(self):
+        return int(self._array.nbytes)
+
+    def data_ptr(self):
+        return int(self._array.ctypes.data)
+
+    def buffer(self):
+        return self._array
+
+    def resize_(self, new_nbytes):
+        raise NotImplementedError("pinned storage cannot resize")
+
+    def share_memory_(self):
+        self._shared = True
+        return self
+
+    def is_shared(self):
+        return self._shared
+
+    def is_pinned(self):
+        return True
+
+    @classmethod
+    def from_file(cls, filename, shared=False):
+        data = np.memmap(filename, mode="r+", dtype=np.uint8)
+        return cls(data, int(data.ctypes.data), filename=filename, shared=shared)
+
+    def filename(self):
+        return self._filename
 
 
 class _CPUUntypedStorage(UntypedStorage):
@@ -93,6 +140,9 @@ class _NPUUntypedStorage(UntypedStorage):
     def data_ptr(self):
         return self._device_ptr
 
+    def is_pinned(self):
+        return False
+
 
 class _MetaUntypedStorage(UntypedStorage):
     def __init__(self, nbytes, device=None):
@@ -104,6 +154,9 @@ class _MetaUntypedStorage(UntypedStorage):
 
     def data_ptr(self):
         raise RuntimeError("meta tensor has no data")
+
+    def is_pinned(self):
+        return False
 
 
 class TypedStorage:
@@ -132,6 +185,9 @@ class TypedStorage:
 
     def is_shared(self):
         return self._untyped.is_shared()
+
+    def is_pinned(self):
+        return self._untyped.is_pinned()
 
     @property
     def data(self):
@@ -258,3 +314,21 @@ class PendingStorage:
 
     def is_shared(self):
         return False
+
+    def is_pinned(self):
+        return False
+
+
+
+def pinned_cpu_typed_storage_from_numpy(arr, dtype, device=None):
+    from ._backends.npu import runtime as npu_runtime
+
+    arr = np.ascontiguousarray(arr, dtype=to_numpy_dtype(dtype))
+    size = int(arr.nbytes)
+    host_ptr = npu_runtime.alloc_host(size)
+    buf = np.ctypeslib.as_array((ctypes.c_uint8 * size).from_address(int(host_ptr)))
+    buf[:] = arr.view(np.uint8)
+    raw = np.frombuffer(buf, dtype=np.uint8)
+    untyped = _PinnedCPUUntypedStorage(raw, host_ptr, device=device)
+    data = np.frombuffer(raw, dtype=to_numpy_dtype(dtype), count=arr.size)
+    return TypedStorage(untyped, dtype, arr.size, data=data)

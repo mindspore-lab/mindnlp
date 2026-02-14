@@ -5,6 +5,7 @@ from ._storage import (
     empty_cpu_typed_storage,
     meta_typed_storage_from_shape,
     npu_typed_storage_from_ptr,
+    pinned_cpu_typed_storage_from_numpy,
     typed_storage_from_numpy,
 )
 from ._device import _default_device, device as Device
@@ -152,6 +153,17 @@ class Tensor:
 
     def backward(self, gradient=None):
         _backward(self, gradient)
+
+    def pin_memory(self):
+        if self.device.type != "cpu":
+            raise RuntimeError("pin_memory only supports CPU tensors")
+        if self.is_pinned():
+            return self
+        storage = pinned_cpu_typed_storage_from_numpy(self._numpy_view(), self.dtype, device=self.device)
+        return Tensor(storage, self.shape, self.stride, self.offset, self.requires_grad)
+
+    def is_pinned(self):
+        return self._storage.is_pinned()
 
     def to(self, dev, non_blocking=False):
         if self._pending:

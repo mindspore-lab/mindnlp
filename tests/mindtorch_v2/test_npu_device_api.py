@@ -30,9 +30,54 @@ def test_stream_priority_range_fallback():
 
 
 def test_pinned_memory():
+    import ctypes
+    import mindtorch_v2._backends.npu.runtime as npu_runtime
+
+    buffers = []
+
+    def fake_alloc_host(size):
+        buf = (ctypes.c_uint8 * int(size))()
+        buffers.append(buf)
+        return ctypes.addressof(buf)
+
+    def fake_free_host(ptr):
+        return None
+
+    npu_runtime.alloc_host = fake_alloc_host
+    npu_runtime.free_host = fake_free_host
+
     t = torch.tensor([1.0, 2.0])
-    tp = torch.npu.pin_memory(t)
-    assert torch.npu.is_pinned(tp) is True
+    tp = t.pin_memory()
+    assert tp.is_pinned() is True
+    assert t.is_pinned() is False
+    assert tp.numpy().tolist() == t.numpy().tolist()
+
+
+def test_pinned_memory_storage_cleanup(monkeypatch):
+    import ctypes
+    import mindtorch_v2._backends.npu.runtime as npu_runtime
+
+    calls = {"free": 0}
+    buffers = []
+
+    def fake_alloc_host(size):
+        buf = (ctypes.c_uint8 * int(size))()
+        buffers.append(buf)
+        return ctypes.addressof(buf)
+
+    def fake_free_host(ptr):
+        calls["free"] += 1
+
+    monkeypatch.setattr(npu_runtime, "alloc_host", fake_alloc_host)
+    monkeypatch.setattr(npu_runtime, "free_host", fake_free_host)
+
+    t = torch.tensor([1.0, 2.0])
+    tp = t.pin_memory()
+    del tp
+    import gc
+
+    gc.collect()
+    assert calls["free"] >= 1
 
 
 def test_npu_is_initialized_and_init(monkeypatch):
@@ -80,17 +125,27 @@ def test_npu_is_initialized_after_set_device(monkeypatch):
 
 def test_to_non_blocking_respects_pinned(monkeypatch):
     import mindtorch_v2._backends.npu.runtime as npu_runtime
+    import ctypes
 
     calls = {}
 
-    def fake_copy_cpu_to_npu(arr, runtime=None, non_blocking=False):
+    def fake_copy_cpu_to_npu(arr, runtime=None, non_blocking=False, stream=None):
         calls["non_blocking"] = non_blocking
         return (123, 0)
 
     monkeypatch.setattr(npu_runtime, "_copy_cpu_to_npu", fake_copy_cpu_to_npu)
 
-    t = torch.tensor([1.0, 2.0])
-    torch.npu.pin_memory(t)
+    buffers = []
+
+    def fake_alloc_host(size):
+        buf = (ctypes.c_uint8 * int(size))()
+        buffers.append(buf)
+        return ctypes.addressof(buf)
+
+    npu_runtime.alloc_host = fake_alloc_host
+    npu_runtime.free_host = lambda ptr: None
+
+    t = torch.tensor([1.0, 2.0]).pin_memory()
     _ = t.to("npu", non_blocking=True)
     assert calls["non_blocking"] is True
 

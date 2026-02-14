@@ -351,6 +351,25 @@ def _alloc_device(size, runtime=None):
     return alloc.malloc(int(size), stream=stream)
 
 
+def alloc_host(size):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    host_ptr, ret = acl.rt.malloc_host(int(size))
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.malloc_host failed: {ret}")
+    return host_ptr
+
+
+def free_host(ptr):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    ret = acl.rt.free_host(ptr)
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.free_host failed: {ret}")
+
+
 def _memcpy_h2d(dst, size, src_ptr, runtime=None):
     global acl
     if acl is None:
