@@ -44,7 +44,7 @@ class OpRegistry:
     def register(self, name, device, fn, meta=None):
         key = resolve_dispatch_key(device)
         entry = self.register_kernel(name, key, fn)
-        if meta is not None:
+        if meta is not None and DispatchKey.Meta not in entry.kernels:
             entry.kernels[DispatchKey.Meta] = meta
         return entry
 
