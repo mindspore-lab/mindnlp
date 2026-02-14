@@ -32,3 +32,27 @@ def relu(a):
 
 def sum_(a, dim=None, keepdim=False):
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
+
+
+def add_(a, b):
+    arr = _to_numpy(a)
+    arr += _to_numpy(b)
+    return a
+
+
+def mul_(a, b):
+    arr = _to_numpy(a)
+    arr *= _to_numpy(b)
+    return a
+
+
+def relu_(a):
+    arr = _to_numpy(a)
+    np.maximum(arr, 0, out=arr)
+    return a
+
+
+def zero_(a):
+    arr = _to_numpy(a)
+    arr.fill(0)
+    return a
