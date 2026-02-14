@@ -70,6 +70,8 @@ def to_device(a, dev, non_blocking=False):
 
         runtime = npu_runtime.get_runtime(a.device.index or 0)
         do_non_blocking = bool(non_blocking)
+        if not do_non_blocking:
+            runtime.synchronize()
         stream = None
         if do_non_blocking:
             from ..npu import state as npu_state

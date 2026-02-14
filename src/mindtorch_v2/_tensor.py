@@ -13,6 +13,7 @@ from ._dtype import float32, to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum, reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
+from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
 
 
@@ -26,6 +27,9 @@ class Tensor:
         self.grad = None
         self.grad_fn = None
         self._pending = False
+        self._version_counter = VersionCounter()
+        self._base = None
+        self._view_meta = None
 
     @property
     def dtype(self):
@@ -164,6 +168,56 @@ class Tensor:
 
     def is_pinned(self):
         return self._storage.is_pinned()
+
+    def _bump_version(self):
+        self._version_counter.bump()
+
+    def _is_view(self):
+        return self._base is not None
+
+    def _check_inplace(self):
+        from ._autograd.grad_mode import is_grad_enabled
+
+        if not is_grad_enabled():
+            return
+        if not self.requires_grad:
+            return
+        if self.grad_fn is None and not self._is_view():
+            raise RuntimeError("a leaf Variable that requires grad is being used in an in-place operation")
+        if self._is_view() and self._base is not None and self._base.grad_fn is None and self._base.requires_grad:
+            raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation")
+
+    def add_(self, other):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("add_", self.device.type, self, other)
+        self._bump_version()
+        return out
+
+    def mul_(self, other):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("mul_", self.device.type, self, other)
+        self._bump_version()
+        return out
+
+    def relu_(self):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("relu_", self.device.type, self)
+        self._bump_version()
+        return out
+
+    def zero_(self):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("zero_", self.device.type, self)
+        self._bump_version()
+        return out
 
     def to(self, dev, non_blocking=False):
         if self._pending:

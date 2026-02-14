@@ -137,3 +137,99 @@ def sum_(a, dim=None, keepdim=False):
 
     storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(out_shape) if out_shape else 1), a.dtype, device=a.device)
     return _wrap_tensor(storage, out_shape, npu_runtime._contiguous_stride(out_shape))
+
+
+def add_(a, b):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU add_ expects NPU tensors")
+    if a.dtype != b.dtype:
+        raise ValueError("NPU add_ requires matching dtypes")
+
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    aclnn.add(
+        a_storage.data_ptr(),
+        b_storage.data_ptr(),
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def mul_(a, b):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU mul_ expects NPU tensors")
+    if a.dtype != b.dtype:
+        raise ValueError("NPU mul_ requires matching dtypes")
+
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    aclnn.mul(
+        a_storage.data_ptr(),
+        b_storage.data_ptr(),
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def relu_(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU relu_ expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    out_size = int(np.prod(a.shape)) * np.dtype(npu_runtime._dtype_to_numpy(a.dtype)).itemsize
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.relu(
+        a_storage.data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    runtime.activate()
+    ret = npu_runtime.acl.rt.memcpy(
+        a_storage.data_ptr(),
+        out_size,
+        out_ptr,
+        out_size,
+        3,
+    )
+    if ret != npu_runtime.ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+    npu_runtime.get_runtime((a.device.index or 0)).defer_free(out_ptr)
+    return a
+
+
+def zero_(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU zero_ expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    aclnn.inplace_zero(
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
