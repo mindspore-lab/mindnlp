@@ -173,6 +173,26 @@ class Tensor:
     def retain_grad(self):
         self._retain_grad = True
 
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = bool(requires_grad)
+        if not self.requires_grad:
+            self.grad_fn = None
+        return self
+
+    def detach(self):
+        out = Tensor(self._storage, self.shape, self.stride, self.offset, requires_grad=False)
+        out.grad_fn = None
+        out.grad = None
+        out._pending = self._pending
+        out._version_counter = self._version_counter
+        return out
+
+    def detach_(self):
+        self.requires_grad = False
+        self.grad_fn = None
+        self._retain_grad = False
+        return self
+
     def _bump_version(self):
         self._version_counter.bump()
 

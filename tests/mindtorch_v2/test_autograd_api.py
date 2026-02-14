@@ -32,3 +32,17 @@ def test_retain_grad_populates_non_leaf_grad():
     y.retain_grad()
     y.backward()
     assert y.grad is not None
+
+
+def test_detach_breaks_grad_chain():
+    t = torch.ones((2,))
+    t.requires_grad_(True)
+    y = t.detach()
+    assert y.requires_grad is False
+
+
+def test_detach_inplace():
+    t = torch.ones((2,))
+    t.requires_grad_(True)
+    t.detach_()
+    assert t.requires_grad is False
