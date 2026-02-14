@@ -13,7 +13,13 @@ class OpRegistry:
     def __init__(self):
         self._ops = {}
 
+    def _canonical_name(self, name):
+        if "::" in name:
+            return name
+        return f"aten::{name}"
+
     def _entry(self, name):
+        name = self._canonical_name(name)
         entry = self._ops.get(name)
         if entry is None:
             entry = OperatorEntry(name)
@@ -43,7 +49,7 @@ class OpRegistry:
         return entry
 
     def get(self, name):
-        return self._ops[name]
+        return self._ops[self._canonical_name(name)]
 
 
 registry = OpRegistry()
