@@ -46,3 +46,15 @@ def test_detach_inplace():
     t.requires_grad_(True)
     t.detach_()
     assert t.requires_grad is False
+
+
+def test_register_hook_receives_grad():
+    t = torch.ones((2,))
+    t.requires_grad_(True)
+    seen = {}
+    def hook(grad):
+        seen["grad"] = grad.numpy().tolist()
+        return grad
+    t.register_hook(hook)
+    t.sum().backward()
+    assert seen["grad"] == [1.0, 1.0]

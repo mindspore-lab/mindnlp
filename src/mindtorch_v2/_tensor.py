@@ -17,6 +17,27 @@ from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
 
 
+class _HookHandle:
+    _next_id = 0
+
+    def __init__(self, hooks):
+        self._hooks = hooks
+        self.id = _HookHandle._next_id
+        _HookHandle._next_id += 1
+
+    def remove(self):
+        if self._hooks is None:
+            return
+        self._hooks.pop(self.id, None)
+        self._hooks = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.remove()
+
+
 class Tensor:
     def __init__(self, storage, shape, stride, offset=0, requires_grad=False):
         self._storage = storage
@@ -28,6 +49,7 @@ class Tensor:
         self.grad_fn = None
         self._pending = False
         self._retain_grad = False
+        self._backward_hooks = None
         self._version_counter = VersionCounter()
         self._base = None
         self._view_meta = None
@@ -192,6 +214,15 @@ class Tensor:
         self.grad_fn = None
         self._retain_grad = False
         return self
+
+    def register_hook(self, hook):
+        if not callable(hook):
+            raise TypeError("hook must be callable")
+        if self._backward_hooks is None:
+            self._backward_hooks = {}
+        handle = _HookHandle(self._backward_hooks)
+        self._backward_hooks[handle.id] = hook
+        return handle
 
     def _bump_version(self):
         self._version_counter.bump()
