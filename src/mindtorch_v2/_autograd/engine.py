@@ -31,7 +31,7 @@ def backward(tensor, grad=None, retain_graph=False, create_graph=False):
             with no_grad():
                 t.grad = add(t.grad, g)
         if t.grad_fn is not None:
-            backward(t, t.grad, retain_graph=retain_graph, create_graph=create_graph)
+            backward(t, g, retain_graph=retain_graph, create_graph=create_graph)
 
 
 def grad(outputs, inputs, grad_outputs=None, retain_graph=None, create_graph=False, allow_unused=False):
