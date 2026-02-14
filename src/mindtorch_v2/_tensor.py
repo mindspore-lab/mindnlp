@@ -179,6 +179,12 @@ class Tensor:
         return self._numpy_view()
 
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
+        if self._pending:
+            from ._dispatch.pipeline import current_pipeline
+
+            pipe = current_pipeline()
+            if pipe is not None:
+                pipe.flush()
         _backward(self, gradient, retain_graph=retain_graph, create_graph=create_graph)
 
     def pin_memory(self):
