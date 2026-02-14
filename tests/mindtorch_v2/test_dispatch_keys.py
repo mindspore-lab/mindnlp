@@ -19,3 +19,16 @@ def test_registry_schema_and_kernel():
     entry = registry.get("aten::add")
     assert entry.schema is not None
     assert entry.kernels[DispatchKey.CPU] is cpu_impl
+
+
+def test_keyset_includes_autograd_when_needed():
+    a = torch.ones((2,))
+    a.requires_grad = True
+    keyset = DispatchKeySet.from_tensors((a,), grad_enabled=True, pipeline_enabled=False)
+    assert DispatchKey.Autograd in keyset
+
+
+def test_keyset_includes_pipeline_when_enabled():
+    a = torch.ones((2,))
+    keyset = DispatchKeySet.from_tensors((a,), grad_enabled=False, pipeline_enabled=True)
+    assert DispatchKey.Pipeline in keyset
