@@ -2,14 +2,14 @@ import pytest
 import mindtorch_v2 as torch
 
 
-def test_get_device_name_stub(monkeypatch):
-    monkeypatch.setattr(torch.npu, "_get_device_name", lambda device=None: "Ascend", raising=False)
-    assert torch.npu.get_device_name("npu:0") == "Ascend"
+def test_get_device_name_from_soc(monkeypatch):
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B")
+    assert torch.npu.get_device_name("npu:0") == "Ascend910B"
 
 
-def test_get_device_capability_stub(monkeypatch):
-    monkeypatch.setattr(torch.npu, "_get_device_capability", lambda device=None: (0, 0), raising=False)
-    assert torch.npu.get_device_capability("npu:0") == (0, 0)
+def test_get_device_capability_from_soc(monkeypatch):
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B")
+    assert torch.npu.get_device_capability("npu:0") == (9, 1)
 
 
 def test_peer_access_unsupported():

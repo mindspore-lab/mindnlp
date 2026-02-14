@@ -249,12 +249,49 @@ def set_per_process_memory_fraction(fraction, device=None):
     _MEMORY_FRACTION = float(fraction)
 
 
+_SOC_NAME = None
+
+
+def _get_soc_name():
+    global _SOC_NAME
+    if _SOC_NAME:
+        return _SOC_NAME
+    from ._backends.npu.acl_loader import ensure_acl
+    try:
+        acl = ensure_acl()
+        soc = acl.get_soc_name()
+    except Exception as exc:
+        raise RuntimeError(f"Failed to query NPU SoC name: {exc}") from exc
+    if isinstance(soc, (bytes, bytearray)):
+        soc = soc.decode()
+    if not soc:
+        raise RuntimeError("Failed to query NPU SoC name")
+    _SOC_NAME = str(soc)
+    return _SOC_NAME
+
+
 def _get_device_name(device=None):
-    return "Ascend"
+    soc = _get_soc_name()
+    if soc.lower().startswith("ascend"):
+        return soc
+    return f"Ascend {soc}"
 
 
 def _get_device_capability(device=None):
-    return (0, 0)
+    soc = _get_soc_name().lower()
+    if "910b" in soc:
+        return (9, 1)
+    if "910a" in soc:
+        return (9, 0)
+    if "910" in soc:
+        return (9, 0)
+    if "310p" in soc:
+        return (3, 1)
+    if "310" in soc:
+        return (3, 0)
+    raise RuntimeError(f"Unknown Ascend SoC: {soc}")
+
+
 
 
 def get_device_name(device=None):
@@ -284,7 +321,6 @@ def get_device_properties(device=None):
     name = get_device_name(device)
     major, minor = get_device_capability(device)
     return _DeviceProperties(name=name, major=major, minor=minor)
-
 
 def can_device_access_peer(device, peer_device):
     return False
