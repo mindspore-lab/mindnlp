@@ -35,15 +35,14 @@ def _prepare_kwargs(func, kwargs, device):
 
 
 class _PendingOp:
-    def __init__(self, entry, args, kwargs, out):
-        self.entry = entry
+    def __init__(self, impl, args, kwargs, out):
+        self.impl = impl
         self.args = args
         self.kwargs = kwargs
         self.out = out
 
     def execute(self):
-        impl = self.entry["impl"]
-        result = impl(*self.args, **self.kwargs)
+        result = self.impl(*self.args, **self.kwargs)
         self.out._storage = result.storage()
         self.out.shape = result.shape
         self.out.stride = result.stride
@@ -97,7 +96,22 @@ def dispatch(name, dispatch_device, *args, **kwargs):
         pipeline_enabled=pipe is not None,
     )
     entry = registry.get(name)
-    kernel, key = _kernel_for_entry(entry, _key_order(keyset))
+    if pipe is not None and DispatchKey.Pipeline in keyset:
+        meta = entry.kernels.get(DispatchKey.Meta)
+        if meta is None:
+            raise RuntimeError(f"pipeline requires meta kernel for op {name}")
+        meta_kwargs = _prepare_kwargs(meta, kwargs, dispatch_device)
+        spec = meta(*args, **meta_kwargs)
+        out = _pending_tensor_from_spec(spec, dispatch_device)
+        out._pending = True
+        backend_keys = [key for key in (DispatchKey.NPU, DispatchKey.CPU) if key in keyset]
+        impl, _ = _kernel_for_entry(entry, backend_keys)
+        if impl is None:
+            raise RuntimeError(f"pipeline requires backend kernel for op {name}")
+        impl_kwargs = _prepare_kwargs(impl, kwargs, dispatch_device)
+        pipe.record(_PendingOp(impl, args, impl_kwargs, out))
+        return out
+    kernel, _ = _kernel_for_entry(entry, _key_order(keyset))
     if kernel is None:
         raise RuntimeError(f"could not find kernel for op {name} with keys {sorted(k.name for k in keyset)}")
     impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
