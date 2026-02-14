@@ -17,6 +17,27 @@ from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
 
 
+class _HookHandle:
+    _next_id = 0
+
+    def __init__(self, hooks):
+        self._hooks = hooks
+        self.id = _HookHandle._next_id
+        _HookHandle._next_id += 1
+
+    def remove(self):
+        if self._hooks is None:
+            return
+        self._hooks.pop(self.id, None)
+        self._hooks = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.remove()
+
+
 class Tensor:
     def __init__(self, storage, shape, stride, offset=0, requires_grad=False):
         self._storage = storage
@@ -27,6 +48,8 @@ class Tensor:
         self.grad = None
         self.grad_fn = None
         self._pending = False
+        self._retain_grad = False
+        self._backward_hooks = None
         self._version_counter = VersionCounter()
         self._base = None
         self._view_meta = None
@@ -51,11 +74,11 @@ class Tensor:
         return self._storage.untyped_storage()
 
     def dim(self):
-        return len(self._shape)
+        return len(self.shape)
 
     def numel(self):
         result = 1
-        for s in self._shape:
+        for s in self.shape:
             result *= s
         return result
 
@@ -63,18 +86,18 @@ class Tensor:
     nelement = numel
 
     def element_size(self):
-        return self._dtype.itemsize
+        return self.dtype.itemsize
 
     def is_floating_point(self):
         """Check if tensor is of a floating point dtype."""
         floating_point_dtypes = {'float16', 'float32', 'float64', 'bfloat16',
                                  'half', 'float', 'double'}
-        return str(self._dtype).split('.')[-1] in floating_point_dtypes
+        return str(self.dtype).split('.')[-1] in floating_point_dtypes
 
     def is_contiguous(self, memory_format=None):
         """Check if tensor is contiguous in row-major order."""
-        expected = _compute_strides(self._shape)
-        return self._stride == expected
+        expected = _compute_strides(self.shape)
+        return self.stride == expected
 
     def contiguous(self, memory_format=None):
         """Return contiguous tensor (copy if not already contiguous)."""
@@ -155,8 +178,8 @@ class Tensor:
             raise RuntimeError("numpy() is only available for CPU tensors")
         return self._numpy_view()
 
-    def backward(self, gradient=None):
-        _backward(self, gradient)
+    def backward(self, gradient=None, retain_graph=False, create_graph=False):
+        _backward(self, gradient, retain_graph=retain_graph, create_graph=create_graph)
 
     def pin_memory(self):
         if self.device.type != "cpu":
@@ -168,6 +191,38 @@ class Tensor:
 
     def is_pinned(self):
         return self._storage.is_pinned()
+
+    def retain_grad(self):
+        self._retain_grad = True
+
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = bool(requires_grad)
+        if not self.requires_grad:
+            self.grad_fn = None
+        return self
+
+    def detach(self):
+        out = Tensor(self._storage, self.shape, self.stride, self.offset, requires_grad=False)
+        out.grad_fn = None
+        out.grad = None
+        out._pending = self._pending
+        out._version_counter = self._version_counter
+        return out
+
+    def detach_(self):
+        self.requires_grad = False
+        self.grad_fn = None
+        self._retain_grad = False
+        return self
+
+    def register_hook(self, hook):
+        if not callable(hook):
+            raise TypeError("hook must be callable")
+        if self._backward_hooks is None:
+            self._backward_hooks = {}
+        handle = _HookHandle(self._backward_hooks)
+        self._backward_hooks[handle.id] = hook
+        return handle
 
     def _bump_version(self):
         self._version_counter.bump()
