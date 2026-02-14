@@ -209,7 +209,7 @@ def relu_(a):
         out_size,
         out_ptr,
         out_size,
-        npu_runtime.ACL_MEMCPY_DEVICE_TO_DEVICE,
+        3,
     )
     if ret != npu_runtime.ACL_ERROR_CODE:
         raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
