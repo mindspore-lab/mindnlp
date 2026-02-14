@@ -1,0 +1,28 @@
+import pytest
+import mindtorch_v2 as torch
+
+
+def test_get_device_name_stub(monkeypatch):
+    monkeypatch.setattr(torch.npu, "_get_device_name", lambda device=None: "Ascend", raising=False)
+    assert torch.npu.get_device_name("npu:0") == "Ascend"
+
+
+def test_get_device_capability_stub(monkeypatch):
+    monkeypatch.setattr(torch.npu, "_get_device_capability", lambda device=None: (0, 0), raising=False)
+    assert torch.npu.get_device_capability("npu:0") == (0, 0)
+
+
+def test_peer_access_unsupported():
+    assert torch.npu.can_device_access_peer(0, 1) is False
+    with pytest.raises(RuntimeError):
+        torch.npu.enable_peer_access(1)
+
+
+def test_stream_priority_range_fallback():
+    assert torch.npu.stream_priority_range() == (0, 0)
+
+
+def test_pinned_memory():
+    t = torch.tensor([1.0, 2.0])
+    tp = torch.npu.pin_memory(t)
+    assert torch.npu.is_pinned(tp) is True
