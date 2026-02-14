@@ -58,3 +58,21 @@ def test_register_hook_receives_grad():
     t.register_hook(hook)
     t.sum().backward()
     assert seen["grad"] == [1.0, 1.0]
+
+
+def test_autograd_grad_basic():
+    x = torch.ones((2,))
+    x.requires_grad_(True)
+    y = (x * x).sum()
+    (gx,) = torch.autograd.grad(y, (x,))
+    assert gx.numpy().tolist() == [2.0, 2.0]
+
+
+def test_autograd_grad_allow_unused():
+    x = torch.ones((2,))
+    x.requires_grad_(True)
+    y = torch.ones((1,))
+    with pytest.raises(RuntimeError):
+        torch.autograd.grad(y, (x,))
+    gx = torch.autograd.grad(y, (x,), allow_unused=True)[0]
+    assert gx is None

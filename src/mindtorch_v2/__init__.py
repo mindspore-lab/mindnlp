@@ -10,6 +10,7 @@ from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context
 from ._backends import cpu
 from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad
+from . import _autograd as autograd
 from . import npu
 from . import _C
 
@@ -40,4 +41,5 @@ __all__ = [
     "get_default_device",
     "set_default_device",
     "npu",
+    "autograd",
 ]
