@@ -10,13 +10,13 @@ def test_dispatch_keyset_cpu():
 
 
 def test_registry_schema_and_kernel():
-    registry.register_schema("aten::add", "add(Tensor a, Tensor b) -> Tensor")
+    registry.register_schema("aten::test_add", "add(Tensor a, Tensor b) -> Tensor")
 
     def cpu_impl(a, b):
         return a
 
-    registry.register_kernel("aten::add", DispatchKey.CPU, cpu_impl)
-    entry = registry.get("aten::add")
+    registry.register_kernel("aten::test_add", DispatchKey.CPU, cpu_impl)
+    entry = registry.get("aten::test_add")
     assert entry.schema is not None
     assert entry.kernels[DispatchKey.CPU] is cpu_impl
 

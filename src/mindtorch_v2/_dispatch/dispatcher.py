@@ -94,8 +94,17 @@ def dispatch(name, dispatch_device, *args, **kwargs):
         tensors,
         grad_enabled=is_grad_enabled(),
         pipeline_enabled=pipe is not None,
+        device=dispatch_device,
     )
     entry = registry.get(name)
+    def _run_kernel():
+        kernel, _ = _kernel_for_entry(entry, _key_order(keyset))
+        if kernel is None:
+            raise RuntimeError(
+                f"could not find kernel for op {name} with keys {sorted(k.name for k in keyset)}"
+            )
+        impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
+        return kernel(*args, **impl_kwargs)
     if pipe is not None and DispatchKey.Pipeline in keyset:
         meta = entry.kernels.get(DispatchKey.Meta)
         if meta is None:
@@ -111,8 +120,6 @@ def dispatch(name, dispatch_device, *args, **kwargs):
         impl_kwargs = _prepare_kwargs(impl, kwargs, dispatch_device)
         pipe.record(_PendingOp(impl, args, impl_kwargs, out))
         return out
-    kernel, _ = _kernel_for_entry(entry, _key_order(keyset))
-    if kernel is None:
-        raise RuntimeError(f"could not find kernel for op {name} with keys {sorted(k.name for k in keyset)}")
-    impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
-    return kernel(*args, **impl_kwargs)
+    if pipe is not None:
+        pipe.flush()
+    return _run_kernel()

@@ -11,7 +11,7 @@ class DispatchKey(Enum):
 
 class DispatchKeySet(set):
     @classmethod
-    def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False):
+    def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, device=None):
         keys = cls()
         has_meta = False
         has_npu = False
@@ -29,6 +29,14 @@ class DispatchKeySet(set):
                 has_cpu = True
             if getattr(tensor, "requires_grad", False):
                 requires_grad = True
+        if not tensors and device is not None:
+            dev_type = device.type if hasattr(device, "type") else device
+            if dev_type == "meta":
+                has_meta = True
+            elif dev_type == "npu":
+                has_npu = True
+            else:
+                has_cpu = True
         if has_meta:
             keys.add(DispatchKey.Meta)
         elif has_npu:
