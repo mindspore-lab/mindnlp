@@ -153,14 +153,14 @@ class Tensor:
     def backward(self, gradient=None):
         _backward(self, gradient)
 
-    def to(self, dev):
+    def to(self, dev, non_blocking=False):
         if self._pending:
             from ._dispatch.pipeline import current_pipeline
 
             pipe = current_pipeline()
             if pipe is not None:
                 pipe.flush()
-        return to_dispatch(self, dev)
+        return to_dispatch(self, dev, non_blocking=non_blocking)
 
     def __add__(self, other):
         return add(self, other)
