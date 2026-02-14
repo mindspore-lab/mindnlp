@@ -27,6 +27,7 @@ class Tensor:
         self.grad = None
         self.grad_fn = None
         self._pending = False
+        self._retain_grad = False
         self._version_counter = VersionCounter()
         self._base = None
         self._view_meta = None
@@ -168,6 +169,9 @@ class Tensor:
 
     def is_pinned(self):
         return self._storage.is_pinned()
+
+    def retain_grad(self):
+        self._retain_grad = True
 
     def _bump_version(self):
         self._version_counter.bump()

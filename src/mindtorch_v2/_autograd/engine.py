@@ -15,7 +15,8 @@ def backward(tensor, grad=None, retain_graph=False, create_graph=False):
         if g is None:
             continue
         if t.grad is None:
-            t.grad = g
+            if t.grad_fn is None or getattr(t, "_retain_grad", False):
+                t.grad = g
         else:
             with no_grad():
                 t.grad = add(t.grad, g)
