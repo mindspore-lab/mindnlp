@@ -115,8 +115,8 @@ def empty(shape, dtype=None, device=None):
     return dispatch("empty", dev, shape, dtype=dtype)
 
 
-def to(a, device):
-    return dispatch("to", a.device, a, device)
+def to(a, device, non_blocking=False):
+    return dispatch("to", a.device, a, device, non_blocking=non_blocking)
 
 
 

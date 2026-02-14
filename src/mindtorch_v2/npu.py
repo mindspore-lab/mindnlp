@@ -335,12 +335,11 @@ def disable_peer_access(peer_device, device=None):
 
 
 def pin_memory(tensor):
-    setattr(tensor, "_pinned", True)
-    return tensor
+    return tensor.pin_memory()
 
 
 def is_pinned(tensor):
-    return bool(getattr(tensor, "_pinned", False))
+    return tensor.is_pinned()
 
 
 def memory_summary(device=None, abbreviated=False):

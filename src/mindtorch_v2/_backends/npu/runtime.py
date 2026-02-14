@@ -351,6 +351,25 @@ def _alloc_device(size, runtime=None):
     return alloc.malloc(int(size), stream=stream)
 
 
+def alloc_host(size):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    host_ptr, ret = acl.rt.malloc_host(int(size))
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.malloc_host failed: {ret}")
+    return host_ptr
+
+
+def free_host(ptr):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    ret = acl.rt.free_host(ptr)
+    if ret != ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.free_host failed: {ret}")
+
+
 def _memcpy_h2d(dst, size, src_ptr, runtime=None):
     global acl
     if acl is None:
@@ -395,7 +414,7 @@ def _numpy_from_ptr(ptr, shape, dtype):
     return arr.reshape(shape)
 
 
-def _copy_cpu_to_npu(arr, runtime=None):
+def _copy_cpu_to_npu(arr, runtime=None, non_blocking=False, stream=None):
     if runtime is None:
         runtime = get_runtime(0)
     global acl
@@ -409,15 +428,22 @@ def _copy_cpu_to_npu(arr, runtime=None):
         raise RuntimeError(f"acl.rt.malloc_host failed: {ret}")
     try:
         ctypes.memmove(int(host_ptr), int(arr.ctypes.data), int(size))
-        _memcpy_h2d(dev_ptr, size, host_ptr, runtime=runtime)
-        runtime.defer_host_free(host_ptr)
+        if non_blocking and hasattr(acl.rt, "memcpy_async"):
+            use_stream = runtime.stream if stream is None else stream
+            ret = acl.rt.memcpy_async(dev_ptr, size, host_ptr, size, ACL_MEMCPY_HOST_TO_DEVICE, use_stream)
+            if ret != ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy_async H2D failed: {ret}")
+            runtime.defer_host_free(host_ptr)
+        else:
+            _memcpy_h2d(dev_ptr, size, host_ptr, runtime=runtime)
+            runtime.defer_host_free(host_ptr)
     except Exception:
         acl.rt.free_host(host_ptr)
         raise
     return dev_ptr, int(size)
 
 
-def _copy_npu_to_cpu(ptr, size, shape, dtype, runtime=None):
+def _copy_npu_to_cpu(ptr, size, shape, dtype, runtime=None, non_blocking=False, stream=None):
     if runtime is None:
         runtime = get_runtime(0)
     global acl
@@ -427,6 +453,15 @@ def _copy_npu_to_cpu(ptr, size, shape, dtype, runtime=None):
     host_ptr, ret = acl.rt.malloc_host(size)
     if ret != ACL_ERROR_CODE:
         raise RuntimeError(f"acl.rt.malloc_host failed: {ret}")
+    if non_blocking and hasattr(acl.rt, "memcpy_async"):
+        use_stream = runtime.stream if stream is None else stream
+        ret = acl.rt.memcpy_async(host_ptr, size, ptr, size, ACL_MEMCPY_DEVICE_TO_HOST, use_stream)
+        if ret != ACL_ERROR_CODE:
+            raise RuntimeError(f"acl.rt.memcpy_async D2H failed: {ret}")
+        runtime.synchronize_stream(use_stream)
+        arr = _numpy_from_ptr(host_ptr, shape, dtype).copy()
+        acl.rt.free_host(host_ptr)
+        return arr
     _memcpy_d2h(host_ptr, size, ptr)
     arr = _numpy_from_ptr(host_ptr, shape, dtype).copy()
     acl.rt.free_host(host_ptr)
