@@ -155,8 +155,8 @@ class Tensor:
             raise RuntimeError("numpy() is only available for CPU tensors")
         return self._numpy_view()
 
-    def backward(self, gradient=None):
-        _backward(self, gradient)
+    def backward(self, gradient=None, retain_graph=False, create_graph=False):
+        _backward(self, gradient, retain_graph=retain_graph, create_graph=create_graph)
 
     def pin_memory(self):
         if self.device.type != "cpu":

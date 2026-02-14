@@ -2,7 +2,7 @@ from .grad_mode import no_grad
 from .._functional import add
 
 
-def backward(tensor, grad=None):
+def backward(tensor, grad=None, retain_graph=False, create_graph=False):
     if grad is None:
         if tensor.numel() != 1:
             raise RuntimeError("grad can be implicitly created only for scalar outputs")
@@ -20,4 +20,4 @@ def backward(tensor, grad=None):
             with no_grad():
                 t.grad = add(t.grad, g)
         if t.grad_fn is not None:
-            backward(t, t.grad)
+            backward(t, t.grad, retain_graph=retain_graph, create_graph=create_graph)
