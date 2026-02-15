@@ -138,6 +138,26 @@ def erfc(a):
 def softplus(a):
     return dispatch("softplus", a.device.type, a)
 
+def sinh(a):
+    return dispatch("sinh", a.device.type, a)
+
+
+def cosh(a):
+    return dispatch("cosh", a.device.type, a)
+
+
+def erf(a):
+    return dispatch("erf", a.device.type, a)
+
+
+def erfc(a):
+    return dispatch("erfc", a.device.type, a)
+
+
+def softplus(a):
+    return dispatch("softplus", a.device.type, a)
+
+
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 
