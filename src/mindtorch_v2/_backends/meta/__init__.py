@@ -10,6 +10,10 @@ from .ops import (
     _meta_transpose_meta,
     _meta_unary_meta,
     _meta_unary_bool_meta,
+    _meta_clamp_meta,
+    _meta_clamp_min_meta,
+    _meta_clamp_max_meta,
+    _meta_hardtanh_meta,
     _meta_view_meta,
     _meta_contiguous_meta,
 )
@@ -48,6 +52,11 @@ registry.register("cosh", "meta", _meta_unary_meta)
 registry.register("erf", "meta", _meta_unary_meta)
 registry.register("erfc", "meta", _meta_unary_meta)
 registry.register("softplus", "meta", _meta_unary_meta)
+registry.register("clamp", "meta", _meta_clamp_meta)
+registry.register("clamp_min", "meta", _meta_clamp_min_meta)
+registry.register("clamp_max", "meta", _meta_clamp_max_meta)
+registry.register("relu6", "meta", _meta_unary_meta)
+registry.register("hardtanh", "meta", _meta_hardtanh_meta)
 registry.register("contiguous", "meta", _meta_contiguous_meta)
 registry.register("sum", "meta", _meta_sum_meta)
 registry.register("reshape", "meta", view_backend.reshape, meta=_meta_view_meta)

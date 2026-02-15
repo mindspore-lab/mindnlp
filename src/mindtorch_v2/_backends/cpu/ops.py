@@ -205,3 +205,33 @@ def softplus(a):
     arr = _to_numpy(a)
     out = np.log1p(np.exp(arr))
     return _from_numpy(out, a.dtype, a.device)
+
+
+def clamp(a, min_val=None, max_val=None):
+    arr = _to_numpy(a)
+    out = np.clip(arr, min_val, max_val)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def clamp_min(a, min_val):
+    arr = _to_numpy(a)
+    out = np.maximum(arr, min_val)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def clamp_max(a, max_val):
+    arr = _to_numpy(a)
+    out = np.minimum(arr, max_val)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def relu6(a):
+    arr = _to_numpy(a)
+    out = np.minimum(np.maximum(arr, 0.0), 6.0)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def hardtanh(a, min_val=-1.0, max_val=1.0):
+    arr = _to_numpy(a)
+    out = np.clip(arr, min_val, max_val)
+    return _from_numpy(out, a.dtype, a.device)

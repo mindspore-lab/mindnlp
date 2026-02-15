@@ -20,6 +20,7 @@ from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc
 from ._functional import pow, log2, log10, exp2, rsqrt
 from ._functional import sign, signbit, isnan, isinf, isfinite
 from ._functional import sinh, cosh, erf, erfc, softplus
+from ._functional import clamp, clamp_min, clamp_max, relu6, hardtanh
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context
 from ._backends import cpu
@@ -85,6 +86,11 @@ __all__ = [
     "erf",
     "erfc",
     "softplus",
+    "clamp",
+    "clamp_min",
+    "clamp_max",
+    "relu6",
+    "hardtanh",
     "sum",
     # printing
     "set_printoptions",

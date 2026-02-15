@@ -49,6 +49,22 @@ def _meta_unary_bool_meta(a):
     return _meta_tensor(a.shape, bool_dtype, a.device)
 
 
+def _meta_clamp_meta(a, min_val=None, max_val=None):
+    return _meta_unary_meta(a)
+
+
+def _meta_clamp_min_meta(a, min_val):
+    return _meta_unary_meta(a)
+
+
+def _meta_clamp_max_meta(a, max_val):
+    return _meta_unary_meta(a)
+
+
+def _meta_hardtanh_meta(a, min_val=-1.0, max_val=1.0):
+    return _meta_unary_meta(a)
+
+
 def _meta_sum_meta(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
@@ -117,6 +133,10 @@ __all__ = [
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",
+    "_meta_clamp_meta",
+    "_meta_clamp_min_meta",
+    "_meta_clamp_max_meta",
+    "_meta_hardtanh_meta",
     "_meta_view_meta",
     "_meta_contiguous_meta",
 ]

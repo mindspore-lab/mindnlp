@@ -60,6 +60,17 @@ def test_meta_unary_elementwise_ops_shape():
         torch.erf,
         torch.erfc,
         torch.softplus,
+        torch.relu6,
+    ):
+        out = op(x)
+        assert out.device.type == "meta"
+        assert out.shape == x.shape
+
+    for op in (
+        lambda t: torch.clamp(t, 0.0, 1.0),
+        lambda t: torch.clamp_min(t, 0.0),
+        lambda t: torch.clamp_max(t, 1.0),
+        lambda t: torch.hardtanh(t, -1.0, 1.0),
     ):
         out = op(x)
         assert out.device.type == "meta"

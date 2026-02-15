@@ -44,6 +44,11 @@ from .ops import (
     erf,
     erfc,
     softplus,
+    clamp,
+    clamp_min,
+    clamp_max,
+    relu6,
+    hardtanh,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -80,6 +85,11 @@ registry.register("cosh", "cpu", cosh, meta=meta_infer.infer_unary)
 registry.register("erf", "cpu", erf, meta=meta_infer.infer_unary)
 registry.register("erfc", "cpu", erfc, meta=meta_infer.infer_unary)
 registry.register("softplus", "cpu", softplus, meta=meta_infer.infer_unary)
+registry.register("clamp", "cpu", clamp, meta=meta_infer.infer_unary)
+registry.register("clamp_min", "cpu", clamp_min, meta=meta_infer.infer_unary)
+registry.register("clamp_max", "cpu", clamp_max, meta=meta_infer.infer_unary)
+registry.register("relu6", "cpu", relu6, meta=meta_infer.infer_unary)
+registry.register("hardtanh", "cpu", hardtanh, meta=meta_infer.infer_unary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
