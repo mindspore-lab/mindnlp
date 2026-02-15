@@ -45,14 +45,14 @@ def test_file_backed_storage_resize_raises(tmp_path):
     path = tmp_path / "storage.bin"
     path.write_bytes(b"\x00" * 8)
     untyped = torch.UntypedStorage.from_file(str(path))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(RuntimeError, match="Trying to resize storage that is not resizable"):
         untyped.resize_(16)
 
 
 def test_shared_storage_resize_raises():
     t = torch.tensor([1.0, 2.0])
     untyped = t.storage().untyped_storage().share_memory_()
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(RuntimeError, match="Trying to resize storage that is not resizable"):
         untyped.resize_(16)
 
 

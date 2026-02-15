@@ -6,7 +6,7 @@ from . import aclnn
 from . import state as npu_state
 
 
-def _wrap_tensor(storage, shape, stride):
+def _wrap_tensor(storage, shape, stride, requires_grad):
     from ..._tensor import Tensor
 
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
@@ -24,7 +24,7 @@ def tensor_create(data, dtype=None, device=None, requires_grad=False):
     ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
     storage = npu_typed_storage_from_ptr(ptr, arr.size, dtype, device=device)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
-    return _wrap_tensor(storage, arr.shape, stride)
+    return _wrap_tensor(storage, arr.shape, stride, requires_grad)
 
 
 def zeros_create(shape, dtype=None, device=None, requires_grad=False):
@@ -38,7 +38,7 @@ def zeros_create(shape, dtype=None, device=None, requires_grad=False):
     stride = npu_runtime._contiguous_stride(shape)
     aclnn.inplace_zero(ptr, shape, stride, dtype, runtime, stream=stream.stream)
     storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
-    return _wrap_tensor(storage, shape, stride)
+    return _wrap_tensor(storage, shape, stride, requires_grad)
 
 
 def ones_create(shape, dtype=None, device=None, requires_grad=False):
@@ -52,7 +52,7 @@ def ones_create(shape, dtype=None, device=None, requires_grad=False):
     stride = npu_runtime._contiguous_stride(shape)
     aclnn.inplace_one(ptr, shape, stride, dtype, runtime, stream=stream.stream)
     storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
-    return _wrap_tensor(storage, shape, stride)
+    return _wrap_tensor(storage, shape, stride, requires_grad)
 
 
 def empty_create(shape, dtype=None, device=None, requires_grad=False):
@@ -64,4 +64,4 @@ def empty_create(shape, dtype=None, device=None, requires_grad=False):
     ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
     storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
     stride = npu_runtime._contiguous_stride(shape)
-    return _wrap_tensor(storage, shape, stride)
+    return _wrap_tensor(storage, shape, stride, requires_grad)
