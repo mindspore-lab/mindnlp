@@ -27,6 +27,34 @@ def _autograd_binary(name, backward_impl):
     return wrapper
 
 
+
+
+
+def _autograd_unary_args(name, backward_impl, *, cpu_only=False, save_input=True):
+    def wrapper(a, *args, **kwargs):
+        keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
+        out = redispatch(name, keyset, a, *args, **kwargs)
+        if cpu_only and a.device.type != "cpu":
+            return out
+        if GradMode.enabled and a.requires_grad:
+            node_holder = {}
+
+            def _backward(grad):
+                if save_input:
+                    saved_a = node_holder["node"].saved_tensors()[0]
+                else:
+                    saved_a = a
+                return backward_impl(grad, a, saved_a, keyset, args, kwargs)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            if save_input:
+                node.save_for_backward(a)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
 def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
     def wrapper(a, **kwargs):
         keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
@@ -175,4 +203,18 @@ registry.register_kernel("view", DispatchKey.Autograd, _autograd_view("view", _r
 registry.register_kernel("add_", DispatchKey.Autograd, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("mul_", DispatchKey.Autograd, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
+
+
+
+def _contiguous_backward(grad, _a, _saved_a, _keyset):
+    return (grad,)
+
+
+
+def _to_backward(grad, a, _saved_a, keyset, args, _kwargs):
+    with no_grad():
+        return (redispatch("to", keyset, grad, a.device, non_blocking=False),)
+
 registry.register_kernel("zero_", DispatchKey.Autograd, _autograd_inplace("zero_", _inplace_zero_backward, save_input=False))
+registry.register_kernel("contiguous", DispatchKey.Autograd, _autograd_unary("contiguous", _contiguous_backward, save_input=False))
+registry.register_kernel("to", DispatchKey.Autograd, _autograd_unary_args("to", _to_backward, save_input=True))
