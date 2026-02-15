@@ -50,6 +50,78 @@ def test_npu_matmul_batched_broadcast():
     assert np.allclose(out.to("cpu").numpy(), np.matmul(a.to("cpu").numpy(), b.to("cpu").numpy()))
 
 
+@pytest.mark.parametrize(
+    "op_name, numpy_fn",
+    [
+        ("abs", np.abs),
+        ("neg", np.negative),
+        ("exp", np.exp),
+        ("log", np.log),
+        ("sqrt", np.sqrt),
+        ("rsqrt", lambda x: 1.0 / np.sqrt(x)),
+        ("sin", np.sin),
+        ("cos", np.cos),
+        ("tan", np.tan),
+        ("tanh", np.tanh),
+        ("sigmoid", lambda x: 1.0 / (1.0 + np.exp(-x))),
+        ("ceil", np.ceil),
+        ("floor", np.floor),
+        ("round", np.round),
+        ("trunc", np.trunc),
+        ("frac", lambda x: x - np.trunc(x)),
+        ("log2", np.log2),
+        ("log10", np.log10),
+        ("exp2", np.exp2),
+    ],
+)
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_unary_ops(op_name, numpy_fn, dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    if op_name in {"log", "log2", "log10", "sqrt", "rsqrt"}:
+        data = np.array([0.5, 1.0, 2.0, 4.0], dtype=np.float32)
+    else:
+        data = np.array([-2.0, -0.5, 0.5, 2.0], dtype=np.float32)
+
+    x = torch.tensor(data, device="npu", dtype=dtype)
+    op = getattr(torch, op_name)
+    out = op(x)
+    expected = numpy_fn(data).astype(np.float32)
+    assert out.device.type == "npu"
+    assert np.allclose(
+        out.to("cpu").numpy().astype(np.float32),
+        expected,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_pow(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    base = torch.tensor([1.0, 2.0, 3.0], device="npu", dtype=dtype)
+    exp = torch.tensor([2.0, 3.0, 0.5], device="npu", dtype=dtype)
+    out = torch.pow(base, exp)
+    expected = np.power(base.to("cpu").numpy(), exp.to("cpu").numpy())
+    assert np.allclose(
+        out.to("cpu").numpy().astype(np.float32),
+        expected.astype(np.float32),
+        atol=1e-3,
+        rtol=1e-3,
+    )
+
+    scalar_out = torch.pow(base, 2.0)
+    scalar_expected = np.power(base.to("cpu").numpy(), 2.0)
+    assert np.allclose(
+        scalar_out.to("cpu").numpy().astype(np.float32),
+        scalar_expected.astype(np.float32),
+        atol=1e-3,
+        rtol=1e-3,
+    )
+
+
 def test_npu_model_dir_probe():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")

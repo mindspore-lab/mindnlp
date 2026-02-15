@@ -100,6 +100,50 @@ def _batch_offset(index, stride):
     return sum(i * s for i, s in zip(index, stride))
 
 
+def _unary_op(a, fn, name):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError(f"NPU {name} expects NPU tensors")
+    out_size = _numel(a.shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    fn(storage.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def _binary_op(a, b, fn, name):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError(f"NPU {name} expects NPU tensors")
+    if a.dtype != b.dtype:
+        raise ValueError(f"NPU {name} requires matching dtypes")
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    fn(
+        a_storage.data_ptr(),
+        b_storage.data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        b.shape,
+        b.stride,
+        out_shape,
+        out_stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
 def add(a, b):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
@@ -276,6 +320,110 @@ def relu(a):
 
     storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
     return _wrap_tensor(storage, a.shape, a.stride)
+
+
+def abs(a):
+    return _unary_op(a, aclnn.abs, "abs")
+
+
+def neg(a):
+    return _unary_op(a, aclnn.neg, "neg")
+
+
+def exp(a):
+    return _unary_op(a, aclnn.exp, "exp")
+
+
+def log(a):
+    return _unary_op(a, aclnn.log, "log")
+
+
+def sqrt(a):
+    return _unary_op(a, aclnn.sqrt, "sqrt")
+
+
+def rsqrt(a):
+    return _unary_op(a, aclnn.rsqrt, "rsqrt")
+
+
+def sin(a):
+    return _unary_op(a, aclnn.sin, "sin")
+
+
+def cos(a):
+    return _unary_op(a, aclnn.cos, "cos")
+
+
+def tan(a):
+    return _unary_op(a, aclnn.tan, "tan")
+
+
+def tanh(a):
+    return _unary_op(a, aclnn.tanh, "tanh")
+
+
+def sigmoid(a):
+    return _unary_op(a, aclnn.sigmoid, "sigmoid")
+
+
+def floor(a):
+    return _unary_op(a, aclnn.floor, "floor")
+
+
+def ceil(a):
+    return _unary_op(a, aclnn.ceil, "ceil")
+
+
+def round(a):
+    return _unary_op(a, aclnn.round, "round")
+
+
+def trunc(a):
+    return _unary_op(a, aclnn.trunc, "trunc")
+
+
+def frac(a):
+    return _unary_op(a, aclnn.frac, "frac")
+
+
+def log2(a):
+    return _unary_op(a, aclnn.log2, "log2")
+
+
+def log10(a):
+    return _unary_op(a, aclnn.log10, "log10")
+
+
+def exp2(a):
+    return _unary_op(a, aclnn.exp2, "exp2")
+
+
+def _pow_tensor_scalar_op(a, exponent):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU pow expects NPU tensors")
+    out_size = _numel(a.shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    aclnn.pow_tensor_scalar(
+        storage.data_ptr(),
+        exponent,
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def pow(a, b):
+    if hasattr(b, "shape"):
+        return _binary_op(a, b, aclnn.pow_tensor_tensor, "pow")
+    return _pow_tensor_scalar_op(a, b)
 
 
 def sum_(a, dim=None, keepdim=False):
