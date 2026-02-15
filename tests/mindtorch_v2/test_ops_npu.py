@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import mindtorch_v2 as torch
 
@@ -9,6 +10,44 @@ def test_npu_add():
     y = torch.tensor([3.0, 4.0]).to("npu")
     z = torch.add(x, y).to("cpu")
     assert z.storage().data.tolist() == [4.0, 6.0]
+
+
+def test_npu_matmul_2d():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu", dtype=torch.float16)
+    b = torch.tensor([[1.0, 0.0], [0.0, 1.0]], device="npu", dtype=torch.float16)
+    out = torch.matmul(a, b)
+    assert out.device.type == "npu"
+    assert np.allclose(out.to("cpu").numpy(), np.matmul(a.to("cpu").numpy(), b.to("cpu").numpy()))
+
+
+def test_npu_matmul_1d_2d():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([1.0, 2.0, 3.0], device="npu", dtype=torch.float16)
+    b = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], device="npu", dtype=torch.float16)
+    out = torch.matmul(a, b)
+    assert out.shape == (2,)
+    assert np.allclose(out.to("cpu").numpy(), np.matmul(a.to("cpu").numpy(), b.to("cpu").numpy()))
+
+
+def test_npu_matmul_batched_broadcast():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor(
+        np.arange(2 * 1 * 2 * 3, dtype=np.float16).reshape(2, 1, 2, 3),
+        device="npu",
+        dtype=torch.float16,
+    )
+    b = torch.tensor(
+        np.arange(1 * 4 * 3 * 5, dtype=np.float16).reshape(1, 4, 3, 5),
+        device="npu",
+        dtype=torch.float16,
+    )
+    out = torch.matmul(a, b)
+    assert out.shape == (2, 4, 2, 5)
+    assert np.allclose(out.to("cpu").numpy(), np.matmul(a.to("cpu").numpy(), b.to("cpu").numpy()))
 
 
 def test_npu_model_dir_probe():
