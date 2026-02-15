@@ -1,0 +1,130 @@
+from .._dispatch.keys import DispatchKey
+from .._dispatch.registry import registry
+from .._dispatch.dispatcher import current_dispatch_keyset, redispatch
+from .._autograd.grad_mode import GradMode, no_grad
+from .._autograd.node import Node
+from .._autograd.utils import reduce_grad
+
+
+def _autograd_binary(name, backward_impl):
+    def wrapper(a, b):
+        keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
+        out = redispatch(name, keyset, a, b)
+        if GradMode.enabled and (a.requires_grad or b.requires_grad):
+            node_holder = {}
+
+            def _backward(grad):
+                saved_a, saved_b = node_holder["node"].saved_tensors()
+                return backward_impl(grad, saved_a, saved_b, keyset)
+
+            node = Node(_backward, (a, b))
+            node_holder["node"] = node
+            node.save_for_backward(a, b)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
+    def wrapper(a, **kwargs):
+        keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
+        out = redispatch(name, keyset, a, **kwargs)
+        if cpu_only and a.device.type != "cpu":
+            return out
+        if GradMode.enabled and a.requires_grad:
+            node_holder = {}
+
+            def _backward(grad):
+                if save_input:
+                    saved_a = node_holder["node"].saved_tensors()[0]
+                else:
+                    saved_a = a
+                return backward_impl(grad, saved_a, keyset)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            if save_input:
+                node.save_for_backward(a)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _autograd_view(name, backward_impl):
+    def wrapper(a, *args):
+        keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
+        out = redispatch(name, keyset, a, *args)
+        if GradMode.enabled and a.requires_grad:
+            node_holder = {}
+
+            def _backward(grad):
+                saved_a = node_holder["node"].saved_tensors()[0]
+                return backward_impl(grad, saved_a, args, keyset)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            node.save_for_backward(a)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _add_backward(grad, a, b, _keyset):
+    grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
+    grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
+    return grad_a, grad_b
+
+
+def _mul_backward(grad, a, b, keyset):
+    saved_a, saved_b = a, b
+    with no_grad():
+        grad_a = redispatch("mul", keyset, grad, saved_b) if saved_a.requires_grad else None
+        grad_b = redispatch("mul", keyset, grad, saved_a) if saved_b.requires_grad else None
+    grad_a = reduce_grad(grad_a, saved_a.shape) if grad_a is not None else None
+    grad_b = reduce_grad(grad_b, saved_b.shape) if grad_b is not None else None
+    return grad_a, grad_b
+
+
+def _matmul_backward(grad, a, b, keyset):
+    with no_grad():
+        grad_a = redispatch("matmul", keyset, grad, b.transpose(0, 1)) if a.requires_grad else None
+        grad_b = redispatch("matmul", keyset, a.transpose(0, 1), grad) if b.requires_grad else None
+    return grad_a, grad_b
+
+
+def _sum_backward(grad, a, keyset):
+    with no_grad():
+        ones = a._ones_like()
+        return (redispatch("mul", keyset, grad, ones),)
+
+
+def _relu_backward(grad, a, keyset):
+    saved_a = a
+    with no_grad():
+        mask = saved_a._ones_like()
+        mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
+        return (redispatch("mul", keyset, grad, mask),)
+
+
+def _reshape_backward(grad, a, _args, keyset):
+    return (redispatch("reshape", keyset, grad, a.shape),)
+
+
+def _transpose_backward(grad, _a, args, keyset):
+    dim0, dim1 = args
+    return (redispatch("transpose", keyset, grad, dim0, dim1),)
+
+
+registry.register_kernel("add", DispatchKey.Autograd, _autograd_binary("add", _add_backward))
+registry.register_kernel("mul", DispatchKey.Autograd, _autograd_binary("mul", _mul_backward))
+registry.register_kernel("matmul", DispatchKey.Autograd, _autograd_binary("matmul", _matmul_backward))
+registry.register_kernel("sum", DispatchKey.Autograd, _autograd_unary("sum", _sum_backward, save_input=False))
+registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
+registry.register_kernel("reshape", DispatchKey.Autograd, _autograd_view("reshape", _reshape_backward))
+registry.register_kernel("transpose", DispatchKey.Autograd, _autograd_view("transpose", _transpose_backward))

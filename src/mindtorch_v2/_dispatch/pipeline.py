@@ -7,14 +7,20 @@ _CURRENT = None
 class Pipeline:
     def __init__(self):
         self.queue = []
+        self.outputs = {}
 
-    def record(self, entry):
+    def record(self, entry, *, pending=None):
         self.queue.append(entry)
+        if pending is not None:
+            self.outputs[id(pending)] = pending
+            entry.out = pending
 
     def flush(self):
-        for entry in self.queue:
-            entry.execute()
+        pending = list(self.queue)
         self.queue.clear()
+        for entry in pending:
+            entry.execute()
+        self.outputs.clear()
 
 
 @contextlib.contextmanager
