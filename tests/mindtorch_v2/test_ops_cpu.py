@@ -225,3 +225,38 @@ def test_softplus_cpu():
     expected = np.log1p(np.exp(x.numpy()))
     np.testing.assert_allclose(torch.softplus(x).numpy(), expected)
     np.testing.assert_allclose(x.softplus().numpy(), expected)
+
+
+def test_clamp_cpu():
+    x = torch.tensor([-1.0, 0.5, 2.0])
+    expected = np.clip(x.numpy(), 0.0, 1.0)
+    np.testing.assert_allclose(torch.clamp(x, 0.0, 1.0).numpy(), expected)
+    np.testing.assert_allclose(x.clamp(0.0, 1.0).numpy(), expected)
+
+
+def test_clamp_min_cpu():
+    x = torch.tensor([-1.0, 0.5, 2.0])
+    expected = np.maximum(x.numpy(), 0.5)
+    np.testing.assert_allclose(torch.clamp_min(x, 0.5).numpy(), expected)
+    np.testing.assert_allclose(x.clamp_min(0.5).numpy(), expected)
+
+
+def test_clamp_max_cpu():
+    x = torch.tensor([-1.0, 0.5, 2.0])
+    expected = np.minimum(x.numpy(), 0.5)
+    np.testing.assert_allclose(torch.clamp_max(x, 0.5).numpy(), expected)
+    np.testing.assert_allclose(x.clamp_max(0.5).numpy(), expected)
+
+
+def test_relu6_cpu():
+    x = torch.tensor([-1.0, 0.5, 7.0])
+    expected = np.minimum(np.maximum(x.numpy(), 0.0), 6.0)
+    np.testing.assert_allclose(torch.relu6(x).numpy(), expected)
+    np.testing.assert_allclose(x.relu6().numpy(), expected)
+
+
+def test_hardtanh_cpu():
+    x = torch.tensor([-2.0, 0.0, 2.0])
+    expected = np.clip(x.numpy(), -1.0, 1.0)
+    np.testing.assert_allclose(torch.hardtanh(x, -1.0, 1.0).numpy(), expected)
+    np.testing.assert_allclose(x.hardtanh(-1.0, 1.0).numpy(), expected)
