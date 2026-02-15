@@ -40,6 +40,26 @@ def sqrt(a):
     return dispatch("sqrt", a.device.type, a)
 
 
+def sin(a):
+    return dispatch("sin", a.device.type, a)
+
+
+def cos(a):
+    return dispatch("cos", a.device.type, a)
+
+
+def tan(a):
+    return dispatch("tan", a.device.type, a)
+
+
+def tanh(a):
+    return dispatch("tanh", a.device.type, a)
+
+
+def sigmoid(a):
+    return dispatch("sigmoid", a.device.type, a)
+
+
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 

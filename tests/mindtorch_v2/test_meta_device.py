@@ -30,7 +30,18 @@ def test_meta_ops_shape_propagation():
 
 def test_meta_unary_elementwise_ops_shape():
     x = torch.tensor([1.0, 2.0], device="meta")
-    for op in (torch.abs, torch.neg, torch.exp, torch.log, torch.sqrt):
+    for op in (
+        torch.abs,
+        torch.neg,
+        torch.exp,
+        torch.log,
+        torch.sqrt,
+        torch.sin,
+        torch.cos,
+        torch.tan,
+        torch.tanh,
+        torch.sigmoid,
+    ):
         out = op(x)
         assert out.device.type == "meta"
         assert out.shape == x.shape

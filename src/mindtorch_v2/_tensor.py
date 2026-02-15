@@ -12,6 +12,8 @@ from ._device import _default_device, device as Device
 from ._dtype import float32, to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum, abs as abs_dispatch, neg as neg_dispatch
 from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
+from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_dispatch
+from ._functional import tanh as tanh_dispatch, sigmoid as sigmoid_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -315,6 +317,21 @@ class Tensor:
 
     def sqrt(self):
         return sqrt_dispatch(self)
+
+    def sin(self):
+        return sin_dispatch(self)
+
+    def cos(self):
+        return cos_dispatch(self)
+
+    def tan(self):
+        return tan_dispatch(self)
+
+    def tanh(self):
+        return tanh_dispatch(self)
+
+    def sigmoid(self):
+        return sigmoid_dispatch(self)
 
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
