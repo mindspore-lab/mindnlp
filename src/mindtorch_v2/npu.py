@@ -63,7 +63,7 @@ def _normalize_npu_device(device):
     else:
         dev = Device(device)
     if dev.type != "npu":
-        raise ValueError(f"Expected NPU device, got {dev}")
+        raise ValueError(f"Expected a cuda device, but got: {dev}")
     if dev.index is None:
         return Device("npu", index=npu_state.current_device())
     return dev

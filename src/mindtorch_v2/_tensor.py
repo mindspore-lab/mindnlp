@@ -181,6 +181,10 @@ class Tensor:
     def pin_memory(self):
         if self.device.type != "cpu":
             raise RuntimeError("pin_memory only supports CPU tensors")
+        from . import npu as npu_api
+
+        if not npu_api.is_available():
+            raise RuntimeError("Cannot access accelerator device when none is available.")
         if self.is_pinned():
             return self
         storage = pinned_cpu_typed_storage_from_numpy(self._numpy_view(), self.dtype, device=self.device)
@@ -235,9 +239,9 @@ class Tensor:
         if not self.requires_grad:
             return
         if self.grad_fn is None and not self._is_view():
-            raise RuntimeError("a leaf Variable that requires grad is being used in an in-place operation")
+            raise RuntimeError("a leaf Variable that requires grad is being used in an in-place operation.")
         if self._is_view() and self._base is not None and self._base.grad_fn is None and self._base.requires_grad:
-            raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation")
+            raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation.")
 
     def add_(self, other):
         from ._dispatch.dispatcher import dispatch

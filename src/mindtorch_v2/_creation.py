@@ -5,8 +5,8 @@ from ._functional import ones as ones_dispatch
 from ._functional import empty as empty_dispatch
 
 
-def tensor(data, dtype=float32, device=None):
-    return tensor_dispatch(data, dtype=dtype, device=device)
+def tensor(data, dtype=float32, device=None, requires_grad=False):
+    return tensor_dispatch(data, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 def zeros(shape, dtype=float32, device=None):

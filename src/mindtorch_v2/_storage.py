@@ -100,9 +100,9 @@ class _CPUUntypedStorage(UntypedStorage):
 
     def resize_(self, new_nbytes):
         if self._filename is not None:
-            raise NotImplementedError("file-backed storage cannot resize")
+            raise RuntimeError("Trying to resize storage that is not resizable")
         if self._shared:
-            raise NotImplementedError("shared storage cannot resize")
+            raise RuntimeError("Trying to resize storage that is not resizable")
         new_array = np.empty(int(new_nbytes), dtype=np.uint8)
         old_bytes = self._array.view(np.uint8)
         copy_bytes = min(old_bytes.size, new_array.size)
