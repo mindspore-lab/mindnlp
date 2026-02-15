@@ -32,3 +32,10 @@ def test_keyset_includes_pipeline_when_enabled():
     a = torch.ones((2,))
     keyset = DispatchKeySet.from_tensors((a,), grad_enabled=False, pipeline_enabled=True)
     assert DispatchKey.Pipeline in keyset
+
+
+def test_dispatch_keyset_without_removes_keys():
+    keyset = DispatchKeySet({DispatchKey.CPU, DispatchKey.Autograd})
+    trimmed = keyset.without(DispatchKey.Autograd)
+    assert DispatchKey.CPU in trimmed
+    assert DispatchKey.Autograd not in trimmed

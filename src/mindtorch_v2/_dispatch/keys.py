@@ -10,6 +10,11 @@ class DispatchKey(Enum):
 
 
 class DispatchKeySet(set):
+    def without(self, keys):
+        if isinstance(keys, (set, list, tuple)):
+            return DispatchKeySet({key for key in self if key not in keys})
+        return DispatchKeySet({key for key in self if key != keys})
+
     @classmethod
     def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, device=None):
         keys = cls()

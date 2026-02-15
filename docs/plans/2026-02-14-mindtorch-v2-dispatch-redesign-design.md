@@ -72,3 +72,66 @@ This preserves Torch-visible behavior while reducing Python overhead in pipeline
 - Regression tests for current op behavior (CPU/NPU/meta) with new dispatcher.
 - Pipeline tests verifying deferred execution, flush triggers, and autograd correctness.
 
+## P0 Checklist (Torch Alignment)
+
+### Dispatcher
+- **Dispatch key model & ordering**
+  - Torch ref: `c10/core/DispatchKeySet.h`, `aten/src/ATen/core/dispatch/Dispatcher.h`
+  - mindtorch target: `src/mindtorch_v2/_dispatch/keys.py`, `src/mindtorch_v2/_dispatch/dispatcher.py`
+  - Minimal ops: `tensor/zeros/ones/empty`, `add/mul/matmul/relu/sum`, `reshape/view/transpose`, `to`, `contiguous`
+- **Kernel registration + fallthrough/redispatch**
+  - Torch ref: `aten/src/ATen/core/dispatch/OperatorEntry.cpp`, `aten/src/ATen/core/dispatch/Dispatcher.cpp`
+  - mindtorch target: `src/mindtorch_v2/_dispatch/registry.py`, `src/mindtorch_v2/_dispatch/dispatcher.py`
+  - Minimal ops: `add/mul/matmul/relu/sum` (and inplace variants)
+- **Autograd key wrappers in dispatch**
+  - Torch ref: `torch/csrc/autograd/VariableType`
+  - mindtorch target: `src/mindtorch_v2/_dispatch/dispatcher.py`, `src/mindtorch_v2/_autograd/*`, `src/mindtorch_v2/_functional.py`
+  - Minimal ops: `add/mul/matmul/relu/sum`, `reshape/view/transpose`
+- **Composite/BackendSelect style kernels**
+  - Torch ref: `aten/src/ATen/native` composite kernels + `DispatchKey` definitions
+  - mindtorch target: `src/mindtorch_v2/_dispatch/registry.py`, `src/mindtorch_v2/_functional.py`
+  - Minimal ops: `reshape/view/transpose`, `sum`
+- **Pipeline integration without bypassing dispatch**
+  - Torch ref: N/A (pipeline is mindtorch-specific)
+  - mindtorch target: `src/mindtorch_v2/_dispatch/pipeline.py`, `src/mindtorch_v2/_dispatch/dispatcher.py`
+  - Minimal ops: `add/mul/matmul/relu/sum` with meta kernels
+
+### Autograd
+- **Autograd dispatch wrappers**
+  - Torch ref: `torch/csrc/autograd/VariableType`, `variable_tensor.cpp`
+  - mindtorch target: `src/mindtorch_v2/_dispatch/dispatcher.py`, `src/mindtorch_v2/_autograd/*`, `src/mindtorch_v2/_functional.py`
+  - Minimal ops: `add/mul/matmul/relu/sum`, `reshape/view/transpose`
+- **Version counter + inplace/view semantics**
+  - Torch ref: `VariableTypeUtils.h`, `VariableVersion`
+  - mindtorch target: `src/mindtorch_v2/_tensor.py`, `src/mindtorch_v2/_autograd/version_counter.py`, `src/mindtorch_v2/_functional.py`
+  - Minimal ops: `view/reshape/transpose`, `add_/mul_/relu_/zero_`
+- **View metadata propagation**
+  - Torch ref: `ViewOps.cpp`
+  - mindtorch target: `src/mindtorch_v2/_tensor.py`, `src/mindtorch_v2/_functional.py`
+- **Saved tensors + hooks**
+  - Torch ref: `SavedTensorHooks`, `saved_variable.cpp`
+  - mindtorch target: `src/mindtorch_v2/_autograd/node.py`, `src/mindtorch_v2/_autograd/utils.py`
+- **Grad mode correctness**
+  - Torch ref: `GradMode`
+  - mindtorch target: `src/mindtorch_v2/_dispatch/keys.py`, `src/mindtorch_v2/_autograd/grad_mode.py`, `src/mindtorch_v2/_functional.py`
+
+### Meta + Streams
+- **Meta kernels for core ops**
+  - Torch ref: `aten/src/ATen/meta`, FakeTensor
+  - mindtorch target: `src/mindtorch_v2/_backends/meta/*` (or meta kernels in op files), `src/mindtorch_v2/_dispatch/registry.py`
+  - Minimal ops: `tensor/zeros/ones/empty`, `add/mul/matmul/relu/sum`, `reshape/view/transpose`
+- **Meta tensor data access guards**
+  - Torch ref: meta storage
+  - mindtorch target: `src/mindtorch_v2/_tensor.py`, `src/mindtorch_v2/_storage.py`
+- **Meta + autograd graph build**
+  - Torch ref: FakeTensor autograd
+  - mindtorch target: `src/mindtorch_v2/_autograd/*`, `src/mindtorch_v2/_functional.py`
+- **Thread-local current stream**
+  - Torch ref: `torch/cuda/streams.py`, stream pool
+  - mindtorch target: `src/mindtorch_v2/_backends/npu/state.py`, `src/mindtorch_v2/npu.py`
+- **record_stream + non_blocking copy rules**
+  - Torch ref: `torch/cuda/memory.py`, `THC` copy kernels
+  - mindtorch target: `src/mindtorch_v2/_backends/common/convert.py`, `src/mindtorch_v2/_backends/npu/runtime.py`, `src/mindtorch_v2/_tensor.py`
+- **Synchronization semantics**
+  - Torch ref: `cuda::CUDAGuard`, `CUDA_LAUNCH_BLOCKING`
+  - mindtorch target: `src/mindtorch_v2/_backends/npu/runtime.py`, `src/mindtorch_v2/_backends/npu/state.py`, `Tensor.to`/`numpy`
