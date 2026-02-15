@@ -9,7 +9,7 @@ from . import state as npu_state
 def _wrap_tensor(storage, shape, stride):
     from ..._tensor import Tensor
 
-    return Tensor(storage, shape, stride)
+    return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
 def _require_inplace_one_zero():
@@ -17,7 +17,7 @@ def _require_inplace_one_zero():
         raise RuntimeError("aclnnInplaceOne/Zero not available")
 
 
-def tensor_create(data, dtype=None, device=None):
+def tensor_create(data, dtype=None, device=None, requires_grad=False):
     arr = np.array(data, dtype=npu_runtime._dtype_to_numpy(dtype))
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
@@ -27,7 +27,7 @@ def tensor_create(data, dtype=None, device=None):
     return _wrap_tensor(storage, arr.shape, stride)
 
 
-def zeros_create(shape, dtype=None, device=None):
+def zeros_create(shape, dtype=None, device=None, requires_grad=False):
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
     _require_inplace_one_zero()
@@ -41,7 +41,7 @@ def zeros_create(shape, dtype=None, device=None):
     return _wrap_tensor(storage, shape, stride)
 
 
-def ones_create(shape, dtype=None, device=None):
+def ones_create(shape, dtype=None, device=None, requires_grad=False):
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
     _require_inplace_one_zero()
@@ -55,7 +55,7 @@ def ones_create(shape, dtype=None, device=None):
     return _wrap_tensor(storage, shape, stride)
 
 
-def empty_create(shape, dtype=None, device=None):
+def empty_create(shape, dtype=None, device=None, requires_grad=False):
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
     shape = tuple(shape)

@@ -14,32 +14,32 @@ def _contiguous_stride(shape):
     return tuple(reversed(stride))
 
 
-def tensor_create_meta(data, dtype=None, device=None):
+def tensor_create_meta(data, dtype=None, device=None, requires_grad=False):
     arr = np.array(data, dtype=to_numpy_dtype(dtype))
     stride = tuple(np.array(arr.strides) // arr.itemsize)
     storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
-    return Tensor(storage, arr.shape, stride)
+    return Tensor(storage, arr.shape, stride, requires_grad=requires_grad)
 
 
-def zeros_create_meta(shape, dtype=None, device=None):
+def zeros_create_meta(shape, dtype=None, device=None, requires_grad=False):
     shape = tuple(shape)
     stride = _contiguous_stride(shape)
     storage = meta_typed_storage_from_shape(shape, dtype, device=device)
-    return Tensor(storage, shape, stride)
+    return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
-def ones_create_meta(shape, dtype=None, device=None):
+def ones_create_meta(shape, dtype=None, device=None, requires_grad=False):
     shape = tuple(shape)
     stride = _contiguous_stride(shape)
     storage = meta_typed_storage_from_shape(shape, dtype, device=device)
-    return Tensor(storage, shape, stride)
+    return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
-def empty_create_meta(shape, dtype=None, device=None):
+def empty_create_meta(shape, dtype=None, device=None, requires_grad=False):
     shape = tuple(shape)
     stride = _contiguous_stride(shape)
     storage = meta_typed_storage_from_shape(shape, dtype, device=device)
-    return Tensor(storage, shape, stride)
+    return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
 __all__ = [

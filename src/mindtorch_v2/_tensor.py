@@ -239,9 +239,9 @@ class Tensor:
         if not self.requires_grad:
             return
         if self.grad_fn is None and not self._is_view():
-            raise RuntimeError("a leaf Variable that requires grad is being used in an in-place operation")
+            raise RuntimeError("a leaf Variable that requires grad is being used in an in-place operation.")
         if self._is_view() and self._base is not None and self._base.grad_fn is None and self._base.requires_grad:
-            raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation")
+            raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation.")
 
     def add_(self, other):
         from ._dispatch.dispatcher import dispatch

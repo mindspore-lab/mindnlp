@@ -36,9 +36,9 @@ def transpose(a, dim0, dim1):
     return dispatch("transpose", a.device.type, a, dim0, dim1)
 
 
-def tensor(data, dtype=None, device=None):
+def tensor(data, dtype=None, device=None, requires_grad=False):
     dev = _as_device(device)
-    return dispatch("tensor", dev, data, dtype=dtype)
+    return dispatch("tensor", dev, data, dtype=dtype, requires_grad=requires_grad)
 
 
 def zeros(shape, dtype=None, device=None):
