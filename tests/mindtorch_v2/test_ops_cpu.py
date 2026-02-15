@@ -120,3 +120,37 @@ def test_frac_cpu():
     expected = x.numpy() - np.trunc(x.numpy())
     np.testing.assert_allclose(torch.frac(x).numpy(), expected)
     np.testing.assert_allclose(x.frac().numpy(), expected)
+
+
+def test_pow_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    expected = np.power(x.numpy(), 2.0)
+    np.testing.assert_allclose(torch.pow(x, 2.0).numpy(), expected)
+
+
+def test_log2_cpu():
+    x = torch.tensor([0.5, 1.0, 2.0])
+    expected = np.log2(x.numpy())
+    np.testing.assert_allclose(torch.log2(x).numpy(), expected)
+    np.testing.assert_allclose(x.log2().numpy(), expected)
+
+
+def test_log10_cpu():
+    x = torch.tensor([0.5, 1.0, 10.0])
+    expected = np.log10(x.numpy())
+    np.testing.assert_allclose(torch.log10(x).numpy(), expected)
+    np.testing.assert_allclose(x.log10().numpy(), expected)
+
+
+def test_exp2_cpu():
+    x = torch.tensor([0.0, 1.0, 2.0])
+    expected = np.exp2(x.numpy())
+    np.testing.assert_allclose(torch.exp2(x).numpy(), expected)
+    np.testing.assert_allclose(x.exp2().numpy(), expected)
+
+
+def test_rsqrt_cpu():
+    x = torch.tensor([0.5, 1.0, 4.0])
+    expected = 1.0 / np.sqrt(x.numpy())
+    np.testing.assert_allclose(torch.rsqrt(x).numpy(), expected)
+    np.testing.assert_allclose(x.rsqrt().numpy(), expected)

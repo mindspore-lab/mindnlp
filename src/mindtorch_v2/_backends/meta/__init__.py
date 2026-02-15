@@ -4,6 +4,7 @@ from ..._dispatch.registry import registry
 from .creation import empty_create_meta, ones_create_meta, tensor_create_meta, zeros_create_meta
 from .ops import (
     _meta_binary_meta,
+    _meta_binary_or_scalar_meta,
     _meta_matmul_meta,
     _meta_sum_meta,
     _meta_transpose_meta,
@@ -31,6 +32,11 @@ registry.register("ceil", "meta", _meta_unary_meta)
 registry.register("round", "meta", _meta_unary_meta)
 registry.register("trunc", "meta", _meta_unary_meta)
 registry.register("frac", "meta", _meta_unary_meta)
+registry.register("pow", "meta", _meta_binary_or_scalar_meta)
+registry.register("log2", "meta", _meta_unary_meta)
+registry.register("log10", "meta", _meta_unary_meta)
+registry.register("exp2", "meta", _meta_unary_meta)
+registry.register("rsqrt", "meta", _meta_unary_meta)
 registry.register("contiguous", "meta", _meta_contiguous_meta)
 registry.register("sum", "meta", _meta_sum_meta)
 registry.register("reshape", "meta", view_backend.reshape, meta=_meta_view_meta)
