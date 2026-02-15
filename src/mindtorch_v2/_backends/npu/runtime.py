@@ -443,7 +443,7 @@ def _copy_cpu_to_npu(arr, runtime=None, non_blocking=False, stream=None):
     return dev_ptr, int(size)
 
 
-def _copy_npu_to_cpu(ptr, size, shape, dtype, runtime=None, non_blocking=False, stream=None):
+def _copy_npu_to_cpu(ptr, size, shape, dtype, runtime=None, non_blocking=False, stream=None, event=None):
     if runtime is None:
         runtime = get_runtime(0)
     global acl
@@ -455,10 +455,14 @@ def _copy_npu_to_cpu(ptr, size, shape, dtype, runtime=None, non_blocking=False, 
         raise RuntimeError(f"acl.rt.malloc_host failed: {ret}")
     if non_blocking and hasattr(acl.rt, "memcpy_async"):
         use_stream = runtime.stream if stream is None else stream
-        ret = acl.rt.memcpy_async(host_ptr, size, ptr, size, ACL_MEMCPY_DEVICE_TO_HOST, use_stream)
+        stream_handle = use_stream.stream if hasattr(use_stream, "stream") else use_stream
+        ret = acl.rt.memcpy_async(host_ptr, size, ptr, size, ACL_MEMCPY_DEVICE_TO_HOST, stream_handle)
         if ret != ACL_ERROR_CODE:
             raise RuntimeError(f"acl.rt.memcpy_async D2H failed: {ret}")
-        runtime.synchronize_stream(use_stream)
+        if event is not None and hasattr(runtime, "stream_wait_event"):
+            runtime.stream_wait_event(stream_handle, event.event)
+        if hasattr(runtime, "synchronize_stream"):
+            runtime.synchronize_stream(stream_handle)
         arr = _numpy_from_ptr(host_ptr, shape, dtype).copy()
         acl.rt.free_host(host_ptr)
         return arr

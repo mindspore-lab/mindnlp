@@ -73,10 +73,13 @@ def to_device(a, dev, non_blocking=False):
         if not do_non_blocking:
             runtime.synchronize()
         stream = None
+        event = None
         if do_non_blocking:
             from ..npu import state as npu_state
 
-            stream = npu_state.current_stream(a.device.index or 0).stream
+            stream_obj = npu_state.current_stream(a.device.index or 0)
+            event = stream_obj.record_event()
+            stream = stream_obj
         arr = npu_runtime._copy_npu_to_cpu(
             a.storage().data_ptr(),
             a.storage().nbytes(),
@@ -85,6 +88,7 @@ def to_device(a, dev, non_blocking=False):
             runtime=runtime,
             non_blocking=do_non_blocking,
             stream=stream,
+            event=event,
         )
         storage = typed_storage_from_numpy(arr, a.dtype, device=dev)
         out = Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
