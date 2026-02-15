@@ -246,15 +246,33 @@ class AclnnBindings:
 _ACL_DTYPE = {
     "float32": 0,
     "float16": 1,
+    "float64": 11,
+    "bfloat16": 27,
+    "int8": 2,
+    "int16": 6,
+    "int32": 3,
     "int64": 9,
+    "uint8": 4,
+    "bool": 12,
+    "complex64": 16,
+    "complex128": 17,
 }
 
 _ACL_FORMAT_ND = 2
 
 _NP_DTYPE = {
-    "float32": np.float32,
     "float16": np.float16,
+    "float32": np.float32,
+    "float64": np.float64,
+    "bfloat16": np.uint16,
+    "int8": np.int8,
+    "int16": np.int16,
+    "int32": np.int32,
     "int64": np.int64,
+    "uint8": np.uint8,
+    "bool": np.bool_,
+    "complex64": np.complex64,
+    "complex128": np.complex128,
 }
 
 
