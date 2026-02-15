@@ -233,3 +233,25 @@ def zero_(a):
         stream=stream.stream,
     )
     return a
+
+def contiguous(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU contiguous expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    out_size = int(np.prod(a.shape)) * np.dtype(npu_runtime._dtype_to_numpy(a.dtype)).itemsize
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    ret = npu_runtime.acl.rt.memcpy(
+        out_ptr,
+        out_size,
+        a_storage.data_ptr(),
+        out_size,
+        3,
+    )
+    if ret != npu_runtime.ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+
+    storage = npu_typed_storage_from_ptr(out_ptr, int(np.prod(a.shape)), a.dtype, device=a.device)
+    return _wrap_tensor(storage, a.shape, npu_runtime._contiguous_stride(a.shape))
+

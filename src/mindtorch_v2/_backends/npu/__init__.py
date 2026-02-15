@@ -3,13 +3,14 @@ from ..common import view as view_backend
 from ..meta import infer as meta_infer
 from ..._dispatch.registry import registry
 from .creation import empty_create, ones_create, tensor_create, zeros_create
-from .ops import add, mul, relu, sum_, add_, mul_, relu_, zero_
+from .ops import add, mul, relu, sum_, add_, mul_, relu_, zero_, contiguous
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
 
 registry.register("add", "npu", add, meta=meta_infer.infer_binary)
 registry.register("mul", "npu", mul, meta=meta_infer.infer_binary)
 registry.register("relu", "npu", relu, meta=meta_infer.infer_unary)
+registry.register("contiguous", "npu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "npu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
