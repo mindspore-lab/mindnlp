@@ -82,3 +82,25 @@ def log(a):
 
 def sqrt(a):
     return _from_numpy(np.sqrt(_to_numpy(a)), a.dtype, a.device)
+
+
+def sin(a):
+    return _from_numpy(np.sin(_to_numpy(a)), a.dtype, a.device)
+
+
+def cos(a):
+    return _from_numpy(np.cos(_to_numpy(a)), a.dtype, a.device)
+
+
+def tan(a):
+    return _from_numpy(np.tan(_to_numpy(a)), a.dtype, a.device)
+
+
+def tanh(a):
+    return _from_numpy(np.tanh(_to_numpy(a)), a.dtype, a.device)
+
+
+def sigmoid(a):
+    arr = _to_numpy(a)
+    out = 1.0 / (1.0 + np.exp(-arr))
+    return _from_numpy(out, a.dtype, a.device)

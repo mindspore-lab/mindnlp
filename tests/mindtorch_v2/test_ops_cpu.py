@@ -50,3 +50,38 @@ def test_sqrt_cpu():
     expected = np.sqrt(x.numpy())
     np.testing.assert_allclose(torch.sqrt(x).numpy(), expected)
     np.testing.assert_allclose(x.sqrt().numpy(), expected)
+
+
+def test_sin_cpu():
+    x = torch.tensor([0.0, 0.5, 1.0])
+    expected = np.sin(x.numpy())
+    np.testing.assert_allclose(torch.sin(x).numpy(), expected)
+    np.testing.assert_allclose(x.sin().numpy(), expected)
+
+
+def test_cos_cpu():
+    x = torch.tensor([0.0, 0.5, 1.0])
+    expected = np.cos(x.numpy())
+    np.testing.assert_allclose(torch.cos(x).numpy(), expected)
+    np.testing.assert_allclose(x.cos().numpy(), expected)
+
+
+def test_tan_cpu():
+    x = torch.tensor([0.0, 0.5, 1.0])
+    expected = np.tan(x.numpy())
+    np.testing.assert_allclose(torch.tan(x).numpy(), expected)
+    np.testing.assert_allclose(x.tan().numpy(), expected)
+
+
+def test_tanh_cpu():
+    x = torch.tensor([0.0, 0.5, 1.0])
+    expected = np.tanh(x.numpy())
+    np.testing.assert_allclose(torch.tanh(x).numpy(), expected)
+    np.testing.assert_allclose(x.tanh().numpy(), expected)
+
+
+def test_sigmoid_cpu():
+    x = torch.tensor([-1.0, 0.0, 1.0])
+    expected = 1.0 / (1.0 + np.exp(-x.numpy()))
+    np.testing.assert_allclose(torch.sigmoid(x).numpy(), expected)
+    np.testing.assert_allclose(x.sigmoid().numpy(), expected)

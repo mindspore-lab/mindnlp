@@ -19,6 +19,11 @@ from .ops import (
     exp,
     log,
     sqrt,
+    sin,
+    cos,
+    tan,
+    tanh,
+    sigmoid,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -30,6 +35,11 @@ registry.register("neg", "cpu", neg, meta=meta_infer.infer_unary)
 registry.register("exp", "cpu", exp, meta=meta_infer.infer_unary)
 registry.register("log", "cpu", log, meta=meta_infer.infer_unary)
 registry.register("sqrt", "cpu", sqrt, meta=meta_infer.infer_unary)
+registry.register("sin", "cpu", sin, meta=meta_infer.infer_unary)
+registry.register("cos", "cpu", cos, meta=meta_infer.infer_unary)
+registry.register("tan", "cpu", tan, meta=meta_infer.infer_unary)
+registry.register("tanh", "cpu", tanh, meta=meta_infer.infer_unary)
+registry.register("sigmoid", "cpu", sigmoid, meta=meta_infer.infer_unary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)

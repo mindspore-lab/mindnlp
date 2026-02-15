@@ -6,6 +6,7 @@ from ._tensor import Tensor
 from ._creation import tensor, zeros, ones
 from ._storage import UntypedStorage, TypedStorage
 from ._functional import add, mul, matmul, relu, sum, abs, neg, exp, log, sqrt
+from ._functional import sin, cos, tan, tanh, sigmoid
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context
 from ._backends import cpu
@@ -38,6 +39,11 @@ __all__ = [
     "exp",
     "log",
     "sqrt",
+    "sin",
+    "cos",
+    "tan",
+    "tanh",
+    "sigmoid",
     "sum",
     "set_printoptions",
     "get_printoptions",
