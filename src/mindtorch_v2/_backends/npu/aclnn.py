@@ -39,6 +39,7 @@ _PRELOAD_LIBS = (
 _LIBS = (
     "libaclnn_ops_infer.so",
     "libaclnn_math.so",
+    "libopapi.so",
 )
 
 _LIB_HANDLES = None
@@ -206,6 +207,25 @@ class AclnnBindings:
         self.aclnn_matmul = _optional_symbol(
             libs,
             "aclnnMatmul",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_batch_matmul_get_workspace = _optional_symbol(
+            libs,
+            "aclnnBatchMatMulGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_int8,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_batch_matmul = _optional_symbol(
+            libs,
+            "aclnnBatchMatMul",
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
@@ -732,6 +752,80 @@ def reduce_sum(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, runtime, 
         if workspace is not None:
             runtime.defer_free(workspace)
         _ = (self_keep, out_keep, dim_array)
+
+
+def matmul(a_ptr, b_ptr, out_ptr, a_shape, a_stride, b_shape, b_stride, out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not bindings.aclnn_matmul_get_workspace or not bindings.aclnn_matmul:
+        raise RuntimeError("aclnnMatmul symbols not available")
+    is_batched = len(a_shape) > 2 or len(b_shape) > 2
+    if is_batched:
+        if not bindings.aclnn_batch_matmul_get_workspace or not bindings.aclnn_batch_matmul:
+            raise RuntimeError("aclnnBatchMatMul symbols not available")
+    a_tensor, a_keep = _create_tensor(bindings, a_shape, a_stride, dtype, a_ptr)
+    b_tensor, b_keep = _create_tensor(bindings, b_shape, b_stride, dtype, b_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        if is_batched:
+            ret = bindings.aclnn_batch_matmul_get_workspace(
+                a_tensor,
+                b_tensor,
+                out_tensor,
+                ctypes.c_int8(0),
+                ctypes.byref(workspace_size),
+                ctypes.byref(executor),
+            )
+        else:
+            ret = bindings.aclnn_matmul_get_workspace(
+                a_tensor,
+                b_tensor,
+                out_tensor,
+                ctypes.c_int8(0),
+                ctypes.byref(workspace_size),
+                ctypes.byref(executor),
+            )
+        if ret != 0:
+            if is_batched:
+                raise RuntimeError(f"aclnnBatchMatMulGetWorkspaceSize failed: {ret}")
+            raise RuntimeError(f"aclnnMatmulGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        if is_batched:
+            ret = bindings.aclnn_batch_matmul(
+                ctypes.c_void_p(0 if workspace is None else int(workspace)),
+                ctypes.c_uint64(workspace_size.value),
+                executor,
+                ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+            )
+        else:
+            ret = bindings.aclnn_matmul(
+                ctypes.c_void_p(0 if workspace is None else int(workspace)),
+                ctypes.c_uint64(workspace_size.value),
+                executor,
+                ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+            )
+        if ret != 0:
+            if is_batched:
+                raise RuntimeError(f"aclnnBatchMatMul failed: {ret}")
+            raise RuntimeError(f"aclnnMatmul failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(a_tensor)
+        bindings.acl_destroy_tensor(b_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (a_keep, b_keep, out_keep)
 
 
 def ones_zero_symbols_ok():
