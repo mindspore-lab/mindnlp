@@ -9,7 +9,9 @@ from ._storage import (
     typed_storage_from_numpy,
 )
 from ._device import _default_device, device as Device
-from ._dtype import float32, to_numpy_dtype
+from ._dtype import float32, float16, float64, bfloat16, int8, int16, int32, int64, uint8
+from ._dtype import bool as dtype_bool
+from ._dtype import to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum, abs as abs_dispatch, neg as neg_dispatch
 from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
 from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_dispatch
@@ -32,6 +34,21 @@ def _compute_strides(shape):
         stride.append(acc)
         acc *= d
     return tuple(reversed(stride))
+
+
+def _bf16_to_f32(arr):
+    """Convert bfloat16 (stored as uint16) to float32."""
+    u32 = arr.astype(np.uint32) << 16
+    return u32.view(np.float32)
+
+
+def _f32_to_bf16(arr):
+    """Convert float32 to bfloat16 (stored as uint16), round-to-nearest-even."""
+    u32 = arr.view(np.uint32)
+    # Round to nearest even: add bias + (lsb of result)
+    rounding_bias = (u32 >> 16) & 1
+    u32 = u32 + 0x7FFF + rounding_bias
+    return (u32 >> 16).astype(np.uint16)
 
 
 class _HookHandle:
@@ -106,10 +123,10 @@ class Tensor:
         return self.dtype.itemsize
 
     def is_floating_point(self):
-        """Check if tensor is of a floating point dtype."""
-        floating_point_dtypes = {'float16', 'float32', 'float64', 'bfloat16',
-                                 'half', 'float', 'double'}
-        return str(self.dtype).split('.')[-1] in floating_point_dtypes
+        return self.dtype.is_floating_point
+
+    def is_complex(self):
+        return self.dtype.is_complex
 
     def is_contiguous(self, memory_format=None):
         """Check if tensor is contiguous in row-major order."""
@@ -283,14 +300,123 @@ class Tensor:
         self._bump_version()
         return out
 
-    def to(self, dev, non_blocking=False):
+    def to(self, *args, **kwargs):
         if self._pending:
             from ._dispatch.pipeline import current_pipeline
 
             pipe = current_pipeline()
             if pipe is not None:
                 pipe.flush()
-        return to_dispatch(self, dev, non_blocking=non_blocking)
+        # Parse arguments: to(device), to(dtype), to(device, dtype), to(dtype=, device=)
+        device = None
+        dtype = None
+        non_blocking = kwargs.get("non_blocking", False)
+        for arg in args:
+            if isinstance(arg, Device):
+                device = arg
+            elif isinstance(arg, str):
+                from ._dtype import from_name
+                dt = from_name(arg)
+                if dt is not None:
+                    dtype = dt
+                else:
+                    device = Device(arg)
+            elif hasattr(arg, 'name') and hasattr(arg, 'itemsize'):
+                dtype = arg
+            else:
+                device = Device(str(arg))
+        if "device" in kwargs:
+            device = kwargs["device"]
+            if isinstance(device, str):
+                device = Device(device)
+        if "dtype" in kwargs:
+            dtype = kwargs["dtype"]
+        result = self
+        if dtype is not None and dtype != self.dtype:
+            result = result._to_dtype(dtype)
+        if device is not None:
+            result = to_dispatch(result, device, non_blocking=non_blocking)
+        if result is self and dtype is None and device is None:
+            return self
+        return result
+
+    def _to_dtype(self, dtype):
+        if self.device.type == "cpu":
+            arr = self._numpy_view()
+            src_dtype = self.dtype
+            target_np = to_numpy_dtype(dtype)
+            if src_dtype == bfloat16:
+                # bfloat16 -> target: first convert uint16 bits to float32
+                arr = _bf16_to_f32(arr)
+            if dtype == bfloat16:
+                # source -> bfloat16: convert to float32 then to uint16 bits
+                arr = arr.astype(np.float32)
+                arr = _f32_to_bf16(arr)
+            else:
+                arr = arr.astype(target_np)
+            storage = typed_storage_from_numpy(arr, dtype, device=self.device)
+            stride = tuple(np.array(arr.strides) // arr.itemsize)
+            return Tensor(storage, arr.shape, stride)
+        elif self.device.type == "meta":
+            storage = meta_typed_storage_from_shape(self.shape, dtype, device=self.device)
+            return Tensor(storage, self.shape, _compute_strides(self.shape))
+        else:
+            raise RuntimeError(
+                f"dtype conversion not yet supported on device {self.device.type}"
+            )
+
+    def float(self):
+        return self._to_dtype(float32) if self.dtype != float32 else self
+
+    def half(self):
+        return self._to_dtype(float16) if self.dtype != float16 else self
+
+    def double(self):
+        return self._to_dtype(float64) if self.dtype != float64 else self
+
+    def bfloat16(self):
+        return self._to_dtype(bfloat16) if self.dtype != bfloat16 else self
+
+    def long(self):
+        return self._to_dtype(int64) if self.dtype != int64 else self
+
+    def int(self):
+        return self._to_dtype(int32) if self.dtype != int32 else self
+
+    def short(self):
+        return self._to_dtype(int16) if self.dtype != int16 else self
+
+    def char(self):
+        return self._to_dtype(int8) if self.dtype != int8 else self
+
+    def byte(self):
+        return self._to_dtype(uint8) if self.dtype != uint8 else self
+
+    def bool(self):
+        return self._to_dtype(dtype_bool) if self.dtype != dtype_bool else self
+
+    def type(self, dtype=None):
+        if dtype is None:
+            return f"torch.{self.dtype.name.capitalize()}Tensor"
+        if isinstance(dtype, str):
+            from ._dtype import from_name
+            _type_map = {
+                "torch.FloatTensor": float32,
+                "torch.DoubleTensor": float64,
+                "torch.HalfTensor": float16,
+                "torch.BFloat16Tensor": bfloat16,
+                "torch.LongTensor": int64,
+                "torch.IntTensor": int32,
+                "torch.ShortTensor": int16,
+                "torch.CharTensor": int8,
+                "torch.ByteTensor": uint8,
+                "torch.BoolTensor": dtype_bool,
+            }
+            dt = _type_map.get(dtype) or from_name(dtype)
+            if dt is None:
+                raise RuntimeError(f"Unknown type: {dtype}")
+            return self._to_dtype(dt)
+        return self._to_dtype(dtype)
 
     def __add__(self, other):
         return add(self, other)

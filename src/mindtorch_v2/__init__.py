@@ -1,6 +1,16 @@
 __version__ = "0.1.0"
 
-from ._dtype import DType, float32, float16, int64
+from ._dtype import (
+    DType,
+    float16, float32, float64, bfloat16,
+    int8, int16, int32, int64, uint8,
+    bool,
+    complex64, complex128,
+    # aliases
+    half, double, short, long, byte, cfloat, cdouble,
+)
+from ._dtype import float as float  # noqa: F811
+from ._dtype import int as int  # noqa: F811
 from ._device import device as Device, _default_device, get_default_device, set_default_device
 from ._tensor import Tensor
 from ._creation import tensor, zeros, ones
@@ -25,12 +35,20 @@ __all__ = [
     "Device",
     "Tensor",
     "DType",
-    "float32",
-    "float16",
-    "int64",
+    # dtypes
+    "float16", "float32", "float64", "bfloat16",
+    "int8", "int16", "int32", "int64", "uint8",
+    "bool",
+    "complex64", "complex128",
+    # dtype aliases
+    "half", "float", "double",
+    "short", "int", "long", "byte",
+    "cfloat", "cdouble",
+    # creation
     "tensor",
     "zeros",
     "ones",
+    # ops
     "add",
     "mul",
     "matmul",
@@ -56,12 +74,16 @@ __all__ = [
     "exp2",
     "rsqrt",
     "sum",
+    # printing
     "set_printoptions",
     "get_printoptions",
+    # pipeline
     "pipeline",
     "pipeline_context",
+    # device
     "get_default_device",
     "set_default_device",
     "npu",
+    # autograd
     "autograd",
 ]
