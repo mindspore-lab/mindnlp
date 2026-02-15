@@ -24,6 +24,11 @@ from .ops import (
     tan,
     tanh,
     sigmoid,
+    floor,
+    ceil,
+    round,
+    trunc,
+    frac,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -40,6 +45,11 @@ registry.register("cos", "cpu", cos, meta=meta_infer.infer_unary)
 registry.register("tan", "cpu", tan, meta=meta_infer.infer_unary)
 registry.register("tanh", "cpu", tanh, meta=meta_infer.infer_unary)
 registry.register("sigmoid", "cpu", sigmoid, meta=meta_infer.infer_unary)
+registry.register("floor", "cpu", floor, meta=meta_infer.infer_unary)
+registry.register("ceil", "cpu", ceil, meta=meta_infer.infer_unary)
+registry.register("round", "cpu", round, meta=meta_infer.infer_unary)
+registry.register("trunc", "cpu", trunc, meta=meta_infer.infer_unary)
+registry.register("frac", "cpu", frac, meta=meta_infer.infer_unary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
