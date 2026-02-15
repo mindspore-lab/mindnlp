@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import OrderedDict
+
 from .parameter import Parameter
 
 
@@ -9,6 +11,7 @@ class Module:
         self._modules = {}
         self._buffers = {}
         self._non_persistent_buffers_set = set()
+        self.training = True
 
     def __setattr__(self, name, value):
         if isinstance(value, Parameter):
@@ -20,11 +23,153 @@ class Module:
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
-    def parameters(self):
-        for p in self._parameters.values():
-            yield p
-        for m in self._modules.values():
-            yield from m.parameters()
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def register_buffer(self, name, tensor, persistent=True):
+        self._buffers[name] = tensor
+        if not persistent:
+            self._non_persistent_buffers_set.add(name)
+        if tensor is not None:
+            super().__setattr__(name, tensor)
+
+    def register_parameter(self, name, param):
+        self._parameters[name] = param
+        if param is not None:
+            super().__setattr__(name, param)
+
+    def parameters(self, recurse=True):
+        for name, param in self.named_parameters(recurse=recurse):
+            yield param
+
+    def named_parameters(self, prefix='', recurse=True):
+        yield from self._named_members(
+            lambda m: m._parameters.items(), prefix=prefix, recurse=recurse
+        )
+
+    def buffers(self, recurse=True):
+        for name, buf in self.named_buffers(recurse=recurse):
+            yield buf
+
+    def named_buffers(self, prefix='', recurse=True):
+        yield from self._named_members(
+            lambda m: m._buffers.items(), prefix=prefix, recurse=recurse
+        )
+
+    def children(self):
+        for module in self._modules.values():
+            yield module
+
+    def named_children(self):
+        for name, module in self._modules.items():
+            yield name, module
+
+    def modules(self):
+        for _, module in self.named_modules():
+            yield module
+
+    def named_modules(self, memo=None, prefix=''):
+        if memo is None:
+            memo = set()
+        if id(self) not in memo:
+            memo.add(id(self))
+            yield prefix, self
+            for name, module in self._modules.items():
+                if module is None:
+                    continue
+                submodule_prefix = prefix + ('.' if prefix else '') + name
+                yield from module.named_modules(memo, submodule_prefix)
+
+    def state_dict(self, destination=None, prefix='', keep_vars=False):
+        if destination is None:
+            destination = OrderedDict()
+        for name, param in self._parameters.items():
+            if param is not None:
+                destination[prefix + name] = param if keep_vars else param.detach()
+        for name, buf in self._buffers.items():
+            if buf is not None and name not in self._non_persistent_buffers_set:
+                destination[prefix + name] = buf if keep_vars else (buf.detach() if hasattr(buf, 'detach') else buf)
+        for name, module in self._modules.items():
+            if module is not None:
+                module.state_dict(destination, prefix + name + '.', keep_vars)
+        return destination
+
+    def train(self, mode=True):
+        self.training = mode
+        for module in self.children():
+            module.train(mode)
+        return self
+
+    def eval(self):
+        return self.train(False)
+
+    def to(self, *args, **kwargs):
+        device = kwargs.get('device', None)
+        dtype = kwargs.get('dtype', None)
+        if len(args) == 1:
+            if isinstance(args[0], str):
+                device = args[0]
+            else:
+                dtype = args[0]
+        def convert(t):
+            return t
+        self._apply(convert)
+        return self
+
+    def cpu(self):
+        return self.to(device='cpu')
+
+    def float(self):
+        from .. import float32
+        return self.to(dtype=float32)
+
+    def half(self):
+        from .. import float16
+        return self.to(dtype=float16)
+
+    def double(self):
+        return self
+
+    def bfloat16(self):
+        return self
+
+    def requires_grad_(self, requires_grad=True):
+        for p in self.parameters():
+            p.requires_grad = requires_grad
+        return self
+
+    def zero_grad(self, set_to_none=True):
+        for p in self.parameters():
+            if p.grad is not None:
+                if set_to_none:
+                    p.grad = None
+                else:
+                    p.grad.zero_()
+
+    def extra_repr(self):
+        return ''
+
+    def __repr__(self):
+        extra = self.extra_repr()
+        extra_lines = extra.split('\n') if extra else []
+        child_lines = []
+        for key, module in self._modules.items():
+            child_lines.append(f'({key}): {repr(module)}')
+        lines = extra_lines + child_lines
+        main_str = self._get_name() + '('
+        if lines:
+            main_str += '\n  ' + '\n  '.join(lines) + '\n'
+        main_str += ')'
+        return main_str
+
+    def __dir__(self):
+        module_attrs = dir(self.__class__)
+        attrs = list(self.__dict__.keys())
+        keys = module_attrs + attrs
+        keys += list(self._parameters.keys())
+        keys += list(self._modules.keys())
+        keys += list(self._buffers.keys())
+        return sorted(set(keys))
 
     def load_state_dict(self, state_dict, strict=True, assign=False):
         """Load a state dictionary into the module.
