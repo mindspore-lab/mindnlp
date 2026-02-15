@@ -113,3 +113,15 @@ def test_contiguous_autograd_sets_grad_fn():
     out = y.sum()
     out.backward()
     assert x.grad is not None
+
+
+def test_to_autograd_sets_grad_fn_meta():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    x.requires_grad = True
+    y = x.to("meta")
+    assert y is not x
+    assert y.grad_fn is not None
+
+    out = y.sum()
+    out.backward()
+    assert x.grad is not None

@@ -17,6 +17,15 @@ from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
 
 
+def _compute_strides(shape):
+    stride = []
+    acc = 1
+    for d in reversed(shape):
+        stride.append(acc)
+        acc *= d
+    return tuple(reversed(stride))
+
+
 class _HookHandle:
     _next_id = 0
 
