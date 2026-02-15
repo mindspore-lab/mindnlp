@@ -17,6 +17,15 @@ from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
 
 
+def _compute_strides(shape):
+    stride = []
+    acc = 1
+    for d in reversed(shape):
+        stride.append(acc)
+        acc *= d
+    return tuple(reversed(stride))
+
+
 class _HookHandle:
     _next_id = 0
 
@@ -106,25 +115,7 @@ class Tensor:
 
         # Use dispatch to stay on device (avoid numpy round-trip)
         from ._dispatch import dispatch
-        result = dispatch("contiguous", self)
-
-        # Track autograd if needed
-        if self._requires_grad:
-            from ._autograd import is_grad_enabled
-            from ._autograd.node import AccumulateGrad
-            from ._autograd.functions import ContiguousBackward
-
-            if is_grad_enabled():
-                grad_fn = ContiguousBackward()
-
-                if self._grad_fn is not None:
-                    grad_fn._next_functions = ((self._grad_fn, 0),)
-                else:
-                    acc_grad = AccumulateGrad(self)
-                    grad_fn._next_functions = ((acc_grad, 0),)
-
-                result._grad_fn = grad_fn
-                result._requires_grad = True  # Propagate requires_grad
+        return dispatch("contiguous", self.device.type, self)
 
     def _numpy_view(self):
         if self.device.type == "meta":

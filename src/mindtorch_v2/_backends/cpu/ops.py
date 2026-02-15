@@ -56,3 +56,10 @@ def zero_(a):
     arr = _to_numpy(a)
     arr.fill(0)
     return a
+
+def contiguous(a):
+    if a.device.type != "cpu":
+        raise ValueError("CPU contiguous expects CPU tensors")
+    arr = np.ascontiguousarray(_to_numpy(a))
+    return _from_numpy(arr, a.dtype, a.device)
+

@@ -102,3 +102,26 @@ def test_autograd_dispatch_zero_inplace_sets_grad_fn():
     out = dispatch("zero_", x.device.type, x)
     assert out.requires_grad is True
     assert out.grad_fn is not None
+
+
+def test_contiguous_autograd_sets_grad_fn():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    x.requires_grad = True
+    y = x.transpose(0, 1).contiguous()
+    assert y.grad_fn is not None
+
+    out = y.sum()
+    out.backward()
+    assert x.grad is not None
+
+
+def test_to_autograd_sets_grad_fn_meta():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    x.requires_grad = True
+    y = x.to("meta")
+    assert y is not x
+    assert y.grad_fn is not None
+
+    out = y.sum()
+    out.backward()
+    assert x.grad is not None
