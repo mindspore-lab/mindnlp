@@ -9,6 +9,8 @@ ACL_MEMCPY_DEVICE_TO_DEVICE = 3
 
 class UntypedStorage:
     def __init__(self, device):
+        if isinstance(device, str):
+            device = Device(device)
         self.device = device
 
     def nbytes(self):
@@ -143,6 +145,39 @@ class _NPUUntypedStorage(UntypedStorage):
     def is_pinned(self):
         return False
 
+    def resize_(self, new_nbytes):
+        new_nbytes = int(new_nbytes)
+        if new_nbytes == self._nbytes:
+            return self
+        from ._backends.npu import allocator as npu_allocator
+        from ._backends.npu import runtime as npu_runtime
+        from ._backends.npu import state as npu_state
+
+        device_id = self.device.index or 0
+        runtime = npu_runtime.get_runtime(device_id)
+        stream = npu_state.current_stream(device_id).stream
+        alloc = npu_allocator.get_allocator(device_id)
+        runtime.activate()
+        new_ptr = alloc.malloc(new_nbytes, stream=stream)
+        if self._device_ptr:
+            copy_bytes = min(self._nbytes, new_nbytes)
+            if copy_bytes:
+                ret = npu_runtime.acl.rt.memcpy(
+                    new_ptr,
+                    copy_bytes,
+                    self._device_ptr,
+                    copy_bytes,
+                    ACL_MEMCPY_DEVICE_TO_DEVICE,
+                )
+                if ret != 0:
+                    raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+        alloc.free(self._device_ptr, stream=stream)
+        self._device_ptr = int(new_ptr)
+        self._nbytes = new_nbytes
+        self._finalizer.detach()
+        self._finalizer = weakref.finalize(self, alloc.free, self._device_ptr, None)
+        return self
+
 
 class _MetaUntypedStorage(UntypedStorage):
     def __init__(self, nbytes, device=None):
@@ -157,6 +192,10 @@ class _MetaUntypedStorage(UntypedStorage):
 
     def is_pinned(self):
         return False
+
+    def resize_(self, new_nbytes):
+        self._nbytes = int(new_nbytes)
+        return self
 
 
 class TypedStorage:
@@ -245,13 +284,12 @@ class TypedStorage:
         raise NotImplementedError(f"Unsupported device: {self.device}")
 
     def resize_(self, new_size):
-        if self.device.type != "cpu":
-            raise NotImplementedError("resize_ only supported on CPU storage")
         itemsize = np.dtype(to_numpy_dtype(self.dtype)).itemsize
         self._untyped.resize_(int(new_size) * itemsize)
         self._size = int(new_size)
-        buf = self._untyped.buffer()
-        self._data = np.frombuffer(buf, dtype=to_numpy_dtype(self.dtype), count=self._size)
+        if self.device.type == "cpu":
+            buf = self._untyped.buffer()
+            self._data = np.frombuffer(buf, dtype=to_numpy_dtype(self.dtype), count=self._size)
         return self
 
 
