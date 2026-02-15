@@ -41,6 +41,11 @@ def test_meta_unary_elementwise_ops_shape():
         torch.tan,
         torch.tanh,
         torch.sigmoid,
+        torch.floor,
+        torch.ceil,
+        torch.round,
+        torch.trunc,
+        torch.frac,
     ):
         out = op(x)
         assert out.device.type == "meta"

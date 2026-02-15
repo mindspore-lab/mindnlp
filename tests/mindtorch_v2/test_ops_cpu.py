@@ -85,3 +85,38 @@ def test_sigmoid_cpu():
     expected = 1.0 / (1.0 + np.exp(-x.numpy()))
     np.testing.assert_allclose(torch.sigmoid(x).numpy(), expected)
     np.testing.assert_allclose(x.sigmoid().numpy(), expected)
+
+
+def test_floor_cpu():
+    x = torch.tensor([-1.2, 0.5, 1.7])
+    expected = np.floor(x.numpy())
+    np.testing.assert_allclose(torch.floor(x).numpy(), expected)
+    np.testing.assert_allclose(x.floor().numpy(), expected)
+
+
+def test_ceil_cpu():
+    x = torch.tensor([-1.2, 0.5, 1.7])
+    expected = np.ceil(x.numpy())
+    np.testing.assert_allclose(torch.ceil(x).numpy(), expected)
+    np.testing.assert_allclose(x.ceil().numpy(), expected)
+
+
+def test_round_cpu():
+    x = torch.tensor([-1.2, 0.5, 1.7])
+    expected = np.round(x.numpy())
+    np.testing.assert_allclose(torch.round(x).numpy(), expected)
+    np.testing.assert_allclose(x.round().numpy(), expected)
+
+
+def test_trunc_cpu():
+    x = torch.tensor([-1.2, 0.5, 1.7])
+    expected = np.trunc(x.numpy())
+    np.testing.assert_allclose(torch.trunc(x).numpy(), expected)
+    np.testing.assert_allclose(x.trunc().numpy(), expected)
+
+
+def test_frac_cpu():
+    x = torch.tensor([-1.2, 0.5, 1.7])
+    expected = x.numpy() - np.trunc(x.numpy())
+    np.testing.assert_allclose(torch.frac(x).numpy(), expected)
+    np.testing.assert_allclose(x.frac().numpy(), expected)

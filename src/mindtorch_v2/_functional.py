@@ -60,6 +60,26 @@ def sigmoid(a):
     return dispatch("sigmoid", a.device.type, a)
 
 
+def floor(a):
+    return dispatch("floor", a.device.type, a)
+
+
+def ceil(a):
+    return dispatch("ceil", a.device.type, a)
+
+
+def round(a):
+    return dispatch("round", a.device.type, a)
+
+
+def trunc(a):
+    return dispatch("trunc", a.device.type, a)
+
+
+def frac(a):
+    return dispatch("frac", a.device.type, a)
+
+
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 

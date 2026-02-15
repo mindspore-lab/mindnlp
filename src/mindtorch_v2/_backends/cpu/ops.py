@@ -104,3 +104,25 @@ def sigmoid(a):
     arr = _to_numpy(a)
     out = 1.0 / (1.0 + np.exp(-arr))
     return _from_numpy(out, a.dtype, a.device)
+
+
+def floor(a):
+    return _from_numpy(np.floor(_to_numpy(a)), a.dtype, a.device)
+
+
+def ceil(a):
+    return _from_numpy(np.ceil(_to_numpy(a)), a.dtype, a.device)
+
+
+def round(a):
+    return _from_numpy(np.round(_to_numpy(a)), a.dtype, a.device)
+
+
+def trunc(a):
+    return _from_numpy(np.trunc(_to_numpy(a)), a.dtype, a.device)
+
+
+def frac(a):
+    arr = _to_numpy(a)
+    out = arr - np.trunc(arr)
+    return _from_numpy(out, a.dtype, a.device)
