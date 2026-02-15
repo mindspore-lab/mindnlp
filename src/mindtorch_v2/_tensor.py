@@ -115,25 +115,7 @@ class Tensor:
 
         # Use dispatch to stay on device (avoid numpy round-trip)
         from ._dispatch import dispatch
-        result = dispatch("contiguous", self)
-
-        # Track autograd if needed
-        if self._requires_grad:
-            from ._autograd import is_grad_enabled
-            from ._autograd.node import AccumulateGrad
-            from ._autograd.functions import ContiguousBackward
-
-            if is_grad_enabled():
-                grad_fn = ContiguousBackward()
-
-                if self._grad_fn is not None:
-                    grad_fn._next_functions = ((self._grad_fn, 0),)
-                else:
-                    acc_grad = AccumulateGrad(self)
-                    grad_fn._next_functions = ((acc_grad, 0),)
-
-                result._grad_fn = grad_fn
-                result._requires_grad = True  # Propagate requires_grad
+        return dispatch("contiguous", self.device.type, self)
 
     def _numpy_view(self):
         if self.device.type == "meta":
