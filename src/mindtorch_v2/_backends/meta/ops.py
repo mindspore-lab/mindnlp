@@ -91,6 +91,11 @@ def _meta_matmul_meta(a, b):
     return _meta_tensor(out_shape, a.dtype, a.device)
 
 
+
+def _meta_contiguous_meta(a):
+    return _meta_tensor(a.shape, a.dtype, a.device)
+
+
 __all__ = [
     "_meta_binary_meta",
     "_meta_matmul_meta",
@@ -98,4 +103,5 @@ __all__ = [
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_view_meta",
+    "_meta_contiguous_meta",
 ]

@@ -9,12 +9,14 @@ from .ops import (
     _meta_transpose_meta,
     _meta_unary_meta,
     _meta_view_meta,
+    _meta_contiguous_meta,
 )
 
 registry.register("add", "meta", _meta_binary_meta)
 registry.register("mul", "meta", _meta_binary_meta)
 registry.register("matmul", "meta", _meta_matmul_meta)
 registry.register("relu", "meta", _meta_unary_meta)
+registry.register("contiguous", "meta", _meta_contiguous_meta)
 registry.register("sum", "meta", _meta_sum_meta)
 registry.register("reshape", "meta", view_backend.reshape, meta=_meta_view_meta)
 registry.register("view", "meta", view_backend.view, meta=_meta_view_meta)
