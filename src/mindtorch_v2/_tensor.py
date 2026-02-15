@@ -181,6 +181,10 @@ class Tensor:
     def pin_memory(self):
         if self.device.type != "cpu":
             raise RuntimeError("pin_memory only supports CPU tensors")
+        from . import npu as npu_api
+
+        if not npu_api.is_available():
+            raise RuntimeError("Cannot access accelerator device when none is available.")
         if self.is_pinned():
             return self
         storage = pinned_cpu_typed_storage_from_numpy(self._numpy_view(), self.dtype, device=self.device)
