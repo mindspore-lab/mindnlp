@@ -32,4 +32,8 @@ This document is about collaboration rules only (not defining the op scope).
 
 | Op | Owner | Status | PR | Notes |
 |---|---|---|---|---|
-
+| `aten::abs` | CPU | done | - | numpy impl + meta + tests |
+| `aten::neg` | CPU | done | - | numpy impl + meta + tests |
+| `aten::exp` | CPU | done | - | numpy impl + meta + tests |
+| `aten::log` | CPU | done | - | numpy impl + meta + tests |
+| `aten::sqrt` | CPU | done | - | numpy impl + meta + tests |

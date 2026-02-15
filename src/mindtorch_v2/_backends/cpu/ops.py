@@ -63,3 +63,22 @@ def contiguous(a):
     arr = np.ascontiguousarray(_to_numpy(a))
     return _from_numpy(arr, a.dtype, a.device)
 
+
+def abs(a):
+    return _from_numpy(np.abs(_to_numpy(a)), a.dtype, a.device)
+
+
+def neg(a):
+    return _from_numpy(np.negative(_to_numpy(a)), a.dtype, a.device)
+
+
+def exp(a):
+    return _from_numpy(np.exp(_to_numpy(a)), a.dtype, a.device)
+
+
+def log(a):
+    return _from_numpy(np.log(_to_numpy(a)), a.dtype, a.device)
+
+
+def sqrt(a):
+    return _from_numpy(np.sqrt(_to_numpy(a)), a.dtype, a.device)

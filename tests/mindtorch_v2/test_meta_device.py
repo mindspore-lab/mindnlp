@@ -26,3 +26,11 @@ def test_meta_ops_shape_propagation():
     assert e.device.type == "meta"
     assert c.shape == a.shape
     assert e.shape == ()
+
+
+def test_meta_unary_elementwise_ops_shape():
+    x = torch.tensor([1.0, 2.0], device="meta")
+    for op in (torch.abs, torch.neg, torch.exp, torch.log, torch.sqrt):
+        out = op(x)
+        assert out.device.type == "meta"
+        assert out.shape == x.shape

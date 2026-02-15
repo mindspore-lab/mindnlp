@@ -10,7 +10,9 @@ from ._storage import (
 )
 from ._device import _default_device, device as Device
 from ._dtype import float32, to_numpy_dtype
-from ._functional import add, mul, matmul, relu, sum, reshape as reshape_dispatch
+from ._functional import add, mul, matmul, relu, sum, abs as abs_dispatch, neg as neg_dispatch
+from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
+from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
 from ._autograd.version_counter import VersionCounter
@@ -290,11 +292,29 @@ class Tensor:
     def __mul__(self, other):
         return mul(self, other)
 
+    def __neg__(self):
+        return neg_dispatch(self)
+
     def matmul(self, other):
         return matmul(self, other)
 
     def relu(self):
         return relu(self)
+
+    def abs(self):
+        return abs_dispatch(self)
+
+    def neg(self):
+        return neg_dispatch(self)
+
+    def exp(self):
+        return exp_dispatch(self)
+
+    def log(self):
+        return log_dispatch(self)
+
+    def sqrt(self):
+        return sqrt_dispatch(self)
 
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
