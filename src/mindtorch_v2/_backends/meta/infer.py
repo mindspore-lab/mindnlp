@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import numpy as np
 
+from ..._dtype import bool as bool_dtype
+
 
 @dataclass(frozen=True)
 class TensorSpec:
@@ -33,6 +35,10 @@ def infer_binary(a, b):
 
 def infer_unary(a):
     return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=a.dtype)
+
+
+def infer_unary_bool(a):
+    return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=bool_dtype)
 
 
 def infer_sum(a, dim=None, keepdim=False):

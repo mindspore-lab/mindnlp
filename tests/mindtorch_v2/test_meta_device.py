@@ -50,6 +50,16 @@ def test_meta_unary_elementwise_ops_shape():
         torch.log10,
         torch.exp2,
         torch.rsqrt,
+        torch.sign,
+        torch.signbit,
+        torch.isnan,
+        torch.isinf,
+        torch.isfinite,
+        torch.sinh,
+        torch.cosh,
+        torch.erf,
+        torch.erfc,
+        torch.softplus,
     ):
         out = op(x)
         assert out.device.type == "meta"

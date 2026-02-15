@@ -1,5 +1,7 @@
+import math
 import numpy as np
 
+from ..._dtype import bool as bool_dtype
 from ..._storage import typed_storage_from_numpy
 from ..._tensor import Tensor
 
@@ -152,4 +154,54 @@ def exp2(a):
 def rsqrt(a):
     arr = _to_numpy(a)
     out = 1.0 / np.sqrt(arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def sign(a):
+    return _from_numpy(np.sign(_to_numpy(a)), a.dtype, a.device)
+
+
+def signbit(a):
+    arr = np.signbit(_to_numpy(a))
+    return _from_numpy(arr, bool_dtype, a.device)
+
+
+def isnan(a):
+    arr = np.isnan(_to_numpy(a))
+    return _from_numpy(arr, bool_dtype, a.device)
+
+
+def isinf(a):
+    arr = np.isinf(_to_numpy(a))
+    return _from_numpy(arr, bool_dtype, a.device)
+
+
+def isfinite(a):
+    arr = np.isfinite(_to_numpy(a))
+    return _from_numpy(arr, bool_dtype, a.device)
+
+
+def sinh(a):
+    return _from_numpy(np.sinh(_to_numpy(a)), a.dtype, a.device)
+
+
+def cosh(a):
+    return _from_numpy(np.cosh(_to_numpy(a)), a.dtype, a.device)
+
+
+def erf(a):
+    arr = _to_numpy(a)
+    out = np.vectorize(math.erf)(arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def erfc(a):
+    arr = _to_numpy(a)
+    out = np.vectorize(math.erfc)(arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def softplus(a):
+    arr = _to_numpy(a)
+    out = np.log1p(np.exp(arr))
     return _from_numpy(out, a.dtype, a.device)

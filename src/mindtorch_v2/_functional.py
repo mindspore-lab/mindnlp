@@ -100,6 +100,46 @@ def rsqrt(a):
     return dispatch("rsqrt", a.device.type, a)
 
 
+def sign(a):
+    return dispatch("sign", a.device.type, a)
+
+
+def signbit(a):
+    return dispatch("signbit", a.device.type, a)
+
+
+def isnan(a):
+    return dispatch("isnan", a.device.type, a)
+
+
+def isinf(a):
+    return dispatch("isinf", a.device.type, a)
+
+
+def isfinite(a):
+    return dispatch("isfinite", a.device.type, a)
+
+
+def sinh(a):
+    return dispatch("sinh", a.device.type, a)
+
+
+def cosh(a):
+    return dispatch("cosh", a.device.type, a)
+
+
+def erf(a):
+    return dispatch("erf", a.device.type, a)
+
+
+def erfc(a):
+    return dispatch("erfc", a.device.type, a)
+
+
+def softplus(a):
+    return dispatch("softplus", a.device.type, a)
+
+
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 
