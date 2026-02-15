@@ -258,3 +258,68 @@ def test_copy_npu_to_cpu_uses_async_when_available(monkeypatch):
     assert calls.get("stream") == 111
     assert calls.get("sync_stream") == 111
     assert arr.shape == (2,)
+
+
+def test_copy_npu_to_cpu_non_blocking_waits_event(monkeypatch):
+    import numpy as np
+    import mindtorch_v2._backends.npu.runtime as npu_runtime
+
+    calls = {}
+
+    class FakeRt:
+        def memcpy_async(self, dst, dst_size, src, src_size, kind, stream):
+            calls["async"] = True
+            calls["stream"] = stream
+            return 0
+
+        def memcpy(self, dst, dst_size, src, src_size, kind):
+            calls["sync"] = True
+            return 0
+
+        def malloc_host(self, size):
+            return (1234, 0)
+
+        def free_host(self, ptr):
+            calls["free"] = ptr
+            return 0
+
+    class FakeAcl:
+        def __init__(self):
+            self.rt = FakeRt()
+
+    class DummyRuntime:
+        stream = 999
+
+        def activate(self):
+            return None
+
+    class DummyStream:
+        device = type("D", (), {"index": 0})()
+        stream = 111
+
+    class DummyEvent:
+        event = 222
+
+    fake_acl = FakeAcl()
+    monkeypatch.setattr(npu_runtime, "acl", fake_acl)
+    monkeypatch.setattr(npu_runtime, "ensure_acl", lambda: fake_acl)
+    monkeypatch.setattr(
+        npu_runtime,
+        "_numpy_from_ptr",
+        lambda ptr, shape, dtype: np.zeros(shape, dtype=np.float32),
+    )
+
+    arr = npu_runtime._copy_npu_to_cpu(
+        123,
+        8,
+        (2,),
+        "float32",
+        runtime=DummyRuntime(),
+        non_blocking=True,
+        stream=DummyStream(),
+        event=DummyEvent(),
+    )
+
+    assert calls.get("async") is True
+    assert calls.get("stream") == 111
+    assert arr.shape == (2,)

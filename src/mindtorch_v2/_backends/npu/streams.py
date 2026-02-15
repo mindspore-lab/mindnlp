@@ -28,6 +28,12 @@ class Stream:
         self.wait_event(event)
         self._event = event
 
+    def record_event(self, event=None):
+        if event is None:
+            event = Event()
+        event.record(self)
+        return event
+
 
 class Event:
     def __init__(self, enable_timing=False, blocking=False, interprocess=False):
@@ -56,6 +62,13 @@ class Event:
             stream = npu_state.current_stream()
         runtime = npu_runtime.get_runtime(stream.device.index or 0)
         runtime.record_event(self._event, stream.stream)
+
+    def wait(self, stream=None):
+        if stream is None:
+            from . import state as npu_state
+
+            stream = npu_state.current_stream()
+        stream.wait_event(self)
 
     def synchronize(self):
         runtime = npu_runtime.get_runtime(self.device.index or 0)

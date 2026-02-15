@@ -27,6 +27,7 @@ def _stub_runtime(monkeypatch):
         def __init__(self, device_id):
             self.device_id = device_id
             self.wait_calls = []
+            self.record_calls = []
 
         def create_stream(self, priority=0):
             return int(self.device_id * 1000 + int(priority))
@@ -38,6 +39,7 @@ def _stub_runtime(monkeypatch):
             return (bool(enable_timing), bool(blocking), bool(interprocess))
 
         def record_event(self, event, stream):
+            self.record_calls.append((event, stream))
             return None
 
         def synchronize_event(self, event):
@@ -121,6 +123,21 @@ def test_npu_event_record_query(monkeypatch):
     s = torch.npu.current_stream()
     evt.record(s)
     assert evt.query() in (True, False)
+
+
+def test_npu_stream_record_event(monkeypatch):
+    runtime = _stub_runtime(monkeypatch)
+    s = torch.npu.Stream()
+    evt = s.record_event()
+    assert runtime.record_calls == [(evt.event, s.stream)]
+
+
+def test_npu_event_wait_stream(monkeypatch):
+    runtime = _stub_runtime(monkeypatch)
+    s = torch.npu.Stream()
+    evt = torch.npu.Event()
+    evt.wait(s)
+    assert runtime.wait_calls == [(s.stream, evt.event)]
 
 
 def test_npu_runtime_primitives_exist():
