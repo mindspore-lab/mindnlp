@@ -15,7 +15,7 @@ def _autograd_binary(name, backward_impl):
 
             def _backward(grad):
                 saved_a, saved_b = node_holder["node"].saved_tensors()
-                return backward_impl(grad, saved_a, saved_b, keyset)
+                return backward_impl(grad, a, b, saved_a, saved_b, keyset)
 
             node = Node(_backward, (a, b))
             node_holder["node"] = node
@@ -41,7 +41,7 @@ def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
                     saved_a = node_holder["node"].saved_tensors()[0]
                 else:
                     saved_a = a
-                return backward_impl(grad, saved_a, keyset)
+                return backward_impl(grad, a, saved_a, keyset)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -63,7 +63,7 @@ def _autograd_view(name, backward_impl):
 
             def _backward(grad):
                 saved_a = node_holder["node"].saved_tensors()[0]
-                return backward_impl(grad, saved_a, args, keyset)
+                return backward_impl(grad, a, saved_a, args, keyset)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -89,7 +89,7 @@ def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
                     saved = node_holder["node"].saved_tensors()[0]
                 else:
                     saved = a
-                return backward_impl(grad, saved, args, keyset)
+                return backward_impl(grad, a, saved, args, keyset)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -102,68 +102,65 @@ def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
     return wrapper
 
 
-def _add_backward(grad, a, b, _keyset):
+def _add_backward(grad, a, b, _saved_a, _saved_b, _keyset):
     grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
     grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
     return grad_a, grad_b
 
 
-def _mul_backward(grad, a, b, keyset):
-    saved_a, saved_b = a, b
+def _mul_backward(grad, a, b, saved_a, saved_b, keyset):
     with no_grad():
-        grad_a = redispatch("mul", keyset, grad, saved_b) if saved_a.requires_grad else None
-        grad_b = redispatch("mul", keyset, grad, saved_a) if saved_b.requires_grad else None
-    grad_a = reduce_grad(grad_a, saved_a.shape) if grad_a is not None else None
-    grad_b = reduce_grad(grad_b, saved_b.shape) if grad_b is not None else None
+        grad_a = redispatch("mul", keyset, grad, saved_b) if a.requires_grad else None
+        grad_b = redispatch("mul", keyset, grad, saved_a) if b.requires_grad else None
+    grad_a = reduce_grad(grad_a, a.shape) if grad_a is not None else None
+    grad_b = reduce_grad(grad_b, b.shape) if grad_b is not None else None
     return grad_a, grad_b
 
 
-def _matmul_backward(grad, a, b, keyset):
+def _matmul_backward(grad, a, b, saved_a, saved_b, keyset):
     with no_grad():
-        grad_a = redispatch("matmul", keyset, grad, b.transpose(0, 1)) if a.requires_grad else None
-        grad_b = redispatch("matmul", keyset, a.transpose(0, 1), grad) if b.requires_grad else None
+        grad_a = redispatch("matmul", keyset, grad, saved_b.transpose(0, 1)) if a.requires_grad else None
+        grad_b = redispatch("matmul", keyset, saved_a.transpose(0, 1), grad) if b.requires_grad else None
     return grad_a, grad_b
 
 
-def _sum_backward(grad, a, keyset):
+def _sum_backward(grad, _a, saved_a, keyset):
     with no_grad():
-        ones = a._ones_like()
+        ones = saved_a._ones_like()
         return (redispatch("mul", keyset, grad, ones),)
 
 
-def _relu_backward(grad, a, keyset):
-    saved_a = a
+def _relu_backward(grad, _a, saved_a, keyset):
     with no_grad():
         mask = saved_a._ones_like()
         mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
         return (redispatch("mul", keyset, grad, mask),)
 
 
-def _reshape_backward(grad, a, _args, keyset):
+def _reshape_backward(grad, a, _saved_a, _args, keyset):
     return (redispatch("reshape", keyset, grad, a.shape),)
 
 
-def _transpose_backward(grad, _a, args, keyset):
+def _transpose_backward(grad, _a, _saved_a, args, keyset):
     dim0, dim1 = args
     return (redispatch("transpose", keyset, grad, dim0, dim1),)
 
 
-def _inplace_binary_backward(grad, _a, args, keyset):
+def _inplace_binary_backward(grad, a, _saved_a, args, _keyset):
     b = args[0]
-    grad_a = reduce_grad(grad, _a.shape) if _a.requires_grad else None
+    grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
     grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
     return grad_a, grad_b
 
 
-def _inplace_relu_backward(grad, a, _args, keyset):
-    saved_a = a
+def _inplace_relu_backward(grad, _a, saved_a, _args, keyset):
     with no_grad():
         mask = saved_a._ones_like()
         mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
         return (redispatch("mul", keyset, grad, mask),)
 
 
-def _inplace_zero_backward(grad, _a, _args, _keyset):
+def _inplace_zero_backward(_grad, _a, _saved_a, _args, _keyset):
     return (None,)
 
 
