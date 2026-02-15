@@ -75,6 +75,33 @@ def _autograd_view(name, backward_impl):
     return wrapper
 
 
+def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
+    def wrapper(a, *args):
+        keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
+        out = redispatch(name, keyset, a, *args)
+        if cpu_only and a.device.type != "cpu":
+            return out
+        if GradMode.enabled and a.requires_grad:
+            node_holder = {}
+
+            def _backward(grad):
+                if save_input:
+                    saved = node_holder["node"].saved_tensors()[0]
+                else:
+                    saved = a
+                return backward_impl(grad, saved, args, keyset)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            if save_input:
+                node.save_for_backward(a)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
 def _add_backward(grad, a, b, _keyset):
     grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
     grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
@@ -121,6 +148,25 @@ def _transpose_backward(grad, _a, args, keyset):
     return (redispatch("transpose", keyset, grad, dim0, dim1),)
 
 
+def _inplace_binary_backward(grad, _a, args, keyset):
+    b = args[0]
+    grad_a = reduce_grad(grad, _a.shape) if _a.requires_grad else None
+    grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
+    return grad_a, grad_b
+
+
+def _inplace_relu_backward(grad, a, _args, keyset):
+    saved_a = a
+    with no_grad():
+        mask = saved_a._ones_like()
+        mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
+        return (redispatch("mul", keyset, grad, mask),)
+
+
+def _inplace_zero_backward(grad, _a, _args, _keyset):
+    return (None,)
+
+
 registry.register_kernel("add", DispatchKey.Autograd, _autograd_binary("add", _add_backward))
 registry.register_kernel("mul", DispatchKey.Autograd, _autograd_binary("mul", _mul_backward))
 registry.register_kernel("matmul", DispatchKey.Autograd, _autograd_binary("matmul", _matmul_backward))
@@ -128,3 +174,8 @@ registry.register_kernel("sum", DispatchKey.Autograd, _autograd_unary("sum", _su
 registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
 registry.register_kernel("reshape", DispatchKey.Autograd, _autograd_view("reshape", _reshape_backward))
 registry.register_kernel("transpose", DispatchKey.Autograd, _autograd_view("transpose", _transpose_backward))
+registry.register_kernel("view", DispatchKey.Autograd, _autograd_view("view", _reshape_backward))
+registry.register_kernel("add_", DispatchKey.Autograd, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
+registry.register_kernel("mul_", DispatchKey.Autograd, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
+registry.register_kernel("zero_", DispatchKey.Autograd, _autograd_inplace("zero_", _inplace_zero_backward, save_input=False))
