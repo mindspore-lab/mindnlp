@@ -138,6 +138,26 @@ def erfc(a):
 def softplus(a):
     return dispatch("softplus", a.device.type, a)
 
+
+def clamp(a, min_val=None, max_val=None):
+    return dispatch("clamp", a.device.type, a, min_val, max_val)
+
+
+def clamp_min(a, min_val):
+    return dispatch("clamp_min", a.device.type, a, min_val)
+
+
+def clamp_max(a, max_val):
+    return dispatch("clamp_max", a.device.type, a, max_val)
+
+
+def relu6(a):
+    return dispatch("relu6", a.device.type, a)
+
+
+def hardtanh(a, min_val=-1.0, max_val=1.0):
+    return dispatch("hardtanh", a.device.type, a, min_val, max_val)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 

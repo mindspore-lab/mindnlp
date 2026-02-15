@@ -24,6 +24,8 @@ from ._functional import sign as sign_dispatch, signbit as signbit_dispatch
 from ._functional import isnan as isnan_dispatch, isinf as isinf_dispatch, isfinite as isfinite_dispatch
 from ._functional import sinh as sinh_dispatch, cosh as cosh_dispatch
 from ._functional import erf as erf_dispatch, erfc as erfc_dispatch, softplus as softplus_dispatch
+from ._functional import clamp as clamp_dispatch, clamp_min as clamp_min_dispatch, clamp_max as clamp_max_dispatch
+from ._functional import relu6 as relu6_dispatch, hardtanh as hardtanh_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -526,6 +528,21 @@ class Tensor:
 
     def softplus(self):
         return softplus_dispatch(self)
+
+    def clamp(self, min_val=None, max_val=None):
+        return clamp_dispatch(self, min_val, max_val)
+
+    def clamp_min(self, min_val):
+        return clamp_min_dispatch(self, min_val)
+
+    def clamp_max(self, max_val):
+        return clamp_max_dispatch(self, max_val)
+
+    def relu6(self):
+        return relu6_dispatch(self)
+
+    def hardtanh(self, min_val=-1.0, max_val=1.0):
+        return hardtanh_dispatch(self, min_val, max_val)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 
