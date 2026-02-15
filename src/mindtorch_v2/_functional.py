@@ -80,6 +80,26 @@ def frac(a):
     return dispatch("frac", a.device.type, a)
 
 
+def pow(a, b):
+    return dispatch("pow", a.device.type, a, b)
+
+
+def log2(a):
+    return dispatch("log2", a.device.type, a)
+
+
+def log10(a):
+    return dispatch("log10", a.device.type, a)
+
+
+def exp2(a):
+    return dispatch("exp2", a.device.type, a)
+
+
+def rsqrt(a):
+    return dispatch("rsqrt", a.device.type, a)
+
+
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 

@@ -29,6 +29,11 @@ from .ops import (
     round,
     trunc,
     frac,
+    pow,
+    log2,
+    log10,
+    exp2,
+    rsqrt,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -50,6 +55,11 @@ registry.register("ceil", "cpu", ceil, meta=meta_infer.infer_unary)
 registry.register("round", "cpu", round, meta=meta_infer.infer_unary)
 registry.register("trunc", "cpu", trunc, meta=meta_infer.infer_unary)
 registry.register("frac", "cpu", frac, meta=meta_infer.infer_unary)
+registry.register("pow", "cpu", pow, meta=meta_infer.infer_binary)
+registry.register("log2", "cpu", log2, meta=meta_infer.infer_unary)
+registry.register("log10", "cpu", log10, meta=meta_infer.infer_unary)
+registry.register("exp2", "cpu", exp2, meta=meta_infer.infer_unary)
+registry.register("rsqrt", "cpu", rsqrt, meta=meta_infer.infer_unary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)

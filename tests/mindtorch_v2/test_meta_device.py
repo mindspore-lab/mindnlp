@@ -46,7 +46,18 @@ def test_meta_unary_elementwise_ops_shape():
         torch.round,
         torch.trunc,
         torch.frac,
+        torch.log2,
+        torch.log10,
+        torch.exp2,
+        torch.rsqrt,
     ):
         out = op(x)
         assert out.device.type == "meta"
         assert out.shape == x.shape
+
+
+def test_meta_pow_shape():
+    x = torch.tensor([1.0, 2.0, 3.0], device="meta")
+    out = torch.pow(x, 2.0)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape

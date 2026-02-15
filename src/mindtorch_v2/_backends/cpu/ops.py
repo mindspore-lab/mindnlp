@@ -126,3 +126,30 @@ def frac(a):
     arr = _to_numpy(a)
     out = arr - np.trunc(arr)
     return _from_numpy(out, a.dtype, a.device)
+
+
+def pow(a, b):
+    arr_a = _to_numpy(a)
+    if isinstance(b, Tensor):
+        arr_b = _to_numpy(b)
+    else:
+        arr_b = b
+    return _from_numpy(np.power(arr_a, arr_b), a.dtype, a.device)
+
+
+def log2(a):
+    return _from_numpy(np.log2(_to_numpy(a)), a.dtype, a.device)
+
+
+def log10(a):
+    return _from_numpy(np.log10(_to_numpy(a)), a.dtype, a.device)
+
+
+def exp2(a):
+    return _from_numpy(np.exp2(_to_numpy(a)), a.dtype, a.device)
+
+
+def rsqrt(a):
+    arr = _to_numpy(a)
+    out = 1.0 / np.sqrt(arr)
+    return _from_numpy(out, a.dtype, a.device)

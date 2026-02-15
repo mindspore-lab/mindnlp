@@ -16,6 +16,8 @@ from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_di
 from ._functional import tanh as tanh_dispatch, sigmoid as sigmoid_dispatch
 from ._functional import floor as floor_dispatch, ceil as ceil_dispatch, round as round_dispatch
 from ._functional import trunc as trunc_dispatch, frac as frac_dispatch
+from ._functional import pow as pow_dispatch, log2 as log2_dispatch, log10 as log10_dispatch
+from ._functional import exp2 as exp2_dispatch, rsqrt as rsqrt_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -349,6 +351,21 @@ class Tensor:
 
     def frac(self):
         return frac_dispatch(self)
+
+    def pow(self, exponent):
+        return pow_dispatch(self, exponent)
+
+    def log2(self):
+        return log2_dispatch(self)
+
+    def log10(self):
+        return log10_dispatch(self)
+
+    def exp2(self):
+        return exp2_dispatch(self)
+
+    def rsqrt(self):
+        return rsqrt_dispatch(self)
 
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
