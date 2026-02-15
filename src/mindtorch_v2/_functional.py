@@ -20,6 +20,26 @@ def relu(a):
     return dispatch("relu", a.device.type, a)
 
 
+def abs(a):
+    return dispatch("abs", a.device.type, a)
+
+
+def neg(a):
+    return dispatch("neg", a.device.type, a)
+
+
+def exp(a):
+    return dispatch("exp", a.device.type, a)
+
+
+def log(a):
+    return dispatch("log", a.device.type, a)
+
+
+def sqrt(a):
+    return dispatch("sqrt", a.device.type, a)
+
+
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 
