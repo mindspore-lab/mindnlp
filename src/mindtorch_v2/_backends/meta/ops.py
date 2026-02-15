@@ -1,5 +1,6 @@
 import numpy as np
 
+from ..._dtype import bool as bool_dtype
 from ..._dtype import to_numpy_dtype
 from ..._storage import meta_typed_storage_from_shape
 from ..._tensor import Tensor
@@ -42,6 +43,10 @@ def _meta_binary_or_scalar_meta(a, b):
 
 def _meta_unary_meta(a):
     return _meta_tensor(a.shape, a.dtype, a.device)
+
+
+def _meta_unary_bool_meta(a):
+    return _meta_tensor(a.shape, bool_dtype, a.device)
 
 
 def _meta_sum_meta(a, dim=None, keepdim=False):
@@ -111,6 +116,7 @@ __all__ = [
     "_meta_sum_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
+    "_meta_unary_bool_meta",
     "_meta_view_meta",
     "_meta_contiguous_meta",
 ]

@@ -9,6 +9,7 @@ from .ops import (
     _meta_sum_meta,
     _meta_transpose_meta,
     _meta_unary_meta,
+    _meta_unary_bool_meta,
     _meta_view_meta,
     _meta_contiguous_meta,
 )
@@ -37,6 +38,11 @@ registry.register("log2", "meta", _meta_unary_meta)
 registry.register("log10", "meta", _meta_unary_meta)
 registry.register("exp2", "meta", _meta_unary_meta)
 registry.register("rsqrt", "meta", _meta_unary_meta)
+registry.register("sign", "meta", _meta_unary_meta)
+registry.register("signbit", "meta", _meta_unary_bool_meta)
+registry.register("isnan", "meta", _meta_unary_bool_meta)
+registry.register("isinf", "meta", _meta_unary_bool_meta)
+registry.register("isfinite", "meta", _meta_unary_bool_meta)
 registry.register("contiguous", "meta", _meta_contiguous_meta)
 registry.register("sum", "meta", _meta_sum_meta)
 registry.register("reshape", "meta", view_backend.reshape, meta=_meta_view_meta)

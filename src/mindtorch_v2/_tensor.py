@@ -20,6 +20,8 @@ from ._functional import floor as floor_dispatch, ceil as ceil_dispatch, round a
 from ._functional import trunc as trunc_dispatch, frac as frac_dispatch
 from ._functional import pow as pow_dispatch, log2 as log2_dispatch, log10 as log10_dispatch
 from ._functional import exp2 as exp2_dispatch, rsqrt as rsqrt_dispatch
+from ._functional import sign as sign_dispatch, signbit as signbit_dispatch
+from ._functional import isnan as isnan_dispatch, isinf as isinf_dispatch, isfinite as isfinite_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -492,6 +494,21 @@ class Tensor:
 
     def rsqrt(self):
         return rsqrt_dispatch(self)
+
+    def sign(self):
+        return sign_dispatch(self)
+
+    def signbit(self):
+        return signbit_dispatch(self)
+
+    def isnan(self):
+        return isnan_dispatch(self)
+
+    def isinf(self):
+        return isinf_dispatch(self)
+
+    def isfinite(self):
+        return isfinite_dispatch(self)
 
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)

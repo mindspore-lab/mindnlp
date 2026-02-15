@@ -34,6 +34,11 @@ from .ops import (
     log10,
     exp2,
     rsqrt,
+    sign,
+    signbit,
+    isnan,
+    isinf,
+    isfinite,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -60,6 +65,11 @@ registry.register("log2", "cpu", log2, meta=meta_infer.infer_unary)
 registry.register("log10", "cpu", log10, meta=meta_infer.infer_unary)
 registry.register("exp2", "cpu", exp2, meta=meta_infer.infer_unary)
 registry.register("rsqrt", "cpu", rsqrt, meta=meta_infer.infer_unary)
+registry.register("sign", "cpu", sign, meta=meta_infer.infer_unary)
+registry.register("signbit", "cpu", signbit, meta=meta_infer.infer_unary_bool)
+registry.register("isnan", "cpu", isnan, meta=meta_infer.infer_unary_bool)
+registry.register("isinf", "cpu", isinf, meta=meta_infer.infer_unary_bool)
+registry.register("isfinite", "cpu", isfinite, meta=meta_infer.infer_unary_bool)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
