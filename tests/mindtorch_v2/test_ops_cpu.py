@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import mindtorch_v2 as torch
 
@@ -189,3 +190,38 @@ def test_isfinite_cpu():
     expected = np.isfinite(x.numpy())
     np.testing.assert_array_equal(torch.isfinite(x).numpy(), expected)
     np.testing.assert_array_equal(x.isfinite().numpy(), expected)
+
+
+def test_sinh_cpu():
+    x = torch.tensor([0.0, 0.5, 1.0])
+    expected = np.sinh(x.numpy())
+    np.testing.assert_allclose(torch.sinh(x).numpy(), expected)
+    np.testing.assert_allclose(x.sinh().numpy(), expected)
+
+
+def test_cosh_cpu():
+    x = torch.tensor([0.0, 0.5, 1.0])
+    expected = np.cosh(x.numpy())
+    np.testing.assert_allclose(torch.cosh(x).numpy(), expected)
+    np.testing.assert_allclose(x.cosh().numpy(), expected)
+
+
+def test_erf_cpu():
+    x = torch.tensor([-1.0, 0.0, 1.0])
+    expected = np.vectorize(math.erf)(x.numpy())
+    np.testing.assert_allclose(torch.erf(x).numpy(), expected)
+    np.testing.assert_allclose(x.erf().numpy(), expected)
+
+
+def test_erfc_cpu():
+    x = torch.tensor([-1.0, 0.0, 1.0])
+    expected = np.vectorize(math.erfc)(x.numpy())
+    np.testing.assert_allclose(torch.erfc(x).numpy(), expected)
+    np.testing.assert_allclose(x.erfc().numpy(), expected)
+
+
+def test_softplus_cpu():
+    x = torch.tensor([-1.0, 0.0, 1.0])
+    expected = np.log1p(np.exp(x.numpy()))
+    np.testing.assert_allclose(torch.softplus(x).numpy(), expected)
+    np.testing.assert_allclose(x.softplus().numpy(), expected)

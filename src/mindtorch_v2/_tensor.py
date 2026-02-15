@@ -22,6 +22,8 @@ from ._functional import pow as pow_dispatch, log2 as log2_dispatch, log10 as lo
 from ._functional import exp2 as exp2_dispatch, rsqrt as rsqrt_dispatch
 from ._functional import sign as sign_dispatch, signbit as signbit_dispatch
 from ._functional import isnan as isnan_dispatch, isinf as isinf_dispatch, isfinite as isfinite_dispatch
+from ._functional import sinh as sinh_dispatch, cosh as cosh_dispatch
+from ._functional import erf as erf_dispatch, erfc as erfc_dispatch, softplus as softplus_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -509,6 +511,21 @@ class Tensor:
 
     def isfinite(self):
         return isfinite_dispatch(self)
+
+    def sinh(self):
+        return sinh_dispatch(self)
+
+    def cosh(self):
+        return cosh_dispatch(self)
+
+    def erf(self):
+        return erf_dispatch(self)
+
+    def erfc(self):
+        return erfc_dispatch(self)
+
+    def softplus(self):
+        return softplus_dispatch(self)
 
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)

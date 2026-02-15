@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 from ..._dtype import bool as bool_dtype
@@ -178,3 +179,29 @@ def isinf(a):
 def isfinite(a):
     arr = np.isfinite(_to_numpy(a))
     return _from_numpy(arr, bool_dtype, a.device)
+
+
+def sinh(a):
+    return _from_numpy(np.sinh(_to_numpy(a)), a.dtype, a.device)
+
+
+def cosh(a):
+    return _from_numpy(np.cosh(_to_numpy(a)), a.dtype, a.device)
+
+
+def erf(a):
+    arr = _to_numpy(a)
+    out = np.vectorize(math.erf)(arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def erfc(a):
+    arr = _to_numpy(a)
+    out = np.vectorize(math.erfc)(arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def softplus(a):
+    arr = _to_numpy(a)
+    out = np.log1p(np.exp(arr))
+    return _from_numpy(out, a.dtype, a.device)

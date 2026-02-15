@@ -39,6 +39,11 @@ from .ops import (
     isnan,
     isinf,
     isfinite,
+    sinh,
+    cosh,
+    erf,
+    erfc,
+    softplus,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -70,6 +75,11 @@ registry.register("signbit", "cpu", signbit, meta=meta_infer.infer_unary_bool)
 registry.register("isnan", "cpu", isnan, meta=meta_infer.infer_unary_bool)
 registry.register("isinf", "cpu", isinf, meta=meta_infer.infer_unary_bool)
 registry.register("isfinite", "cpu", isfinite, meta=meta_infer.infer_unary_bool)
+registry.register("sinh", "cpu", sinh, meta=meta_infer.infer_unary)
+registry.register("cosh", "cpu", cosh, meta=meta_infer.infer_unary)
+registry.register("erf", "cpu", erf, meta=meta_infer.infer_unary)
+registry.register("erfc", "cpu", erfc, meta=meta_infer.infer_unary)
+registry.register("softplus", "cpu", softplus, meta=meta_infer.infer_unary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
