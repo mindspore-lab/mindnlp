@@ -119,7 +119,6 @@ def isinf(a):
 def isfinite(a):
     return dispatch("isfinite", a.device.type, a)
 
-
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 
@@ -138,7 +137,6 @@ def erfc(a):
 
 def softplus(a):
     return dispatch("softplus", a.device.type, a)
-
 
 def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)

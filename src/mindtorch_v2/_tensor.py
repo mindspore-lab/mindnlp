@@ -526,7 +526,6 @@ class Tensor:
 
     def softplus(self):
         return softplus_dispatch(self)
-
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 
