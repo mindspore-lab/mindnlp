@@ -1,4 +1,5 @@
 import ctypes
+import glob
 import os
 import sys
 import threading
@@ -23,6 +24,7 @@ _CANDIDATE_PYTHON_DIRS = (
 )
 
 _PRELOAD_LIBS = (
+    "libascend_protobuf.so",
     "libascendcl.so",
     "libascendcl_impl.so",
     "libopapi.so",
@@ -58,6 +60,13 @@ def _preload_libs(paths):
             candidate = os.path.join(base, lib)
             if os.path.exists(candidate):
                 ctypes.CDLL(candidate, mode=ctypes.RTLD_GLOBAL)
+                continue
+            if lib == "libascend_protobuf.so":
+                for match in sorted(glob.glob(candidate + "*")):
+                    if not os.path.isfile(match):
+                        continue
+                    ctypes.CDLL(match, mode=ctypes.RTLD_GLOBAL)
+                    break
 
 
 def _import_acl():

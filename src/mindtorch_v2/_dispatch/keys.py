@@ -22,10 +22,13 @@ class DispatchKeySet(set):
         has_npu = False
         has_cpu = False
         requires_grad = False
+        saw_device = False
         for tensor in tensors:
             if not hasattr(tensor, "device"):
                 continue
-            dev_type = tensor.device.type
+            saw_device = True
+            dev = tensor.device
+            dev_type = dev.type if hasattr(dev, "type") else dev
             if dev_type == "meta":
                 has_meta = True
             elif dev_type == "npu":
@@ -34,7 +37,7 @@ class DispatchKeySet(set):
                 has_cpu = True
             if getattr(tensor, "requires_grad", False):
                 requires_grad = True
-        if not tensors and device is not None:
+        if (not saw_device) and device is not None:
             dev_type = device.type if hasattr(device, "type") else device
             if dev_type == "meta":
                 has_meta = True
