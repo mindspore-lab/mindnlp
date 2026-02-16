@@ -18,6 +18,7 @@ from .ops import (
     matmul,
     mul,
     neg,
+    sign,
     pow,
     relu,
     round,
@@ -46,6 +47,7 @@ registry.register("contiguous", "npu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "npu", sum_, meta=meta_infer.infer_sum)
 registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
+registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)
 registry.register("exp", "npu", exp, meta=meta_infer.infer_unary)
 registry.register("log", "npu", log, meta=meta_infer.infer_unary)
 registry.register("sqrt", "npu", sqrt, meta=meta_infer.infer_unary)

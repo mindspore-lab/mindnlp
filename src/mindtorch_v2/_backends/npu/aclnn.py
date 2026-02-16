@@ -303,6 +303,30 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        self.aclnn_sign_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSignGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_sign = _optional_symbol(
+            libs,
+            "aclnnSign",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_signbit_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSignbitGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_signbit = _optional_symbol(
+            libs,
+            "aclnnSignbit",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
         self.aclnn_floor_get_workspace = _optional_symbol(
             libs,
             "aclnnFloorGetWorkspaceSize",
@@ -1082,6 +1106,24 @@ def neg(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
                        self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
 
 
+def sign(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnSign", bindings.aclnn_sign_get_workspace, bindings.aclnn_sign,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def signbit(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnSignbit", bindings.aclnn_signbit_get_workspace, bindings.aclnn_signbit,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
 def exp(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
@@ -1416,5 +1458,37 @@ def ones_zero_symbols_ok():
                 bindings.aclnn_inplace_zero,
             ]
         )
+    except Exception:
+        return False
+
+
+def trunc_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_trunc_get_workspace, bindings.aclnn_trunc])
+    except Exception:
+        return False
+
+
+def frac_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_frac_get_workspace, bindings.aclnn_frac])
+    except Exception:
+        return False
+
+
+def sign_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_sign_get_workspace, bindings.aclnn_sign])
+    except Exception:
+        return False
+
+
+def signbit_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_signbit_get_workspace, bindings.aclnn_signbit])
     except Exception:
         return False

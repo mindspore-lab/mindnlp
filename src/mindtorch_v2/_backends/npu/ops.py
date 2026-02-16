@@ -2,6 +2,7 @@ from ..._storage import npu_typed_storage_from_ptr
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
+from ..common import convert as convert_backend
 
 
 def _unwrap_storage(tensor):
@@ -330,6 +331,10 @@ def neg(a):
     return _unary_op(a, aclnn.neg, "neg")
 
 
+def sign(a):
+    return _unary_op(a, aclnn.sign, "sign")
+
+
 def exp(a):
     return _unary_op(a, aclnn.exp, "exp")
 
@@ -379,11 +384,26 @@ def round(a):
 
 
 def trunc(a):
-    return _unary_op(a, aclnn.trunc, "trunc")
+    try:
+        return _unary_op(a, aclnn.trunc, "trunc")
+    except RuntimeError as exc:
+        if "561103" not in str(exc):
+            raise
+    if not a.dtype.is_floating_point:
+        return a
+    if not aclnn.sign_symbols_ok():
+        raise RuntimeError("aclnnTrunc not available and aclnnSign unavailable")
+    return mul(sign(a), floor(abs(a)))
 
 
 def frac(a):
-    return _unary_op(a, aclnn.frac, "frac")
+    try:
+        return _unary_op(a, aclnn.frac, "frac")
+    except RuntimeError as exc:
+        if "561103" not in str(exc):
+            raise
+    out = trunc(a)
+    return add(a, neg(out))
 
 
 def log2(a):
