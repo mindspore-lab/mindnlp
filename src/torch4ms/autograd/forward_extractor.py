@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Tuple
 import torch
 from torch.nn.utils import stateless as torch_stateless
 from torch4ms.tensor import Tensor as Torch4msTensor
+from mindspore import Tensor as ms_Tensor
 
 
 def _is_trainable_param(value) -> bool:
@@ -151,11 +152,33 @@ class AutogradForwardExtractor:
                 res = base_forward(*torch_args)
             
             # 将结果转换回 MindSpore Tensor
-            if isinstance(res, torch.Tensor):
+            if isinstance(res, Torch4msTensor):
+                # 如果已经是 torch4ms.Tensor，直接返回其 _elem
+                return res._elem
+            elif isinstance(res, torch.Tensor):
+                # 检查是否是 meta 设备上的 tensor
+                # 注意：torch4ms.Tensor 的 device 属性返回字符串，不是 torch.device
+                # 所以我们需要检查 res 是否是普通的 torch.Tensor 且在 meta 设备上
+                try:
+                    device_type = res.device.type if hasattr(res.device, 'type') else str(res.device)
+                    if device_type == 'meta':
+                        # meta tensor 无法直接转换
+                        # 这种情况可能发生在某些操作没有被正确拦截的情况下
+                        # 尝试检查是否有 _elem 属性（可能是 torch4ms.Tensor 但没有被正确识别）
+                        if hasattr(res, '_elem') and isinstance(res._elem, ms_Tensor):
+                            return res._elem
+                        raise RuntimeError(
+                            "Cannot convert meta tensor to MindSpore tensor. "
+                            "This may indicate that the forward function returned a meta tensor. "
+                            "Please ensure all operations are performed on real tensors. "
+                            "If you're using torch4ms, make sure the environment is enabled."
+                        )
+                except (AttributeError, TypeError):
+                    # 如果 device 属性不是标准的 torch.device，尝试直接转换
+                    pass
+                
                 from torch4ms.ops import mappings
                 return mappings.t2ms(res)
-            elif isinstance(res, Torch4msTensor):
-                return res._elem
             else:
                 return res
 
