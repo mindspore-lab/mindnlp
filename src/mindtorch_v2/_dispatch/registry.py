@@ -1,10 +1,12 @@
 from .keys import DispatchKey
+from .schema import OpSchema
 
 
 class OperatorEntry:
     def __init__(self, name):
         self.name = name
         self.schema = None
+        self.schema_obj = None
         self.kernels = {}
         self.fallthrough = set()
 
@@ -12,6 +14,7 @@ class OperatorEntry:
 class OpRegistry:
     def __init__(self):
         self._ops = {}
+        self._aliases = {}
 
     def _canonical_name(self, name):
         if "::" in name:
@@ -29,6 +32,7 @@ class OpRegistry:
     def register_schema(self, name, schema):
         entry = self._entry(name)
         entry.schema = schema
+        entry.schema_obj = OpSchema(schema)
         return entry
 
     def register_kernel(self, name, key, fn):
@@ -40,6 +44,13 @@ class OpRegistry:
         entry = self._entry(name)
         entry.fallthrough.add(key)
         return entry
+
+    def register_alias(self, alias, target):
+        self._aliases[alias] = target
+        return alias
+
+    def resolve(self, name):
+        return self._aliases.get(name, name)
 
     def register(self, name, device, fn, meta=None):
         key = resolve_dispatch_key(device)
