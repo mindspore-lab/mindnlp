@@ -16,6 +16,7 @@ from ._object_collectives import (
     broadcast_object_list, all_gather_object,
     gather_object, scatter_object_list,
 )
+from .device_mesh import init_device_mesh
 from . import nn
 
 # ---------------------------------------------------------------------------
@@ -645,6 +646,7 @@ __all__ = [
     # Sub-groups
     "new_group", "new_subgroups", "new_subgroups_by_enumeration",
     "split_group",
+    "init_device_mesh",
     # Misc
     "supports_complex",
     "default_pg_timeout", "get_debug_level",
