@@ -81,6 +81,8 @@ def test_meta_unary_elementwise_ops_shape():
         lambda t: torch.asin(t),
         lambda t: torch.acos(t),
         lambda t: torch.lerp(t, t, 0.5),
+        lambda t: torch.addcmul(t, t, t, value=0.5),
+        lambda t: torch.addcdiv(t, t, t, value=0.5),
     ):
         out = op(x)
         assert out.device.type == "meta"

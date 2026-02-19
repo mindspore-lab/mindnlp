@@ -67,6 +67,16 @@ def _meta_lerp_meta(a, b, weight):
     return _meta_tensor(shape, a.dtype, a.device)
 
 
+def _meta_addcmul_meta(a, b, c, value=1.0):
+    shape = _broadcast_shape(_broadcast_shape(a.shape, b.shape), c.shape)
+    return _meta_tensor(shape, a.dtype, a.device)
+
+
+def _meta_addcdiv_meta(a, b, c, value=1.0):
+    shape = _broadcast_shape(_broadcast_shape(a.shape, b.shape), c.shape)
+    return _meta_tensor(shape, a.dtype, a.device)
+
+
 def _meta_unary_meta(a):
     return _meta_tensor(a.shape, a.dtype, a.device)
 
@@ -156,6 +166,8 @@ __all__ = [
     "_meta_binary_or_scalar_meta",
     "_meta_where_meta",
     "_meta_lerp_meta",
+    "_meta_addcmul_meta",
+    "_meta_addcdiv_meta",
     "_meta_matmul_meta",
     "_meta_sum_meta",
     "_meta_transpose_meta",

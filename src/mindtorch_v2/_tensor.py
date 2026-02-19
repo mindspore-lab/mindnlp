@@ -33,6 +33,7 @@ from ._functional import where as where_dispatch
 from ._functional import atan as atan_dispatch, atan2 as atan2_dispatch
 from ._functional import asin as asin_dispatch, acos as acos_dispatch
 from ._functional import lerp as lerp_dispatch
+from ._functional import addcmul as addcmul_dispatch, addcdiv as addcdiv_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -586,6 +587,12 @@ class Tensor:
 
     def lerp(self, other, weight):
         return lerp_dispatch(self, other, weight)
+
+    def addcmul(self, tensor1, tensor2, value=1.0):
+        return addcmul_dispatch(self, tensor1, tensor2, value=value)
+
+    def addcdiv(self, tensor1, tensor2, value=1.0):
+        return addcdiv_dispatch(self, tensor1, tensor2, value=value)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 
