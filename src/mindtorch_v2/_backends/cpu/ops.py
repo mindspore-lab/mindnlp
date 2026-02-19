@@ -274,3 +274,19 @@ def where(cond, x, y):
         y_arr = y
     out = np.where(cond_arr, x_arr, y_arr)
     return _from_numpy(out, x.dtype, x.device)
+
+
+def atan(a):
+    return _from_numpy(np.arctan(_to_numpy(a)), a.dtype, a.device)
+
+
+def atan2(a, b):
+    return _from_numpy(np.arctan2(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def asin(a):
+    return _from_numpy(np.arcsin(_to_numpy(a)), a.dtype, a.device)
+
+
+def acos(a):
+    return _from_numpy(np.arccos(_to_numpy(a)), a.dtype, a.device)

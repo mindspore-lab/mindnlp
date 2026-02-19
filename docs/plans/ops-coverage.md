@@ -74,3 +74,7 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::fmin` | CPU | done | - | numpy impl + meta + tests |
 | `aten::fmax` | CPU | done | - | numpy impl + meta + tests |
 | `aten::where` | CPU | done | - | numpy impl + meta + tests |
+| `aten::atan` | CPU | done | - | numpy impl + meta + tests |
+| `aten::atan2` | CPU | done | - | numpy impl + meta + tests |
+| `aten::asin` | CPU | done | - | numpy impl + meta + tests |
+| `aten::acos` | CPU | done | - | numpy impl + meta + tests |

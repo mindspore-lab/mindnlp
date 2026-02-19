@@ -186,6 +186,22 @@ def fmax(a, b):
 def where(cond, x, y):
     return dispatch("where", x.device.type, cond, x, y)
 
+
+def atan(a):
+    return dispatch("atan", a.device.type, a)
+
+
+def atan2(a, b):
+    return dispatch("atan2", a.device.type, a, b)
+
+
+def asin(a):
+    return dispatch("asin", a.device.type, a)
+
+
+def acos(a):
+    return dispatch("acos", a.device.type, a)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 

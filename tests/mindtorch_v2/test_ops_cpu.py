@@ -317,3 +317,32 @@ def test_where_tensor_cpu():
     y = torch.tensor([3.0, 2.0, 1.0])
     expected = np.where(cond.numpy(), x.numpy(), y.numpy())
     np.testing.assert_allclose(torch.where(cond, x, y).numpy(), expected)
+
+
+def test_atan_cpu():
+    x = torch.tensor([-1.0, 0.0, 1.0])
+    expected = np.arctan(x.numpy())
+    np.testing.assert_allclose(torch.atan(x).numpy(), expected)
+    np.testing.assert_allclose(x.atan().numpy(), expected)
+
+
+def test_atan2_cpu():
+    x = torch.tensor([1.0, -1.0, 2.0])
+    y = torch.tensor([2.0, 2.0, -2.0])
+    expected = np.arctan2(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.atan2(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.atan2(y).numpy(), expected)
+
+
+def test_asin_cpu():
+    x = torch.tensor([-0.5, 0.0, 0.5])
+    expected = np.arcsin(x.numpy())
+    np.testing.assert_allclose(torch.asin(x).numpy(), expected)
+    np.testing.assert_allclose(x.asin().numpy(), expected)
+
+
+def test_acos_cpu():
+    x = torch.tensor([-0.5, 0.0, 0.5])
+    expected = np.arccos(x.numpy())
+    np.testing.assert_allclose(torch.acos(x).numpy(), expected)
+    np.testing.assert_allclose(x.acos().numpy(), expected)

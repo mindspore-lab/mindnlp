@@ -56,6 +56,10 @@ from .ops import (
     fmin,
     fmax,
     where,
+    atan,
+    atan2,
+    asin,
+    acos,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -104,6 +108,10 @@ registry.register("amax", "cpu", amax, meta=meta_infer.infer_sum)
 registry.register("fmin", "cpu", fmin, meta=meta_infer.infer_binary)
 registry.register("fmax", "cpu", fmax, meta=meta_infer.infer_binary)
 registry.register("where", "cpu", where, meta=meta_infer.infer_binary)
+registry.register("atan", "cpu", atan, meta=meta_infer.infer_unary)
+registry.register("atan2", "cpu", atan2, meta=meta_infer.infer_binary)
+registry.register("asin", "cpu", asin, meta=meta_infer.infer_unary)
+registry.register("acos", "cpu", acos, meta=meta_infer.infer_unary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
