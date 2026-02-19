@@ -71,10 +71,22 @@ def test_meta_unary_elementwise_ops_shape():
         lambda t: torch.clamp_min(t, 0.0),
         lambda t: torch.clamp_max(t, 1.0),
         lambda t: torch.hardtanh(t, -1.0, 1.0),
+        lambda t: torch.min(t, t),
+        lambda t: torch.max(t, t),
+        lambda t: torch.fmin(t, t),
+        lambda t: torch.fmax(t, t),
     ):
         out = op(x)
         assert out.device.type == "meta"
         assert out.shape == x.shape
+
+    for op in (
+        lambda t: torch.amin(t, dim=0),
+        lambda t: torch.amax(t, dim=0),
+    ):
+        out = op(x)
+        assert out.device.type == "meta"
+        assert out.shape == ()
 
 
 def test_meta_pow_shape():
