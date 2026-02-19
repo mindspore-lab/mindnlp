@@ -319,6 +319,21 @@ def test_where_tensor_cpu():
     np.testing.assert_allclose(torch.where(cond, x, y).numpy(), expected)
 
 
+def test_tensor_where_cpu():
+    cond = torch.tensor([True, False, True])
+    x = torch.tensor([1.0, 2.0, 3.0])
+    y = torch.tensor([3.0, 2.0, 1.0])
+    expected = np.where(cond.numpy(), x.numpy(), y.numpy())
+    np.testing.assert_allclose(x.where(cond, y).numpy(), expected)
+
+
+def test_tensor_where_scalar_cpu():
+    cond = torch.tensor([True, False, True])
+    x = torch.tensor([1.0, 2.0, 3.0])
+    expected = np.where(cond.numpy(), x.numpy(), 0.5)
+    np.testing.assert_allclose(x.where(cond, 0.5).numpy(), expected)
+
+
 def test_atan_cpu():
     x = torch.tensor([-1.0, 0.0, 1.0])
     expected = np.arctan(x.numpy())

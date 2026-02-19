@@ -568,8 +568,8 @@ class Tensor:
     def fmax(self, other):
         return fmax_dispatch(self, other)
 
-    def where(self, other, y):
-        return where_dispatch(self, other, y)
+    def where(self, condition, other):
+        return where_dispatch(condition, self, other)
 
     def atan(self):
         return atan_dispatch(self)
