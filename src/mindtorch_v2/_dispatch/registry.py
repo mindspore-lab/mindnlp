@@ -14,6 +14,7 @@ class OperatorEntry:
 class OpRegistry:
     def __init__(self):
         self._ops = {}
+        self._aliases = {}
 
     def _canonical_name(self, name):
         if "::" in name:
@@ -43,6 +44,13 @@ class OpRegistry:
         entry = self._entry(name)
         entry.fallthrough.add(key)
         return entry
+
+    def register_alias(self, alias, target):
+        self._aliases[alias] = target
+        return alias
+
+    def resolve(self, name):
+        return self._aliases.get(name, name)
 
     def register(self, name, device, fn, meta=None):
         key = resolve_dispatch_key(device)
