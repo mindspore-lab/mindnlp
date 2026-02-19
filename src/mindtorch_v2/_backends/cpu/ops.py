@@ -290,3 +290,14 @@ def asin(a):
 
 def acos(a):
     return _from_numpy(np.arccos(_to_numpy(a)), a.dtype, a.device)
+
+
+def lerp(a, b, weight):
+    arr_a = _to_numpy(a)
+    arr_b = _to_numpy(b)
+    if isinstance(weight, Tensor):
+        w = _to_numpy(weight)
+    else:
+        w = weight
+    out = arr_a + w * (arr_b - arr_a)
+    return _from_numpy(out, a.dtype, a.device)

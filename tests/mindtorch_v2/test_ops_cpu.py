@@ -334,6 +334,24 @@ def test_tensor_where_scalar_cpu():
     np.testing.assert_allclose(x.where(cond, 0.5).numpy(), expected)
 
 
+def test_lerp_scalar_cpu():
+    x = torch.tensor([0.0, 1.0, 2.0])
+    y = torch.tensor([2.0, 3.0, 4.0])
+    weight = 0.25
+    expected = x.numpy() + weight * (y.numpy() - x.numpy())
+    np.testing.assert_allclose(torch.lerp(x, y, weight).numpy(), expected)
+    np.testing.assert_allclose(x.lerp(y, weight).numpy(), expected)
+
+
+def test_lerp_tensor_cpu():
+    x = torch.tensor([0.0, 1.0, 2.0])
+    y = torch.tensor([2.0, 3.0, 4.0])
+    weight = torch.tensor([0.0, 0.5, 1.0])
+    expected = x.numpy() + weight.numpy() * (y.numpy() - x.numpy())
+    np.testing.assert_allclose(torch.lerp(x, y, weight).numpy(), expected)
+    np.testing.assert_allclose(x.lerp(y, weight).numpy(), expected)
+
+
 def test_atan_cpu():
     x = torch.tensor([-1.0, 0.0, 1.0])
     expected = np.arctan(x.numpy())

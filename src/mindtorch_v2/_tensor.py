@@ -32,6 +32,7 @@ from ._functional import fmin as fmin_dispatch, fmax as fmax_dispatch
 from ._functional import where as where_dispatch
 from ._functional import atan as atan_dispatch, atan2 as atan2_dispatch
 from ._functional import asin as asin_dispatch, acos as acos_dispatch
+from ._functional import lerp as lerp_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -582,6 +583,9 @@ class Tensor:
 
     def acos(self):
         return acos_dispatch(self)
+
+    def lerp(self, other, weight):
+        return lerp_dispatch(self, other, weight)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 

@@ -15,6 +15,7 @@ from .ops import (
     _meta_clamp_max_meta,
     _meta_hardtanh_meta,
     _meta_where_meta,
+    _meta_lerp_meta,
     _meta_view_meta,
     _meta_contiguous_meta,
 )
@@ -69,6 +70,7 @@ registry.register("atan", "meta", _meta_unary_meta)
 registry.register("atan2", "meta", _meta_binary_meta)
 registry.register("asin", "meta", _meta_unary_meta)
 registry.register("acos", "meta", _meta_unary_meta)
+registry.register("lerp", "meta", _meta_lerp_meta)
 registry.register("contiguous", "meta", _meta_contiguous_meta)
 registry.register("sum", "meta", _meta_sum_meta)
 registry.register("reshape", "meta", view_backend.reshape, meta=_meta_view_meta)
