@@ -36,7 +36,8 @@ class OpSchema:
         for idx, value in enumerate(args):
             param = positional_params[idx]
             if param.name in kwargs:
-                raise TypeError(f"{name}() got multiple values for argument '{param.name}'")
+                arg_name = _torch_param_name(param.name)
+                raise TypeError(f"{name}() got multiple values for argument '{arg_name}'")
         provided = {p.name for p in positional_params[: len(args)]} | set(kwargs.keys())
         missing = [p.name for p in params if p.name not in provided and not p.has_default]
         if missing:
