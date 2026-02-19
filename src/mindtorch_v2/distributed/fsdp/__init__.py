@@ -24,6 +24,10 @@ class ShardingStrategy:
     NO_SHARD = 2
 
 
+def fully_shard(*args, **kwargs):
+    raise NotImplementedError("fully_shard is not available in mindtorch_v2.")
+
+
 def __getattr__(name):
     raise AttributeError(
         f"module 'torch.distributed.fsdp' has no attribute '{name}'. "
