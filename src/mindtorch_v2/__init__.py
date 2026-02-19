@@ -22,6 +22,7 @@ from ._functional import sign, signbit, isnan, isinf, isfinite
 from ._functional import sinh, cosh, erf, erfc, softplus
 from ._functional import clamp, clamp_min, clamp_max, relu6, hardtanh
 from ._functional import min, max, amin, amax, fmin, fmax, where
+from ._functional import atan, atan2, asin, acos
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context
 from ._backends import cpu
@@ -99,6 +100,10 @@ __all__ = [
     "fmin",
     "fmax",
     "where",
+    "atan",
+    "atan2",
+    "asin",
+    "acos",
     "sum",
     # printing
     "set_printoptions",
