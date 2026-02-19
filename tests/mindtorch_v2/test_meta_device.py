@@ -75,6 +75,7 @@ def test_meta_unary_elementwise_ops_shape():
         lambda t: torch.max(t, t),
         lambda t: torch.fmin(t, t),
         lambda t: torch.fmax(t, t),
+        lambda t: torch.where(t, t, t),
     ):
         out = op(x)
         assert out.device.type == "meta"

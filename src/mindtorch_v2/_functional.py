@@ -182,6 +182,10 @@ def fmin(a, b):
 def fmax(a, b):
     return dispatch("fmax", a.device.type, a, b)
 
+
+def where(cond, x, y):
+    return dispatch("where", x.device.type, cond, x, y)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 

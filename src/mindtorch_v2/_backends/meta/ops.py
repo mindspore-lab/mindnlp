@@ -41,6 +41,23 @@ def _meta_binary_or_scalar_meta(a, b):
     return _meta_tensor(shape, a.dtype, a.device)
 
 
+def _meta_where_meta(cond, x, y):
+    if hasattr(cond, "shape"):
+        cond_shape = cond.shape
+    else:
+        cond_shape = ()
+    if hasattr(x, "shape"):
+        x_shape = x.shape
+    else:
+        x_shape = ()
+    if hasattr(y, "shape"):
+        y_shape = y.shape
+    else:
+        y_shape = ()
+    shape = _broadcast_shape(_broadcast_shape(cond_shape, x_shape), y_shape)
+    return _meta_tensor(shape, x.dtype, x.device)
+
+
 def _meta_unary_meta(a):
     return _meta_tensor(a.shape, a.dtype, a.device)
 
@@ -128,6 +145,7 @@ def _meta_contiguous_meta(a):
 __all__ = [
     "_meta_binary_meta",
     "_meta_binary_or_scalar_meta",
+    "_meta_where_meta",
     "_meta_matmul_meta",
     "_meta_sum_meta",
     "_meta_transpose_meta",
