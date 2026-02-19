@@ -372,6 +372,22 @@ def test_addcdiv_cpu():
     np.testing.assert_allclose(x.addcdiv(y, z, value=value).numpy(), expected)
 
 
+def test_logaddexp_cpu():
+    x = torch.tensor([0.0, 1.0, 2.0])
+    y = torch.tensor([2.0, 1.0, 0.0])
+    expected = np.logaddexp(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.logaddexp(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.logaddexp(y).numpy(), expected)
+
+
+def test_logaddexp2_cpu():
+    x = torch.tensor([0.0, 1.0, 2.0])
+    y = torch.tensor([2.0, 1.0, 0.0])
+    expected = np.logaddexp2(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.logaddexp2(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.logaddexp2(y).numpy(), expected)
+
+
 def test_atan_cpu():
     x = torch.tensor([-1.0, 0.0, 1.0])
     expected = np.arctan(x.numpy())

@@ -214,6 +214,14 @@ def addcmul(a, b, c, value=1.0):
 def addcdiv(a, b, c, value=1.0):
     return dispatch("addcdiv", a.device.type, a, b, c, value=value)
 
+
+def logaddexp(a, b):
+    return dispatch("logaddexp", a.device.type, a, b)
+
+
+def logaddexp2(a, b):
+    return dispatch("logaddexp2", a.device.type, a, b)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 
