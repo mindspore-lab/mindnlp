@@ -23,6 +23,7 @@ from ._functional import sinh, cosh, erf, erfc, softplus
 from ._functional import clamp, clamp_min, clamp_max, relu6, hardtanh
 from ._functional import min, max, amin, amax, fmin, fmax, where
 from ._functional import atan, atan2, asin, acos, lerp, addcmul, addcdiv
+from ._functional import logaddexp, logaddexp2
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context
 from ._backends import cpu
@@ -108,6 +109,8 @@ __all__ = [
     "lerp",
     "addcmul",
     "addcdiv",
+    "logaddexp",
+    "logaddexp2",
     "sum",
     # printing
     "set_printoptions",

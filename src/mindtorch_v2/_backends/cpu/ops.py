@@ -317,3 +317,11 @@ def addcdiv(a, b, c, value=1.0):
         a.dtype,
         a.device,
     )
+
+
+def logaddexp(a, b):
+    return _from_numpy(np.logaddexp(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def logaddexp2(a, b):
+    return _from_numpy(np.logaddexp2(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
