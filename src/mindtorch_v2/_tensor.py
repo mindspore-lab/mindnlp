@@ -29,6 +29,7 @@ from ._functional import relu6 as relu6_dispatch, hardtanh as hardtanh_dispatch
 from ._functional import min as min_dispatch, max as max_dispatch
 from ._functional import amin as amin_dispatch, amax as amax_dispatch
 from ._functional import fmin as fmin_dispatch, fmax as fmax_dispatch
+from ._functional import where as where_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -564,6 +565,9 @@ class Tensor:
 
     def fmax(self, other):
         return fmax_dispatch(self, other)
+
+    def where(self, other, y):
+        return where_dispatch(self, other, y)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 

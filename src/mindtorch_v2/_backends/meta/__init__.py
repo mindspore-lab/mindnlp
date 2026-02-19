@@ -14,6 +14,7 @@ from .ops import (
     _meta_clamp_min_meta,
     _meta_clamp_max_meta,
     _meta_hardtanh_meta,
+    _meta_where_meta,
     _meta_view_meta,
     _meta_contiguous_meta,
 )
@@ -63,6 +64,7 @@ registry.register("amin", "meta", _meta_sum_meta)
 registry.register("amax", "meta", _meta_sum_meta)
 registry.register("fmin", "meta", _meta_binary_meta)
 registry.register("fmax", "meta", _meta_binary_meta)
+registry.register("where", "meta", _meta_where_meta)
 registry.register("contiguous", "meta", _meta_contiguous_meta)
 registry.register("sum", "meta", _meta_sum_meta)
 registry.register("reshape", "meta", view_backend.reshape, meta=_meta_view_meta)

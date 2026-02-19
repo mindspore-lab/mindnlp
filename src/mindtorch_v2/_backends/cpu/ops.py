@@ -263,3 +263,14 @@ def fmin(a, b):
 
 def fmax(a, b):
     return _from_numpy(np.fmax(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def where(cond, x, y):
+    cond_arr = _to_numpy(cond)
+    x_arr = _to_numpy(x)
+    if isinstance(y, Tensor):
+        y_arr = _to_numpy(y)
+    else:
+        y_arr = y
+    out = np.where(cond_arr, x_arr, y_arr)
+    return _from_numpy(out, x.dtype, x.device)
