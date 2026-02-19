@@ -61,6 +61,8 @@ from .ops import (
     asin,
     acos,
     lerp,
+    addcmul,
+    addcdiv,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -114,6 +116,8 @@ registry.register("atan2", "cpu", atan2, meta=meta_infer.infer_binary)
 registry.register("asin", "cpu", asin, meta=meta_infer.infer_unary)
 registry.register("acos", "cpu", acos, meta=meta_infer.infer_unary)
 registry.register("lerp", "cpu", lerp, meta=meta_infer.infer_binary)
+registry.register("addcmul", "cpu", addcmul, meta=meta_infer.infer_binary)
+registry.register("addcdiv", "cpu", addcdiv, meta=meta_infer.infer_binary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)

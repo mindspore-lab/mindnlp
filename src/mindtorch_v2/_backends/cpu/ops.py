@@ -301,3 +301,19 @@ def lerp(a, b, weight):
         w = weight
     out = arr_a + w * (arr_b - arr_a)
     return _from_numpy(out, a.dtype, a.device)
+
+
+def addcmul(a, b, c, value=1.0):
+    return _from_numpy(
+        _to_numpy(a) + value * (_to_numpy(b) * _to_numpy(c)),
+        a.dtype,
+        a.device,
+    )
+
+
+def addcdiv(a, b, c, value=1.0):
+    return _from_numpy(
+        _to_numpy(a) + value * (_to_numpy(b) / _to_numpy(c)),
+        a.dtype,
+        a.device,
+    )

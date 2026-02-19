@@ -206,6 +206,14 @@ def acos(a):
 def lerp(a, b, weight):
     return dispatch("lerp", a.device.type, a, b, weight)
 
+
+def addcmul(a, b, c, value=1.0):
+    return dispatch("addcmul", a.device.type, a, b, c, value=value)
+
+
+def addcdiv(a, b, c, value=1.0):
+    return dispatch("addcdiv", a.device.type, a, b, c, value=value)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 

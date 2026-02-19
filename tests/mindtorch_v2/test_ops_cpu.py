@@ -352,6 +352,26 @@ def test_lerp_tensor_cpu():
     np.testing.assert_allclose(x.lerp(y, weight).numpy(), expected)
 
 
+def test_addcmul_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    y = torch.tensor([2.0, 2.0, 2.0])
+    z = torch.tensor([3.0, 4.0, 5.0])
+    value = 0.5
+    expected = x.numpy() + value * (y.numpy() * z.numpy())
+    np.testing.assert_allclose(torch.addcmul(x, y, z, value=value).numpy(), expected)
+    np.testing.assert_allclose(x.addcmul(y, z, value=value).numpy(), expected)
+
+
+def test_addcdiv_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    y = torch.tensor([2.0, 4.0, 6.0])
+    z = torch.tensor([1.0, 2.0, 3.0])
+    value = 0.25
+    expected = x.numpy() + value * (y.numpy() / z.numpy())
+    np.testing.assert_allclose(torch.addcdiv(x, y, z, value=value).numpy(), expected)
+    np.testing.assert_allclose(x.addcdiv(y, z, value=value).numpy(), expected)
+
+
 def test_atan_cpu():
     x = torch.tensor([-1.0, 0.0, 1.0])
     expected = np.arctan(x.numpy())
