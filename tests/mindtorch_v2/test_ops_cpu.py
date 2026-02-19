@@ -260,3 +260,45 @@ def test_hardtanh_cpu():
     expected = np.clip(x.numpy(), -1.0, 1.0)
     np.testing.assert_allclose(torch.hardtanh(x, -1.0, 1.0).numpy(), expected)
     np.testing.assert_allclose(x.hardtanh(-1.0, 1.0).numpy(), expected)
+
+
+def test_min_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    y = torch.tensor([3.0, 1.0, 2.0])
+    expected = np.minimum(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.min(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.min(y).numpy(), expected)
+
+
+def test_max_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    y = torch.tensor([3.0, 1.0, 2.0])
+    expected = np.maximum(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.max(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.max(y).numpy(), expected)
+
+
+def test_amin_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 0.5]])
+    expected = np.amin(x.numpy(), axis=1)
+    np.testing.assert_allclose(torch.amin(x, dim=1).numpy(), expected)
+
+
+def test_amax_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 0.5]])
+    expected = np.amax(x.numpy(), axis=1)
+    np.testing.assert_allclose(torch.amax(x, dim=1).numpy(), expected)
+
+
+def test_fmin_cpu():
+    x = torch.tensor([1.0, float('nan'), 2.0])
+    y = torch.tensor([0.5, 1.0, float('nan')])
+    expected = np.fmin(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.fmin(x, y).numpy(), expected)
+
+
+def test_fmax_cpu():
+    x = torch.tensor([1.0, float('nan'), 2.0])
+    y = torch.tensor([0.5, 1.0, float('nan')])
+    expected = np.fmax(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.fmax(x, y).numpy(), expected)

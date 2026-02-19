@@ -158,6 +158,30 @@ def relu6(a):
 def hardtanh(a, min_val=-1.0, max_val=1.0):
     return dispatch("hardtanh", a.device.type, a, min_val, max_val)
 
+
+def min(a, b):
+    return dispatch("min", a.device.type, a, b)
+
+
+def max(a, b):
+    return dispatch("max", a.device.type, a, b)
+
+
+def amin(a, dim=None, keepdim=False):
+    return dispatch("amin", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def amax(a, dim=None, keepdim=False):
+    return dispatch("amax", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def fmin(a, b):
+    return dispatch("fmin", a.device.type, a, b)
+
+
+def fmax(a, b):
+    return dispatch("fmax", a.device.type, a, b)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 

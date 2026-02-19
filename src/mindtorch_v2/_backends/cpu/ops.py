@@ -235,3 +235,31 @@ def hardtanh(a, min_val=-1.0, max_val=1.0):
     arr = _to_numpy(a)
     out = np.clip(arr, min_val, max_val)
     return _from_numpy(out, a.dtype, a.device)
+
+
+def min_(a, b):
+    return _from_numpy(np.minimum(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def max_(a, b):
+    return _from_numpy(np.maximum(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def amin(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    out = np.amin(arr, axis=dim, keepdims=keepdim)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def amax(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    out = np.amax(arr, axis=dim, keepdims=keepdim)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def fmin(a, b):
+    return _from_numpy(np.fmin(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def fmax(a, b):
+    return _from_numpy(np.fmax(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)

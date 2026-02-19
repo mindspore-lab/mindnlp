@@ -26,6 +26,9 @@ from ._functional import sinh as sinh_dispatch, cosh as cosh_dispatch
 from ._functional import erf as erf_dispatch, erfc as erfc_dispatch, softplus as softplus_dispatch
 from ._functional import clamp as clamp_dispatch, clamp_min as clamp_min_dispatch, clamp_max as clamp_max_dispatch
 from ._functional import relu6 as relu6_dispatch, hardtanh as hardtanh_dispatch
+from ._functional import min as min_dispatch, max as max_dispatch
+from ._functional import amin as amin_dispatch, amax as amax_dispatch
+from ._functional import fmin as fmin_dispatch, fmax as fmax_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -543,6 +546,24 @@ class Tensor:
 
     def hardtanh(self, min_val=-1.0, max_val=1.0):
         return hardtanh_dispatch(self, min_val, max_val)
+
+    def min(self, other):
+        return min_dispatch(self, other)
+
+    def max(self, other):
+        return max_dispatch(self, other)
+
+    def amin(self, dim=None, keepdim=False):
+        return amin_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def amax(self, dim=None, keepdim=False):
+        return amax_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def fmin(self, other):
+        return fmin_dispatch(self, other)
+
+    def fmax(self, other):
+        return fmax_dispatch(self, other)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 
