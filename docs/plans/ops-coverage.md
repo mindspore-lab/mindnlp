@@ -78,3 +78,4 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::atan2` | CPU | done | - | numpy impl + meta + tests |
 | `aten::asin` | CPU | done | - | numpy impl + meta + tests |
 | `aten::acos` | CPU | done | - | numpy impl + meta + tests |
+| `aten::lerp` | CPU | done | - | numpy impl + meta + tests |

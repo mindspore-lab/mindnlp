@@ -202,6 +202,10 @@ def asin(a):
 def acos(a):
     return dispatch("acos", a.device.type, a)
 
+
+def lerp(a, b, weight):
+    return dispatch("lerp", a.device.type, a, b, weight)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 
