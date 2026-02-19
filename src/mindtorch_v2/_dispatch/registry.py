@@ -1,10 +1,12 @@
 from .keys import DispatchKey
+from .schema import OpSchema
 
 
 class OperatorEntry:
     def __init__(self, name):
         self.name = name
         self.schema = None
+        self.schema_obj = None
         self.kernels = {}
         self.fallthrough = set()
 
@@ -29,6 +31,7 @@ class OpRegistry:
     def register_schema(self, name, schema):
         entry = self._entry(name)
         entry.schema = schema
+        entry.schema_obj = OpSchema(schema)
         return entry
 
     def register_kernel(self, name, key, fn):

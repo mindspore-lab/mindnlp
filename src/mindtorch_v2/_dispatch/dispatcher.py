@@ -158,6 +158,9 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     dispatch_device = _infer_dispatch_device(dispatch_device, tensors, keyset)
     entry = registry.get(name)
 
+    if entry.schema_obj is not None:
+        entry.schema_obj.bind(args, kwargs, op_name=name)
+
     def _run_kernel():
         kernel, key = _kernel_for_entry(entry, _key_order(keyset))
         if kernel is None:
