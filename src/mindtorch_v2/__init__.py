@@ -30,6 +30,7 @@ from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, ena
 from . import _autograd as autograd
 from . import npu
 from . import _C
+from . import distributed
 
 
 def pipeline():
@@ -117,4 +118,6 @@ __all__ = [
     "npu",
     # autograd
     "autograd",
+    # distributed
+    "distributed",
 ]
