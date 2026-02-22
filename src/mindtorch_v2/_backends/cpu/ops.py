@@ -57,6 +57,31 @@ def argmax(a, dim=None, keepdim=False):
     return _from_numpy(out, int64_dtype, a.device)
 
 
+def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
+    return np.allclose(
+        _to_numpy(a),
+        _to_numpy(b),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=equal_nan,
+    )
+
+
+def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
+    out = np.isclose(
+        _to_numpy(a),
+        _to_numpy(b),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=equal_nan,
+    )
+    return _from_numpy(out, bool_dtype, a.device)
+
+
+def equal(a, b):
+    return np.array_equal(_to_numpy(a), _to_numpy(b))
+
+
 def add_(a, b):
     arr = _to_numpy(a)
     arr += _to_numpy(b)

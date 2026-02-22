@@ -335,6 +335,28 @@ def test_argmax_cpu():
     np.testing.assert_array_equal(torch.argmax(x, dim=1, keepdim=True).numpy(), expected_keep.reshape(2, 1))
 
 
+def test_allclose_cpu():
+    x = torch.tensor([1.0, 1.0, 1.0001])
+    y = torch.tensor([1.0, 1.0, 1.0])
+    assert torch.allclose(x, y, rtol=1e-3, atol=1e-4)
+    assert not torch.allclose(x, y, rtol=1e-6, atol=1e-8)
+
+
+def test_isclose_cpu():
+    x = torch.tensor([1.0, 1.0, 1.0001])
+    y = torch.tensor([1.0, 1.0, 1.0])
+    expected = np.isclose(x.numpy(), y.numpy(), rtol=1e-3, atol=1e-4)
+    np.testing.assert_array_equal(torch.isclose(x, y, rtol=1e-3, atol=1e-4).numpy(), expected)
+
+
+def test_equal_cpu():
+    x = torch.tensor([1.0, 2.0])
+    y = torch.tensor([1.0, 2.0])
+    z = torch.tensor([1.0, 3.0])
+    assert torch.equal(x, y)
+    assert not torch.equal(x, z)
+
+
 def test_fmin_cpu():
     x = torch.tensor([1.0, float('nan'), 2.0])
     y = torch.tensor([0.5, 1.0, float('nan')])
