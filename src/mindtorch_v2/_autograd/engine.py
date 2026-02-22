@@ -74,7 +74,7 @@ class _GraphTask:
                 if t.grad_fn is not None:
                     self._accumulate_node_grad(t.grad_fn, g)
             if not self.retain_graph:
-                node._saved_tensors = []
+                node.release_saved_tensors()
 
 
 def _apply_hooks(tensor, grad):
@@ -152,6 +152,8 @@ def backward(tensor, grad=None, retain_graph=False, create_graph=False):
         if tensor.numel() != 1:
             raise RuntimeError("grad can be implicitly created only for scalar outputs")
         grad = tensor._ones_like()
+    if create_graph and not retain_graph:
+        retain_graph = True
     _run_backward((tensor,), (grad,), retain_graph=retain_graph, create_graph=create_graph, accumulate_grad=True)
 
 
