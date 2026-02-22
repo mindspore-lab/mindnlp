@@ -37,7 +37,10 @@ def test_saved_tensor_version_mismatch_raises():
     b = a.relu()
     c = b.relu()
     b.add_(torch.tensor([1.0, 1.0]))
-    with pytest.raises(RuntimeError):
+    with pytest.raises(
+        RuntimeError,
+        match=r"one of the variables needed for gradient computation has been modified by an inplace operation: .*expected version 0 instead\. Hint: enable anomaly detection to find the operation that failed to compute its gradient, with torch\.autograd\.set_detect_anomaly\(True\)\.",
+    ):
         c.sum().backward()
 
 
