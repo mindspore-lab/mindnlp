@@ -106,3 +106,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::cumsum` | CPU | done | - | numpy impl + meta + tests |
 | `aten::cumprod` | CPU | done | - | numpy impl + meta + tests |
 | `aten::cummax` | CPU | done | - | numpy impl + meta + tests |
+| `aten::argsort` | CPU | done | - | numpy impl + meta + tests |
+| `aten::sort` | CPU | done | - | numpy impl + meta + tests |
+| `aten::topk` | CPU | done | - | numpy impl + meta + tests |

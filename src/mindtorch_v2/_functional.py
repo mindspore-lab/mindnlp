@@ -329,6 +329,59 @@ def cummax(a, dim=0):
     return dispatch("cummax", a.device.type, a, dim)
 
 
+def argsort(a, dim=-1, descending=False, stable=False, out=None):
+    result = dispatch("argsort", a.device.type, a, dim=dim, descending=descending, stable=stable)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def sort(a, dim=-1, descending=False, stable=False, out=None):
+    values, indices = dispatch("sort", a.device.type, a, dim=dim, descending=descending, stable=stable)
+    if out is not None:
+        out_values, out_indices = out
+        out_values._storage = values.storage()
+        out_values.shape = values.shape
+        out_values.stride = values.stride
+        out_values.offset = values.offset
+        out_values._base = values._base
+        out_values._view_meta = values._view_meta
+        out_indices._storage = indices.storage()
+        out_indices.shape = indices.shape
+        out_indices.stride = indices.stride
+        out_indices.offset = indices.offset
+        out_indices._base = indices._base
+        out_indices._view_meta = indices._view_meta
+        return out_values, out_indices
+    return values, indices
+
+
+def topk(a, k, dim=-1, largest=True, sorted=True, out=None):
+    values, indices = dispatch("topk", a.device.type, a, k, dim=dim, largest=largest, sorted=sorted)
+    if out is not None:
+        out_values, out_indices = out
+        out_values._storage = values.storage()
+        out_values.shape = values.shape
+        out_values.stride = values.stride
+        out_values.offset = values.offset
+        out_values._base = values._base
+        out_values._view_meta = values._view_meta
+        out_indices._storage = indices.storage()
+        out_indices.shape = indices.shape
+        out_indices.stride = indices.stride
+        out_indices.offset = indices.offset
+        out_indices._base = indices._base
+        out_indices._view_meta = indices._view_meta
+        return out_values, out_indices
+    return values, indices
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 
