@@ -281,6 +281,7 @@ def sum(*args, **kwargs):
     dtype = kwargs.get("dtype")
     if dtype is not None:
         raise NotImplementedError("sum dtype not supported yet")
+    kwargs.pop("device", None)
     return dispatch("sum", None, *args, **kwargs)
 
 
@@ -337,22 +338,22 @@ def view(*args, **kwargs):
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
     dev = _as_device(device)
-    return dispatch("tensor", dev, data, dtype=dtype, device=dev, requires_grad=requires_grad)
+    return dispatch("tensor", dev, data, dtype=dtype, requires_grad=requires_grad)
 
 
 def zeros(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("zeros", dev, shape, dtype=dtype, device=dev, memory_format=memory_format)
+    return dispatch("zeros", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
 def ones(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("ones", dev, shape, dtype=dtype, device=dev, memory_format=memory_format)
+    return dispatch("ones", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
 def empty(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("empty", dev, shape, dtype=dtype, device=dev, memory_format=memory_format)
+    return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
 def arange(start, end=None, step=1, dtype=None, device=None):

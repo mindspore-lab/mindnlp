@@ -64,6 +64,8 @@ class OpSchema:
                 f"{name}() takes {expected} positional argument{plural} but {len(args)} were given"
             )
         for key in kwargs:
+            if key == "device" and key not in {p.name for p in params}:
+                continue
             if key not in {p.name for p in params}:
                 _maybe_override("unexpected")
                 raise TypeError(f"{name}() got an unexpected keyword argument '{key}'")
@@ -73,7 +75,7 @@ class OpSchema:
                 arg_name = _torch_param_name(param.name)
                 _maybe_override("duplicate")
                 raise TypeError(f"{name}() got multiple values for argument '{arg_name}'")
-        provided = {p.name for p in positional_params[: len(args)]} | set(kwargs.keys())
+        provided = {p.name for p in positional_params[: len(args)]} | {k for k in kwargs.keys() if k != "device" or k in {p.name for p in params}}
         missing = [p.name for p in params if p.name not in provided and not p.has_default]
         if missing:
             _maybe_override("missing")

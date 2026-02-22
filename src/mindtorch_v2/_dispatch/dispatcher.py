@@ -52,24 +52,20 @@ def _accepts_device(func):
     params = sig.parameters
     if "device" in params:
         return True
-    for param in params.values():
-        if param.kind == inspect.Parameter.VAR_KEYWORD:
-            return True
     return False
 
 
 def _prepare_kwargs(func, kwargs, device):
     if not kwargs:
         kwargs = {}
-    if "device" in kwargs:
-        if _accepts_device(func):
-            return kwargs
-        return {k: v for k, v in kwargs.items() if k != "device"}
+    filtered = {k: v for k, v in kwargs.items() if k != "device"}
+    if "device" in kwargs and _accepts_device(func):
+        return kwargs
     if _accepts_device(func):
-        merged = dict(kwargs)
+        merged = dict(filtered)
         merged["device"] = device
         return merged
-    return kwargs
+    return filtered
 
 
 class _PendingOp:

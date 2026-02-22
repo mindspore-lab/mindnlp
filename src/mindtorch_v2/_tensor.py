@@ -362,6 +362,8 @@ class Tensor:
         device = None
         dtype = None
         non_blocking = kwargs.get("non_blocking", False)
+        copy = kwargs.get("copy", False)
+        memory_format = kwargs.get("memory_format", None)
         for arg in args:
             if isinstance(arg, Device):
                 device = arg
@@ -386,7 +388,14 @@ class Tensor:
         if dtype is not None and dtype != self.dtype:
             result = result._to_dtype(dtype)
         if device is not None:
-            result = to_dispatch(result, device, non_blocking=non_blocking)
+            result = to_dispatch(
+                result,
+                device,
+                dtype=dtype,
+                non_blocking=non_blocking,
+                copy=copy,
+                memory_format=memory_format,
+            )
         if result is self and dtype is None and device is None:
             return self
         return result
