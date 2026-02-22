@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pytest
 import mindtorch_v2 as torch
@@ -95,6 +96,95 @@ def test_npu_unary_ops(op_name, numpy_fn, dtype):
         atol=1e-3,
         rtol=1e-3,
     )
+
+
+@pytest.mark.parametrize(
+    "op_name, numpy_fn",
+    [
+        ("cosh", np.cosh),
+        ("sinh", np.sinh),
+        ("erf", lambda x: np.vectorize(math.erf)(x)),
+        ("erfc", lambda x: np.vectorize(math.erfc)(x)),
+        ("softplus", lambda x: np.log1p(np.exp(-np.abs(x))) + np.maximum(x, 0)),
+    ],
+)
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_unary_ops_extra(op_name, numpy_fn, dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([-2.0, -0.5, 0.5, 2.0], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+    op = getattr(torch, op_name)
+    out = op(x)
+    expected = numpy_fn(data).astype(np.float32)
+    assert out.device.type == "npu"
+    assert np.allclose(
+        out.to("cpu").numpy().astype(np.float32),
+        expected,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_clamp_ops(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([-2.0, -0.5, 0.5, 2.0], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+    out = torch.clamp(x, -1.0, 1.0)
+    out_min = torch.clamp_min(x, -1.0)
+    out_max = torch.clamp_max(x, 1.0)
+    assert np.allclose(out.to("cpu").numpy(), np.clip(data, -1.0, 1.0).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(out_min.to("cpu").numpy(), np.clip(data, -1.0, None).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(out_max.to("cpu").numpy(), np.clip(data, None, 1.0).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+    tensor_data = np.array([[-2.0, -0.5], [0.5, 2.0]], dtype=np.float32)
+    min_data = np.array([[-1.0], [0.0]], dtype=np.float32)
+    max_data = np.array([[0.25, 1.0]], dtype=np.float32)
+    tensor_x = torch.tensor(tensor_data, device="npu", dtype=dtype)
+    tensor_min = torch.tensor(min_data, device="npu", dtype=dtype)
+    tensor_max = torch.tensor(max_data, device="npu", dtype=dtype)
+    tensor_out = torch.clamp(tensor_x, tensor_min, tensor_max)
+    tensor_out_min = torch.clamp_min(tensor_x, tensor_min)
+    tensor_out_max = torch.clamp_max(tensor_x, tensor_max)
+    expected = np.clip(tensor_data, min_data, max_data).astype(np.float32)
+    expected_min = np.clip(tensor_data, min_data, None).astype(np.float32)
+    expected_max = np.clip(tensor_data, None, max_data).astype(np.float32)
+    assert np.allclose(tensor_out.to("cpu").numpy(), expected, atol=1e-3, rtol=1e-3)
+    assert np.allclose(tensor_out_min.to("cpu").numpy(), expected_min, atol=1e-3, rtol=1e-3)
+    assert np.allclose(tensor_out_max.to("cpu").numpy(), expected_max, atol=1e-3, rtol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_relu6_hardtanh(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([-2.0, -0.5, 0.5, 2.0, 7.0], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+    relu6 = torch.relu6(x)
+    hardtanh = torch.hardtanh(x, -1.0, 1.0)
+    assert np.allclose(relu6.to("cpu").numpy(), np.clip(data, 0.0, 6.0).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(hardtanh.to("cpu").numpy(), np.clip(data, -1.0, 1.0).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+
+def test_npu_isfinite_isinf_isnan_signbit():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([0.0, 1.0, -1.0, np.inf, -np.inf, np.nan], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=torch.float32)
+    isfinite = torch.isfinite(x)
+    isinf = torch.isinf(x)
+    isnan = torch.isnan(x)
+    signbit = torch.signbit(x)
+    assert isfinite.dtype == torch.bool
+    assert isinf.dtype == torch.bool
+    assert isnan.dtype == torch.bool
+    assert signbit.dtype == torch.bool
+    assert np.array_equal(isfinite.to("cpu").numpy(), np.isfinite(data))
+    assert np.array_equal(isinf.to("cpu").numpy(), np.isinf(data))
+    assert np.array_equal(isnan.to("cpu").numpy(), np.isnan(data))
+    assert np.array_equal(signbit.to("cpu").numpy(), np.signbit(data))
 
 
 @pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
