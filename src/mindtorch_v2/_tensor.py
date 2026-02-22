@@ -35,6 +35,7 @@ from ._functional import asin as asin_dispatch, acos as acos_dispatch
 from ._functional import lerp as lerp_dispatch
 from ._functional import addcmul as addcmul_dispatch, addcdiv as addcdiv_dispatch
 from ._functional import logaddexp as logaddexp_dispatch, logaddexp2 as logaddexp2_dispatch
+from ._functional import hypot as hypot_dispatch, remainder as remainder_dispatch, fmod as fmod_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -600,6 +601,15 @@ class Tensor:
 
     def logaddexp2(self, other):
         return logaddexp2_dispatch(self, other)
+
+    def hypot(self, other):
+        return hypot_dispatch(self, other)
+
+    def remainder(self, other):
+        return remainder_dispatch(self, other)
+
+    def fmod(self, other):
+        return fmod_dispatch(self, other)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 

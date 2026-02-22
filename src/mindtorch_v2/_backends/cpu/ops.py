@@ -325,3 +325,15 @@ def logaddexp(a, b):
 
 def logaddexp2(a, b):
     return _from_numpy(np.logaddexp2(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def hypot(a, b):
+    return _from_numpy(np.hypot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def remainder(a, b):
+    return _from_numpy(np.remainder(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def fmod(a, b):
+    return _from_numpy(np.fmod(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)

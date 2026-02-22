@@ -65,6 +65,9 @@ from .ops import (
     addcdiv,
     logaddexp,
     logaddexp2,
+    hypot,
+    remainder,
+    fmod,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -122,6 +125,9 @@ registry.register("addcmul", "cpu", addcmul, meta=meta_infer.infer_binary)
 registry.register("addcdiv", "cpu", addcdiv, meta=meta_infer.infer_binary)
 registry.register("logaddexp", "cpu", logaddexp, meta=meta_infer.infer_binary)
 registry.register("logaddexp2", "cpu", logaddexp2, meta=meta_infer.infer_binary)
+registry.register("hypot", "cpu", hypot, meta=meta_infer.infer_binary)
+registry.register("remainder", "cpu", remainder, meta=meta_infer.infer_binary)
+registry.register("fmod", "cpu", fmod, meta=meta_infer.infer_binary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)

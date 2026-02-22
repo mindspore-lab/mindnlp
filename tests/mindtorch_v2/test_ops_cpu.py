@@ -388,6 +388,30 @@ def test_logaddexp2_cpu():
     np.testing.assert_allclose(x.logaddexp2(y).numpy(), expected)
 
 
+def test_hypot_cpu():
+    x = torch.tensor([3.0, 5.0, 8.0])
+    y = torch.tensor([4.0, 12.0, 15.0])
+    expected = np.hypot(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.hypot(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.hypot(y).numpy(), expected)
+
+
+def test_remainder_cpu():
+    x = torch.tensor([-3.0, 3.0, -3.0])
+    y = torch.tensor([2.0, 2.0, -2.0])
+    expected = np.remainder(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.remainder(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.remainder(y).numpy(), expected)
+
+
+def test_fmod_cpu():
+    x = torch.tensor([-3.0, 3.0, -3.0])
+    y = torch.tensor([2.0, 2.0, -2.0])
+    expected = np.fmod(x.numpy(), y.numpy())
+    np.testing.assert_allclose(torch.fmod(x, y).numpy(), expected)
+    np.testing.assert_allclose(x.fmod(y).numpy(), expected)
+
+
 def test_atan_cpu():
     x = torch.tensor([-1.0, 0.0, 1.0])
     expected = np.arctan(x.numpy())
