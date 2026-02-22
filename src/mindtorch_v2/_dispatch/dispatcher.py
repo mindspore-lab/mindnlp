@@ -157,6 +157,7 @@ def _kernel_for_entry(entry, key_order):
 
 def _key_order(keyset):
     order = [
+        DispatchKey.Pipeline,
         DispatchKey.Functionalize,
         DispatchKey.Autograd,
         DispatchKey.Meta,
@@ -171,7 +172,6 @@ def _key_order(keyset):
         DispatchKey.AutogradNPU,
         DispatchKey.AutogradXPU,
         DispatchKey.AutogradMeta,
-        DispatchKey.Pipeline,
     ]
     return [key for key in order if key in keyset]
 
