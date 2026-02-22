@@ -6,7 +6,7 @@ class DispatchKey(Enum):
     ADInplaceOrView = auto()
     AutogradOther = auto()
     AutogradCPU = auto()
-    AutogradCUDA = auto()
+    AutogradNPU = auto()
     AutogradXPU = auto()
     AutogradMeta = auto()
     Autograd = auto()
@@ -74,7 +74,7 @@ class DispatchKeySet(set):
                 DispatchKey.ADInplaceOrView,
                 DispatchKey.AutogradOther,
                 DispatchKey.AutogradCPU,
-                DispatchKey.AutogradCUDA,
+                DispatchKey.AutogradNPU,
                 DispatchKey.AutogradXPU,
                 DispatchKey.AutogradMeta,
                 DispatchKey.Python,

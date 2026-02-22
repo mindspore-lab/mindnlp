@@ -13,3 +13,8 @@ def test_dispatch_key_order_prefix_matches_torch_cuda():
         "CPU",
     ]
     assert names[: len(prefix)] == prefix
+
+
+def test_dispatch_key_includes_autograd_npu():
+    assert DispatchKey.AutogradNPU in DispatchKey
+    assert not hasattr(DispatchKey, "AutogradCUDA")

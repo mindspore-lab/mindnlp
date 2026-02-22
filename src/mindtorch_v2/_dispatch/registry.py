@@ -96,7 +96,7 @@ def _register_global_fallthroughs():
         DispatchKey.ADInplaceOrView,
         DispatchKey.AutogradOther,
         DispatchKey.AutogradCPU,
-        DispatchKey.AutogradCUDA,
+        DispatchKey.AutogradNPU,
         DispatchKey.AutogradXPU,
         DispatchKey.AutogradMeta,
         DispatchKey.Python,
