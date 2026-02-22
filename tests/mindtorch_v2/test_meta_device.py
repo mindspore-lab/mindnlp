@@ -279,6 +279,27 @@ def test_meta_unbind_shape():
     assert out[2].shape == (2,)
 
 
+def test_meta_tril_triu_shape():
+    x = torch.tensor([[1.0, 2.0]], device="meta")
+    out = torch.tril(x, diagonal=-1)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape
+    out = torch.triu(x, diagonal=1)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape
+
+
+def test_meta_diag_shape():
+    x = torch.tensor([1.0, 2.0], device="meta")
+    out = torch.diag(x, diagonal=1)
+    assert out.device.type == "meta"
+    assert out.shape == (3, 3)
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="meta")
+    out = torch.diag(y, diagonal=0)
+    assert out.device.type == "meta"
+    assert out.shape == (2,)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)

@@ -45,6 +45,7 @@ from .ops import (
     _meta_column_stack_meta,
     _meta_pad_sequence_meta,
     _meta_block_diag_meta,
+    _meta_diag_meta,
     _meta_cartesian_prod_meta,
     _meta_chunk_meta,
     _meta_split_meta,
@@ -116,6 +117,9 @@ registry.register("vstack", "meta", _meta_vstack_meta)
 registry.register("column_stack", "meta", _meta_column_stack_meta)
 registry.register("pad_sequence", "meta", _meta_pad_sequence_meta)
 registry.register("block_diag", "meta", _meta_block_diag_meta)
+registry.register("tril", "meta", _meta_unary_meta)
+registry.register("triu", "meta", _meta_unary_meta)
+registry.register("diag", "meta", _meta_diag_meta)
 registry.register("cartesian_prod", "meta", _meta_cartesian_prod_meta)
 registry.register("chunk", "meta", _meta_chunk_meta)
 registry.register("split", "meta", _meta_split_meta)

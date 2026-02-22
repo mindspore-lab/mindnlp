@@ -214,12 +214,31 @@ def _meta_block_diag_meta(*tensors):
     return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
 
 
+def _meta_diag_meta(a, diagonal=0):
+    if len(a.shape) == 1:
+        size = a.shape[0] + abs(diagonal)
+        shape = (size, size)
+    elif len(a.shape) == 2:
+        m, n = a.shape
+        if diagonal >= 0:
+            length = max(0, min(m, n - diagonal))
+        else:
+            length = max(0, min(m + diagonal, n))
+        shape = (length,)
+    else:
+        raise ValueError("diag expects 1D or 2D tensor")
+    return _meta_tensor(shape, a.dtype, a.device)
+
+
 def _meta_cartesian_prod_meta(*tensors):
     rows = 1
     for t in tensors:
         rows *= t.shape[0]
     cols = len(tensors)
     return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
+
+
+
 
 
 def _meta_chunk_meta(a, chunks, dim=0):
@@ -355,6 +374,8 @@ __all__ = [
     "_meta_column_stack_meta",
     "_meta_pad_sequence_meta",
     "_meta_block_diag_meta",
+    "_meta_diag_meta",
+    "_meta_diag_meta",
     "_meta_cartesian_prod_meta",
     "_meta_chunk_meta",
     "_meta_split_meta",

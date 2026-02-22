@@ -38,6 +38,9 @@ from .ops import (
     column_stack,
     pad_sequence,
     block_diag,
+    tril,
+    triu,
+    diag,
     cartesian_prod,
     chunk,
     split,
@@ -195,6 +198,9 @@ registry.register("vstack", "cpu", vstack, meta=meta_infer.infer_vstack)
 registry.register("column_stack", "cpu", column_stack, meta=meta_infer.infer_column_stack)
 registry.register("pad_sequence", "cpu", pad_sequence, meta=meta_infer.infer_pad_sequence)
 registry.register("block_diag", "cpu", block_diag, meta=meta_infer.infer_block_diag)
+registry.register("tril", "cpu", tril, meta=meta_infer.infer_unary)
+registry.register("triu", "cpu", triu, meta=meta_infer.infer_unary)
+registry.register("diag", "cpu", diag, meta=meta_infer.infer_diag)
 registry.register("cartesian_prod", "cpu", cartesian_prod, meta=meta_infer.infer_cartesian_prod)
 registry.register("chunk", "cpu", chunk, meta=meta_infer.infer_chunk)
 registry.register("split", "cpu", split, meta=meta_infer.infer_split)

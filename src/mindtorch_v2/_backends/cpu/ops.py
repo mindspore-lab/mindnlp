@@ -213,6 +213,24 @@ def block_diag(*tensors):
     return _from_numpy(out, tensors[0].dtype, tensors[0].device)
 
 
+def tril(a, diagonal=0):
+    out = np.tril(_to_numpy(a), k=diagonal)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def triu(a, diagonal=0):
+    out = np.triu(_to_numpy(a), k=diagonal)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def diag(a, diagonal=0):
+    arr = _to_numpy(a)
+    if arr.ndim not in (1, 2):
+        raise ValueError("diag expects 1D or 2D tensor")
+    out = np.diag(arr, k=diagonal).copy()
+    return _from_numpy(out, a.dtype, a.device)
+
+
 def cartesian_prod(*tensors):
     arrays = [_to_numpy(t) for t in tensors]
     grids = np.meshgrid(*arrays, indexing="ij")
