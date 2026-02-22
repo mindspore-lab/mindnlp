@@ -41,6 +41,9 @@ from .ops import (
     isfinite,
     sinh,
     cosh,
+    asinh,
+    acosh,
+    atanh,
     erf,
     erfc,
     softplus,
@@ -101,6 +104,9 @@ registry.register("isinf", "cpu", isinf, meta=meta_infer.infer_unary_bool)
 registry.register("isfinite", "cpu", isfinite, meta=meta_infer.infer_unary_bool)
 registry.register("sinh", "cpu", sinh, meta=meta_infer.infer_unary)
 registry.register("cosh", "cpu", cosh, meta=meta_infer.infer_unary)
+registry.register("asinh", "cpu", asinh, meta=meta_infer.infer_unary)
+registry.register("acosh", "cpu", acosh, meta=meta_infer.infer_unary)
+registry.register("atanh", "cpu", atanh, meta=meta_infer.infer_unary)
 registry.register("erf", "cpu", erf, meta=meta_infer.infer_unary)
 registry.register("erfc", "cpu", erfc, meta=meta_infer.infer_unary)
 registry.register("softplus", "cpu", softplus, meta=meta_infer.infer_unary)

@@ -23,6 +23,7 @@ from ._functional import exp2 as exp2_dispatch, rsqrt as rsqrt_dispatch
 from ._functional import sign as sign_dispatch, signbit as signbit_dispatch
 from ._functional import isnan as isnan_dispatch, isinf as isinf_dispatch, isfinite as isfinite_dispatch
 from ._functional import sinh as sinh_dispatch, cosh as cosh_dispatch
+from ._functional import asinh as asinh_dispatch, acosh as acosh_dispatch, atanh as atanh_dispatch
 from ._functional import erf as erf_dispatch, erfc as erfc_dispatch, softplus as softplus_dispatch
 from ._functional import clamp as clamp_dispatch, clamp_min as clamp_min_dispatch, clamp_max as clamp_max_dispatch
 from ._functional import relu6 as relu6_dispatch, hardtanh as hardtanh_dispatch
@@ -529,6 +530,15 @@ class Tensor:
 
     def cosh(self):
         return cosh_dispatch(self)
+
+    def asinh(self):
+        return asinh_dispatch(self)
+
+    def acosh(self):
+        return acosh_dispatch(self)
+
+    def atanh(self):
+        return atanh_dispatch(self)
 
     def erf(self):
         return erf_dispatch(self)

@@ -206,6 +206,27 @@ def test_cosh_cpu():
     np.testing.assert_allclose(x.cosh().numpy(), expected)
 
 
+def test_asinh_cpu():
+    x = torch.tensor([-1.0, 0.0, 1.0])
+    expected = np.arcsinh(x.numpy())
+    np.testing.assert_allclose(torch.asinh(x).numpy(), expected)
+    np.testing.assert_allclose(x.asinh().numpy(), expected)
+
+
+def test_acosh_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    expected = np.arccosh(x.numpy())
+    np.testing.assert_allclose(torch.acosh(x).numpy(), expected)
+    np.testing.assert_allclose(x.acosh().numpy(), expected)
+
+
+def test_atanh_cpu():
+    x = torch.tensor([-0.5, 0.0, 0.5])
+    expected = np.arctanh(x.numpy())
+    np.testing.assert_allclose(torch.atanh(x).numpy(), expected)
+    np.testing.assert_allclose(x.atanh().numpy(), expected)
+
+
 def test_erf_cpu():
     x = torch.tensor([-1.0, 0.0, 1.0])
     expected = np.vectorize(math.erf)(x.numpy())
