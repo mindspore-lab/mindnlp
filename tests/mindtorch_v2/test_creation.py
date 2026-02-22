@@ -18,3 +18,21 @@ def test_creation_device_index_cpu_meta():
     meta_tensor = torch.ones((1,), device="meta:1")
     assert meta_tensor.device.type == "meta"
     assert meta_tensor.device.index == 1
+
+
+def test_arange_cpu():
+    x = torch.arange(0, 5)
+    assert x.shape == (5,)
+    assert x.numpy().tolist() == [0, 1, 2, 3, 4]
+
+
+def test_linspace_cpu():
+    x = torch.linspace(0.0, 1.0, 5)
+    assert x.shape == (5,)
+    assert x.numpy().tolist() == [0.0, 0.25, 0.5, 0.75, 1.0]
+
+
+def test_full_cpu():
+    x = torch.full((2, 3), 1.5)
+    assert x.shape == (2, 3)
+    assert x.numpy().tolist() == [[1.5, 1.5, 1.5], [1.5, 1.5, 1.5]]

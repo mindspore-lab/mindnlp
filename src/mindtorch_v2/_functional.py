@@ -302,6 +302,23 @@ def empty(shape, dtype=None, device=None):
     return dispatch("empty", dev, shape, dtype=dtype)
 
 
+def arange(start, end=None, step=1, dtype=None, device=None):
+    dev = _as_device(device)
+    if end is None:
+        start, end = 0, start
+    return dispatch("arange", dev, start, end, step, dtype=dtype)
+
+
+def linspace(start, end, steps, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("linspace", dev, start, end, steps, dtype=dtype)
+
+
+def full(shape, fill_value, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("full", dev, shape, fill_value, dtype=dtype)
+
+
 def to(a, device, non_blocking=False):
     return dispatch("to", a.device, a, device, non_blocking=non_blocking)
 

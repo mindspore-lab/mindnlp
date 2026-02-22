@@ -2,7 +2,15 @@ from ..common import convert as convert_backend
 from ..common import view as view_backend
 from ..meta import infer as meta_infer
 from ..._dispatch.registry import registry
-from .creation import empty_create, ones_create, tensor_create, zeros_create
+from .creation import (
+    arange_create,
+    empty_create,
+    full_create,
+    linspace_create,
+    ones_create,
+    tensor_create,
+    zeros_create,
+)
 from .ops import (
     add,
     matmul,
@@ -149,3 +157,6 @@ registry.register("tensor", "cpu", tensor_create)
 registry.register("zeros", "cpu", zeros_create)
 registry.register("ones", "cpu", ones_create)
 registry.register("empty", "cpu", empty_create)
+registry.register("arange", "cpu", arange_create)
+registry.register("linspace", "cpu", linspace_create)
+registry.register("full", "cpu", full_create)

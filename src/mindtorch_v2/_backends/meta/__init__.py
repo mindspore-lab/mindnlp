@@ -1,7 +1,15 @@
 from ..common import convert as convert_backend
 from ..common import view as view_backend
 from ..._dispatch.registry import registry
-from .creation import empty_create_meta, ones_create_meta, tensor_create_meta, zeros_create_meta
+from .creation import (
+    arange_create_meta,
+    empty_create_meta,
+    full_create_meta,
+    linspace_create_meta,
+    ones_create_meta,
+    tensor_create_meta,
+    zeros_create_meta,
+)
 from .ops import (
     _meta_binary_meta,
     _meta_binary_or_scalar_meta,
@@ -94,3 +102,6 @@ registry.register("tensor", "meta", tensor_create_meta)
 registry.register("zeros", "meta", zeros_create_meta)
 registry.register("ones", "meta", ones_create_meta)
 registry.register("empty", "meta", empty_create_meta)
+registry.register("arange", "meta", arange_create_meta)
+registry.register("linspace", "meta", linspace_create_meta)
+registry.register("full", "meta", full_create_meta)
