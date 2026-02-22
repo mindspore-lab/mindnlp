@@ -102,6 +102,28 @@ class _PendingOp:
         self.out._version_counter = result._version_counter
         self.out._pending = False
 
+class _FunctionalizePendingOp:
+    def __init__(self, target, thunk, keyset, key):
+        self.target = target
+        self.thunk = thunk
+        self.keyset = keyset
+        self.key = key
+
+    def execute(self):
+        _push_dispatch_context(self.keyset, self.key)
+        try:
+            result = self.thunk()
+        finally:
+            _pop_dispatch_context()
+        self.target._storage = result.storage()
+        self.target.shape = result.shape
+        self.target.stride = result.stride
+        self.target.offset = result.offset
+        self.target._base = result._base
+        self.target._view_meta = result._view_meta
+        self.target._pending = False
+
+
 
 def _pending_tensor_from_spec(spec, device):
     from .._storage import PendingStorage
@@ -166,7 +188,10 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         entry.schema_obj.bind(args, kwargs, op_name=alias_name)
 
     if DispatchKey.Functionalize in keyset and should_functionalize(entry):
-        return functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch)
+        if pipe is not None and DispatchKey.Pipeline in keyset:
+            pending = functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, pipeline=pipe, dispatch_device=dispatch_device)
+            return pending
+        return functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, dispatch_device=dispatch_device)
 
     def _run_kernel():
         kernel, key = _kernel_for_entry(entry, _key_order(keyset))

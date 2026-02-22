@@ -1,4 +1,5 @@
 import contextlib
+import numpy as np
 
 from .registry import registry
 
@@ -37,6 +38,7 @@ def should_functionalize(entry):
     return True
 
 
+
 def _mutating_args(schema_obj, args, kwargs):
     if schema_obj is None:
         return []
@@ -70,6 +72,26 @@ def _writeback(target, result):
         return target
     if getattr(target, "device", None) is not None and target.device.type == "meta":
         return target
+
+    # View-aware writeback: only update the logical elements of `target`.
+    # This matches torch in-place semantics for views.
+    if target.device.type != "cpu":
+        raise NotImplementedError("functionalize view writeback only implemented for cpu")
+
+    dst = target._numpy_view()
+    src = result._numpy_view()
+    if dst.shape != src.shape:
+        raise RuntimeError("functionalize writeback shape mismatch")
+    np.copyto(dst, src)
+
+    target.shape = result.shape
+    target.stride = result.stride
+    target.offset = result.offset
+    target._base = result._base
+    target._view_meta = result._view_meta
+    return target
+    if getattr(target, "device", None) is not None and target.device.type == "meta":
+        return target
     target.storage().copy_(result.storage())
     target.shape = result.shape
     target.stride = result.stride
@@ -79,16 +101,42 @@ def _writeback(target, result):
     return target
 
 
-def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch):
+def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, pipeline=None, dispatch_device=None):
     functional_name = _derive_functional_name(name)
     if not functional_name or not registry.has(functional_name):
         raise RuntimeError(f"functionalize: missing rule for op {alias_name}()")
 
     from .keys import DispatchKey
 
+
+    if pipeline is not None:
+        from .dispatcher import _pending_tensor_from_spec, _infer_dispatch_device, _extract_tensors, _FunctionalizePendingOp
+
+        meta = entry.kernels.get(DispatchKey.Meta)
+        if meta is None:
+            raise RuntimeError(f"pipeline requires meta kernel for op {name}")
+        meta_kwargs = kwargs if kwargs is not None else {}
+        spec = meta(*args, **meta_kwargs)
+        out = _pending_tensor_from_spec(spec, _infer_dispatch_device(dispatch_device, _extract_tensors(args, kwargs or {}), keyset))
+        out._pending = True
+
+        def _thunk():
+            trimmed = keyset.without({DispatchKey.Functionalize, DispatchKey.Pipeline})
+            return redispatch(functional_name, trimmed, *args, **kwargs)
+
+        pipeline.record(_FunctionalizePendingOp(out, _thunk, keyset.without(DispatchKey.Pipeline), DispatchKey.Functionalize), pending=out)
+        return out
+
     out = redispatch(functional_name, keyset.without(DispatchKey.Functionalize), *args, **kwargs)
     mutated = _mutating_args(entry.schema_obj, args, kwargs)
-    if mutated:
-        target = mutated[0]
-        return _writeback(target, out)
-    return out
+    if not mutated:
+        return out
+    if len(mutated) == 1:
+        return _writeback(mutated[0], out)
+    if not isinstance(out, (tuple, list)):
+        raise RuntimeError(f"functionalize: expected tuple output for op {alias_name}()")
+    if len(out) != len(mutated):
+        raise RuntimeError(f"functionalize: output count mismatch for op {alias_name}()")
+    for target, result in zip(mutated, out):
+        _writeback(target, result)
+    return mutated[0]
