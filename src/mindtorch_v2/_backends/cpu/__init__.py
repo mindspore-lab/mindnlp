@@ -33,8 +33,11 @@ from .ops import (
     topk,
     stack,
     cat,
+    concatenate,
     hstack,
     vstack,
+    row_stack,
+    dstack,
     column_stack,
     pad_sequence,
     block_diag,
@@ -110,6 +113,8 @@ from .ops import (
     hypot,
     remainder,
     fmod,
+    tril_indices,
+    triu_indices,
     getitem,
     setitem,
 )
@@ -175,6 +180,8 @@ registry.register("logaddexp2", "cpu", logaddexp2, meta=meta_infer.infer_binary)
 registry.register("hypot", "cpu", hypot, meta=meta_infer.infer_binary)
 registry.register("remainder", "cpu", remainder, meta=meta_infer.infer_binary)
 registry.register("fmod", "cpu", fmod, meta=meta_infer.infer_binary)
+registry.register("tril_indices", "cpu", tril_indices, meta=meta_infer.infer_tril_indices)
+registry.register("triu_indices", "cpu", triu_indices, meta=meta_infer.infer_triu_indices)
 registry.register("getitem", "cpu", getitem)
 registry.register("setitem", "cpu", setitem)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
@@ -193,8 +200,11 @@ registry.register("topk", "cpu", topk, meta=meta_infer.infer_topk)
 registry.register("stack", "cpu", stack, meta=meta_infer.infer_stack)
 registry.register("cat", "cpu", cat, meta=meta_infer.infer_cat)
 registry.register("concat", "cpu", cat, meta=meta_infer.infer_cat)
+registry.register("concatenate", "cpu", concatenate, meta=meta_infer.infer_cat)
 registry.register("hstack", "cpu", hstack, meta=meta_infer.infer_hstack)
 registry.register("vstack", "cpu", vstack, meta=meta_infer.infer_vstack)
+registry.register("row_stack", "cpu", row_stack, meta=meta_infer.infer_vstack)
+registry.register("dstack", "cpu", dstack, meta=meta_infer.infer_dstack)
 registry.register("column_stack", "cpu", column_stack, meta=meta_infer.infer_column_stack)
 registry.register("pad_sequence", "cpu", pad_sequence, meta=meta_infer.infer_pad_sequence)
 registry.register("block_diag", "cpu", block_diag, meta=meta_infer.infer_block_diag)

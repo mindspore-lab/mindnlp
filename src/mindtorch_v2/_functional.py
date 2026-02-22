@@ -439,6 +439,20 @@ def column_stack(tensors, out=None):
     return result
 
 
+def concatenate(tensors, dim=0, axis=None):
+    if axis is not None:
+        dim = axis
+    return dispatch("concatenate", tensors[0].device.type, tensors, dim)
+
+
+def row_stack(tensors):
+    return dispatch("row_stack", tensors[0].device.type, tensors)
+
+
+def dstack(tensors):
+    return dispatch("dstack", tensors[0].device.type, tensors)
+
+
 def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
     return dispatch(
         "pad_sequence",
@@ -480,6 +494,16 @@ def split(a, split_size_or_sections, dim=0):
 
 def unbind(a, dim=0):
     return dispatch("unbind", a.device.type, a, dim)
+
+
+def tril_indices(row, col, offset=0, *, dtype=None, device=None, layout=None):
+    dev = _as_device(device)
+    return dispatch("tril_indices", dev, row, col, offset, dtype=dtype, device=dev, layout=layout)
+
+
+def triu_indices(row, col, offset=0, *, dtype=None, device=None, layout=None):
+    dev = _as_device(device)
+    return dispatch("triu_indices", dev, row, col, offset, dtype=dtype, device=dev, layout=layout)
 
 
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):

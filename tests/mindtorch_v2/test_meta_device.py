@@ -279,6 +279,39 @@ def test_meta_unbind_shape():
     assert out[2].shape == (2,)
 
 
+def test_meta_concatenate_shape():
+    a = torch.tensor([[1.0, 2.0]], device="meta")
+    b = torch.tensor([[3.0, 4.0]], device="meta")
+    out = torch.concatenate([a, b], dim=0)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
+def test_meta_row_stack_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0, 4.0], device="meta")
+    out = torch.row_stack([a, b])
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
+def test_meta_dstack_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0, 4.0], device="meta")
+    out = torch.dstack([a, b])
+    assert out.device.type == "meta"
+    assert out.shape == (1, 2, 2)
+
+
+def test_meta_tril_triu_indices_shape():
+    out = torch.tril_indices(3, 4, offset=1, device="meta")
+    assert out.device.type == "meta"
+    assert out.shape == (2, 9)
+    out = torch.triu_indices(3, 4, offset=-1, device="meta")
+    assert out.device.type == "meta"
+    assert out.shape == (2, 11)
+
+
 def test_meta_tril_triu_shape():
     x = torch.tensor([[1.0, 2.0]], device="meta")
     out = torch.tril(x, diagonal=-1)

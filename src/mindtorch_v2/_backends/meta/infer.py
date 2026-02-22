@@ -138,6 +138,73 @@ def infer_column_stack(tensors):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
 
 
+def infer_dstack(tensors):
+    expanded = []
+    for t in tensors:
+        shape = t.shape
+        if len(shape) == 1:
+            expanded.append((1, shape[0], 1))
+        elif len(shape) == 2:
+            expanded.append((shape[0], shape[1], 1))
+        else:
+            expanded.append(tuple(shape))
+    base = expanded[0]
+    if len(base) < 3:
+        raise ValueError("dstack expects 1D, 2D, or 3D+ tensors")
+    for shape in expanded[1:]:
+        if len(shape) != len(base):
+            raise ValueError("dstack expects same rank after expansion")
+        if shape[0] != base[0] or shape[1] != base[1] or shape[3:] != base[3:]:
+            raise ValueError("dstack expects same shape except dim=2")
+    out_shape = list(base)
+    out_shape[2] = sum(shape[2] for shape in expanded)
+    out_shape = tuple(out_shape)
+    return TensorSpec(shape=out_shape, stride=_contiguous_stride(out_shape), dtype=tensors[0].dtype)
+
+
+def _tril_count(row, col, offset):
+    if row <= 0 or col <= 0:
+        return 0
+    start = max(0, -offset)
+    if start >= row:
+        return 0
+    cap = col - offset - 1
+    total = 0
+    if cap > start:
+        end_linear = min(row - 1, cap - 1)
+        if end_linear >= start:
+            n = end_linear - start + 1
+            total += (start + end_linear) * n // 2 + (offset + 1) * n
+    start_full = max(start, cap)
+    if start_full <= row - 1:
+        total += (row - start_full) * col
+    return total
+
+
+def _triu_count(row, col, offset):
+    return row * col - _tril_count(row, col, offset - 1)
+
+
+def infer_tril_indices(row, col, offset=0, dtype=None, device=None, layout=None):
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+    n = _tril_count(row, col, offset)
+    shape = (2, n)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=dtype)
+
+
+def infer_triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+    n = _triu_count(row, col, offset)
+    shape = (2, n)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=dtype)
+
+
 def infer_pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
     max_len = max(t.shape[0] for t in seqs)
     batch = len(seqs)

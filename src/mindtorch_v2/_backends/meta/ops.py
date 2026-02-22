@@ -3,6 +3,7 @@ import numpy as np
 from ..._dtype import bool as bool_dtype
 from ..._dtype import int64 as int64_dtype
 from ..._dtype import to_numpy_dtype
+from ..._device import device as Device
 from ..._storage import meta_typed_storage_from_shape
 from ..._tensor import Tensor
 
@@ -200,6 +201,29 @@ def _meta_column_stack_meta(tensors):
     return _meta_tensor(shape, tensors[0].dtype, tensors[0].device)
 
 
+def _meta_dstack_meta(tensors):
+    expanded = []
+    for t in tensors:
+        shape = t.shape
+        if len(shape) == 1:
+            expanded.append((1, shape[0], 1))
+        elif len(shape) == 2:
+            expanded.append((shape[0], shape[1], 1))
+        else:
+            expanded.append(tuple(shape))
+    base = expanded[0]
+    if len(base) < 3:
+        raise ValueError("dstack expects 1D, 2D, or 3D+ tensors")
+    for shape in expanded[1:]:
+        if len(shape) != len(base):
+            raise ValueError("dstack expects same rank after expansion")
+        if shape[0] != base[0] or shape[1] != base[1] or shape[3:] != base[3:]:
+            raise ValueError("dstack expects same shape except dim=2")
+    out_shape = list(base)
+    out_shape[2] = sum(shape[2] for shape in expanded)
+    return _meta_tensor(tuple(out_shape), tensors[0].dtype, tensors[0].device)
+
+
 def _meta_pad_sequence_meta(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
     max_len = max(t.shape[0] for t in seqs)
     batch = len(seqs)
@@ -212,6 +236,47 @@ def _meta_block_diag_meta(*tensors):
     rows = sum(t.shape[0] for t in tensors)
     cols = sum(t.shape[1] for t in tensors)
     return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
+
+
+def _tril_count(row, col, offset):
+    if row <= 0 or col <= 0:
+        return 0
+    start = max(0, -offset)
+    if start >= row:
+        return 0
+    cap = col - offset - 1
+    total = 0
+    if cap > start:
+        end_linear = min(row - 1, cap - 1)
+        if end_linear >= start:
+            n = end_linear - start + 1
+            total += (start + end_linear) * n // 2 + (offset + 1) * n
+    start_full = max(start, cap)
+    if start_full <= row - 1:
+        total += (row - start_full) * col
+    return total
+
+
+def _triu_count(row, col, offset):
+    return row * col - _tril_count(row, col, offset - 1)
+
+
+def _meta_tril_indices_meta(row, col, offset=0, dtype=None, device=None, layout=None):
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+    n = _tril_count(row, col, offset)
+    return _meta_tensor((2, n), dtype, device or Device("meta"))
+
+
+def _meta_triu_indices_meta(row, col, offset=0, dtype=None, device=None, layout=None):
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+    n = _triu_count(row, col, offset)
+    return _meta_tensor((2, n), dtype, device or Device("meta"))
 
 
 def _meta_diag_meta(a, diagonal=0):
@@ -372,8 +437,11 @@ __all__ = [
     "_meta_hstack_meta",
     "_meta_vstack_meta",
     "_meta_column_stack_meta",
+    "_meta_dstack_meta",
     "_meta_pad_sequence_meta",
     "_meta_block_diag_meta",
+    "_meta_tril_indices_meta",
+    "_meta_triu_indices_meta",
     "_meta_diag_meta",
     "_meta_diag_meta",
     "_meta_cartesian_prod_meta",
