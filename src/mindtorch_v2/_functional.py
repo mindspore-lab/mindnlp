@@ -222,6 +222,18 @@ def logaddexp(a, b):
 def logaddexp2(a, b):
     return dispatch("logaddexp2", a.device.type, a, b)
 
+
+def hypot(a, b):
+    return dispatch("hypot", a.device.type, a, b)
+
+
+def remainder(a, b):
+    return dispatch("remainder", a.device.type, a, b)
+
+
+def fmod(a, b):
+    return dispatch("fmod", a.device.type, a, b)
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 

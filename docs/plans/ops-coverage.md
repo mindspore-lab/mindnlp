@@ -83,3 +83,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::addcdiv` | CPU | done | - | numpy impl + meta + tests |
 | `aten::logaddexp` | CPU | done | - | numpy impl + meta + tests |
 | `aten::logaddexp2` | CPU | done | - | numpy impl + meta + tests |
+| `aten::hypot` | CPU | done | - | numpy impl + meta + tests |
+| `aten::remainder` | CPU | done | - | numpy impl + meta + tests |
+| `aten::fmod` | CPU | done | - | numpy impl + meta + tests |
