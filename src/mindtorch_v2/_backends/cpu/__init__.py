@@ -7,6 +7,7 @@ from .creation import (
     empty_create,
     full_create,
     linspace_create,
+    logspace_create,
     ones_create,
     tensor_create,
     zeros_create,
@@ -20,6 +21,8 @@ from .ops import (
     all_,
     any_,
     argmax,
+    argmin,
+    count_nonzero,
     allclose,
     isclose,
     equal,
@@ -153,6 +156,8 @@ registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("any", "cpu", any_, meta=meta_infer.infer_reduce_bool)
 registry.register("argmax", "cpu", argmax, meta=meta_infer.infer_argmax)
+registry.register("argmin", "cpu", argmin, meta=meta_infer.infer_argmax)
+registry.register("count_nonzero", "cpu", count_nonzero, meta=meta_infer.infer_argmax)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)
@@ -172,3 +177,4 @@ registry.register("empty", "cpu", empty_create)
 registry.register("arange", "cpu", arange_create)
 registry.register("linspace", "cpu", linspace_create)
 registry.register("full", "cpu", full_create)
+registry.register("logspace", "cpu", logspace_create)

@@ -98,3 +98,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::allclose` | CPU | done | - | numpy impl + meta + tests |
 | `aten::isclose` | CPU | done | - | numpy impl + meta + tests |
 | `aten::equal` | CPU | done | - | numpy impl + meta + tests |
+| `aten::argmin` | CPU | done | - | numpy impl + meta + tests |
+| `aten::count_nonzero` | CPU | done | - | numpy impl + meta + tests |
+| `aten::logspace` | CPU | done | - | numpy impl + meta + tests |

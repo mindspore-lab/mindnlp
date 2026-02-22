@@ -102,6 +102,8 @@ def test_meta_unary_elementwise_ops_shape():
         lambda t: torch.all(t, dim=0),
         lambda t: torch.any(t, dim=0),
         lambda t: torch.argmax(t, dim=0),
+        lambda t: torch.argmin(t, dim=0),
+        lambda t: torch.count_nonzero(t, dim=0),
     ):
         out = op(x)
         assert out.device.type == "meta"
@@ -115,6 +117,12 @@ def test_meta_unary_elementwise_ops_shape():
         out = op(x)
         assert out.device.type == "meta"
         assert out.shape in ((), x.shape)
+
+
+def test_meta_logspace_shape():
+    x = torch.logspace(0.0, 2.0, 3, device="meta")
+    assert x.device.type == "meta"
+    assert x.shape == (3,)
 
 
 def test_meta_pow_shape():

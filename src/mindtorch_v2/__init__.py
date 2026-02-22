@@ -13,9 +13,9 @@ from ._dtype import float as float  # noqa: F811
 from ._dtype import int as int  # noqa: F811
 from ._device import device as Device, _default_device, get_default_device, set_default_device
 from ._tensor import Tensor
-from ._creation import tensor, zeros, ones, empty, arange, linspace, full
+from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace
 from ._storage import UntypedStorage, TypedStorage
-from ._functional import add, mul, matmul, relu, sum, all, any, argmax, allclose, isclose, equal, abs, neg, exp, log, sqrt
+from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, allclose, isclose, equal, abs, neg, exp, log, sqrt
 from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac
 from ._functional import pow, log2, log10, exp2, rsqrt
 from ._functional import sign, signbit, isnan, isinf, isfinite
@@ -63,6 +63,7 @@ __all__ = [
     "arange",
     "linspace",
     "full",
+    "logspace",
     # ops
     "add",
     "mul",
@@ -76,6 +77,8 @@ __all__ = [
     "all",
     "any",
     "argmax",
+    "argmin",
+    "count_nonzero",
     "allclose",
     "isclose",
     "equal",

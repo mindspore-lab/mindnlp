@@ -6,6 +6,7 @@ from .creation import (
     empty_create_meta,
     full_create_meta,
     linspace_create_meta,
+    logspace_create_meta,
     ones_create_meta,
     tensor_create_meta,
     zeros_create_meta,
@@ -82,6 +83,8 @@ registry.register("amax", "meta", _meta_sum_meta)
 registry.register("all", "meta", _meta_reduce_bool_meta)
 registry.register("any", "meta", _meta_reduce_bool_meta)
 registry.register("argmax", "meta", _meta_argmax_meta)
+registry.register("argmin", "meta", _meta_argmax_meta)
+registry.register("count_nonzero", "meta", _meta_argmax_meta)
 registry.register("allclose", "meta", _meta_reduce_bool_meta)
 registry.register("isclose", "meta", _meta_binary_meta)
 registry.register("equal", "meta", _meta_equal_meta)
@@ -114,3 +117,4 @@ registry.register("empty", "meta", empty_create_meta)
 registry.register("arange", "meta", arange_create_meta)
 registry.register("linspace", "meta", linspace_create_meta)
 registry.register("full", "meta", full_create_meta)
+registry.register("logspace", "meta", logspace_create_meta)

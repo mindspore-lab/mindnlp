@@ -57,6 +57,31 @@ def argmax(a, dim=None, keepdim=False):
     return _from_numpy(out, int64_dtype, a.device)
 
 
+def argmin(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.array(np.argmin(arr), dtype=np.int64)
+    else:
+        out = np.argmin(arr, axis=dim)
+        if keepdim:
+            out = np.expand_dims(out, axis=dim)
+        out = out.astype(np.int64)
+    return _from_numpy(out, int64_dtype, a.device)
+
+
+def count_nonzero(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is None:
+        count = np.count_nonzero(arr)
+        if keepdim:
+            out = np.array(count, dtype=np.int64).reshape((1,) * arr.ndim)
+        else:
+            out = np.array(count, dtype=np.int64)
+    else:
+        out = np.count_nonzero(arr, axis=dim, keepdims=keepdim).astype(np.int64)
+    return _from_numpy(out, int64_dtype, a.device)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),
