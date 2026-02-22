@@ -90,6 +90,24 @@ class OpRegistry:
 registry = OpRegistry()
 
 
+def _register_global_fallthroughs():
+    placeholders = {
+        DispatchKey.BackendSelect,
+        DispatchKey.ADInplaceOrView,
+        DispatchKey.AutogradOther,
+        DispatchKey.AutogradCPU,
+        DispatchKey.AutogradCUDA,
+        DispatchKey.AutogradXPU,
+        DispatchKey.AutogradMeta,
+        DispatchKey.Python,
+        DispatchKey.Autocast,
+    }
+    registry._global_fallthrough = placeholders
+
+
+_register_global_fallthroughs()
+
+
 def resolve_dispatch_key(device):
     if isinstance(device, DispatchKey):
         return device

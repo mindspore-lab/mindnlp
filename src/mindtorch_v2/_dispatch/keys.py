@@ -2,11 +2,20 @@ from enum import Enum, auto
 
 
 class DispatchKey(Enum):
-    CPU = auto()
-    NPU = auto()
-    Meta = auto()
+    BackendSelect = auto()
+    ADInplaceOrView = auto()
+    AutogradOther = auto()
+    AutogradCPU = auto()
+    AutogradCUDA = auto()
+    AutogradXPU = auto()
+    AutogradMeta = auto()
     Autograd = auto()
     Functionalize = auto()
+    Meta = auto()
+    NPU = auto()
+    CPU = auto()
+    Python = auto()
+    Autocast = auto()
     Pipeline = auto()
 
 
@@ -58,4 +67,18 @@ class DispatchKeySet(set):
             keys.add(DispatchKey.Functionalize)
         if pipeline_enabled and not has_meta:
             keys.add(DispatchKey.Pipeline)
+        # Placeholders for torch-aligned key ordering; fallthrough by default.
+        keys.update(
+            {
+                DispatchKey.BackendSelect,
+                DispatchKey.ADInplaceOrView,
+                DispatchKey.AutogradOther,
+                DispatchKey.AutogradCPU,
+                DispatchKey.AutogradCUDA,
+                DispatchKey.AutogradXPU,
+                DispatchKey.AutogradMeta,
+                DispatchKey.Python,
+                DispatchKey.Autocast,
+            }
+        )
         return keys
