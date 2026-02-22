@@ -420,3 +420,22 @@ def remainder(a, b):
 
 def fmod(a, b):
     return _from_numpy(np.fmod(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def getitem(tensor, key):
+    arr = _to_numpy(tensor)
+    result = arr[key]
+    if isinstance(result, np.generic) or (isinstance(result, np.ndarray) and result.ndim == 0):
+        # Return 0-dim tensor (matches PyTorch behavior)
+        scalar_arr = np.array(result)
+        return _from_numpy(scalar_arr, tensor.dtype, tensor.device)
+    return _from_numpy(np.ascontiguousarray(result), tensor.dtype, tensor.device)
+
+
+def setitem(tensor, key, value):
+    arr = _to_numpy(tensor)
+    if hasattr(value, 'numpy'):
+        arr[key] = value.numpy()
+    else:
+        arr[key] = value
+    return tensor

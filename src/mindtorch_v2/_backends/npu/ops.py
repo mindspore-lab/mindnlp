@@ -183,6 +183,8 @@ def add(a, b):
 def mul(a, b):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
+    if isinstance(b, (int, float)):
+        b = _scalar_to_npu_tensor(b, a)
     if a.device.type != "npu" or b.device.type != "npu":
         raise ValueError("NPU mul expects NPU tensors")
     if a.dtype != b.dtype:
@@ -920,9 +922,19 @@ def add_(a, b):
     return a
 
 
+def _scalar_to_npu_tensor(scalar, ref_tensor):
+    """Convert scalar to NPU tensor matching ref_tensor's shape/dtype/device."""
+    import mindtorch_v2 as torch
+    import numpy as np
+    arr = np.full(ref_tensor.shape, scalar, dtype=np.float32)
+    return torch.tensor(arr, dtype=ref_tensor.dtype).to(ref_tensor.device)
+
+
 def mul_(a, b):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
+    if isinstance(b, (int, float)):
+        b = _scalar_to_npu_tensor(b, a)
     if a.device.type != "npu" or b.device.type != "npu":
         raise ValueError("NPU mul_ expects NPU tensors")
     if a.dtype != b.dtype:
@@ -1012,3 +1024,112 @@ def contiguous(a):
 
     storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
     return _wrap_tensor(storage, a.shape, npu_runtime._contiguous_stride(a.shape))
+
+
+def getitem(tensor, key):
+    """NPU tensor indexing via D2D memcpy of contiguous sub-regions."""
+    itemsize = _dtype_itemsize(tensor.dtype)
+
+    if isinstance(key, int):
+        if key < 0:
+            key += tensor.shape[0]
+        if tensor.dim() == 1:
+            # Return 0-dim tensor (matches PyTorch behavior)
+            runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+            src_ptr = int(_unwrap_storage(tensor).data_ptr()) + key * itemsize
+            out_ptr = npu_runtime._alloc_device(itemsize, runtime=runtime)
+            ret = npu_runtime.acl.rt.memcpy(out_ptr, itemsize, src_ptr, itemsize, 3)  # D2D
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+            storage = npu_typed_storage_from_ptr(out_ptr, 1, tensor.dtype, device=tensor.device)
+            return _wrap_tensor(storage, (), ())
+        # Multi-dim: slice [key:key+1] then reshape to drop dim 0
+        sliced = getitem(tensor, slice(key, key + 1))
+        from ..common import view as view_backend
+        return view_backend.reshape(sliced, tensor.shape[1:])
+
+    if isinstance(key, slice):
+        start, stop, step = key.indices(tensor.shape[0])
+        if step != 1:
+            raise NotImplementedError("NPU getitem with step != 1 not supported")
+        length = max(0, stop - start)
+        out_shape = (length,) + tensor.shape[1:]
+        out_numel = _numel(out_shape)
+        if out_numel == 0:
+            out_shape_list = list(out_shape)
+            out_stride = npu_runtime._contiguous_stride(out_shape) if out_numel else tuple([0] * len(out_shape))
+            runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+            out_ptr = npu_runtime._alloc_device(max(itemsize, 1), runtime=runtime)
+            storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), tensor.dtype, device=tensor.device)
+            return _wrap_tensor(storage, out_shape, out_stride)
+
+        runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+        src_storage = _unwrap_storage(tensor)
+        # Compute byte offset for start along dim 0
+        stride0 = tensor.stride[0] if tensor.stride else 1
+        byte_offset = int(start * stride0 * itemsize)
+        src_ptr = int(src_storage.data_ptr()) + byte_offset
+        out_size = int(out_numel * itemsize)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        ret = npu_runtime.acl.rt.memcpy(out_ptr, out_size, src_ptr, out_size, 3)  # D2D
+        if ret != npu_runtime.ACL_ERROR_CODE:
+            raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        storage = npu_typed_storage_from_ptr(out_ptr, out_numel, tensor.dtype, device=tensor.device)
+        return _wrap_tensor(storage, out_shape, out_stride)
+
+    raise NotImplementedError(f"NPU getitem not implemented for key type: {type(key)}")
+
+
+def setitem(tensor, key, value):
+    """NPU tensor index assignment via D2D memcpy."""
+    itemsize = _dtype_itemsize(tensor.dtype)
+
+    if isinstance(key, int):
+        if key < 0:
+            key += tensor.shape[0]
+        key = slice(key, key + 1)
+
+    if isinstance(key, slice):
+        start, stop, step = key.indices(tensor.shape[0])
+        if step != 1:
+            raise NotImplementedError("NPU setitem with step != 1 not supported")
+        length = max(0, stop - start)
+        if length == 0:
+            return tensor
+
+        stride0 = tensor.stride[0] if tensor.stride else 1
+        byte_offset = int(start * stride0 * itemsize)
+        dst_ptr = int(_unwrap_storage(tensor).data_ptr()) + byte_offset
+        slice_numel = length
+        for d in tensor.shape[1:]:
+            slice_numel *= d
+        copy_size = int(slice_numel * itemsize)
+
+        runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+
+        if isinstance(value, (int, float)):
+            # Scalar assignment: create a filled buffer on host, then H2D
+            import numpy as np
+            dtype_name = getattr(tensor.dtype, 'name', None) or str(tensor.dtype).split('.')[-1]
+            np_dtype = {'float32': np.float32, 'float16': np.float16, 'float64': np.float64,
+                        'int32': np.int32, 'int64': np.int64, 'int8': np.int8, 'int16': np.int16,
+                        'uint8': np.uint8}.get(dtype_name, np.float32)
+            arr = np.full(slice_numel, value, dtype=np_dtype)
+            host_ptr = arr.ctypes.data
+            ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, host_ptr, copy_size, 1)  # H2D
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy H2D failed: {ret}")
+        elif hasattr(value, 'storage'):
+            src_ptr = value.storage().data_ptr()
+            if value.device.type != "npu":
+                # CPU tensor -> H2D
+                ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 1)
+            else:
+                # NPU tensor -> D2D
+                ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 3)
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
+        return tensor
+
+    raise NotImplementedError(f"NPU setitem not implemented for key type: {type(key)}")

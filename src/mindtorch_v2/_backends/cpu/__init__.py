@@ -90,6 +90,8 @@ from .ops import (
     hypot,
     remainder,
     fmod,
+    getitem,
+    setitem,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -153,6 +155,8 @@ registry.register("logaddexp2", "cpu", logaddexp2, meta=meta_infer.infer_binary)
 registry.register("hypot", "cpu", hypot, meta=meta_infer.infer_binary)
 registry.register("remainder", "cpu", remainder, meta=meta_infer.infer_binary)
 registry.register("fmod", "cpu", fmod, meta=meta_infer.infer_binary)
+registry.register("getitem", "cpu", getitem)
+registry.register("setitem", "cpu", setitem)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)

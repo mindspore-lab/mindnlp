@@ -31,6 +31,8 @@ def zeros_create(shape, dtype=None, device=None, requires_grad=False):
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
     _require_inplace_one_zero()
+    if isinstance(shape, int):
+        shape = (shape,)
     shape = tuple(shape)
     size = int(np.prod(shape))
     out_size = size * np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
@@ -45,6 +47,8 @@ def ones_create(shape, dtype=None, device=None, requires_grad=False):
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
     _require_inplace_one_zero()
+    if isinstance(shape, int):
+        shape = (shape,)
     shape = tuple(shape)
     size = int(np.prod(shape))
     out_size = size * np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
@@ -58,6 +62,8 @@ def ones_create(shape, dtype=None, device=None, requires_grad=False):
 def empty_create(shape, dtype=None, device=None, requires_grad=False):
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
     stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
+    if isinstance(shape, int):
+        shape = (shape,)
     shape = tuple(shape)
     size = int(np.prod(shape))
     out_size = size * np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
