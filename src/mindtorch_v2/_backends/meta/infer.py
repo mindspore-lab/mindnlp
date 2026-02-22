@@ -108,6 +108,36 @@ def infer_cat(tensors, dim=0):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
 
 
+def infer_hstack(tensors):
+    if len(tensors[0].shape) == 1:
+        shape = (sum(t.shape[0] for t in tensors),)
+    else:
+        shape = list(tensors[0].shape)
+        shape[1] = sum(t.shape[1] for t in tensors)
+        shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
+def infer_vstack(tensors):
+    if len(tensors[0].shape) == 1:
+        shape = (len(tensors), tensors[0].shape[0])
+    else:
+        shape = list(tensors[0].shape)
+        shape[0] = sum(t.shape[0] for t in tensors)
+        shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
+def infer_column_stack(tensors):
+    if len(tensors[0].shape) == 1:
+        shape = (tensors[0].shape[0], len(tensors))
+    else:
+        shape = list(tensors[0].shape)
+        shape[1] = sum(t.shape[1] for t in tensors)
+        shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1

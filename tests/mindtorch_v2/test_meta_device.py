@@ -205,6 +205,30 @@ def test_meta_concat_shape():
     assert out.shape == (1, 4)
 
 
+def test_meta_hstack_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0, 4.0], device="meta")
+    out = torch.hstack([a, b])
+    assert out.device.type == "meta"
+    assert out.shape == (4,)
+
+
+def test_meta_vstack_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0, 4.0], device="meta")
+    out = torch.vstack([a, b])
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
+def test_meta_column_stack_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0, 4.0], device="meta")
+    out = torch.column_stack([a, b])
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)

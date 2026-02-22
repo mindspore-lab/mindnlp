@@ -170,6 +170,36 @@ def _meta_cat_meta(tensors, dim=0):
     return _meta_tensor(tuple(shape), tensors[0].dtype, tensors[0].device)
 
 
+def _meta_hstack_meta(tensors):
+    if len(tensors[0].shape) == 1:
+        shape = (sum(t.shape[0] for t in tensors),)
+    else:
+        shape = list(tensors[0].shape)
+        shape[1] = sum(t.shape[1] for t in tensors)
+        shape = tuple(shape)
+    return _meta_tensor(shape, tensors[0].dtype, tensors[0].device)
+
+
+def _meta_vstack_meta(tensors):
+    if len(tensors[0].shape) == 1:
+        shape = (len(tensors), tensors[0].shape[0])
+    else:
+        shape = list(tensors[0].shape)
+        shape[0] = sum(t.shape[0] for t in tensors)
+        shape = tuple(shape)
+    return _meta_tensor(shape, tensors[0].dtype, tensors[0].device)
+
+
+def _meta_column_stack_meta(tensors):
+    if len(tensors[0].shape) == 1:
+        shape = (tensors[0].shape[0], len(tensors))
+    else:
+        shape = list(tensors[0].shape)
+        shape[1] = sum(t.shape[1] for t in tensors)
+        shape = tuple(shape)
+    return _meta_tensor(shape, tensors[0].dtype, tensors[0].device)
+
+
 def _meta_argmax_meta(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
@@ -249,6 +279,9 @@ __all__ = [
     "_meta_topk_meta",
     "_meta_stack_meta",
     "_meta_cat_meta",
+    "_meta_hstack_meta",
+    "_meta_vstack_meta",
+    "_meta_column_stack_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

@@ -112,3 +112,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::stack` | CPU | done | - | numpy impl + meta + tests |
 | `aten::cat` | CPU | done | - | numpy impl + meta + tests |
 | `aten::concat` | CPU | done | - | numpy impl + meta + tests |
+| `aten::hstack` | CPU | done | - | numpy impl + meta + tests |
+| `aten::vstack` | CPU | done | - | numpy impl + meta + tests |
+| `aten::column_stack` | CPU | done | - | numpy impl + meta + tests |
