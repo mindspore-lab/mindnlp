@@ -9,6 +9,7 @@ class OperatorEntry:
         self.schema_obj = None
         self.kernels = {}
         self.fallthrough = set()
+        self.functionalize = None
 
 
 class OpRegistry:
@@ -33,6 +34,9 @@ class OpRegistry:
         entry = self._entry(name)
         entry.schema = schema
         entry.schema_obj = OpSchema(schema)
+        if entry.functionalize is None and name.endswith("_"):
+            if any(param.mutates for param in entry.schema_obj.params):
+                entry.functionalize = name[:-1]
         return entry
 
     def register_kernel(self, name, key, fn):
@@ -48,6 +52,20 @@ class OpRegistry:
     def register_alias(self, alias, target):
         self._aliases[alias] = target
         return alias
+
+    def register_functionalize(self, name, functional_name):
+        entry = self._entry(name)
+        entry.functionalize = functional_name
+        return entry
+
+    def get_functionalize(self, name):
+        entry = self._ops.get(self._canonical_name(name))
+        if entry is None:
+            return None
+        return entry.functionalize
+
+    def has(self, name):
+        return self._canonical_name(name) in self._ops
 
     def resolve(self, name):
         return self._aliases.get(name, name)

@@ -3,6 +3,7 @@ import inspect
 from .registry import registry
 from .pipeline import current_pipeline
 from .keys import DispatchKey, DispatchKeySet
+from .functionalize import functionalize_op, is_functionalize_enabled, should_functionalize
 import threading
 
 from .._autograd.grad_mode import is_grad_enabled
@@ -123,6 +124,7 @@ def _kernel_for_entry(entry, key_order):
 def _key_order(keyset):
     order = [
         DispatchKey.Pipeline,
+        DispatchKey.Functionalize,
         DispatchKey.Autograd,
         DispatchKey.Meta,
         DispatchKey.NPU,
@@ -163,6 +165,9 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     if entry.schema_obj is not None:
         entry.schema_obj.bind(args, kwargs, op_name=alias_name)
 
+    if DispatchKey.Functionalize in keyset and should_functionalize(entry):
+        return functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch)
+
     def _run_kernel():
         kernel, key = _kernel_for_entry(entry, _key_order(keyset))
         if kernel is None:
@@ -202,6 +207,7 @@ def dispatch(name, dispatch_device, *args, **kwargs):
         tensors,
         grad_enabled=is_grad_enabled(),
         pipeline_enabled=pipe is not None,
+        functionalize_enabled=is_functionalize_enabled(),
         device=dispatch_device,
     )
     return dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs)

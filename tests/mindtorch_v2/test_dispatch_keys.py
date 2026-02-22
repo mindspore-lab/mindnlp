@@ -34,6 +34,15 @@ def test_keyset_includes_pipeline_when_enabled():
     assert DispatchKey.Pipeline in keyset
 
 
+# Functionalize is opt-in; ensure no accidental enablement.
+
+
+def test_keyset_includes_functionalize_when_enabled():
+    a = torch.ones((2,))
+    keyset = DispatchKeySet.from_tensors((a,), functionalize_enabled=True)
+    assert DispatchKey.Functionalize in keyset
+
+
 def test_dispatch_keyset_without_removes_keys():
     keyset = DispatchKeySet({DispatchKey.CPU, DispatchKey.Autograd})
     trimmed = keyset.without(DispatchKey.Autograd)
