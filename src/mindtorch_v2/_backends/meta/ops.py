@@ -345,6 +345,37 @@ def _meta_split_meta(a, split_size_or_sections, dim=0):
     return tuple(specs)
 
 
+
+
+def _split_sections_from_count(dim_size, sections):
+    if sections <= 0:
+        raise ValueError("sections must be > 0")
+    size, extra = divmod(dim_size, sections)
+    return [size + 1] * extra + [size] * (sections - extra)
+def _meta_vsplit_meta(a, split_size_or_sections):
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[0], split_size_or_sections)
+        return _meta_split_meta(a, sizes, dim=0)
+    return _meta_split_meta(a, split_size_or_sections, dim=0)
+
+
+def _meta_hsplit_meta(a, split_size_or_sections):
+    dim = 0 if len(a.shape) == 1 else 1
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[dim], split_size_or_sections)
+        return _meta_split_meta(a, sizes, dim=dim)
+    return _meta_split_meta(a, split_size_or_sections, dim=dim)
+
+
+def _meta_dsplit_meta(a, split_size_or_sections):
+    if len(a.shape) < 3:
+        raise ValueError("dsplit expects input with at least 3 dimensions")
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[2], split_size_or_sections)
+        return _meta_split_meta(a, sizes, dim=2)
+    return _meta_split_meta(a, split_size_or_sections, dim=2)
+
+
 def _meta_unbind_meta(a, dim=0):
     dim_size = a.shape[dim]
     specs = []
@@ -447,6 +478,9 @@ __all__ = [
     "_meta_cartesian_prod_meta",
     "_meta_chunk_meta",
     "_meta_split_meta",
+    "_meta_vsplit_meta",
+    "_meta_hsplit_meta",
+    "_meta_dsplit_meta",
     "_meta_unbind_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",

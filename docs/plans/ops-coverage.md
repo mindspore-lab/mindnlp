@@ -128,4 +128,7 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::cartesian_prod` | CPU | done | - | numpy impl + meta + tests |
 | `aten::chunk` | CPU | done | - | numpy impl + meta + tests |
 | `aten::split` | CPU | done | - | numpy impl + meta + tests |
+| `aten::vsplit` | CPU | done | - | numpy impl + meta + tests |
+| `aten::hsplit` | CPU | done | - | numpy impl + meta + tests |
+| `aten::dsplit` | CPU | done | - | numpy impl + meta + tests |
 | `aten::unbind` | CPU | done | - | numpy impl + meta + tests |

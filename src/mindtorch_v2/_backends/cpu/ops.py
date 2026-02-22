@@ -341,7 +341,7 @@ def split(a, split_size_or_sections, dim=0):
             end = min(start + step, dim_size)
             slices = [slice(None)] * arr.ndim
             slices[dim] = slice(start, end)
-            out = arr[tuple(slices)]
+            out = np.ascontiguousarray(arr[tuple(slices)])
             outputs.append(_from_numpy(out, a.dtype, a.device))
     else:
         sizes = list(split_size_or_sections)
@@ -352,10 +352,41 @@ def split(a, split_size_or_sections, dim=0):
             end = start + size
             slices = [slice(None)] * arr.ndim
             slices[dim] = slice(start, end)
-            out = arr[tuple(slices)]
+            out = np.ascontiguousarray(arr[tuple(slices)])
             outputs.append(_from_numpy(out, a.dtype, a.device))
             start = end
     return tuple(outputs)
+
+
+def _split_sections_from_count(dim_size, sections):
+    if sections <= 0:
+        raise ValueError("sections must be > 0")
+    size, extra = divmod(dim_size, sections)
+    return [size + 1] * extra + [size] * (sections - extra)
+
+
+def vsplit(a, split_size_or_sections):
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[0], split_size_or_sections)
+        return split(a, sizes, dim=0)
+    return split(a, split_size_or_sections, dim=0)
+
+
+def hsplit(a, split_size_or_sections):
+    dim = 0 if a.dim() == 1 else 1
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[dim], split_size_or_sections)
+        return split(a, sizes, dim=dim)
+    return split(a, split_size_or_sections, dim=dim)
+
+
+def dsplit(a, split_size_or_sections):
+    if a.dim() < 3:
+        raise ValueError("dsplit expects input with at least 3 dimensions")
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[2], split_size_or_sections)
+        return split(a, sizes, dim=2)
+    return split(a, split_size_or_sections, dim=2)
 
 
 def unbind(a, dim=0):

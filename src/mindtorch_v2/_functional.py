@@ -492,6 +492,18 @@ def split(a, split_size_or_sections, dim=0):
     return dispatch("split", a.device.type, a, split_size_or_sections, dim)
 
 
+def vsplit(a, split_size_or_sections):
+    return dispatch("vsplit", a.device.type, a, split_size_or_sections)
+
+
+def hsplit(a, split_size_or_sections):
+    return dispatch("hsplit", a.device.type, a, split_size_or_sections)
+
+
+def dsplit(a, split_size_or_sections):
+    return dispatch("dsplit", a.device.type, a, split_size_or_sections)
+
+
 def unbind(a, dim=0):
     return dispatch("unbind", a.device.type, a, dim)
 
