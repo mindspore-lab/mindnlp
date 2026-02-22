@@ -574,6 +574,24 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        self.aclnn_cast_get_workspace = _optional_symbol(
+            libs,
+            "aclnnCastGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_int32,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_cast = _optional_symbol(
+            libs,
+            "aclnnCast",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
         self.aclnn_cosh_get_workspace = _optional_symbol(
             libs,
             "aclnnCoshGetWorkspaceSize",
@@ -1746,6 +1764,52 @@ def min_dim(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim,
         if workspace is not None:
             runtime.defer_free(workspace)
         _ = (self_keep, out_keep, index_keep)
+
+
+
+def cast(self_ptr, out_ptr, shape, stride, src_dtype, dst_dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_cast_get_workspace is None or bindings.aclnn_cast is None:
+        raise RuntimeError("aclnnCast symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, src_dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dst_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_cast_get_workspace(
+            self_tensor,
+            ctypes.c_int32(_dtype_to_acl(dst_dtype)),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnCastGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_cast(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnCast failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep)
 def _unary_call(bindings, name, get_workspace_fn, exec_fn, self_ptr, out_ptr, shape, stride, dtype, runtime, stream, out_dtype=None):
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
     if out_dtype is None:
@@ -3042,6 +3106,13 @@ def min_dim_symbols_ok():
     try:
         bindings = get_bindings()
         return all([bindings.aclnn_min_dim_get_workspace, bindings.aclnn_min_dim])
+    except Exception:
+        return False
+
+def cast_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_cast_get_workspace, bindings.aclnn_cast])
     except Exception:
         return False
 

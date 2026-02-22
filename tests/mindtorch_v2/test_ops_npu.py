@@ -50,7 +50,6 @@ def test_npu_matmul_batched_broadcast():
     assert out.shape == (2, 4, 2, 5)
     assert np.allclose(out.to("cpu").numpy(), np.matmul(a.to("cpu").numpy(), b.to("cpu").numpy()))
 
-
 @pytest.mark.parametrize(
     "op_name, numpy_fn",
     [
@@ -96,7 +95,6 @@ def test_npu_unary_ops(op_name, numpy_fn, dtype):
         atol=1e-3,
         rtol=1e-3,
     )
-
 
 @pytest.mark.parametrize(
     "op_name, numpy_fn",
@@ -167,8 +165,6 @@ def test_npu_relu6_hardtanh(dtype):
     assert np.allclose(relu6.to("cpu").numpy(), np.clip(data, 0.0, 6.0).astype(np.float32), atol=1e-3, rtol=1e-3)
     assert np.allclose(hardtanh.to("cpu").numpy(), np.clip(data, -1.0, 1.0).astype(np.float32), atol=1e-3, rtol=1e-3)
 
-
-
 def test_npu_isfinite_isinf_isnan_signbit():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
@@ -213,6 +209,31 @@ def test_npu_argmax_argmin():
     np.testing.assert_array_equal(
         torch.argmin(x, dim=1, keepdim=True).to("cpu").numpy(),
         expected_min.reshape(2, 1),
+    )
+
+
+def test_npu_all_any():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[True, False], [True, True]], device="npu", dtype=torch.bool)
+    expected_all = np.all(x.to("cpu").numpy(), axis=1)
+    expected_any = np.any(x.to("cpu").numpy(), axis=1)
+    np.testing.assert_array_equal(torch.all(x, dim=1).to("cpu").numpy(), expected_all)
+    np.testing.assert_array_equal(torch.any(x, dim=1).to("cpu").numpy(), expected_any)
+    expected_keep = np.all(x.to("cpu").numpy(), axis=1, keepdims=True)
+    np.testing.assert_array_equal(torch.all(x, dim=1, keepdim=True).to("cpu").numpy(), expected_keep)
+
+
+def test_npu_count_nonzero():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[0.0, 1.0, 2.0], [0.0, 0.0, 3.0]], device="npu")
+    expected = np.count_nonzero(x.to("cpu").numpy(), axis=1)
+    np.testing.assert_array_equal(torch.count_nonzero(x, dim=1).to("cpu").numpy(), expected)
+    expected_keep = np.count_nonzero(x.to("cpu").numpy(), axis=1, keepdims=True)
+    np.testing.assert_array_equal(
+        torch.count_nonzero(x, dim=1, keepdim=True).to("cpu").numpy(),
+        expected_keep,
     )
 
 

@@ -55,6 +55,9 @@ from .ops import (
     contiguous,
     getitem,
     setitem,
+    all_,
+    any_,
+    count_nonzero,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -65,6 +68,10 @@ registry.register("matmul", "npu", matmul, meta=meta_infer.infer_matmul)
 registry.register("relu", "npu", relu, meta=meta_infer.infer_unary)
 registry.register("contiguous", "npu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "npu", sum_, meta=meta_infer.infer_sum)
+
+registry.register("all", "npu", all_, meta=meta_infer.infer_reduce_bool)
+registry.register("any", "npu", any_, meta=meta_infer.infer_reduce_bool)
+registry.register("count_nonzero", "npu", count_nonzero, meta=meta_infer.infer_argmax)
 registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
 registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)
