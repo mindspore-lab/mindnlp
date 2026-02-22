@@ -146,6 +146,9 @@ def _kernel_for_entry(entry, key_order):
     for key in key_order:
         if key in entry.fallthrough:
             continue
+        global_fallthrough = getattr(registry, "_global_fallthrough", set())
+        if key in global_fallthrough:
+            continue
         kernel = entry.kernels.get(key)
         if kernel is not None:
             return kernel, key
@@ -154,12 +157,21 @@ def _kernel_for_entry(entry, key_order):
 
 def _key_order(keyset):
     order = [
-        DispatchKey.Pipeline,
         DispatchKey.Functionalize,
         DispatchKey.Autograd,
         DispatchKey.Meta,
         DispatchKey.NPU,
         DispatchKey.CPU,
+        DispatchKey.Python,
+        DispatchKey.Autocast,
+        DispatchKey.BackendSelect,
+        DispatchKey.ADInplaceOrView,
+        DispatchKey.AutogradOther,
+        DispatchKey.AutogradCPU,
+        DispatchKey.AutogradNPU,
+        DispatchKey.AutogradXPU,
+        DispatchKey.AutogradMeta,
+        DispatchKey.Pipeline,
     ]
     return [key for key in order if key in keyset]
 
