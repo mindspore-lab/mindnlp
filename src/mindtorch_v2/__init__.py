@@ -34,6 +34,7 @@ from . import _autograd as autograd
 from . import npu
 from . import _C
 from . import distributed
+from . import futures
 
 
 def pipeline():
