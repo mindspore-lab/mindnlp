@@ -43,6 +43,9 @@ from .ops import (
     _meta_hstack_meta,
     _meta_vstack_meta,
     _meta_column_stack_meta,
+    _meta_pad_sequence_meta,
+    _meta_block_diag_meta,
+    _meta_cartesian_prod_meta,
 )
 
 registry.register("add", "meta", _meta_binary_meta)
@@ -108,6 +111,9 @@ registry.register("concat", "meta", _meta_cat_meta)
 registry.register("hstack", "meta", _meta_hstack_meta)
 registry.register("vstack", "meta", _meta_vstack_meta)
 registry.register("column_stack", "meta", _meta_column_stack_meta)
+registry.register("pad_sequence", "meta", _meta_pad_sequence_meta)
+registry.register("block_diag", "meta", _meta_block_diag_meta)
+registry.register("cartesian_prod", "meta", _meta_cartesian_prod_meta)
 registry.register("allclose", "meta", _meta_reduce_bool_meta)
 registry.register("isclose", "meta", _meta_binary_meta)
 registry.register("equal", "meta", _meta_equal_meta)
