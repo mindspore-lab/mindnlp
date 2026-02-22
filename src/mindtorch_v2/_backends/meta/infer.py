@@ -163,6 +163,59 @@ def infer_cartesian_prod(*tensors):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
 
 
+def infer_chunk(a, chunks, dim=0):
+    dim_size = a.shape[dim]
+    actual_chunks = min(chunks, dim_size) if dim_size > 0 else chunks
+    if actual_chunks == 0:
+        return tuple()
+    chunk_size = (dim_size + actual_chunks - 1) // actual_chunks
+    specs = []
+    for i in range(actual_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, dim_size)
+        if start >= end:
+            break
+        shape = list(a.shape)
+        shape[dim] = end - start
+        shape = tuple(shape)
+        specs.append(TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype))
+    return tuple(specs)
+
+
+def infer_split(a, split_size_or_sections, dim=0):
+    dim_size = a.shape[dim]
+    specs = []
+    if isinstance(split_size_or_sections, int):
+        step = split_size_or_sections
+        for start in range(0, dim_size, step):
+            end = min(start + step, dim_size)
+            shape = list(a.shape)
+            shape[dim] = end - start
+            shape = tuple(shape)
+            specs.append(TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype))
+    else:
+        sizes = list(split_size_or_sections)
+        if sum(sizes) != dim_size:
+            raise ValueError("split sections must sum to dim size")
+        for size in sizes:
+            shape = list(a.shape)
+            shape[dim] = size
+            shape = tuple(shape)
+            specs.append(TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype))
+    return tuple(specs)
+
+
+def infer_unbind(a, dim=0):
+    dim_size = a.shape[dim]
+    specs = []
+    for _ in range(dim_size):
+        shape = list(a.shape)
+        shape.pop(dim)
+        shape = tuple(shape)
+        specs.append(TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype))
+    return tuple(specs)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1

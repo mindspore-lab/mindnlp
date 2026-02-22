@@ -470,6 +470,18 @@ def cartesian_prod(*tensors):
     return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
 
 
+def chunk(a, chunks, dim=0):
+    return dispatch("chunk", a.device.type, a, chunks, dim)
+
+
+def split(a, split_size_or_sections, dim=0):
+    return dispatch("split", a.device.type, a, split_size_or_sections, dim)
+
+
+def unbind(a, dim=0):
+    return dispatch("unbind", a.device.type, a, dim)
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 
