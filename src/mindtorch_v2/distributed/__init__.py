@@ -4,6 +4,7 @@ from datetime import timedelta
 from ._reduce_op import ReduceOp, RedOpType, reduce_op
 from ._work import Work
 from ._process_group import ProcessGroup, ProcessGroupHCCL
+from ._gloo import ProcessGroupGloo
 from ._store import TCPStore
 from ._backend import (
     Backend, GroupMember, Store, PrefixStore,
@@ -108,7 +109,7 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     timeout_sec = int(timeout.total_seconds())
 
     if backend is None:
-        backend = "hccl"
+        backend = "hccl" if is_hccl_available() else "gloo"
     backend = str(backend).lower()
 
     if rank < 0:
@@ -130,9 +131,18 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     if device_id is not None:
         dev_id = int(getattr(device_id, "index", device_id))
 
-    pg = ProcessGroupHCCL(store, rank, world_size, device_id=dev_id,
-                          group_name=group_name,
-                          group_ranks=list(range(world_size)))
+    # Backend dispatch
+    if backend == "gloo":
+        pg = ProcessGroupGloo(store, rank, world_size,
+                              group_name=group_name,
+                              group_ranks=list(range(world_size)))
+    elif backend in ("hccl", "nccl"):
+        pg = ProcessGroupHCCL(store, rank, world_size, device_id=dev_id,
+                              group_name=group_name,
+                              group_ranks=list(range(world_size)))
+    else:
+        raise ValueError(f"Unsupported backend: {backend}")
+
     _default_pg = pg
     GroupMember.WORLD = pg
     _pg_map[pg] = (Backend(backend), store)
@@ -187,6 +197,13 @@ def get_backend(group=None):
 
 
 def get_backend_config(group=None):
+    pg = group or _default_pg
+    if pg in _pg_map:
+        backend_name = _pg_map[pg][0]
+        if backend_name == "gloo":
+            return "cpu:gloo"
+        elif backend_name in ("hccl", "nccl"):
+            return "npu:hccl"
     return "npu:hccl"
 
 
@@ -549,20 +566,35 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     prefix = f"pg{_group_count}"
     prefixed_store = PrefixStore(prefix, default_store)
 
-    dev_id = None
-    if device_id is not None:
-        dev_id = int(getattr(device_id, "index", device_id))
-    else:
-        # Use global rank for device_id, not group_rank
-        dev_id = world_rank % 8
+    # Inherit backend from parent PG if not specified
+    if backend is None:
+        parent_backend = str(_pg_map[_default_pg][0])
+        backend = parent_backend
 
-    pg = ProcessGroupHCCL(
-        prefixed_store, group_rank, group_size,
-        device_id=dev_id,
-        group_name=group_desc or prefix,
-        group_ranks=ranks,
-    )
-    _pg_map[pg] = (Backend(backend or "hccl"), prefixed_store)
+    backend = str(backend).lower()
+
+    if backend == "gloo":
+        pg = ProcessGroupGloo(
+            prefixed_store, group_rank, group_size,
+            group_name=group_desc or prefix,
+            group_ranks=ranks,
+        )
+    elif backend in ("hccl", "nccl"):
+        dev_id = None
+        if device_id is not None:
+            dev_id = int(getattr(device_id, "index", device_id))
+        else:
+            dev_id = world_rank % 8
+        pg = ProcessGroupHCCL(
+            prefixed_store, group_rank, group_size,
+            device_id=dev_id,
+            group_name=group_desc or prefix,
+            group_ranks=ranks,
+        )
+    else:
+        raise ValueError(f"Unsupported backend: {backend}")
+
+    _pg_map[pg] = (Backend(backend), prefixed_store)
     _pg_names[pg] = group_desc or prefix
     _pg_group_ranks[pg] = {ranks[i]: i for i in range(group_size)}
     _group_count += 1

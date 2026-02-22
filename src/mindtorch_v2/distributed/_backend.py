@@ -72,7 +72,7 @@ def is_nccl_available():
 
 
 def is_gloo_available():
-    return False
+    return True
 
 
 def is_mpi_available():
