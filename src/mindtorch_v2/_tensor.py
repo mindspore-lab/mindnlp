@@ -38,6 +38,7 @@ from ._functional import addcmul as addcmul_dispatch, addcdiv as addcdiv_dispatc
 from ._functional import logaddexp as logaddexp_dispatch, logaddexp2 as logaddexp2_dispatch
 from ._functional import hypot as hypot_dispatch, remainder as remainder_dispatch, fmod as fmod_dispatch
 from ._functional import all as all_dispatch, any as any_dispatch, argmax as argmax_dispatch
+from ._functional import argmin as argmin_dispatch, count_nonzero as count_nonzero_dispatch
 from ._functional import allclose as allclose_dispatch, isclose as isclose_dispatch, equal as equal_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
@@ -633,6 +634,12 @@ class Tensor:
 
     def argmax(self, dim=None, keepdim=False):
         return argmax_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def argmin(self, dim=None, keepdim=False):
+        return argmin_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def count_nonzero(self, dim=None, keepdim=False):
+        return count_nonzero_dispatch(self, dim=dim, keepdim=keepdim)
 
     def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
         return allclose_dispatch(self, other, rtol=rtol, atol=atol, equal_nan=equal_nan)

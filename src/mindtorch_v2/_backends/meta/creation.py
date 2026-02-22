@@ -63,6 +63,13 @@ def full_create_meta(shape, fill_value, dtype=None, device=None):
     return Tensor(storage, shape, stride)
 
 
+def logspace_create_meta(start, end, steps, dtype=None, device=None):
+    arr = np.logspace(start, end, steps, dtype=to_numpy_dtype(dtype))
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
+    return Tensor(storage, arr.shape, stride)
+
+
 __all__ = [
     "tensor_create_meta",
     "zeros_create_meta",
@@ -71,4 +78,5 @@ __all__ = [
     "arange_create_meta",
     "linspace_create_meta",
     "full_create_meta",
+    "logspace_create_meta",
 ]

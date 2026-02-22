@@ -357,6 +357,31 @@ def test_equal_cpu():
     assert not torch.equal(x, z)
 
 
+def test_argmin_cpu():
+    x = torch.tensor([[1.0, 3.0, 2.0], [4.0, 0.0, 5.0]])
+    expected = np.argmin(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argmin(x, dim=1).numpy(), expected)
+    expected_keep = np.argmin(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argmin(x, dim=1, keepdim=True).numpy(), expected_keep.reshape(2, 1))
+
+
+def test_count_nonzero_cpu():
+    x = torch.tensor([[0.0, 1.0, 2.0], [0.0, 0.0, 3.0]])
+    expected = np.count_nonzero(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.count_nonzero(x, dim=1).numpy(), expected)
+    expected_keep = np.count_nonzero(x.numpy(), axis=1, keepdims=True)
+    np.testing.assert_array_equal(
+        torch.count_nonzero(x, dim=1, keepdim=True).numpy(),
+        expected_keep,
+    )
+
+
+def test_logspace_cpu():
+    x = torch.logspace(0.0, 2.0, 3)
+    expected = np.logspace(0.0, 2.0, 3)
+    np.testing.assert_allclose(x.numpy(), expected)
+
+
 def test_fmin_cpu():
     x = torch.tensor([1.0, float('nan'), 2.0])
     y = torch.tensor([0.5, 1.0, float('nan')])

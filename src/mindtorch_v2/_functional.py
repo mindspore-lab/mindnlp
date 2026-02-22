@@ -282,6 +282,14 @@ def argmax(a, dim=None, keepdim=False):
     return dispatch("argmax", a.device.type, a, dim=dim, keepdim=keepdim)
 
 
+def argmin(a, dim=None, keepdim=False):
+    return dispatch("argmin", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def count_nonzero(a, dim=None, keepdim=False):
+    return dispatch("count_nonzero", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return dispatch("allclose", a.device.type, a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
@@ -292,6 +300,11 @@ def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 def equal(a, b):
     return dispatch("equal", a.device.type, a, b)
+
+
+def logspace(start, end, steps, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("logspace", dev, start, end, steps, dtype=dtype)
 
 
 def reshape(a, shape):

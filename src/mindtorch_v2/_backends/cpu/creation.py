@@ -65,3 +65,10 @@ def full_create(shape, fill_value, dtype=None, device=None):
     )
     stride = _contiguous_stride(shape)
     return Tensor(storage, shape, stride)
+
+
+def logspace_create(start, end, steps, dtype=None, device=None):
+    arr = np.logspace(start, end, steps, dtype=to_numpy_dtype(dtype))
+    storage = typed_storage_from_numpy(arr, dtype, device=device)
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    return Tensor(storage, arr.shape, stride)
