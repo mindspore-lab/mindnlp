@@ -45,5 +45,5 @@ def test_saved_tensors_hooks_unpacked_once_per_node():
         b = a * a
         c = b + b
     c.sum().backward()
-    # mul saves two tensors; add saves two tensors. Each should unpack once.
-    assert counters["unpack"] == 4
+    # mul saves two tensors; add does not save inputs.
+    assert counters["unpack"] == 2
