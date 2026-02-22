@@ -1293,7 +1293,9 @@ def pow(a, b):
     return _pow_tensor_scalar_op(a, b)
 
 
-def sum_(a, dim=None, keepdim=False):
+def sum_(a, dim=None, keepdim=False, dtype=None):
+    if dtype is not None:
+        raise NotImplementedError("sum dtype not supported yet")
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":

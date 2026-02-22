@@ -4,20 +4,31 @@ from ._device import device as Device, get_default_device
 from ._dtype import to_numpy_dtype
 
 
-def add(a, b):
-    return dispatch("add", a.device.type, a, b)
+def add(*args, **kwargs):
+    alpha = kwargs.get("alpha", 1)
+    if alpha != 1:
+        raise NotImplementedError("alpha != 1 not supported yet")
+    return dispatch("add", None, *args, **kwargs)
 
 
-def mul(a, b):
-    return dispatch("mul", a.device.type, a, b)
+def transpose(*args, **kwargs):
+    return dispatch("transpose", None, *args, **kwargs)
 
 
-def matmul(a, b):
-    return dispatch("matmul", a.device.type, a, b)
+def reshape(*args, **kwargs):
+    return dispatch("reshape", None, *args, **kwargs)
 
 
-def relu(a):
-    return dispatch("relu", a.device.type, a)
+def mul(*args, **kwargs):
+    return dispatch("mul", None, *args, **kwargs)
+
+
+def matmul(*args, **kwargs):
+    return dispatch("matmul", None, *args, **kwargs)
+
+
+def relu(*args, **kwargs):
+    return dispatch("relu", None, *args, **kwargs)
 
 
 def abs(a):
@@ -266,8 +277,12 @@ def softplus(a):
     return dispatch("softplus", a.device.type, a)
 
 
-def sum(a, dim=None, keepdim=False):
-    return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
+def sum(*args, **kwargs):
+    dtype = kwargs.get("dtype")
+    if dtype is not None:
+        raise NotImplementedError("sum dtype not supported yet")
+    kwargs.pop("device", None)
+    return dispatch("sum", None, *args, **kwargs)
 
 
 def all(a, dim=None, keepdim=False):
@@ -288,33 +303,6 @@ def argmin(a, dim=None, keepdim=False):
 
 def count_nonzero(a, dim=None, keepdim=False):
     return dispatch("count_nonzero", a.device.type, a, dim=dim, keepdim=keepdim)
-
-
-def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
-    return dispatch("allclose", a.device.type, a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
-
-
-def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
-    return dispatch("isclose", a.device.type, a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
-
-
-def equal(a, b):
-    return dispatch("equal", a.device.type, a, b)
-
-
-def logspace(start, end, steps, dtype=None, device=None):
-    dev = _as_device(device)
-    return dispatch("logspace", dev, start, end, steps, dtype=dtype)
-
-
-def eye(n, m=None, dtype=None, device=None):
-    dev = _as_device(device)
-    return dispatch("eye", dev, n, m, dtype=dtype)
-
-
-def range(start, end, step=1, dtype=None, device=None):
-    dev = _as_device(device)
-    return dispatch("range", dev, start, end, step, dtype=dtype)
 
 
 def cumsum(a, dim=0):
@@ -482,36 +470,55 @@ def unbind(a, dim=0):
     return dispatch("unbind", a.device.type, a, dim)
 
 
-def reshape(a, shape):
-    return dispatch("reshape", a.device.type, a, shape)
+def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
+    return dispatch("allclose", a.device.type, a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-def view(a, shape):
-    return reshape(a, shape)
+def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
+    return dispatch("isclose", a.device.type, a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-def transpose(a, dim0, dim1):
-    return dispatch("transpose", a.device.type, a, dim0, dim1)
+def equal(a, b):
+    return dispatch("equal", a.device.type, a, b)
 
 
-def tensor(data, dtype=None, device=None, requires_grad=False):
+def logspace(start, end, steps, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("logspace", dev, start, end, steps, dtype=dtype)
+
+
+def eye(n, m=None, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("eye", dev, n, m, dtype=dtype)
+
+
+def range(start, end, step=1, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("range", dev, start, end, step, dtype=dtype)
+
+
+def view(*args, **kwargs):
+    return dispatch("view", None, *args, **kwargs)
+
+
+def tensor(data, *, dtype=None, device=None, requires_grad=False):
     dev = _as_device(device)
     return dispatch("tensor", dev, data, dtype=dtype, requires_grad=requires_grad)
 
 
-def zeros(shape, dtype=None, device=None):
+def zeros(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("zeros", dev, shape, dtype=dtype)
+    return dispatch("zeros", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
-def ones(shape, dtype=None, device=None):
+def ones(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("ones", dev, shape, dtype=dtype)
+    return dispatch("ones", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
-def empty(shape, dtype=None, device=None):
+def empty(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("empty", dev, shape, dtype=dtype)
+    return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
 def arange(start, end=None, step=1, dtype=None, device=None):
@@ -531,8 +538,17 @@ def full(shape, fill_value, dtype=None, device=None):
     return dispatch("full", dev, shape, fill_value, dtype=dtype)
 
 
-def to(a, device, non_blocking=False):
-    return dispatch("to", a.device, a, device, non_blocking=non_blocking)
+def to(a, device=None, dtype=None, non_blocking=False, copy=False, memory_format=None):
+    return dispatch(
+        "to",
+        a.device,
+        a,
+        device,
+        dtype=dtype,
+        non_blocking=non_blocking,
+        copy=copy,
+        memory_format=memory_format,
+    )
 
 
 

@@ -52,24 +52,20 @@ def _accepts_device(func):
     params = sig.parameters
     if "device" in params:
         return True
-    for param in params.values():
-        if param.kind == inspect.Parameter.VAR_KEYWORD:
-            return True
     return False
 
 
 def _prepare_kwargs(func, kwargs, device):
     if not kwargs:
         kwargs = {}
-    if "device" in kwargs:
-        if _accepts_device(func):
-            return kwargs
-        return {k: v for k, v in kwargs.items() if k != "device"}
+    filtered = {k: v for k, v in kwargs.items() if k != "device"}
+    if "device" in kwargs and _accepts_device(func):
+        return kwargs
     if _accepts_device(func):
-        merged = dict(kwargs)
+        merged = dict(filtered)
         merged["device"] = device
         return merged
-    return kwargs
+    return filtered
 
 
 class _PendingOp:
@@ -198,7 +194,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     entry = registry.get(name)
 
     if entry.schema_obj is not None:
-        entry.schema_obj.bind(args, kwargs, op_name=alias_name)
+        entry.schema_obj.bind(args, kwargs, op_name=alias_name, error_overrides=entry.error_overrides)
 
     if DispatchKey.Functionalize in keyset and should_functionalize(entry):
         if pipe is not None and DispatchKey.Pipeline in keyset:

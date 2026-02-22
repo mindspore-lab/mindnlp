@@ -7,6 +7,7 @@ class OperatorEntry:
         self.name = name
         self.schema = None
         self.schema_obj = None
+        self.error_overrides = None
         self.kernels = {}
         self.fallthrough = set()
         self.functionalize = None
@@ -37,6 +38,11 @@ class OpRegistry:
         if entry.functionalize is None and name.endswith("_"):
             if any(param.mutates for param in entry.schema_obj.params):
                 entry.functionalize = name[:-1]
+        return entry
+
+    def register_error_overrides(self, name, overrides):
+        entry = self._entry(name)
+        entry.error_overrides = overrides
         return entry
 
     def register_kernel(self, name, key, fn):

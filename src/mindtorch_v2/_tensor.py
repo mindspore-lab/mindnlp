@@ -177,8 +177,16 @@ class Tensor:
     def reshape(self, new_shape):
         return reshape_dispatch(self, new_shape)
 
-    def view(self, new_shape):
-        return view_dispatch(self, new_shape)
+    def view(self, *shape):
+        if not shape:
+            raise TypeError(
+                "view() received an invalid combination of arguments - got (), but expected one of:\n"
+                " * (torch.dtype dtype)\n"
+                " * (tuple of ints size)\n"
+            )
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return view_dispatch(self, shape)
 
     def transpose(self, dim0, dim1):
         return transpose_dispatch(self, dim0, dim1)
@@ -354,6 +362,8 @@ class Tensor:
         device = None
         dtype = None
         non_blocking = kwargs.get("non_blocking", False)
+        copy = kwargs.get("copy", False)
+        memory_format = kwargs.get("memory_format", None)
         for arg in args:
             if isinstance(arg, Device):
                 device = arg
@@ -378,7 +388,14 @@ class Tensor:
         if dtype is not None and dtype != self.dtype:
             result = result._to_dtype(dtype)
         if device is not None:
-            result = to_dispatch(result, device, non_blocking=non_blocking)
+            result = to_dispatch(
+                result,
+                device,
+                dtype=dtype,
+                non_blocking=non_blocking,
+                copy=copy,
+                memory_format=memory_format,
+            )
         if result is self and dtype is None and device is None:
             return self
         return result
@@ -469,6 +486,11 @@ class Tensor:
 
     def __neg__(self):
         return neg_dispatch(self)
+
+    def clone(self):
+        from ._functional import to as to_dispatch
+
+        return to_dispatch(self, self.device, copy=True)
 
     def matmul(self, other):
         return matmul(self, other)
@@ -749,6 +771,9 @@ class Tensor:
             if self.numel() == 1 and other.numel() == 1:
                 return self.item() == other.item()
         return self.item() == other
+
+    def __hash__(self):
+        return id(self)
 
     def __ne__(self, other):
         if isinstance(other, Tensor):

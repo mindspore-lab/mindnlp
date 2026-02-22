@@ -10,7 +10,11 @@ from ..._storage import (
 from ..._tensor import Tensor
 
 
-def to_device(a, dev, non_blocking=False):
+def to_device(a, dev, dtype=None, non_blocking=False, copy=False, memory_format=None):
+    if dtype is not None:
+        a = a._to_dtype(dtype)
+    if copy:
+        a = a.clone()
     if isinstance(dev, str):
         dev = Device(dev)
     if a.device.type == dev.type and a.device.index == dev.index:

@@ -21,21 +21,21 @@ def tensor_create_meta(data, dtype=None, device=None, requires_grad=False):
     return Tensor(storage, arr.shape, stride, requires_grad=requires_grad)
 
 
-def zeros_create_meta(shape, dtype=None, device=None, requires_grad=False):
+def zeros_create_meta(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
     shape = tuple(shape)
     stride = _contiguous_stride(shape)
     storage = meta_typed_storage_from_shape(shape, dtype, device=device)
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
-def ones_create_meta(shape, dtype=None, device=None, requires_grad=False):
+def ones_create_meta(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
     shape = tuple(shape)
     stride = _contiguous_stride(shape)
     storage = meta_typed_storage_from_shape(shape, dtype, device=device)
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
-def empty_create_meta(shape, dtype=None, device=None, requires_grad=False):
+def empty_create_meta(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
     shape = tuple(shape)
     stride = _contiguous_stride(shape)
     storage = meta_typed_storage_from_shape(shape, dtype, device=device)

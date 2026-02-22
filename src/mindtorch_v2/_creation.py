@@ -11,20 +11,20 @@ from ._functional import eye as eye_dispatch
 from ._functional import range as range_dispatch
 
 
-def tensor(data, dtype=float32, device=None, requires_grad=False):
+def tensor(data, *, dtype=float32, device=None, requires_grad=False):
     return tensor_dispatch(data, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
-def zeros(shape, dtype=float32, device=None):
-    return zeros_dispatch(shape, dtype=dtype, device=device)
+def zeros(shape, *, dtype=float32, device=None, memory_format=None):
+    return zeros_dispatch(shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def ones(shape, dtype=float32, device=None):
-    return ones_dispatch(shape, dtype=dtype, device=device)
+def ones(shape, *, dtype=float32, device=None, memory_format=None):
+    return ones_dispatch(shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def empty(shape, dtype=float32, device=None):
-    return empty_dispatch(shape, dtype=dtype, device=device)
+def empty(shape, *, dtype=float32, device=None, memory_format=None):
+    return empty_dispatch(shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
 def arange(start, end=None, step=1, dtype=float32, device=None):
