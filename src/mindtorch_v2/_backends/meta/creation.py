@@ -42,9 +42,33 @@ def empty_create_meta(shape, dtype=None, device=None, requires_grad=False):
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
 
 
+def arange_create_meta(start, end, step=1, dtype=None, device=None):
+    arr = np.arange(start, end, step, dtype=to_numpy_dtype(dtype))
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
+    return Tensor(storage, arr.shape, stride)
+
+
+def linspace_create_meta(start, end, steps, dtype=None, device=None):
+    arr = np.linspace(start, end, steps, dtype=to_numpy_dtype(dtype))
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
+    return Tensor(storage, arr.shape, stride)
+
+
+def full_create_meta(shape, fill_value, dtype=None, device=None):
+    shape = tuple(shape)
+    stride = _contiguous_stride(shape)
+    storage = meta_typed_storage_from_shape(shape, dtype, device=device)
+    return Tensor(storage, shape, stride)
+
+
 __all__ = [
     "tensor_create_meta",
     "zeros_create_meta",
     "ones_create_meta",
     "empty_create_meta",
+    "arange_create_meta",
+    "linspace_create_meta",
+    "full_create_meta",
 ]

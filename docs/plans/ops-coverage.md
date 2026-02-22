@@ -89,3 +89,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::hypot` | CPU | done | - | numpy impl + meta + tests |
 | `aten::remainder` | CPU | done | - | numpy impl + meta + tests |
 | `aten::fmod` | CPU | done | - | numpy impl + meta + tests |
+| `aten::arange` | CPU | done | - | numpy impl + meta + tests |
+| `aten::linspace` | CPU | done | - | numpy impl + meta + tests |
+| `aten::full` | CPU | done | - | numpy impl + meta + tests |

@@ -40,3 +40,28 @@ def empty_create(shape, dtype=None, device=None, requires_grad=False):
     storage = typed_storage_from_numpy(np.empty(shape, dtype=to_numpy_dtype(dtype)), dtype, device=device)
     stride = _contiguous_stride(shape)
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
+
+
+def arange_create(start, end, step=1, dtype=None, device=None):
+    arr = np.arange(start, end, step, dtype=to_numpy_dtype(dtype))
+    storage = typed_storage_from_numpy(arr, dtype, device=device)
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    return Tensor(storage, arr.shape, stride)
+
+
+def linspace_create(start, end, steps, dtype=None, device=None):
+    arr = np.linspace(start, end, steps, dtype=to_numpy_dtype(dtype))
+    storage = typed_storage_from_numpy(arr, dtype, device=device)
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    return Tensor(storage, arr.shape, stride)
+
+
+def full_create(shape, fill_value, dtype=None, device=None):
+    shape = tuple(shape)
+    storage = typed_storage_from_numpy(
+        np.full(shape, fill_value, dtype=to_numpy_dtype(dtype)),
+        dtype,
+        device=device,
+    )
+    stride = _contiguous_stride(shape)
+    return Tensor(storage, shape, stride)
