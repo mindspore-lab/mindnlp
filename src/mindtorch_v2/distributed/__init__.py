@@ -623,6 +623,17 @@ def supports_complex(op):
 
 
 # ---------------------------------------------------------------------------
+# Broadcast coalesced (used by DDP for initial param sync)
+# ---------------------------------------------------------------------------
+
+def _broadcast_coalesced(tensors, src=0, group=None):
+    """Broadcast a list of tensors from src rank, one by one."""
+    pg = group or _default_pg
+    for t in tensors:
+        pg.broadcast(t, root=src).wait()
+
+
+# ---------------------------------------------------------------------------
 # Exports
 # ---------------------------------------------------------------------------
 

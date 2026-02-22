@@ -112,7 +112,7 @@ class Module:
             else:
                 dtype = args[0]
         def convert(t):
-            return t
+            return t.to(*args, **kwargs)
         self._apply(convert)
         return self
 
@@ -277,11 +277,15 @@ class Module:
 
         for key, param in self._parameters.items():
             if param is not None:
-                self._parameters[key] = fn(param)
+                new_param = fn(param)
+                self._parameters[key] = new_param
+                super().__setattr__(key, new_param)
 
         for key, buf in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                new_buf = fn(buf)
+                self._buffers[key] = new_buf
+                super().__setattr__(key, new_buf)
 
         return self
 
