@@ -712,6 +712,48 @@ def test_dsplit_cpu():
         torch.dsplit(y, 2)
 
 
+def test_take_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    index = torch.tensor([0, 3, 1], dtype=torch.int64)
+    expected = np.take(x.numpy().reshape(-1), index.numpy().astype(np.int64))
+    np.testing.assert_allclose(torch.take(x, index).numpy(), expected)
+    neg_index = torch.tensor([-1, 0], dtype=torch.int64)
+    expected_neg = np.take(x.numpy().reshape(-1), neg_index.numpy().astype(np.int64))
+    np.testing.assert_allclose(torch.take(x, neg_index).numpy(), expected_neg)
+    out_of_range = torch.tensor([4], dtype=torch.int64)
+    with pytest.raises(IndexError):
+        torch.take(x, out_of_range)
+
+
+def test_take_along_dim_cpu():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    indices = torch.tensor([[0, 2, 1], [2, 0, 1]], dtype=torch.int64)
+    expected = np.take_along_axis(x.numpy(), indices.numpy().astype(np.int64), axis=1)
+    np.testing.assert_allclose(torch.take_along_dim(x, indices, dim=1).numpy(), expected)
+    neg_indices = torch.tensor([[-1, 0, 1], [1, -2, 0]], dtype=torch.int64)
+    expected_neg = np.take_along_axis(x.numpy(), neg_indices.numpy().astype(np.int64), axis=1)
+    np.testing.assert_allclose(torch.take_along_dim(x, neg_indices, dim=1).numpy(), expected_neg)
+    out_of_range = torch.tensor([[3, 0, 1], [1, 2, 0]], dtype=torch.int64)
+    with pytest.raises(IndexError):
+        torch.take_along_dim(x, out_of_range, dim=1)
+
+
+def test_index_select_cpu():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    index = torch.tensor([2, 0], dtype=torch.int64)
+    expected = np.take(x.numpy(), index.numpy().astype(np.int64), axis=1)
+    np.testing.assert_allclose(torch.index_select(x, dim=1, index=index).numpy(), expected)
+    neg_index = torch.tensor([-1, 0], dtype=torch.int64)
+    expected_neg = np.take(x.numpy(), neg_index.numpy().astype(np.int64), axis=1)
+    np.testing.assert_allclose(torch.index_select(x, dim=1, index=neg_index).numpy(), expected_neg)
+    out_of_range = torch.tensor([3], dtype=torch.int64)
+    with pytest.raises(IndexError):
+        torch.index_select(x, dim=1, index=out_of_range)
+    bad_index = torch.tensor([[0, 1]], dtype=torch.int64)
+    with pytest.raises(ValueError):
+        torch.index_select(x, dim=1, index=bad_index)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

@@ -116,6 +116,9 @@ from .ops import (
     hypot,
     remainder,
     fmod,
+    take,
+    take_along_dim,
+    index_select,
     tril_indices,
     triu_indices,
     getitem,
@@ -183,6 +186,9 @@ registry.register("logaddexp2", "cpu", logaddexp2, meta=meta_infer.infer_binary)
 registry.register("hypot", "cpu", hypot, meta=meta_infer.infer_binary)
 registry.register("remainder", "cpu", remainder, meta=meta_infer.infer_binary)
 registry.register("fmod", "cpu", fmod, meta=meta_infer.infer_binary)
+registry.register("take", "cpu", take, meta=meta_infer.infer_take)
+registry.register("take_along_dim", "cpu", take_along_dim, meta=meta_infer.infer_take_along_dim)
+registry.register("index_select", "cpu", index_select, meta=meta_infer.infer_index_select)
 registry.register("tril_indices", "cpu", tril_indices, meta=meta_infer.infer_tril_indices)
 registry.register("triu_indices", "cpu", triu_indices, meta=meta_infer.infer_triu_indices)
 registry.register("getitem", "cpu", getitem)

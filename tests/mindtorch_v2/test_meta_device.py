@@ -344,6 +344,36 @@ def test_meta_dsplit_shape():
         torch.dsplit(y, 2)
 
 
+def test_meta_take_shape():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="meta")
+    index = torch.tensor([0, 1, 3], device="meta", dtype=torch.int64)
+    out = torch.take(x, index)
+    assert out.device.type == "meta"
+    assert out.shape == index.shape
+
+
+def test_meta_take_along_dim_shape():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="meta")
+    indices = torch.tensor([[0, 2, 1], [2, 0, 1]], device="meta", dtype=torch.int64)
+    out = torch.take_along_dim(x, indices, dim=1)
+    assert out.device.type == "meta"
+    assert out.shape == indices.shape
+    bad_indices = torch.tensor([[0, 1, 2]], device="meta", dtype=torch.int64)
+    with pytest.raises(ValueError):
+        torch.take_along_dim(x, bad_indices, dim=1)
+
+
+def test_meta_index_select_shape():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="meta")
+    index = torch.tensor([0, 2], device="meta", dtype=torch.int64)
+    out = torch.index_select(x, dim=1, index=index)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+    bad_index = torch.tensor([[0, 1]], device="meta", dtype=torch.int64)
+    with pytest.raises(ValueError):
+        torch.index_select(x, dim=1, index=bad_index)
+
+
 def test_meta_tril_triu_shape():
     x = torch.tensor([[1.0, 2.0]], device="meta")
     out = torch.tril(x, diagonal=-1)
