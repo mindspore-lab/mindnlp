@@ -23,7 +23,9 @@ def add(a, b):
 
 
 def mul(a, b):
-    return _from_numpy(_to_numpy(a) * _to_numpy(b), a.dtype, a.device)
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(a_np * b_np, a.dtype, a.device)
 
 
 def matmul(a, b):

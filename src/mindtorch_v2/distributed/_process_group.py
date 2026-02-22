@@ -1,18 +1,7 @@
 import os
 import ctypes
 
-from ._hccl.hccl_bindings import (
-    get_bindings, HcclRootInfo, HcclCommConfig, HCCL_ROOT_INFO_BYTES,
-    HCCL_COMM_CONFIG_COMM_NAME,
-    hccl_comm_config_init, is_hccl_feature_supported,
-    dtype_to_hccl, _check,
-)
 from ._work import Work
-
-
-def _get_stream(device_id):
-    from .._backends.npu import state as npu_state
-    return npu_state.current_stream(device_id).stream
 
 
 class ProcessGroup:
@@ -52,6 +41,9 @@ class ProcessGroupHCCL(ProcessGroup):
     Initialization follows torch_npu's pattern:
     1. Try ranktable path (RANK_TABLE_FILE + HcclCommInitClusterInfoConfig)
     2. Fall back to root info path (HcclGetRootInfo + HcclCommInitRootInfoConfig)
+
+    HCCL bindings are imported lazily when this class is instantiated, so
+    importing the base ProcessGroup class does not require libhccl.so.
     """
 
     def __init__(self, store, rank, size, device_id=None, group_name="",
@@ -66,14 +58,26 @@ class ProcessGroupHCCL(ProcessGroup):
         self._store = store
         self._init_hccl(store, group_name)
 
+    @staticmethod
+    def _load_bindings():
+        from ._hccl.hccl_bindings import (
+            get_bindings, HcclRootInfo, HcclCommConfig, HCCL_ROOT_INFO_BYTES,
+            HCCL_COMM_CONFIG_COMM_NAME,
+            hccl_comm_config_init, is_hccl_feature_supported,
+            dtype_to_hccl, _check,
+        )
+        return (get_bindings, HcclRootInfo, HcclCommConfig,
+                HCCL_ROOT_INFO_BYTES, HCCL_COMM_CONFIG_COMM_NAME,
+                hccl_comm_config_init, is_hccl_feature_supported,
+                dtype_to_hccl, _check)
+
     def _make_config(self):
+        (_, _, HcclCommConfig, _, HCCL_COMM_CONFIG_COMM_NAME,
+         hccl_comm_config_init, is_hccl_feature_supported, _, _) = self._load_bindings()
         config = HcclCommConfig()
         hccl_comm_config_init(config)
-        # If HCCL doesn't support COMM_NAME feature, use compat size=32
-        # (torch_npu fallback for older CANN versions)
         if not is_hccl_feature_supported(HCCL_COMM_CONFIG_COMM_NAME):
             import struct
-            # Overwrite only the size field (first 8 bytes of reserved)
             struct.pack_into("<Q", (ctypes.c_ubyte * 8).from_buffer(config), 0, 32)
         return config
 
@@ -82,6 +86,7 @@ class ProcessGroupHCCL(ProcessGroup):
         rank_table = os.environ.get("RANK_TABLE_FILE")
         if not rank_table or not os.path.isfile(rank_table):
             return False
+        get_bindings = self._load_bindings()[0]
         bindings = get_bindings()
         if bindings.comm_init_cluster_info_config is None:
             return False
@@ -100,6 +105,8 @@ class ProcessGroupHCCL(ProcessGroup):
 
     def _init_root_info(self, store, prefix=""):
         """Root info broadcast path (standard NCCL-like init)."""
+        (get_bindings, HcclRootInfo, _, HCCL_ROOT_INFO_BYTES,
+         _, _, _, _, _check) = self._load_bindings()
         bindings = get_bindings()
         key = f"{prefix}/hccl_root_info" if prefix else "hccl_root_info"
 
@@ -107,7 +114,6 @@ class ProcessGroupHCCL(ProcessGroup):
             root_info = HcclRootInfo()
             ret = bindings.get_root_info(ctypes.byref(root_info))
             _check(ret, "HcclGetRootInfo")
-            # NOTE: must read from addressof, not .internal (which truncates at null)
             store.set(key, ctypes.string_at(ctypes.addressof(root_info), HCCL_ROOT_INFO_BYTES))
         else:
             store.wait([key])
@@ -118,7 +124,6 @@ class ProcessGroupHCCL(ProcessGroup):
                 f"HCCL root info size mismatch: expected {HCCL_ROOT_INFO_BYTES}, got {len(raw)}"
             )
         root_info = HcclRootInfo()
-        # NOTE: must write to addressof, not .internal (which writes to temp copy)
         ctypes.memmove(ctypes.addressof(root_info), raw, HCCL_ROOT_INFO_BYTES)
 
         config = self._make_config()
@@ -142,19 +147,22 @@ class ProcessGroupHCCL(ProcessGroup):
             self._init_root_info(store, prefix)
 
     def _stream(self):
-        return _get_stream(self._device_id)
+        from .._backends.npu import state as npu_state
+        return npu_state.current_stream(self._device_id).stream
 
     def _make_work(self, stream, source_rank=-1):
         return Work(stream=stream, device_id=self._device_id,
                     source_rank=source_rank)
 
     def _tensor_args(self, tensor):
+        _, _, _, _, _, _, _, dtype_to_hccl, _ = self._load_bindings()
         ptr = ctypes.c_void_p(tensor.storage().data_ptr())
         count = ctypes.c_uint64(tensor.numel())
         hccl_dtype = ctypes.c_int32(dtype_to_hccl(tensor.dtype))
         return ptr, count, hccl_dtype
 
     def allreduce(self, tensor, op=0):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         ptr, count, dt = self._tensor_args(tensor)
@@ -166,6 +174,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def broadcast(self, tensor, root=0):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         ptr, count, dt = self._tensor_args(tensor)
@@ -177,6 +186,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def allgather(self, output_tensor, input_tensor):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         in_ptr, in_count, dt = self._tensor_args(input_tensor)
@@ -189,6 +199,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def reduce_scatter(self, output_tensor, input_tensor, op=0):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         in_ptr = ctypes.c_void_p(input_tensor.storage().data_ptr())
@@ -201,6 +212,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def reduce(self, tensor, dst=0, op=0):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         ptr, count, dt = self._tensor_args(tensor)
@@ -212,6 +224,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def scatter(self, output_tensor, input_tensor, src=0):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         in_ptr = ctypes.c_void_p(input_tensor.storage().data_ptr())
@@ -224,6 +237,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def barrier(self):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         ret = bindings.barrier(
@@ -233,6 +247,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def send(self, tensor, dst):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         ptr, count, dt = self._tensor_args(tensor)
@@ -244,6 +259,7 @@ class ProcessGroupHCCL(ProcessGroup):
         return self._make_work(stream)
 
     def recv(self, tensor, src):
+        get_bindings, _, _, _, _, _, _, _, _check = self._load_bindings()
         bindings = get_bindings()
         stream = self._stream()
         ptr, count, dt = self._tensor_args(tensor)
@@ -256,6 +272,7 @@ class ProcessGroupHCCL(ProcessGroup):
 
     def destroy(self):
         if self._comm is not None:
+            get_bindings = self._load_bindings()[0]
             bindings = get_bindings()
             bindings.comm_destroy(self._comm)
             self._comm = None
