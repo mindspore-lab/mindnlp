@@ -567,6 +567,41 @@ def test_cartesian_prod_cpu():
     np.testing.assert_allclose(out.numpy(), expected)
 
 
+def test_chunk_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+    out = torch.chunk(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].numpy(), np.array([1.0, 2.0, 3.0]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([4.0, 5.0]))
+
+
+def test_split_int_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+    out = torch.split(x, 2)
+    assert len(out) == 3
+    np.testing.assert_allclose(out[0].numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([3.0, 4.0]))
+    np.testing.assert_allclose(out[2].numpy(), np.array([5.0]))
+
+
+def test_split_sections_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+    out = torch.split(x, [2, 1, 2])
+    assert len(out) == 3
+    np.testing.assert_allclose(out[0].numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([3.0]))
+    np.testing.assert_allclose(out[2].numpy(), np.array([4.0, 5.0]))
+
+
+def test_unbind_cpu():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    out = torch.unbind(x, dim=1)
+    assert len(out) == 3
+    np.testing.assert_allclose(out[0].numpy(), np.array([1.0, 4.0]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([2.0, 5.0]))
+    np.testing.assert_allclose(out[2].numpy(), np.array([3.0, 6.0]))
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

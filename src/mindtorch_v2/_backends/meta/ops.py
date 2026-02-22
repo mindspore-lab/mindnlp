@@ -222,6 +222,55 @@ def _meta_cartesian_prod_meta(*tensors):
     return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
 
 
+def _meta_chunk_meta(a, chunks, dim=0):
+    dim_size = a.shape[dim]
+    actual_chunks = min(chunks, dim_size) if dim_size > 0 else chunks
+    if actual_chunks == 0:
+        return tuple()
+    chunk_size = (dim_size + actual_chunks - 1) // actual_chunks
+    specs = []
+    for i in range(actual_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, dim_size)
+        if start >= end:
+            break
+        shape = list(a.shape)
+        shape[dim] = end - start
+        specs.append(_meta_tensor(tuple(shape), a.dtype, a.device))
+    return tuple(specs)
+
+
+def _meta_split_meta(a, split_size_or_sections, dim=0):
+    dim_size = a.shape[dim]
+    specs = []
+    if isinstance(split_size_or_sections, int):
+        step = split_size_or_sections
+        for start in range(0, dim_size, step):
+            end = min(start + step, dim_size)
+            shape = list(a.shape)
+            shape[dim] = end - start
+            specs.append(_meta_tensor(tuple(shape), a.dtype, a.device))
+    else:
+        sizes = list(split_size_or_sections)
+        if sum(sizes) != dim_size:
+            raise ValueError("split sections must sum to dim size")
+        for size in sizes:
+            shape = list(a.shape)
+            shape[dim] = size
+            specs.append(_meta_tensor(tuple(shape), a.dtype, a.device))
+    return tuple(specs)
+
+
+def _meta_unbind_meta(a, dim=0):
+    dim_size = a.shape[dim]
+    specs = []
+    for _ in range(dim_size):
+        shape = list(a.shape)
+        shape.pop(dim)
+        specs.append(_meta_tensor(tuple(shape), a.dtype, a.device))
+    return tuple(specs)
+
+
 def _meta_argmax_meta(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
@@ -307,6 +356,9 @@ __all__ = [
     "_meta_pad_sequence_meta",
     "_meta_block_diag_meta",
     "_meta_cartesian_prod_meta",
+    "_meta_chunk_meta",
+    "_meta_split_meta",
+    "_meta_unbind_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

@@ -218,6 +218,75 @@ def cartesian_prod(*tensors):
     return _from_numpy(stacked, tensors[0].dtype, tensors[0].device)
 
 
+def chunk(a, chunks, dim=0):
+    arr = _to_numpy(a)
+    if dim < 0:
+        dim += arr.ndim
+    dim_size = arr.shape[dim]
+    if chunks <= 0:
+        raise ValueError("chunks must be > 0")
+    actual_chunks = min(chunks, dim_size) if dim_size > 0 else chunks
+    if actual_chunks == 0:
+        return tuple()
+    chunk_size = (dim_size + actual_chunks - 1) // actual_chunks
+    outputs = []
+    for i in range(actual_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, dim_size)
+        if start >= end:
+            break
+        slices = [slice(None)] * arr.ndim
+        slices[dim] = slice(start, end)
+        out = arr[tuple(slices)]
+        outputs.append(_from_numpy(out, a.dtype, a.device))
+    return tuple(outputs)
+
+
+def split(a, split_size_or_sections, dim=0):
+    arr = _to_numpy(a)
+    if dim < 0:
+        dim += arr.ndim
+    dim_size = arr.shape[dim]
+    outputs = []
+    if isinstance(split_size_or_sections, int):
+        if split_size_or_sections <= 0:
+            raise ValueError("split_size must be > 0")
+        step = split_size_or_sections
+        for start in range(0, dim_size, step):
+            end = min(start + step, dim_size)
+            slices = [slice(None)] * arr.ndim
+            slices[dim] = slice(start, end)
+            out = arr[tuple(slices)]
+            outputs.append(_from_numpy(out, a.dtype, a.device))
+    else:
+        sizes = list(split_size_or_sections)
+        if sum(sizes) != dim_size:
+            raise ValueError("split sections must sum to dim size")
+        start = 0
+        for size in sizes:
+            end = start + size
+            slices = [slice(None)] * arr.ndim
+            slices[dim] = slice(start, end)
+            out = arr[tuple(slices)]
+            outputs.append(_from_numpy(out, a.dtype, a.device))
+            start = end
+    return tuple(outputs)
+
+
+def unbind(a, dim=0):
+    arr = _to_numpy(a)
+    if dim < 0:
+        dim += arr.ndim
+    dim_size = arr.shape[dim]
+    outputs = []
+    for i in range(dim_size):
+        slices = [slice(None)] * arr.ndim
+        slices[dim] = i
+        out = np.ascontiguousarray(arr[tuple(slices)])
+        outputs.append(_from_numpy(out, a.dtype, a.device))
+    return tuple(outputs)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),

@@ -253,6 +253,32 @@ def test_meta_cartesian_prod_shape():
     assert out.shape == (2, 2)
 
 
+def test_meta_chunk_shape():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="meta")
+    out = torch.chunk(x, 2)
+    assert len(out) == 2
+    assert out[0].shape == (3,)
+    assert out[1].shape == (2,)
+
+
+def test_meta_split_shape():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="meta")
+    out = torch.split(x, 2)
+    assert len(out) == 3
+    assert out[0].shape == (2,)
+    assert out[1].shape == (2,)
+    assert out[2].shape == (1,)
+
+
+def test_meta_unbind_shape():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="meta")
+    out = torch.unbind(x, dim=1)
+    assert len(out) == 3
+    assert out[0].shape == (2,)
+    assert out[1].shape == (2,)
+    assert out[2].shape == (2,)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)
