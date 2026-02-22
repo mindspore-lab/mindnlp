@@ -41,6 +41,7 @@ from ._functional import all as all_dispatch, any as any_dispatch, argmax as arg
 from ._functional import argmin as argmin_dispatch, count_nonzero as count_nonzero_dispatch
 from ._functional import allclose as allclose_dispatch, isclose as isclose_dispatch, equal as equal_dispatch
 from ._functional import cumsum as cumsum_dispatch, cumprod as cumprod_dispatch, cummax as cummax_dispatch
+from ._functional import argsort as argsort_dispatch, sort as sort_dispatch, topk as topk_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -671,6 +672,15 @@ class Tensor:
 
     def cummax(self, dim=0):
         return cummax_dispatch(self, dim)
+
+    def argsort(self, dim=-1, descending=False, stable=False):
+        return argsort_dispatch(self, dim=dim, descending=descending, stable=stable)
+
+    def sort(self, dim=-1, descending=False, stable=False):
+        return sort_dispatch(self, dim=dim, descending=descending, stable=stable)
+
+    def topk(self, k, dim=-1, largest=True, sorted=True):
+        return topk_dispatch(self, k, dim=dim, largest=largest, sorted=sorted)
 
     def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
         return allclose_dispatch(self, other, rtol=rtol, atol=atol, equal_nan=equal_nan)

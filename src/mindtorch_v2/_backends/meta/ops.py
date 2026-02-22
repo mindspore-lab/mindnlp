@@ -137,6 +137,27 @@ def _meta_cummax_meta(a, dim=0):
     )
 
 
+def _meta_argsort_meta(a, dim=-1, descending=False, stable=False):
+    return _meta_tensor(a.shape, int64_dtype, a.device)
+
+
+def _meta_sort_meta(a, dim=-1, descending=False, stable=False):
+    return (
+        _meta_tensor(a.shape, a.dtype, a.device),
+        _meta_tensor(a.shape, int64_dtype, a.device),
+    )
+
+
+def _meta_topk_meta(a, k, dim=-1, largest=True, sorted=True):
+    shape = list(a.shape)
+    shape[dim] = k
+    shape = tuple(shape)
+    return (
+        _meta_tensor(shape, a.dtype, a.device),
+        _meta_tensor(shape, int64_dtype, a.device),
+    )
+
+
 def _meta_argmax_meta(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
@@ -211,6 +232,9 @@ __all__ = [
     "_meta_argmax_meta",
     "_meta_equal_meta",
     "_meta_cummax_meta",
+    "_meta_argsort_meta",
+    "_meta_sort_meta",
+    "_meta_topk_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

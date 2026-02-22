@@ -397,6 +397,58 @@ def test_cummax_cpu():
     np.testing.assert_array_equal(indices.numpy(), expected_idx)
 
 
+def test_argsort_cpu():
+    x = torch.tensor([[3.0, 1.0, 2.0], [0.0, -1.0, 5.0]])
+    expected = np.argsort(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argsort(x, dim=1).numpy(), expected)
+    expected_desc = np.argsort(-x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argsort(x, dim=1, descending=True).numpy(), expected_desc)
+
+
+def test_sort_cpu():
+    x = torch.tensor([[3.0, 1.0, 2.0], [0.0, -1.0, 5.0]])
+    values, indices = torch.sort(x, dim=1)
+    expected_indices = np.argsort(x.numpy(), axis=1)
+    expected_values = np.take_along_axis(x.numpy(), expected_indices, axis=1)
+    np.testing.assert_allclose(values.numpy(), expected_values)
+    np.testing.assert_array_equal(indices.numpy(), expected_indices)
+
+
+def test_topk_cpu():
+    x = torch.tensor([[3.0, 1.0, 2.0], [0.0, -1.0, 5.0]])
+    values, indices = torch.topk(x, k=2, dim=1, largest=True, sorted=True)
+    expected_indices = np.argsort(-x.numpy(), axis=1)[:, :2]
+    expected_values = np.take_along_axis(x.numpy(), expected_indices, axis=1)
+    np.testing.assert_allclose(values.numpy(), expected_values)
+    np.testing.assert_array_equal(indices.numpy(), expected_indices)
+
+
+def test_sort_out_cpu():
+    x = torch.tensor([[3.0, 1.0, 2.0]])
+    out_values = torch.empty((1, 3))
+    out_indices = torch.empty((1, 3), dtype=torch.int64)
+    values, indices = torch.sort(x, dim=1, out=(out_values, out_indices))
+    assert values is out_values
+    assert indices is out_indices
+    expected_indices = np.argsort(x.numpy(), axis=1)
+    expected_values = np.take_along_axis(x.numpy(), expected_indices, axis=1)
+    np.testing.assert_allclose(out_values.numpy(), expected_values)
+    np.testing.assert_array_equal(out_indices.numpy(), expected_indices)
+
+
+def test_topk_out_cpu():
+    x = torch.tensor([[3.0, 1.0, 2.0]])
+    out_values = torch.empty((1, 2))
+    out_indices = torch.empty((1, 2), dtype=torch.int64)
+    values, indices = torch.topk(x, k=2, dim=1, out=(out_values, out_indices))
+    assert values is out_values
+    assert indices is out_indices
+    expected_indices = np.argsort(-x.numpy(), axis=1)[:, :2]
+    expected_values = np.take_along_axis(x.numpy(), expected_indices, axis=1)
+    np.testing.assert_allclose(out_values.numpy(), expected_values)
+    np.testing.assert_array_equal(out_indices.numpy(), expected_indices)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

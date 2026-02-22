@@ -113,6 +113,44 @@ def cummax(a, dim=0):
     )
 
 
+def argsort(a, dim=-1, descending=False, stable=False):
+    arr = _to_numpy(a)
+    kind = "stable" if stable else "quicksort"
+    if descending:
+        idx = np.argsort(-arr, axis=dim, kind=kind)
+    else:
+        idx = np.argsort(arr, axis=dim, kind=kind)
+    return _from_numpy(idx.astype(np.int64), int64_dtype, a.device)
+
+
+def sort(a, dim=-1, descending=False, stable=False):
+    arr = _to_numpy(a)
+    kind = "stable" if stable else "quicksort"
+    if descending:
+        idx = np.argsort(-arr, axis=dim, kind=kind)
+    else:
+        idx = np.argsort(arr, axis=dim, kind=kind)
+    values = np.take_along_axis(arr, idx, axis=dim)
+    return (
+        _from_numpy(values, a.dtype, a.device),
+        _from_numpy(idx.astype(np.int64), int64_dtype, a.device),
+    )
+
+
+def topk(a, k, dim=-1, largest=True, sorted=True):
+    arr = _to_numpy(a)
+    if largest:
+        idx = np.argsort(-arr, axis=dim)
+    else:
+        idx = np.argsort(arr, axis=dim)
+    idx = np.take(idx, np.arange(k), axis=dim)
+    values = np.take_along_axis(arr, idx, axis=dim)
+    return (
+        _from_numpy(values, a.dtype, a.device),
+        _from_numpy(idx.astype(np.int64), int64_dtype, a.device),
+    )
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),

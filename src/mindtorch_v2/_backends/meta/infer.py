@@ -74,6 +74,26 @@ def infer_cummax(a, dim=0):
     return (spec, indices)
 
 
+def infer_sort(a, dim=-1, descending=False, stable=False):
+    values = infer_unary(a)
+    indices = TensorSpec(shape=values.shape, stride=values.stride, dtype=int64_dtype)
+    return (values, indices)
+
+
+def infer_topk(a, k, dim=-1, largest=True, sorted=True):
+    shape = list(a.shape)
+    shape[dim] = k
+    shape = tuple(shape)
+    values = TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+    indices = TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=int64_dtype)
+    return (values, indices)
+
+
+def infer_argsort(a, dim=-1, descending=False, stable=False):
+    spec = infer_unary(a)
+    return TensorSpec(shape=spec.shape, stride=spec.stride, dtype=int64_dtype)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1

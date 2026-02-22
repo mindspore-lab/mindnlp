@@ -156,6 +156,31 @@ def test_meta_cummax_shape():
     assert indices.shape == x.shape
 
 
+def test_meta_sort_shape():
+    x = torch.tensor([[1.0, 2.0]], device="meta")
+    values, indices = torch.sort(x, dim=1)
+    assert values.device.type == "meta"
+    assert indices.device.type == "meta"
+    assert values.shape == x.shape
+    assert indices.shape == x.shape
+
+
+def test_meta_argsort_shape():
+    x = torch.tensor([[1.0, 2.0]], device="meta")
+    out = torch.argsort(x, dim=1)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape
+
+
+def test_meta_topk_shape():
+    x = torch.tensor([[1.0, 2.0, 3.0]], device="meta")
+    values, indices = torch.topk(x, k=2, dim=1)
+    assert values.device.type == "meta"
+    assert indices.device.type == "meta"
+    assert values.shape == (1, 2)
+    assert indices.shape == (1, 2)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)
