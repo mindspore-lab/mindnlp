@@ -23,6 +23,7 @@ from ._functional import sinh, cosh, asinh, acosh, atanh, erf, erfc, softplus
 from ._functional import clamp, clamp_min, clamp_max, relu6, hardtanh
 from ._functional import min, max, amin, amax, fmin, fmax, where
 from ._functional import atan, atan2, asin, acos, lerp, addcmul, addcdiv
+from ._functional import reshape, transpose
 from ._functional import logaddexp, logaddexp2, hypot, remainder, fmod
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context, functionalize_context
@@ -155,6 +156,8 @@ __all__ = [
     "remainder",
     "fmod",
     "sum",
+    "reshape",
+    "transpose",
     # printing
     "set_printoptions",
     "get_printoptions",

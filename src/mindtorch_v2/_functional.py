@@ -4,20 +4,31 @@ from ._device import device as Device, get_default_device
 from ._dtype import to_numpy_dtype
 
 
-def add(a, b):
-    return dispatch("add", a.device.type, a, b)
+def add(*args, **kwargs):
+    alpha = kwargs.get("alpha", 1)
+    if alpha != 1:
+        raise NotImplementedError("alpha != 1 not supported yet")
+    return dispatch("add", None, *args, **kwargs)
 
 
-def mul(a, b):
-    return dispatch("mul", a.device.type, a, b)
+def transpose(*args, **kwargs):
+    return dispatch("transpose", None, *args, **kwargs)
 
 
-def matmul(a, b):
-    return dispatch("matmul", a.device.type, a, b)
+def reshape(*args, **kwargs):
+    return dispatch("reshape", None, *args, **kwargs)
 
 
-def relu(a):
-    return dispatch("relu", a.device.type, a)
+def mul(*args, **kwargs):
+    return dispatch("mul", None, *args, **kwargs)
+
+
+def matmul(*args, **kwargs):
+    return dispatch("matmul", None, *args, **kwargs)
+
+
+def relu(*args, **kwargs):
+    return dispatch("relu", None, *args, **kwargs)
 
 
 def abs(a):
@@ -266,8 +277,11 @@ def softplus(a):
     return dispatch("softplus", a.device.type, a)
 
 
-def sum(a, dim=None, keepdim=False):
-    return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
+def sum(*args, **kwargs):
+    dtype = kwargs.get("dtype")
+    if dtype is not None:
+        raise NotImplementedError("sum dtype not supported yet")
+    return dispatch("sum", None, *args, **kwargs)
 
 
 def all(a, dim=None, keepdim=False):
@@ -317,201 +331,28 @@ def range(start, end, step=1, dtype=None, device=None):
     return dispatch("range", dev, start, end, step, dtype=dtype)
 
 
-def cumsum(a, dim=0):
-    return dispatch("cumsum", a.device.type, a, dim)
+def view(*args, **kwargs):
+    return dispatch("view", None, *args, **kwargs)
 
 
-def cumprod(a, dim=0):
-    return dispatch("cumprod", a.device.type, a, dim)
-
-
-def cummax(a, dim=0):
-    return dispatch("cummax", a.device.type, a, dim)
-
-
-def argsort(a, dim=-1, descending=False, stable=False, out=None):
-    result = dispatch("argsort", a.device.type, a, dim=dim, descending=descending, stable=stable)
-    if out is not None:
-        out._storage = result.storage()
-        out.shape = result.shape
-        out.stride = result.stride
-        out.offset = result.offset
-        out._base = result._base
-        out._view_meta = result._view_meta
-        return out
-    return result
-
-
-def sort(a, dim=-1, descending=False, stable=False, out=None):
-    values, indices = dispatch("sort", a.device.type, a, dim=dim, descending=descending, stable=stable)
-    if out is not None:
-        out_values, out_indices = out
-        out_values._storage = values.storage()
-        out_values.shape = values.shape
-        out_values.stride = values.stride
-        out_values.offset = values.offset
-        out_values._base = values._base
-        out_values._view_meta = values._view_meta
-        out_indices._storage = indices.storage()
-        out_indices.shape = indices.shape
-        out_indices.stride = indices.stride
-        out_indices.offset = indices.offset
-        out_indices._base = indices._base
-        out_indices._view_meta = indices._view_meta
-        return out_values, out_indices
-    return values, indices
-
-
-def topk(a, k, dim=-1, largest=True, sorted=True, out=None):
-    values, indices = dispatch("topk", a.device.type, a, k, dim=dim, largest=largest, sorted=sorted)
-    if out is not None:
-        out_values, out_indices = out
-        out_values._storage = values.storage()
-        out_values.shape = values.shape
-        out_values.stride = values.stride
-        out_values.offset = values.offset
-        out_values._base = values._base
-        out_values._view_meta = values._view_meta
-        out_indices._storage = indices.storage()
-        out_indices.shape = indices.shape
-        out_indices.stride = indices.stride
-        out_indices.offset = indices.offset
-        out_indices._base = indices._base
-        out_indices._view_meta = indices._view_meta
-        return out_values, out_indices
-    return values, indices
-
-
-def stack(tensors, dim=0, out=None):
-    result = dispatch("stack", tensors[0].device.type, tensors, dim=dim)
-    if out is not None:
-        out._storage = result.storage()
-        out.shape = result.shape
-        out.stride = result.stride
-        out.offset = result.offset
-        out._base = result._base
-        out._view_meta = result._view_meta
-        return out
-    return result
-
-
-def cat(tensors, dim=0, out=None):
-    result = dispatch("cat", tensors[0].device.type, tensors, dim=dim)
-    if out is not None:
-        out._storage = result.storage()
-        out.shape = result.shape
-        out.stride = result.stride
-        out.offset = result.offset
-        out._base = result._base
-        out._view_meta = result._view_meta
-        return out
-    return result
-
-
-def concat(tensors, dim=0, out=None):
-    return cat(tensors, dim=dim, out=out)
-
-
-def hstack(tensors, out=None):
-    result = dispatch("hstack", tensors[0].device.type, tensors)
-    if out is not None:
-        out._storage = result.storage()
-        out.shape = result.shape
-        out.stride = result.stride
-        out.offset = result.offset
-        out._base = result._base
-        out._view_meta = result._view_meta
-        return out
-    return result
-
-
-def vstack(tensors, out=None):
-    result = dispatch("vstack", tensors[0].device.type, tensors)
-    if out is not None:
-        out._storage = result.storage()
-        out.shape = result.shape
-        out.stride = result.stride
-        out.offset = result.offset
-        out._base = result._base
-        out._view_meta = result._view_meta
-        return out
-    return result
-
-
-def column_stack(tensors, out=None):
-    result = dispatch("column_stack", tensors[0].device.type, tensors)
-    if out is not None:
-        out._storage = result.storage()
-        out.shape = result.shape
-        out.stride = result.stride
-        out.offset = result.offset
-        out._base = result._base
-        out._view_meta = result._view_meta
-        return out
-    return result
-
-
-def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
-    return dispatch(
-        "pad_sequence",
-        seqs[0].device.type,
-        seqs,
-        batch_first=batch_first,
-        padding_value=padding_value,
-        padding_side=padding_side,
-    )
-
-
-def block_diag(*tensors):
-    return dispatch("block_diag", tensors[0].device.type, *tensors)
-
-
-def cartesian_prod(*tensors):
-    return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
-
-
-def chunk(a, chunks, dim=0):
-    return dispatch("chunk", a.device.type, a, chunks, dim)
-
-
-def split(a, split_size_or_sections, dim=0):
-    return dispatch("split", a.device.type, a, split_size_or_sections, dim)
-
-
-def unbind(a, dim=0):
-    return dispatch("unbind", a.device.type, a, dim)
-
-
-def reshape(a, shape):
-    return dispatch("reshape", a.device.type, a, shape)
-
-
-def view(a, shape):
-    return reshape(a, shape)
-
-
-def transpose(a, dim0, dim1):
-    return dispatch("transpose", a.device.type, a, dim0, dim1)
-
-
-def tensor(data, dtype=None, device=None, requires_grad=False):
+def tensor(data, *, dtype=None, device=None, requires_grad=False):
     dev = _as_device(device)
-    return dispatch("tensor", dev, data, dtype=dtype, requires_grad=requires_grad)
+    return dispatch("tensor", dev, data, dtype=dtype, device=dev, requires_grad=requires_grad)
 
 
-def zeros(shape, dtype=None, device=None):
+def zeros(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("zeros", dev, shape, dtype=dtype)
+    return dispatch("zeros", dev, shape, dtype=dtype, device=dev, memory_format=memory_format)
 
 
-def ones(shape, dtype=None, device=None):
+def ones(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("ones", dev, shape, dtype=dtype)
+    return dispatch("ones", dev, shape, dtype=dtype, device=dev, memory_format=memory_format)
 
 
-def empty(shape, dtype=None, device=None):
+def empty(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
-    return dispatch("empty", dev, shape, dtype=dtype)
+    return dispatch("empty", dev, shape, dtype=dtype, device=dev, memory_format=memory_format)
 
 
 def arange(start, end=None, step=1, dtype=None, device=None):
@@ -531,8 +372,17 @@ def full(shape, fill_value, dtype=None, device=None):
     return dispatch("full", dev, shape, fill_value, dtype=dtype)
 
 
-def to(a, device, non_blocking=False):
-    return dispatch("to", a.device, a, device, non_blocking=non_blocking)
+def to(a, device=None, dtype=None, non_blocking=False, copy=False, memory_format=None):
+    return dispatch(
+        "to",
+        a.device,
+        a,
+        device,
+        dtype=dtype,
+        non_blocking=non_blocking,
+        copy=copy,
+        memory_format=memory_format,
+    )
 
 
 

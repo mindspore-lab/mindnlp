@@ -33,7 +33,9 @@ def relu(a):
     return _from_numpy(np.maximum(_to_numpy(a), 0), a.dtype, a.device)
 
 
-def sum_(a, dim=None, keepdim=False):
+def sum_(a, dim=None, keepdim=False, dtype=None):
+    if dtype is not None:
+        raise NotImplementedError("sum dtype not supported yet")
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 

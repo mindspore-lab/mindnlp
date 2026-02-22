@@ -177,8 +177,16 @@ class Tensor:
     def reshape(self, new_shape):
         return reshape_dispatch(self, new_shape)
 
-    def view(self, new_shape):
-        return view_dispatch(self, new_shape)
+    def view(self, *shape):
+        if not shape:
+            raise TypeError(
+                "view() received an invalid combination of arguments - got (), but expected one of:\n"
+                " * (torch.dtype dtype)\n"
+                " * (tuple of ints size)\n"
+            )
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return view_dispatch(self, shape)
 
     def transpose(self, dim0, dim1):
         return transpose_dispatch(self, dim0, dim1)
@@ -469,6 +477,11 @@ class Tensor:
 
     def __neg__(self):
         return neg_dispatch(self)
+
+    def clone(self):
+        from ._functional import to as to_dispatch
+
+        return to_dispatch(self, self.device, copy=True)
 
     def matmul(self, other):
         return matmul(self, other)
