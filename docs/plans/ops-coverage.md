@@ -103,3 +103,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::logspace` | CPU | done | - | numpy impl + meta + tests |
 | `aten::eye` | CPU | done | - | numpy impl + meta + tests |
 | `aten::range` | CPU | done | - | numpy impl + meta + tests |
+| `aten::cumsum` | CPU | done | - | numpy impl + meta + tests |
+| `aten::cumprod` | CPU | done | - | numpy impl + meta + tests |
+| `aten::cummax` | CPU | done | - | numpy impl + meta + tests |

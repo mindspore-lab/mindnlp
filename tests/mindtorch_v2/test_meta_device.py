@@ -137,6 +137,25 @@ def test_meta_range_shape():
     assert x.shape == (5,)
 
 
+def test_meta_cum_ops_shape():
+    x = torch.tensor([[1.0, 2.0]], device="meta")
+    out = torch.cumsum(x, dim=1)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape
+    out = torch.cumprod(x, dim=1)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape
+
+
+def test_meta_cummax_shape():
+    x = torch.tensor([[1.0, 2.0]], device="meta")
+    values, indices = torch.cummax(x, dim=1)
+    assert values.device.type == "meta"
+    assert indices.device.type == "meta"
+    assert values.shape == x.shape
+    assert indices.shape == x.shape
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)

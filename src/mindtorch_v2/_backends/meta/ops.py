@@ -78,11 +78,11 @@ def _meta_addcdiv_meta(a, b, c, value=1.0):
     return _meta_tensor(shape, a.dtype, a.device)
 
 
-def _meta_unary_meta(a):
+def _meta_unary_meta(a, *args, **kwargs):
     return _meta_tensor(a.shape, a.dtype, a.device)
 
 
-def _meta_unary_bool_meta(a, **kwargs):
+def _meta_unary_bool_meta(a, *args, **kwargs):
     return _meta_tensor(a.shape, bool_dtype, a.device)
 
 
@@ -128,6 +128,13 @@ def _meta_reduce_bool_meta(a, b=None, dim=None, keepdim=False, **kwargs):
 
 def _meta_equal_meta(a, b, **kwargs):
     return _meta_tensor((), bool_dtype, a.device)
+
+
+def _meta_cummax_meta(a, dim=0):
+    return (
+        _meta_tensor(a.shape, a.dtype, a.device),
+        _meta_tensor(a.shape, int64_dtype, a.device),
+    )
 
 
 def _meta_argmax_meta(a, dim=None, keepdim=False):
@@ -203,6 +210,7 @@ __all__ = [
     "_meta_reduce_bool_meta",
     "_meta_argmax_meta",
     "_meta_equal_meta",
+    "_meta_cummax_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

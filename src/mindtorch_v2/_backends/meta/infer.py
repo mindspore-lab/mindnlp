@@ -68,6 +68,12 @@ def infer_argmax(a, dim=None, keepdim=False):
     return TensorSpec(shape=spec.shape, stride=spec.stride, dtype=int64_dtype)
 
 
+def infer_cummax(a, dim=0):
+    spec = infer_unary(a)
+    indices = TensorSpec(shape=spec.shape, stride=spec.stride, dtype=int64_dtype)
+    return (spec, indices)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1

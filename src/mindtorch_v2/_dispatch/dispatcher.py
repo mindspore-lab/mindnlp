@@ -81,26 +81,33 @@ class _PendingOp:
         self.keyset = keyset
         self.key = key
 
+    def _copy_result(self, pending, result):
+        prev_requires_grad = pending.requires_grad
+        pending._storage = result.storage()
+        pending.shape = result.shape
+        pending.stride = result.stride
+        pending.offset = result.offset
+        pending.requires_grad = prev_requires_grad or result.requires_grad
+        if result.grad_fn is not None:
+            pending.grad_fn = result.grad_fn
+        elif not pending.requires_grad:
+            pending.grad_fn = None
+        pending._base = result._base
+        pending._view_meta = result._view_meta
+        pending._version_counter = result._version_counter
+        pending._pending = False
+
     def execute(self):
-        prev_requires_grad = self.out.requires_grad
         _push_dispatch_context(self.keyset, self.key)
         try:
             result = self.impl(*self.args, **self.kwargs)
         finally:
             _pop_dispatch_context()
-        self.out._storage = result.storage()
-        self.out.shape = result.shape
-        self.out.stride = result.stride
-        self.out.offset = result.offset
-        self.out.requires_grad = prev_requires_grad or result.requires_grad
-        if result.grad_fn is not None:
-            self.out.grad_fn = result.grad_fn
-        elif not self.out.requires_grad:
-            self.out.grad_fn = None
-        self.out._base = result._base
-        self.out._view_meta = result._view_meta
-        self.out._version_counter = result._version_counter
-        self.out._pending = False
+        if isinstance(self.out, (tuple, list)):
+            for pending, item in zip(self.out, result):
+                self._copy_result(pending, item)
+        else:
+            self._copy_result(self.out, result)
 
 class _FunctionalizePendingOp:
     def __init__(self, target, thunk, keyset, key):
@@ -131,6 +138,12 @@ def _pending_tensor_from_spec(spec, device):
 
     storage = PendingStorage(spec.shape, spec.dtype, device)
     return Tensor(storage, spec.shape, spec.stride, spec.offset)
+
+
+def _pending_from_meta(meta, device):
+    if isinstance(meta, (tuple, list)):
+        return tuple(_pending_tensor_from_spec(spec, device) for spec in meta)
+    return _pending_tensor_from_spec(meta, device)
 
 
 def _kernel_for_entry(entry, key_order):
@@ -211,8 +224,12 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
             raise RuntimeError(f"pipeline requires meta kernel for op {name}")
         meta_kwargs = _prepare_kwargs(meta, kwargs, dispatch_device)
         spec = meta(*args, **meta_kwargs)
-        out = _pending_tensor_from_spec(spec, dispatch_device)
-        out._pending = True
+        out = _pending_from_meta(spec, dispatch_device)
+        if isinstance(out, (tuple, list)):
+            for item in out:
+                item._pending = True
+        else:
+            out._pending = True
         backend_keys = [key for key in _key_order(keyset) if key != DispatchKey.Pipeline]
         impl, impl_key = _kernel_for_entry(entry, backend_keys)
         if impl is None:

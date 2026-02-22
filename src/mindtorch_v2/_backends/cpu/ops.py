@@ -82,6 +82,37 @@ def count_nonzero(a, dim=None, keepdim=False):
     return _from_numpy(out, int64_dtype, a.device)
 
 
+def cumsum(a, dim=0):
+    return _from_numpy(np.cumsum(_to_numpy(a), axis=dim), a.dtype, a.device)
+
+
+def cumprod(a, dim=0):
+    return _from_numpy(np.cumprod(_to_numpy(a), axis=dim), a.dtype, a.device)
+
+
+def cummax(a, dim=0):
+    arr = _to_numpy(a)
+    if dim < 0:
+        dim += arr.ndim
+    moved = np.moveaxis(arr, dim, 0)
+    values = np.empty_like(moved)
+    indices = np.empty(moved.shape, dtype=np.int64)
+    max_vals = moved[0].copy()
+    values[0] = max_vals
+    indices[0] = 0
+    for i in range(1, moved.shape[0]):
+        mask = moved[i] > max_vals
+        max_vals = np.where(mask, moved[i], max_vals)
+        values[i] = max_vals
+        indices[i] = np.where(mask, i, indices[i - 1])
+    values = np.ascontiguousarray(np.moveaxis(values, 0, dim))
+    indices = np.ascontiguousarray(np.moveaxis(indices, 0, dim))
+    return (
+        _from_numpy(values, a.dtype, a.device),
+        _from_numpy(indices, int64_dtype, a.device),
+    )
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),
