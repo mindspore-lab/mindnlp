@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import pytest
 import mindtorch_v2 as torch
 
 
@@ -672,6 +673,43 @@ def test_triu_indices_cpu():
     expected = np.vstack(np.triu_indices(row, k=offset, m=col))
     out = torch.triu_indices(row, col, offset=offset)
     np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_vsplit_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    out = torch.vsplit(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([3.0, 4.0]))
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    out = torch.vsplit(y, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].numpy(), np.array([[1.0, 2.0]]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([[3.0, 4.0]]))
+
+
+def test_hsplit_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    out = torch.hsplit(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([3.0, 4.0]))
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    out = torch.hsplit(y, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].numpy(), np.array([[1.0], [3.0]]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([[2.0], [4.0]]))
+
+
+def test_dsplit_cpu():
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
+    out = torch.dsplit(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].numpy(), np.array([[[1.0], [3.0]]]))
+    np.testing.assert_allclose(out[1].numpy(), np.array([[[2.0], [4.0]]]))
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    with pytest.raises(ValueError):
+        torch.dsplit(y, 2)
 
 
 def test_logspace_cpu():

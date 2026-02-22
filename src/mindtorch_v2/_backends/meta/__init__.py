@@ -52,6 +52,9 @@ from .ops import (
     _meta_cartesian_prod_meta,
     _meta_chunk_meta,
     _meta_split_meta,
+    _meta_vsplit_meta,
+    _meta_hsplit_meta,
+    _meta_dsplit_meta,
     _meta_unbind_meta,
 )
 
@@ -131,6 +134,9 @@ registry.register("triu_indices", "meta", _meta_triu_indices_meta)
 registry.register("cartesian_prod", "meta", _meta_cartesian_prod_meta)
 registry.register("chunk", "meta", _meta_chunk_meta)
 registry.register("split", "meta", _meta_split_meta)
+registry.register("vsplit", "meta", _meta_vsplit_meta)
+registry.register("hsplit", "meta", _meta_hsplit_meta)
+registry.register("dsplit", "meta", _meta_dsplit_meta)
 registry.register("unbind", "meta", _meta_unbind_meta)
 registry.register("allclose", "meta", _meta_reduce_bool_meta)
 registry.register("isclose", "meta", _meta_binary_meta)

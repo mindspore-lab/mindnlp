@@ -312,6 +312,38 @@ def test_meta_tril_triu_indices_shape():
     assert out.shape == (2, 11)
 
 
+def test_meta_vsplit_shape():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0], device="meta")
+    out = torch.vsplit(x, 2)
+    assert len(out) == 2
+    assert out[0].shape == (2,)
+    assert out[1].shape == (2,)
+
+
+def test_meta_hsplit_shape():
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0], device="meta")
+    out = torch.hsplit(x, 2)
+    assert len(out) == 2
+    assert out[0].shape == (2,)
+    assert out[1].shape == (2,)
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="meta")
+    out = torch.hsplit(y, 2)
+    assert len(out) == 2
+    assert out[0].shape == (2, 1)
+    assert out[1].shape == (2, 1)
+
+
+def test_meta_dsplit_shape():
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], device="meta")
+    out = torch.dsplit(x, 2)
+    assert len(out) == 2
+    assert out[0].shape == (1, 2, 1)
+    assert out[1].shape == (1, 2, 1)
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="meta")
+    with pytest.raises(ValueError):
+        torch.dsplit(y, 2)
+
+
 def test_meta_tril_triu_shape():
     x = torch.tensor([[1.0, 2.0]], device="meta")
     out = torch.tril(x, diagonal=-1)
