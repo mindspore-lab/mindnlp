@@ -67,18 +67,4 @@ class DispatchKeySet(set):
             keys.add(DispatchKey.Functionalize)
         if pipeline_enabled and not has_meta:
             keys.add(DispatchKey.Pipeline)
-        # Placeholders for torch-aligned key ordering; fallthrough by default.
-        keys.update(
-            {
-                DispatchKey.BackendSelect,
-                DispatchKey.ADInplaceOrView,
-                DispatchKey.AutogradOther,
-                DispatchKey.AutogradCPU,
-                DispatchKey.AutogradNPU,
-                DispatchKey.AutogradXPU,
-                DispatchKey.AutogradMeta,
-                DispatchKey.Python,
-                DispatchKey.Autocast,
-            }
-        )
         return keys
