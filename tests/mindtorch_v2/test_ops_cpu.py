@@ -602,6 +602,33 @@ def test_unbind_cpu():
     np.testing.assert_allclose(out[2].numpy(), np.array([3.0, 6.0]))
 
 
+def test_tril_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    expected = np.tril(x.numpy(), k=0)
+    np.testing.assert_allclose(torch.tril(x).numpy(), expected)
+    expected_offset = np.tril(x.numpy(), k=-1)
+    np.testing.assert_allclose(torch.tril(x, diagonal=-1).numpy(), expected_offset)
+
+
+def test_triu_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    expected = np.triu(x.numpy(), k=0)
+    np.testing.assert_allclose(torch.triu(x).numpy(), expected)
+    expected_offset = np.triu(x.numpy(), k=1)
+    np.testing.assert_allclose(torch.triu(x, diagonal=1).numpy(), expected_offset)
+
+
+def test_diag_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    expected = np.diag(x.numpy(), k=0)
+    np.testing.assert_allclose(torch.diag(x).numpy(), expected)
+    expected_offset = np.diag(x.numpy(), k=1)
+    np.testing.assert_allclose(torch.diag(x, diagonal=1).numpy(), expected_offset)
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    expected_y = np.diag(y.numpy(), k=0)
+    np.testing.assert_allclose(torch.diag(y).numpy(), expected_y)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

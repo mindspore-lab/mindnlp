@@ -42,6 +42,7 @@ from ._functional import argmin as argmin_dispatch, count_nonzero as count_nonze
 from ._functional import allclose as allclose_dispatch, isclose as isclose_dispatch, equal as equal_dispatch
 from ._functional import cumsum as cumsum_dispatch, cumprod as cumprod_dispatch, cummax as cummax_dispatch
 from ._functional import argsort as argsort_dispatch, sort as sort_dispatch, topk as topk_dispatch
+from ._functional import tril as tril_dispatch, triu as triu_dispatch, diag as diag_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -512,6 +513,15 @@ class Tensor:
 
     def sqrt(self):
         return sqrt_dispatch(self)
+
+    def tril(self, diagonal=0):
+        return tril_dispatch(self, diagonal)
+
+    def triu(self, diagonal=0):
+        return triu_dispatch(self, diagonal)
+
+    def diag(self, diagonal=0):
+        return diag_dispatch(self, diagonal)
 
     def sin(self):
         return sin_dispatch(self)

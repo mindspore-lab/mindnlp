@@ -154,6 +154,23 @@ def infer_block_diag(*tensors):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
 
 
+def infer_diag(a, diagonal=0):
+    if len(a.shape) == 1:
+        n = a.shape[0]
+        size = n + abs(diagonal)
+        shape = (size, size)
+    elif len(a.shape) == 2:
+        m, n = a.shape
+        if diagonal >= 0:
+            length = max(0, min(m, n - diagonal))
+        else:
+            length = max(0, min(m + diagonal, n))
+        shape = (length,)
+    else:
+        raise ValueError("diag expects 1D or 2D tensor")
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_cartesian_prod(*tensors):
     rows = 1
     for t in tensors:

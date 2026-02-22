@@ -454,6 +454,18 @@ def block_diag(*tensors):
     return dispatch("block_diag", tensors[0].device.type, *tensors)
 
 
+def tril(a, diagonal=0):
+    return dispatch("tril", a.device.type, a, diagonal)
+
+
+def triu(a, diagonal=0):
+    return dispatch("triu", a.device.type, a, diagonal)
+
+
+def diag(a, diagonal=0):
+    return dispatch("diag", a.device.type, a, diagonal)
+
+
 def cartesian_prod(*tensors):
     return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
 
