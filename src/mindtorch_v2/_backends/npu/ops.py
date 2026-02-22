@@ -1,3 +1,4 @@
+from ..._dtype import bool as bool_dtype
 from ..._storage import npu_typed_storage_from_ptr
 from . import aclnn
 from . import runtime as npu_runtime
@@ -18,8 +19,12 @@ def _wrap_tensor(storage, shape, stride):
 
 
 def _dtype_itemsize(dtype):
+    size = getattr(dtype, "itemsize", None)
+    if size is not None:
+        return int(size)
     name = getattr(dtype, "name", None) or str(dtype).split(".")[-1]
-    return {"float16": 2, "float32": 4, "int64": 8}.get(name, 4)
+    return {"float16": 2, "float32": 4, "float64": 8, "bfloat16": 2, "int8": 1, "int16": 2,
+            "int32": 4, "int64": 8, "uint8": 1, "bool": 1}.get(name, 4)
 
 
 def _broadcast_shape(a_shape, b_shape):
@@ -101,16 +106,18 @@ def _batch_offset(index, stride):
     return sum(i * s for i, s in zip(index, stride))
 
 
-def _unary_op(a, fn, name):
+def _unary_op(a, fn, name, out_dtype=None):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError(f"NPU {name} expects NPU tensors")
-    out_size = _numel(a.shape) * _dtype_itemsize(a.dtype)
+    if out_dtype is None:
+        out_dtype = a.dtype
+    out_size = _numel(a.shape) * _dtype_itemsize(out_dtype)
     out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
     storage = _unwrap_storage(a)
     fn(storage.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
-    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), out_dtype, device=a.device)
     return _wrap_tensor(out_storage, a.shape, a.stride)
 
 
@@ -335,6 +342,150 @@ def sign(a):
     return _unary_op(a, aclnn.sign, "sign")
 
 
+def signbit(a):
+    return _unary_op(a, aclnn.signbit, "signbit", out_dtype=bool_dtype)
+
+
+def isfinite(a):
+    return _unary_op(a, aclnn.isfinite, "isfinite", out_dtype=bool_dtype)
+
+
+def isinf(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU isinf expects NPU tensors")
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(bool_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    if not a.dtype.is_floating_point:
+        aclnn.logical_not(
+            _unwrap_storage(isfinite(a)).data_ptr(),
+            out_ptr,
+            out_shape,
+            out_stride,
+            bool_dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+        return _wrap_tensor(out_storage, out_shape, out_stride)
+    try:
+        aclnn.isinf(
+            storage.data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            a.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+    except RuntimeError as exc:
+        if "161001" not in str(exc):
+            raise
+        if not (aclnn.logical_not_symbols_ok() and aclnn.logical_and_symbols_ok()):
+            raise RuntimeError("aclnnIsInf unavailable and logical ops missing")
+        finite = isfinite(a)
+        recip = pow(a, -1.0)
+        recip_finite = isfinite(recip)
+        tmp_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.logical_not(
+            _unwrap_storage(finite).data_ptr(),
+            tmp_ptr,
+            out_shape,
+            out_stride,
+            bool_dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        tmp_bool_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.logical_and(
+            tmp_ptr,
+            _unwrap_storage(recip_finite).data_ptr(),
+            tmp_bool_ptr,
+            out_shape,
+            out_stride,
+            out_shape,
+            out_stride,
+            out_shape,
+            out_stride,
+            bool_dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        runtime.defer_free(tmp_ptr)
+        out_ptr = tmp_bool_ptr
+        runtime.defer_free(tmp_bool_ptr)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def isnan(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU isnan expects NPU tensors")
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(bool_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    if not a.dtype.is_floating_point:
+        aclnn.logical_not(
+            _unwrap_storage(isfinite(a)).data_ptr(),
+            out_ptr,
+            out_shape,
+            out_stride,
+            bool_dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+        return _wrap_tensor(out_storage, out_shape, out_stride)
+    if not (aclnn.logical_not_symbols_ok() and aclnn.logical_and_symbols_ok()):
+        raise RuntimeError("aclnn logical ops missing for isnan")
+    finite = isfinite(a)
+    recip = pow(a, -1.0)
+    recip_finite = isfinite(recip)
+    tmp_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.logical_not(
+        _unwrap_storage(finite).data_ptr(),
+        tmp_ptr,
+        out_shape,
+        out_stride,
+        bool_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    aclnn.logical_not(
+        _unwrap_storage(recip_finite).data_ptr(),
+        out_ptr,
+        out_shape,
+        out_stride,
+        bool_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    aclnn.logical_and(
+        tmp_ptr,
+        out_ptr,
+        out_ptr,
+        out_shape,
+        out_stride,
+        out_shape,
+        out_stride,
+        out_shape,
+        out_stride,
+        bool_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    runtime.defer_free(tmp_ptr)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
 def exp(a):
     return _unary_op(a, aclnn.exp, "exp")
 
@@ -369,6 +520,22 @@ def tanh(a):
 
 def sigmoid(a):
     return _unary_op(a, aclnn.sigmoid, "sigmoid")
+
+
+def sinh(a):
+    return _unary_op(a, aclnn.sinh, "sinh")
+
+
+def cosh(a):
+    return _unary_op(a, aclnn.cosh, "cosh")
+
+
+def erf(a):
+    return _unary_op(a, aclnn.erf, "erf")
+
+
+def erfc(a):
+    return _unary_op(a, aclnn.erfc, "erfc")
 
 
 def floor(a):
@@ -418,6 +585,247 @@ def exp2(a):
     return _unary_op(a, aclnn.exp2, "exp2")
 
 
+def softplus(a, beta=1.0, threshold=20.0):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU softplus expects NPU tensors")
+    out_size = _numel(a.shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    aclnn.softplus(
+        storage.data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        beta,
+        threshold,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def clamp(a, min_val=None, max_val=None):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU clamp expects NPU tensors")
+    if min_val is None and max_val is None:
+        raise ValueError("clamp requires min or max")
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    if hasattr(min_val, "shape") and hasattr(max_val, "shape"):
+        out_shape = _broadcast_shape(a.shape, min_val.shape)
+        out_shape = _broadcast_shape(out_shape, max_val.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_tensor(
+            storage.data_ptr(),
+            _unwrap_storage(min_val).data_ptr(),
+            _unwrap_storage(max_val).data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            min_val.shape,
+            min_val.stride,
+            max_val.shape,
+            max_val.stride,
+            out_shape,
+            out_stride,
+            a.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+    elif hasattr(min_val, "shape"):
+        out_shape = _broadcast_shape(a.shape, min_val.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_min_tensor(
+            storage.data_ptr(),
+            _unwrap_storage(min_val).data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            min_val.shape,
+            min_val.stride,
+            out_shape,
+            out_stride,
+            a.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        if max_val is not None:
+            temp_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+            temp_tensor = _wrap_tensor(temp_storage, out_shape, out_stride)
+            return clamp_max(temp_tensor, max_val)
+    elif hasattr(max_val, "shape"):
+        out_shape = _broadcast_shape(a.shape, max_val.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_max_tensor(
+            storage.data_ptr(),
+            _unwrap_storage(max_val).data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            max_val.shape,
+            max_val.stride,
+            out_shape,
+            out_stride,
+            a.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        if min_val is not None:
+            temp_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+            temp_tensor = _wrap_tensor(temp_storage, out_shape, out_stride)
+            return clamp_min(temp_tensor, min_val)
+    else:
+        aclnn.clamp_scalar(
+            storage.data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            a.dtype,
+            min_val,
+            max_val,
+            runtime,
+            stream=stream.stream,
+        )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def clamp_min(a, min_val):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU clamp_min expects NPU tensors")
+    storage = _unwrap_storage(a)
+    if hasattr(min_val, "shape"):
+        out_shape = _broadcast_shape(a.shape, min_val.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_min_tensor(
+            storage.data_ptr(),
+            _unwrap_storage(min_val).data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            min_val.shape,
+            min_val.stride,
+            out_shape,
+            out_stride,
+            a.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+    else:
+        out_shape = a.shape
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_min_scalar(
+            storage.data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            a.dtype,
+            min_val,
+            runtime,
+            stream=stream.stream,
+        )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def clamp_max(a, max_val):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU clamp_max expects NPU tensors")
+    storage = _unwrap_storage(a)
+    if hasattr(max_val, "shape"):
+        out_shape = _broadcast_shape(a.shape, max_val.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_max_tensor(
+            storage.data_ptr(),
+            _unwrap_storage(max_val).data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            max_val.shape,
+            max_val.stride,
+            out_shape,
+            out_stride,
+            a.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+    else:
+        out_shape = a.shape
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.clamp_max_scalar(
+            storage.data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            a.dtype,
+            max_val,
+            runtime,
+            stream=stream.stream,
+        )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def relu6(a):
+    return clamp(a, 0.0, 6.0)
+
+
+def hardtanh(a, min_val=-1.0, max_val=1.0):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU hardtanh expects NPU tensors")
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    try:
+        aclnn.hardtanh(
+            storage.data_ptr(),
+            out_ptr,
+            a.shape,
+            a.stride,
+            a.dtype,
+            min_val,
+            max_val,
+            runtime,
+            stream=stream.stream,
+        )
+    except RuntimeError as exc:
+        if "561103" not in str(exc):
+            raise
+        # Fallback to clamp when hardtanh kernel is unsupported.
+        return clamp(a, min_val, max_val)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 def _pow_tensor_scalar_op(a, exponent):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))

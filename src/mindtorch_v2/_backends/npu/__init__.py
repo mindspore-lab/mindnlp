@@ -8,28 +8,42 @@ from .ops import (
     add,
     ceil,
     cos,
+    cosh,
     exp,
     exp2,
+    erf,
+    erfc,
     floor,
     frac,
+    hardtanh,
+    isfinite,
+    isinf,
+    isnan,
     log,
     log10,
     log2,
     matmul,
     mul,
     neg,
+    relu6,
     sign,
+    signbit,
     pow,
     relu,
     round,
     rsqrt,
     sigmoid,
     sin,
+    sinh,
+    softplus,
     sqrt,
     sum_,
     tan,
     tanh,
     trunc,
+    clamp,
+    clamp_min,
+    clamp_max,
     add_,
     mul_,
     relu_,
@@ -48,6 +62,10 @@ registry.register("sum", "npu", sum_, meta=meta_infer.infer_sum)
 registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
 registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)
+registry.register("signbit", "npu", signbit, meta=meta_infer.infer_unary_bool)
+registry.register("isfinite", "npu", isfinite, meta=meta_infer.infer_unary_bool)
+registry.register("isinf", "npu", isinf, meta=meta_infer.infer_unary_bool)
+registry.register("isnan", "npu", isnan, meta=meta_infer.infer_unary_bool)
 registry.register("exp", "npu", exp, meta=meta_infer.infer_unary)
 registry.register("log", "npu", log, meta=meta_infer.infer_unary)
 registry.register("sqrt", "npu", sqrt, meta=meta_infer.infer_unary)
@@ -57,6 +75,10 @@ registry.register("cos", "npu", cos, meta=meta_infer.infer_unary)
 registry.register("tan", "npu", tan, meta=meta_infer.infer_unary)
 registry.register("tanh", "npu", tanh, meta=meta_infer.infer_unary)
 registry.register("sigmoid", "npu", sigmoid, meta=meta_infer.infer_unary)
+registry.register("sinh", "npu", sinh, meta=meta_infer.infer_unary)
+registry.register("cosh", "npu", cosh, meta=meta_infer.infer_unary)
+registry.register("erf", "npu", erf, meta=meta_infer.infer_unary)
+registry.register("erfc", "npu", erfc, meta=meta_infer.infer_unary)
 registry.register("floor", "npu", floor, meta=meta_infer.infer_unary)
 registry.register("ceil", "npu", ceil, meta=meta_infer.infer_unary)
 registry.register("round", "npu", round, meta=meta_infer.infer_unary)
@@ -65,6 +87,12 @@ registry.register("frac", "npu", frac, meta=meta_infer.infer_unary)
 registry.register("log2", "npu", log2, meta=meta_infer.infer_unary)
 registry.register("log10", "npu", log10, meta=meta_infer.infer_unary)
 registry.register("exp2", "npu", exp2, meta=meta_infer.infer_unary)
+registry.register("softplus", "npu", softplus, meta=meta_infer.infer_unary)
+registry.register("clamp", "npu", clamp, meta=meta_infer.infer_unary)
+registry.register("clamp_min", "npu", clamp_min, meta=meta_infer.infer_unary)
+registry.register("clamp_max", "npu", clamp_max, meta=meta_infer.infer_unary)
+registry.register("relu6", "npu", relu6, meta=meta_infer.infer_unary)
+registry.register("hardtanh", "npu", hardtanh, meta=meta_infer.infer_unary)
 registry.register("pow", "npu", pow, meta=meta_infer.infer_binary)
 registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
