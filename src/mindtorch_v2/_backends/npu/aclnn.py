@@ -496,6 +496,84 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        self.aclnn_argmax_get_workspace = _optional_symbol(
+            libs,
+            "aclnnArgMaxGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_int64,
+                ctypes.c_bool,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_argmax = _optional_symbol(
+            libs,
+            "aclnnArgMax",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_argmin_get_workspace = _optional_symbol(
+            libs,
+            "aclnnArgMinGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_int64,
+                ctypes.c_bool,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_argmin = _optional_symbol(
+            libs,
+            "aclnnArgMin",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_max_dim_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMaxDimGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_int64,
+                ctypes.c_bool,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_max_dim = _optional_symbol(
+            libs,
+            "aclnnMaxDim",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_min_dim_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMinDimGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_int64,
+                ctypes.c_bool,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_min_dim = _optional_symbol(
+            libs,
+            "aclnnMinDim",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
         self.aclnn_cosh_get_workspace = _optional_symbol(
             libs,
             "aclnnCoshGetWorkspaceSize",
@@ -1475,6 +1553,199 @@ def reduce_sum(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, runtime, 
         _ = (self_keep, out_keep, dim_array)
 
 
+
+
+
+def argmax(self_ptr, out_ptr, shape, stride, dtype, dim, keepdim, out_shape, out_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_argmax_get_workspace is None or bindings.aclnn_argmax is None:
+        raise RuntimeError("aclnnArgMax symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "int64", out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_argmax_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            ctypes.c_bool(keepdim),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnArgMaxGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_argmax(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnArgMax failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep)
+
+
+def argmin(self_ptr, out_ptr, shape, stride, dtype, dim, keepdim, out_shape, out_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_argmin_get_workspace is None or bindings.aclnn_argmin is None:
+        raise RuntimeError("aclnnArgMin symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "int64", out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_argmin_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            ctypes.c_bool(keepdim),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnArgMinGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_argmin(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnArgMin failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep)
+
+
+def max_dim(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim,
+            out_shape, out_stride, index_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_max_dim_get_workspace is None or bindings.aclnn_max_dim is None:
+        raise RuntimeError("aclnnMaxDim symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, out_shape, index_stride, "int64", indices_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_max_dim_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            ctypes.c_bool(keepdim),
+            out_tensor,
+            index_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaxDimGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_max_dim(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaxDim failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, index_keep)
+
+
+def min_dim(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim,
+            out_shape, out_stride, index_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_min_dim_get_workspace is None or bindings.aclnn_min_dim is None:
+        raise RuntimeError("aclnnMinDim symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, out_shape, index_stride, "int64", indices_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_min_dim_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            ctypes.c_bool(keepdim),
+            out_tensor,
+            index_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMinDimGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_min_dim(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMinDim failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, index_keep)
 def _unary_call(bindings, name, get_workspace_fn, exec_fn, self_ptr, out_ptr, shape, stride, dtype, runtime, stream, out_dtype=None):
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
     if out_dtype is None:
@@ -2739,6 +3010,38 @@ def eq_tensor_symbols_ok():
     try:
         bindings = get_bindings()
         return all([bindings.aclnn_eq_tensor_get_workspace, bindings.aclnn_eq_tensor])
+    except Exception:
+        return False
+
+
+def argmax_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_argmax_get_workspace, bindings.aclnn_argmax])
+    except Exception:
+        return False
+
+
+def argmin_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_argmin_get_workspace, bindings.aclnn_argmin])
+    except Exception:
+        return False
+
+
+def max_dim_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_max_dim_get_workspace, bindings.aclnn_max_dim])
+    except Exception:
+        return False
+
+
+def min_dim_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_min_dim_get_workspace, bindings.aclnn_min_dim])
     except Exception:
         return False
 

@@ -1,4 +1,5 @@
 from ..._dtype import bool as bool_dtype
+from ..._dtype import int64 as int64_dtype
 from ..._storage import npu_typed_storage_from_ptr
 from . import aclnn
 from . import runtime as npu_runtime
@@ -485,6 +486,173 @@ def isnan(a):
     )
     runtime.defer_free(tmp_ptr)
     out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def _normalize_reduction_dims(dim, ndim):
+    if dim is None:
+        return list(range(ndim))
+    if isinstance(dim, int):
+        return [dim]
+    return list(dim)
+
+
+def _reduce_out_shape(shape, dims, keepdim):
+    out_shape = list(shape)
+    for d in sorted(dims):
+        out_shape[d] = 1
+    if not keepdim:
+        out_shape = [s for i, s in enumerate(out_shape) if i not in dims]
+    return tuple(out_shape)
+
+
+def argmax(a, dim=None, keepdim=False):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU argmax expects NPU tensors")
+    if not aclnn.argmax_symbols_ok():
+        raise RuntimeError("aclnnArgMax not available")
+    if dim is None:
+        from ..common import view as view_backend
+
+        flat = view_backend.reshape(a, (_numel(a.shape),))
+        return argmax(flat, dim=0, keepdim=False)
+    out_shape = _reduce_out_shape(a.shape, _normalize_reduction_dims(dim, len(a.shape)), keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(int64_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    aclnn.argmax(
+        storage.data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dim,
+        keepdim,
+        out_shape,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), int64_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def argmin(a, dim=None, keepdim=False):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU argmin expects NPU tensors")
+    if not aclnn.argmin_symbols_ok():
+        raise RuntimeError("aclnnArgMin not available")
+    if dim is None:
+        from ..common import view as view_backend
+
+        flat = view_backend.reshape(a, (_numel(a.shape),))
+        return argmin(flat, dim=0, keepdim=False)
+    out_shape = _reduce_out_shape(a.shape, _normalize_reduction_dims(dim, len(a.shape)), keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(int64_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    storage = _unwrap_storage(a)
+    aclnn.argmin(
+        storage.data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dim,
+        keepdim,
+        out_shape,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), int64_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def amax(a, dim=None, keepdim=False):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU amax expects NPU tensors")
+    if not aclnn.max_dim_symbols_ok():
+        raise RuntimeError("aclnnMaxDim not available")
+    if dim is None:
+        from ..common import view as view_backend
+
+        flat = view_backend.reshape(a, (_numel(a.shape),))
+        return amax(flat, dim=0, keepdim=False)
+    dims = _normalize_reduction_dims(dim, len(a.shape))
+    if len(dims) != 1:
+        raise ValueError("NPU amax only supports single dimension")
+    out_shape = _reduce_out_shape(a.shape, dims, keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    idx_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(int64_dtype), runtime=runtime)
+    storage = _unwrap_storage(a)
+    aclnn.max_dim(
+        storage.data_ptr(),
+        out_ptr,
+        idx_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dims[0],
+        keepdim,
+        out_shape,
+        out_stride,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+    runtime.defer_free(idx_ptr)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def amin(a, dim=None, keepdim=False):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU amin expects NPU tensors")
+    if not aclnn.min_dim_symbols_ok():
+        raise RuntimeError("aclnnMinDim not available")
+    if dim is None:
+        from ..common import view as view_backend
+
+        flat = view_backend.reshape(a, (_numel(a.shape),))
+        return amin(flat, dim=0, keepdim=False)
+    dims = _normalize_reduction_dims(dim, len(a.shape))
+    if len(dims) != 1:
+        raise ValueError("NPU amin only supports single dimension")
+    out_shape = _reduce_out_shape(a.shape, dims, keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    idx_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(int64_dtype), runtime=runtime)
+    storage = _unwrap_storage(a)
+    aclnn.min_dim(
+        storage.data_ptr(),
+        out_ptr,
+        idx_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dims[0],
+        keepdim,
+        out_shape,
+        out_stride,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+    runtime.defer_free(idx_ptr)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
 

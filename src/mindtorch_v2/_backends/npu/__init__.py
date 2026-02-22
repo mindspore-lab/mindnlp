@@ -44,6 +44,10 @@ from .ops import (
     clamp,
     clamp_min,
     clamp_max,
+    amin,
+    amax,
+    argmax,
+    argmin,
     add_,
     mul_,
     relu_,
@@ -96,6 +100,11 @@ registry.register("clamp_max", "npu", clamp_max, meta=meta_infer.infer_unary)
 registry.register("relu6", "npu", relu6, meta=meta_infer.infer_unary)
 registry.register("hardtanh", "npu", hardtanh, meta=meta_infer.infer_unary)
 registry.register("pow", "npu", pow, meta=meta_infer.infer_binary)
+
+registry.register("amin", "npu", amin, meta=meta_infer.infer_sum)
+registry.register("amax", "npu", amax, meta=meta_infer.infer_sum)
+registry.register("argmax", "npu", argmax, meta=meta_infer.infer_argmax)
+registry.register("argmin", "npu", argmin, meta=meta_infer.infer_argmax)
 registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)

@@ -168,6 +168,7 @@ def test_npu_relu6_hardtanh(dtype):
     assert np.allclose(hardtanh.to("cpu").numpy(), np.clip(data, -1.0, 1.0).astype(np.float32), atol=1e-3, rtol=1e-3)
 
 
+
 def test_npu_isfinite_isinf_isnan_signbit():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
@@ -185,6 +186,34 @@ def test_npu_isfinite_isinf_isnan_signbit():
     assert np.array_equal(isinf.to("cpu").numpy(), np.isinf(data))
     assert np.array_equal(isnan.to("cpu").numpy(), np.isnan(data))
     assert np.array_equal(signbit.to("cpu").numpy(), np.signbit(data))
+
+
+def test_npu_amin_amax():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0], [3.0, 0.5]], device="npu")
+    expected_min = np.amin(x.to("cpu").numpy(), axis=1)
+    expected_max = np.amax(x.to("cpu").numpy(), axis=1)
+    np.testing.assert_allclose(torch.amin(x, dim=1).to("cpu").numpy(), expected_min)
+    np.testing.assert_allclose(torch.amax(x, dim=1).to("cpu").numpy(), expected_max)
+
+
+def test_npu_argmax_argmin():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 3.0, 2.0], [4.0, 0.0, 5.0]], device="npu")
+    expected_max = np.argmax(x.to("cpu").numpy(), axis=1)
+    expected_min = np.argmin(x.to("cpu").numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argmax(x, dim=1).to("cpu").numpy(), expected_max)
+    np.testing.assert_array_equal(torch.argmin(x, dim=1).to("cpu").numpy(), expected_min)
+    np.testing.assert_array_equal(
+        torch.argmax(x, dim=1, keepdim=True).to("cpu").numpy(),
+        expected_max.reshape(2, 1),
+    )
+    np.testing.assert_array_equal(
+        torch.argmin(x, dim=1, keepdim=True).to("cpu").numpy(),
+        expected_min.reshape(2, 1),
+    )
 
 
 @pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
