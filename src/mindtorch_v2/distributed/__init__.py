@@ -60,11 +60,27 @@ def is_initialized():
     return _default_pg is not None
 
 
+def _get_env_rank():
+    for var in ("RANK", "OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK"):
+        val = os.environ.get(var)
+        if val is not None:
+            return int(val)
+    return 0
+
+
+def _get_env_world_size():
+    for var in ("WORLD_SIZE", "OMPI_COMM_WORLD_SIZE", "PMI_SIZE"):
+        val = os.environ.get(var)
+        if val is not None:
+            return int(val)
+    return 1
+
+
 def _create_store_from_env(timeout):
     host = os.environ.get("MASTER_ADDR", "127.0.0.1")
     port = int(os.environ.get("MASTER_PORT", "29500"))
-    rank = int(os.environ.get("RANK", "0"))
-    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    rank = _get_env_rank()
+    world_size = _get_env_world_size()
     return TCPStore(host, port, world_size, is_master=(rank == 0),
                     timeout=int(timeout.total_seconds())
                     if isinstance(timeout, timedelta) else int(timeout))
@@ -96,9 +112,9 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     backend = str(backend).lower()
 
     if rank < 0:
-        rank = int(os.environ.get("RANK", "0"))
+        rank = _get_env_rank()
     if world_size < 0:
-        world_size = int(os.environ.get("WORLD_SIZE", "1"))
+        world_size = _get_env_world_size()
 
     if store is None:
         if init_method is not None and init_method.startswith("tcp://"):

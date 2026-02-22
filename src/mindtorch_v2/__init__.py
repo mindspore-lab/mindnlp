@@ -14,6 +14,7 @@ from ._dtype import int as int  # noqa: F811
 from ._device import device as Device, _default_device, get_default_device, set_default_device
 from ._tensor import Tensor
 from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range
+from ._functional import zeros_like
 from ._storage import UntypedStorage, TypedStorage
 from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, hstack, vstack, column_stack, pad_sequence, block_diag, cartesian_prod, chunk, split, unbind, abs, neg, exp, log, sqrt
 from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac

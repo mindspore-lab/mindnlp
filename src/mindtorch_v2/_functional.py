@@ -511,6 +511,14 @@ def zeros(shape, *, dtype=None, device=None, memory_format=None):
     return dispatch("zeros", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
+def zeros_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return zeros(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
 def ones(shape, *, dtype=None, device=None, memory_format=None):
     dev = _as_device(device)
     return dispatch("ones", dev, shape, dtype=dtype, memory_format=memory_format)

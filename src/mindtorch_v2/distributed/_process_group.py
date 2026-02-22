@@ -1,7 +1,10 @@
+import os
 import ctypes
 
 from ._hccl.hccl_bindings import (
-    get_bindings, HcclRootInfo, HCCL_ROOT_INFO_BYTES, HCCL_SUCCESS,
+    get_bindings, HcclRootInfo, HcclCommConfig, HCCL_ROOT_INFO_BYTES,
+    HCCL_COMM_CONFIG_COMM_NAME,
+    hccl_comm_config_init, is_hccl_feature_supported,
     dtype_to_hccl, _check,
 )
 from ._work import Work
@@ -44,6 +47,13 @@ class ProcessGroup:
 
 
 class ProcessGroupHCCL(ProcessGroup):
+    """HCCL process group using direct ctypes bindings to libhccl.so.
+
+    Initialization follows torch_npu's pattern:
+    1. Try ranktable path (RANK_TABLE_FILE + HcclCommInitClusterInfoConfig)
+    2. Fall back to root info path (HcclGetRootInfo + HcclCommInitRootInfoConfig)
+    """
+
     def __init__(self, store, rank, size, device_id=None, group_name="",
                  group_ranks=None):
         super().__init__(rank, size)
@@ -56,35 +66,80 @@ class ProcessGroupHCCL(ProcessGroup):
         self._store = store
         self._init_hccl(store, group_name)
 
-    def _init_hccl(self, store, prefix=""):
-        from .._backends.npu import state as npu_state
-        npu_state.set_device(self._device_id)
+    def _make_config(self):
+        config = HcclCommConfig()
+        hccl_comm_config_init(config)
+        # If HCCL doesn't support COMM_NAME feature, use compat size=32
+        # (torch_npu fallback for older CANN versions)
+        if not is_hccl_feature_supported(HCCL_COMM_CONFIG_COMM_NAME):
+            import struct
+            # Overwrite only the size field (first 8 bytes of reserved)
+            struct.pack_into("<Q", (ctypes.c_ubyte * 8).from_buffer(config), 0, 32)
+        return config
 
+    def _try_init_cluster_info(self):
+        """Try ranktable-based init (preferred for multi-node)."""
+        rank_table = os.environ.get("RANK_TABLE_FILE")
+        if not rank_table or not os.path.isfile(rank_table):
+            return False
         bindings = get_bindings()
+        if bindings.comm_init_cluster_info_config is None:
+            return False
+        config = self._make_config()
+        comm = ctypes.c_void_p()
+        ret = bindings.comm_init_cluster_info_config(
+            rank_table.encode("utf-8"),
+            ctypes.c_uint32(self._rank),
+            ctypes.byref(config),
+            ctypes.byref(comm),
+        )
+        if ret != 0:
+            return False
+        self._comm = comm
+        return True
 
+    def _init_root_info(self, store, prefix=""):
+        """Root info broadcast path (standard NCCL-like init)."""
+        bindings = get_bindings()
         key = f"{prefix}/hccl_root_info" if prefix else "hccl_root_info"
 
         if self._rank == 0:
             root_info = HcclRootInfo()
             ret = bindings.get_root_info(ctypes.byref(root_info))
             _check(ret, "HcclGetRootInfo")
-            store.set(key, bytes(root_info.internal))
+            # NOTE: must read from addressof, not .internal (which truncates at null)
+            store.set(key, ctypes.string_at(ctypes.addressof(root_info), HCCL_ROOT_INFO_BYTES))
         else:
             store.wait([key])
 
         raw = store.get(key)
+        if len(raw) != HCCL_ROOT_INFO_BYTES:
+            raise RuntimeError(
+                f"HCCL root info size mismatch: expected {HCCL_ROOT_INFO_BYTES}, got {len(raw)}"
+            )
         root_info = HcclRootInfo()
-        ctypes.memmove(root_info.internal, raw, HCCL_ROOT_INFO_BYTES)
+        # NOTE: must write to addressof, not .internal (which writes to temp copy)
+        ctypes.memmove(ctypes.addressof(root_info), raw, HCCL_ROOT_INFO_BYTES)
 
+        config = self._make_config()
         comm = ctypes.c_void_p()
-        ret = bindings.comm_init_root_info(
+        ret = bindings.comm_init_root_info_config(
             ctypes.c_uint32(self._size),
             ctypes.byref(root_info),
             ctypes.c_uint32(self._rank),
+            ctypes.byref(config),
             ctypes.byref(comm),
         )
-        _check(ret, "HcclCommInitRootInfo")
+        _check(ret, "HcclCommInitRootInfoConfig")
         self._comm = comm
+
+    def _init_hccl(self, store, prefix=""):
+        from .._backends.npu import state as npu_state
+        npu_state.set_device(self._device_id)
+
+        # Try ranktable path first, fall back to root info
+        if not self._try_init_cluster_info():
+            self._init_root_info(store, prefix)
 
     def _stream(self):
         return _get_stream(self._device_id)
