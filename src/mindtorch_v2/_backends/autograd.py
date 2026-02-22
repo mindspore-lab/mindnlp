@@ -6,7 +6,7 @@ from .._autograd.node import Node
 from .._autograd.utils import reduce_grad
 
 
-def _autograd_binary(name, backward_impl):
+def _autograd_binary(name, backward_impl, *, save_inputs=True):
     def wrapper(a, b):
         keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
         out = redispatch(name, keyset, a, b)
@@ -14,12 +14,16 @@ def _autograd_binary(name, backward_impl):
             node_holder = {}
 
             def _backward(grad):
-                saved_a, saved_b = node_holder["node"].saved_tensors()
+                if save_inputs:
+                    saved_a, saved_b = node_holder["node"].saved_tensors()
+                else:
+                    saved_a, saved_b = a, b
                 return backward_impl(grad, a, b, saved_a, saved_b, keyset)
 
             node = Node(_backward, (a, b))
             node_holder["node"] = node
-            node.save_for_backward(a, b)
+            if save_inputs:
+                node.save_for_backward(a, b)
             out.grad_fn = node
             out.requires_grad = True
         return out
@@ -192,7 +196,7 @@ def _inplace_zero_backward(_grad, _a, _saved_a, _args, _keyset):
     return (None,)
 
 
-registry.register_kernel("add", DispatchKey.Autograd, _autograd_binary("add", _add_backward))
+registry.register_kernel("add", DispatchKey.Autograd, _autograd_binary("add", _add_backward, save_inputs=False))
 registry.register_kernel("mul", DispatchKey.Autograd, _autograd_binary("mul", _mul_backward))
 registry.register_kernel("matmul", DispatchKey.Autograd, _autograd_binary("matmul", _matmul_backward))
 registry.register_kernel("sum", DispatchKey.Autograd, _autograd_unary("sum", _sum_backward, save_input=False))
