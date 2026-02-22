@@ -52,6 +52,8 @@ from .ops import (
     _meta_take_meta,
     _meta_take_along_dim_meta,
     _meta_index_select_meta,
+    _meta_gather_meta,
+    _meta_scatter_meta,
     _meta_cartesian_prod_meta,
     _meta_chunk_meta,
     _meta_split_meta,
@@ -137,6 +139,8 @@ registry.register("triu_indices", "meta", _meta_triu_indices_meta)
 registry.register("take", "meta", _meta_take_meta)
 registry.register("take_along_dim", "meta", _meta_take_along_dim_meta)
 registry.register("index_select", "meta", _meta_index_select_meta)
+registry.register("gather", "meta", _meta_gather_meta)
+registry.register("scatter", "meta", _meta_scatter_meta)
 registry.register("cartesian_prod", "meta", _meta_cartesian_prod_meta)
 registry.register("chunk", "meta", _meta_chunk_meta)
 registry.register("split", "meta", _meta_split_meta)

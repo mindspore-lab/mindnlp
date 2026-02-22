@@ -516,6 +516,14 @@ def index_select(a, dim, index):
     return dispatch("index_select", a.device.type, a, dim, index)
 
 
+def gather(a, dim, index):
+    return dispatch("gather", a.device.type, a, dim, index)
+
+
+def scatter(a, dim, index, src):
+    return dispatch("scatter", a.device.type, a, dim, index, src)
+
+
 def unbind(a, dim=0):
     return dispatch("unbind", a.device.type, a, dim)
 

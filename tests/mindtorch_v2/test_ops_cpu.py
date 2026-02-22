@@ -754,6 +754,34 @@ def test_index_select_cpu():
         torch.index_select(x, dim=1, index=bad_index)
 
 
+def test_gather_cpu():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    index = torch.tensor([[0, 2], [1, 0]], dtype=torch.int64)
+    expected = np.take_along_axis(x.numpy(), index.numpy(), axis=1)
+    np.testing.assert_allclose(torch.gather(x, dim=1, index=index).numpy(), expected)
+    neg_index = torch.tensor([[0, -1], [1, 0]], dtype=torch.int64)
+    with pytest.raises(IndexError):
+        torch.gather(x, dim=1, index=neg_index)
+    out_of_range = torch.tensor([[3, 0], [1, 0]], dtype=torch.int64)
+    with pytest.raises(IndexError):
+        torch.gather(x, dim=1, index=out_of_range)
+
+
+def test_scatter_cpu():
+    x = torch.tensor([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]])
+    index = torch.tensor([[0, 2], [1, 0]], dtype=torch.int64)
+    src = torch.tensor([[5.0, 6.0], [7.0, 8.0]])
+    expected = x.numpy().copy()
+    np.put_along_axis(expected, index.numpy(), src.numpy(), axis=1)
+    np.testing.assert_allclose(torch.scatter(x, dim=1, index=index, src=src).numpy(), expected)
+    expected_scalar = x.numpy().copy()
+    np.put_along_axis(expected_scalar, index.numpy(), 3.0, axis=1)
+    np.testing.assert_allclose(torch.scatter(x, dim=1, index=index, src=3.0).numpy(), expected_scalar)
+    out_of_range = torch.tensor([[3, 0], [1, 0]], dtype=torch.int64)
+    with pytest.raises(IndexError):
+        torch.scatter(x, dim=1, index=out_of_range, src=1.0)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

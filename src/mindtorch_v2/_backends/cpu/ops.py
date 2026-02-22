@@ -268,6 +268,50 @@ def index_select(a, dim, index):
     return _from_numpy(out, a.dtype, a.device)
 
 
+def _check_index_range(index, dim_size):
+    if (index < 0).any() or (index >= dim_size).any():
+        raise IndexError("index out of range")
+
+
+def gather(a, dim, index):
+    arr = _to_numpy(a)
+    idx = _ensure_integer_indices(_to_numpy(index), "index").astype(np.int64, copy=False)
+    if dim < 0:
+        dim += arr.ndim
+    if dim < 0 or dim >= arr.ndim:
+        raise ValueError("dim out of range")
+    if idx.ndim != arr.ndim:
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(idx.shape):
+        if i != dim and size != arr.shape[i]:
+            raise ValueError("index shape mismatch")
+    _check_index_range(idx, arr.shape[dim])
+    out = np.take_along_axis(arr, idx, axis=dim)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def scatter(a, dim, index, src):
+    arr = _to_numpy(a).copy()
+    idx = _ensure_integer_indices(_to_numpy(index), "index").astype(np.int64, copy=False)
+    if dim < 0:
+        dim += arr.ndim
+    if dim < 0 or dim >= arr.ndim:
+        raise ValueError("dim out of range")
+    if idx.ndim != arr.ndim:
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(idx.shape):
+        if i != dim and size != arr.shape[i]:
+            raise ValueError("index shape mismatch")
+    _check_index_range(idx, arr.shape[dim])
+    if hasattr(src, "shape"):
+        src_arr = _to_numpy(src)
+    else:
+        src_arr = np.array(src, dtype=arr.dtype)
+    src_arr = np.broadcast_to(src_arr, idx.shape)
+    np.put_along_axis(arr, idx, src_arr, axis=dim)
+    return _from_numpy(arr, a.dtype, a.device)
+
+
 def tril_indices(row, col, offset=0, dtype=None, device=None, layout=None):
     _check_indices_layout(layout)
     if row < 0 or col < 0:

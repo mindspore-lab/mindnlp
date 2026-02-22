@@ -376,6 +376,32 @@ def _meta_dsplit_meta(a, split_size_or_sections):
     return _meta_split_meta(a, split_size_or_sections, dim=2)
 
 
+def _meta_gather_meta(a, dim, index):
+    if dim < 0:
+        dim += len(a.shape)
+    if dim < 0 or dim >= len(a.shape):
+        raise ValueError("dim out of range")
+    if len(index.shape) != len(a.shape):
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(index.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("index shape mismatch")
+    return _meta_tensor(index.shape, a.dtype, a.device)
+
+
+def _meta_scatter_meta(a, dim, index, src):
+    if dim < 0:
+        dim += len(a.shape)
+    if dim < 0 or dim >= len(a.shape):
+        raise ValueError("dim out of range")
+    if len(index.shape) != len(a.shape):
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(index.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("index shape mismatch")
+    return _meta_tensor(a.shape, a.dtype, a.device)
+
+
 def _meta_take_meta(a, index):
     return _meta_tensor(index.shape, a.dtype, a.device)
 
@@ -510,6 +536,8 @@ __all__ = [
     "_meta_take_meta",
     "_meta_take_along_dim_meta",
     "_meta_index_select_meta",
+    "_meta_gather_meta",
+    "_meta_scatter_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

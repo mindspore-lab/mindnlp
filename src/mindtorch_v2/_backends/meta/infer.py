@@ -363,6 +363,34 @@ def infer_index_select(a, dim, index):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
+def infer_gather(a, dim, index):
+    if dim < 0:
+        dim += len(a.shape)
+    if dim < 0 or dim >= len(a.shape):
+        raise ValueError("dim out of range")
+    if len(index.shape) != len(a.shape):
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(index.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("index shape mismatch")
+    shape = tuple(index.shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_scatter(a, dim, index, src):
+    if dim < 0:
+        dim += len(a.shape)
+    if dim < 0 or dim >= len(a.shape):
+        raise ValueError("dim out of range")
+    if len(index.shape) != len(a.shape):
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(index.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("index shape mismatch")
+    shape = tuple(a.shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1
