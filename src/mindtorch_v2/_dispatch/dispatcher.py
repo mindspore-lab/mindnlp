@@ -198,7 +198,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     entry = registry.get(name)
 
     if entry.schema_obj is not None:
-        entry.schema_obj.bind(args, kwargs, op_name=alias_name)
+        entry.schema_obj.bind(args, kwargs, op_name=alias_name, error_overrides=entry.error_overrides)
 
     if DispatchKey.Functionalize in keyset and should_functionalize(entry):
         if pipe is not None and DispatchKey.Pipeline in keyset:

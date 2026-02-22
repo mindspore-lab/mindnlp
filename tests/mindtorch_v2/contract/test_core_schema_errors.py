@@ -11,7 +11,7 @@ from tests.mindtorch_v2.contract.helpers import assert_torch_error
         (lambda: torch.sum(), lambda: pt.sum()),
         (lambda: torch.transpose(), lambda: pt.transpose()),
         (lambda: torch.reshape(), lambda: pt.reshape()),
-        (lambda: torch.view(), lambda: pt.view()),
+        (lambda: torch.tensor([1.0]).view(), lambda: pt.tensor([1.0]).view()),
     ],
 )
 def test_core_missing_args_matches_torch(mt_call, torch_call):
