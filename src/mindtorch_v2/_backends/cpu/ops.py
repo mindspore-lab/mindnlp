@@ -3,6 +3,7 @@ import numpy as np
 
 from ..._dtype import bool as bool_dtype
 from ..._dtype import int64 as int64_dtype
+from ..._dtype import to_numpy_dtype
 from ..._storage import typed_storage_from_numpy
 from ..._tensor import Tensor
 
@@ -163,6 +164,10 @@ def cat(tensors, dim=0):
     return _from_numpy(np.concatenate(arrays, axis=dim), tensors[0].dtype, tensors[0].device)
 
 
+def concatenate(tensors, dim=0):
+    return cat(tensors, dim=dim)
+
+
 def hstack(tensors):
     if tensors[0].dim() == 1:
         return cat(tensors, dim=0)
@@ -176,11 +181,71 @@ def vstack(tensors):
     return cat(tensors, dim=0)
 
 
+def row_stack(tensors):
+    return vstack(tensors)
+
+
+def dstack(tensors):
+    arrays = [_to_numpy(t) for t in tensors]
+    expanded = []
+    for arr in arrays:
+        if arr.ndim == 1:
+            expanded.append(arr.reshape(1, arr.shape[0], 1))
+        elif arr.ndim == 2:
+            expanded.append(arr.reshape(arr.shape[0], arr.shape[1], 1))
+        else:
+            expanded.append(arr)
+    out = np.concatenate(expanded, axis=2)
+    return _from_numpy(out, tensors[0].dtype, tensors[0].device)
+
+
 def column_stack(tensors):
     if tensors[0].dim() == 1:
         expanded = [t.reshape((t.shape[0], 1)) for t in tensors]
         return cat(expanded, dim=1)
     return cat(tensors, dim=1)
+
+
+def _check_indices_layout(layout):
+    if layout is None:
+        return
+    if isinstance(layout, str):
+        if layout != "strided":
+            raise ValueError("layout must be strided")
+        return
+    raise ValueError("layout must be strided")
+
+
+def _indices_device(device):
+    if device is None:
+        return None
+    if isinstance(device, str):
+        return device
+    return str(device)
+
+
+def tril_indices(row, col, offset=0, dtype=None, device=None, layout=None):
+    _check_indices_layout(layout)
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+    dev = _indices_device(device)
+    r, c = np.tril_indices(row, k=offset, m=col)
+    out = np.stack([r, c], axis=0).astype(to_numpy_dtype(dtype), copy=False)
+    return _from_numpy(out, dtype, dev)
+
+
+def triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
+    _check_indices_layout(layout)
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+    dev = _indices_device(device)
+    r, c = np.triu_indices(row, k=offset, m=col)
+    out = np.stack([r, c], axis=0).astype(to_numpy_dtype(dtype), copy=False)
+    return _from_numpy(out, dtype, dev)
 
 
 def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):

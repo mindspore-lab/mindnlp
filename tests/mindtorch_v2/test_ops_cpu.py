@@ -470,6 +470,15 @@ def test_concat_cpu():
     np.testing.assert_allclose(torch.concat([a, b], dim=1).numpy(), expected)
 
 
+def test_concatenate_cpu():
+    a = torch.tensor([[1.0, 2.0]])
+    b = torch.tensor([[3.0, 4.0]])
+    expected = np.concatenate([a.numpy(), b.numpy()], axis=0)
+    np.testing.assert_allclose(torch.concatenate([a, b], dim=0).numpy(), expected)
+    expected_axis = np.concatenate([a.numpy(), b.numpy()], axis=1)
+    np.testing.assert_allclose(torch.concatenate([a, b], axis=1).numpy(), expected_axis)
+
+
 def test_stack_out_cpu():
     a = torch.tensor([1.0, 2.0])
     b = torch.tensor([3.0, 4.0])
@@ -502,6 +511,28 @@ def test_vstack_cpu():
     b = torch.tensor([3.0, 4.0])
     expected = np.vstack([a.numpy(), b.numpy()])
     np.testing.assert_allclose(torch.vstack([a, b]).numpy(), expected)
+
+
+def test_row_stack_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    expected = np.vstack([a.numpy(), b.numpy()])
+    np.testing.assert_allclose(torch.row_stack([a, b]).numpy(), expected)
+    c = torch.tensor([[1.0, 2.0]])
+    d = torch.tensor([[3.0, 4.0]])
+    expected_2d = np.vstack([c.numpy(), d.numpy()])
+    np.testing.assert_allclose(torch.row_stack([c, d]).numpy(), expected_2d)
+
+
+def test_dstack_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    expected = np.dstack([a.numpy(), b.numpy()])
+    np.testing.assert_allclose(torch.dstack([a, b]).numpy(), expected)
+    c = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    d = torch.tensor([[5.0, 6.0], [7.0, 8.0]])
+    expected_2d = np.dstack([c.numpy(), d.numpy()])
+    np.testing.assert_allclose(torch.dstack([c, d]).numpy(), expected_2d)
 
 
 def test_column_stack_cpu():
@@ -627,6 +658,20 @@ def test_diag_cpu():
     y = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
     expected_y = np.diag(y.numpy(), k=0)
     np.testing.assert_allclose(torch.diag(y).numpy(), expected_y)
+
+
+def test_tril_indices_cpu():
+    row, col, offset = 3, 4, 1
+    expected = np.vstack(np.tril_indices(row, k=offset, m=col))
+    out = torch.tril_indices(row, col, offset=offset)
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_triu_indices_cpu():
+    row, col, offset = 3, 4, -1
+    expected = np.vstack(np.triu_indices(row, k=offset, m=col))
+    out = torch.triu_indices(row, col, offset=offset)
+    np.testing.assert_allclose(out.numpy(), expected)
 
 
 def test_logspace_cpu():

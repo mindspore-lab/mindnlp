@@ -43,9 +43,12 @@ from .ops import (
     _meta_hstack_meta,
     _meta_vstack_meta,
     _meta_column_stack_meta,
+    _meta_dstack_meta,
     _meta_pad_sequence_meta,
     _meta_block_diag_meta,
     _meta_diag_meta,
+    _meta_tril_indices_meta,
+    _meta_triu_indices_meta,
     _meta_cartesian_prod_meta,
     _meta_chunk_meta,
     _meta_split_meta,
@@ -112,14 +115,19 @@ registry.register("topk", "meta", _meta_topk_meta)
 registry.register("stack", "meta", _meta_stack_meta)
 registry.register("cat", "meta", _meta_cat_meta)
 registry.register("concat", "meta", _meta_cat_meta)
+registry.register("concatenate", "meta", _meta_cat_meta)
 registry.register("hstack", "meta", _meta_hstack_meta)
 registry.register("vstack", "meta", _meta_vstack_meta)
+registry.register("row_stack", "meta", _meta_vstack_meta)
 registry.register("column_stack", "meta", _meta_column_stack_meta)
+registry.register("dstack", "meta", _meta_dstack_meta)
 registry.register("pad_sequence", "meta", _meta_pad_sequence_meta)
 registry.register("block_diag", "meta", _meta_block_diag_meta)
 registry.register("tril", "meta", _meta_unary_meta)
 registry.register("triu", "meta", _meta_unary_meta)
 registry.register("diag", "meta", _meta_diag_meta)
+registry.register("tril_indices", "meta", _meta_tril_indices_meta)
+registry.register("triu_indices", "meta", _meta_triu_indices_meta)
 registry.register("cartesian_prod", "meta", _meta_cartesian_prod_meta)
 registry.register("chunk", "meta", _meta_chunk_meta)
 registry.register("split", "meta", _meta_split_meta)
