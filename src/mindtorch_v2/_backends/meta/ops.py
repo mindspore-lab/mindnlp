@@ -158,6 +158,18 @@ def _meta_topk_meta(a, k, dim=-1, largest=True, sorted=True):
     )
 
 
+def _meta_stack_meta(tensors, dim=0):
+    shape = list(tensors[0].shape)
+    shape.insert(dim, len(tensors))
+    return _meta_tensor(tuple(shape), tensors[0].dtype, tensors[0].device)
+
+
+def _meta_cat_meta(tensors, dim=0):
+    shape = list(tensors[0].shape)
+    shape[dim] = sum(t.shape[dim] for t in tensors)
+    return _meta_tensor(tuple(shape), tensors[0].dtype, tensors[0].device)
+
+
 def _meta_argmax_meta(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
@@ -235,6 +247,8 @@ __all__ = [
     "_meta_argsort_meta",
     "_meta_sort_meta",
     "_meta_topk_meta",
+    "_meta_stack_meta",
+    "_meta_cat_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

@@ -181,6 +181,30 @@ def test_meta_topk_shape():
     assert indices.shape == (1, 2)
 
 
+def test_meta_stack_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0, 4.0], device="meta")
+    out = torch.stack([a, b], dim=0)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
+def test_meta_cat_shape():
+    a = torch.tensor([[1.0, 2.0]], device="meta")
+    b = torch.tensor([[3.0, 4.0]], device="meta")
+    out = torch.cat([a, b], dim=0)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
+def test_meta_concat_shape():
+    a = torch.tensor([[1.0, 2.0]], device="meta")
+    b = torch.tensor([[3.0, 4.0]], device="meta")
+    out = torch.concat([a, b], dim=1)
+    assert out.device.type == "meta"
+    assert out.shape == (1, 4)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)

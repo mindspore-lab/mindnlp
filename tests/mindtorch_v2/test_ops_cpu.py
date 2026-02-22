@@ -449,6 +449,47 @@ def test_topk_out_cpu():
     np.testing.assert_array_equal(out_indices.numpy(), expected_indices)
 
 
+def test_stack_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    expected = np.stack([a.numpy(), b.numpy()], axis=0)
+    np.testing.assert_allclose(torch.stack([a, b], dim=0).numpy(), expected)
+
+
+def test_cat_cpu():
+    a = torch.tensor([[1.0, 2.0]])
+    b = torch.tensor([[3.0, 4.0]])
+    expected = np.concatenate([a.numpy(), b.numpy()], axis=0)
+    np.testing.assert_allclose(torch.cat([a, b], dim=0).numpy(), expected)
+
+
+def test_concat_cpu():
+    a = torch.tensor([[1.0, 2.0]])
+    b = torch.tensor([[3.0, 4.0]])
+    expected = np.concatenate([a.numpy(), b.numpy()], axis=1)
+    np.testing.assert_allclose(torch.concat([a, b], dim=1).numpy(), expected)
+
+
+def test_stack_out_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    out = torch.empty((2, 2))
+    result = torch.stack([a, b], dim=0, out=out)
+    assert result is out
+    expected = np.stack([a.numpy(), b.numpy()], axis=0)
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_cat_out_cpu():
+    a = torch.tensor([[1.0, 2.0]])
+    b = torch.tensor([[3.0, 4.0]])
+    out = torch.empty((2, 2))
+    result = torch.cat([a, b], dim=0, out=out)
+    assert result is out
+    expected = np.concatenate([a.numpy(), b.numpy()], axis=0)
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

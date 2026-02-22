@@ -15,7 +15,7 @@ from ._device import device as Device, _default_device, get_default_device, set_
 from ._tensor import Tensor
 from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range
 from ._storage import UntypedStorage, TypedStorage
-from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, abs, neg, exp, log, sqrt
+from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, abs, neg, exp, log, sqrt
 from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac
 from ._functional import pow, log2, log10, exp2, rsqrt
 from ._functional import sign, signbit, isnan, isinf, isfinite
@@ -87,6 +87,9 @@ __all__ = [
     "argsort",
     "sort",
     "topk",
+    "stack",
+    "cat",
+    "concat",
     "allclose",
     "isclose",
     "equal",

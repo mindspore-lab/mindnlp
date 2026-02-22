@@ -151,6 +151,16 @@ def topk(a, k, dim=-1, largest=True, sorted=True):
     )
 
 
+def stack(tensors, dim=0):
+    arrays = [_to_numpy(t) for t in tensors]
+    return _from_numpy(np.stack(arrays, axis=dim), tensors[0].dtype, tensors[0].device)
+
+
+def cat(tensors, dim=0):
+    arrays = [_to_numpy(t) for t in tensors]
+    return _from_numpy(np.concatenate(arrays, axis=dim), tensors[0].dtype, tensors[0].device)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),

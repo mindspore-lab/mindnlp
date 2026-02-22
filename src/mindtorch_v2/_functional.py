@@ -382,6 +382,36 @@ def topk(a, k, dim=-1, largest=True, sorted=True, out=None):
     return values, indices
 
 
+def stack(tensors, dim=0, out=None):
+    result = dispatch("stack", tensors[0].device.type, tensors, dim=dim)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def cat(tensors, dim=0, out=None):
+    result = dispatch("cat", tensors[0].device.type, tensors, dim=dim)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def concat(tensors, dim=0, out=None):
+    return cat(tensors, dim=dim, out=out)
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 

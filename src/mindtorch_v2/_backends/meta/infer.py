@@ -94,6 +94,20 @@ def infer_argsort(a, dim=-1, descending=False, stable=False):
     return TensorSpec(shape=spec.shape, stride=spec.stride, dtype=int64_dtype)
 
 
+def infer_stack(tensors, dim=0):
+    shape = list(tensors[0].shape)
+    shape.insert(dim, len(tensors))
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
+def infer_cat(tensors, dim=0):
+    shape = list(tensors[0].shape)
+    shape[dim] = sum(t.shape[dim] for t in tensors)
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1
