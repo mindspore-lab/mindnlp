@@ -2,6 +2,7 @@ import math
 import numpy as np
 
 from ..._dtype import bool as bool_dtype
+from ..._dtype import int64 as int64_dtype
 from ..._storage import typed_storage_from_numpy
 from ..._tensor import Tensor
 
@@ -34,6 +35,26 @@ def relu(a):
 
 def sum_(a, dim=None, keepdim=False):
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
+
+
+def all_(a, dim=None, keepdim=False):
+    return _from_numpy(np.all(_to_numpy(a), axis=dim, keepdims=keepdim), bool_dtype, a.device)
+
+
+def any_(a, dim=None, keepdim=False):
+    return _from_numpy(np.any(_to_numpy(a), axis=dim, keepdims=keepdim), bool_dtype, a.device)
+
+
+def argmax(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.array(np.argmax(arr), dtype=np.int64)
+    else:
+        out = np.argmax(arr, axis=dim)
+        if keepdim:
+            out = np.expand_dims(out, axis=dim)
+        out = out.astype(np.int64)
+    return _from_numpy(out, int64_dtype, a.device)
 
 
 def add_(a, b):

@@ -311,6 +311,30 @@ def test_amax_cpu():
     np.testing.assert_allclose(torch.amax(x, dim=1).numpy(), expected)
 
 
+def test_all_cpu():
+    x = torch.tensor([[True, False], [True, True]], dtype=torch.bool)
+    expected = np.all(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.all(x, dim=1).numpy(), expected)
+    expected_keep = np.all(x.numpy(), axis=1, keepdims=True)
+    np.testing.assert_array_equal(torch.all(x, dim=1, keepdim=True).numpy(), expected_keep)
+
+
+def test_any_cpu():
+    x = torch.tensor([[False, False], [True, False]], dtype=torch.bool)
+    expected = np.any(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.any(x, dim=1).numpy(), expected)
+    expected_keep = np.any(x.numpy(), axis=1, keepdims=True)
+    np.testing.assert_array_equal(torch.any(x, dim=1, keepdim=True).numpy(), expected_keep)
+
+
+def test_argmax_cpu():
+    x = torch.tensor([[1.0, 3.0, 2.0], [4.0, 0.0, 5.0]])
+    expected = np.argmax(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argmax(x, dim=1).numpy(), expected)
+    expected_keep = np.argmax(x.numpy(), axis=1)
+    np.testing.assert_array_equal(torch.argmax(x, dim=1, keepdim=True).numpy(), expected_keep.reshape(2, 1))
+
+
 def test_fmin_cpu():
     x = torch.tensor([1.0, float('nan'), 2.0])
     y = torch.tensor([0.5, 1.0, float('nan')])

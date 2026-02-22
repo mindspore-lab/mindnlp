@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..._dtype import bool as bool_dtype
+from ..._dtype import int64 as int64_dtype
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,16 @@ def infer_sum(a, dim=None, keepdim=False):
         shape = [s for i, s in enumerate(shape) if i not in dims]
     shape = tuple(shape)
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_reduce_bool(a, dim=None, keepdim=False):
+    spec = infer_sum(a, dim=dim, keepdim=keepdim)
+    return TensorSpec(shape=spec.shape, stride=spec.stride, dtype=bool_dtype)
+
+
+def infer_argmax(a, dim=None, keepdim=False):
+    spec = infer_sum(a, dim=dim, keepdim=keepdim)
+    return TensorSpec(shape=spec.shape, stride=spec.stride, dtype=int64_dtype)
 
 
 def infer_view(a, shape):

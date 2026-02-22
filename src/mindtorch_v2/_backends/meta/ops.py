@@ -1,6 +1,7 @@
 import numpy as np
 
 from ..._dtype import bool as bool_dtype
+from ..._dtype import int64 as int64_dtype
 from ..._dtype import to_numpy_dtype
 from ..._storage import meta_typed_storage_from_shape
 from ..._tensor import Tensor
@@ -116,6 +117,27 @@ def _meta_sum_meta(a, dim=None, keepdim=False):
     return _meta_tensor(tuple(shape), a.dtype, a.device)
 
 
+def _meta_reduce_bool_meta(a, dim=None, keepdim=False):
+    out = _meta_sum_meta(a, dim=dim, keepdim=keepdim)
+    return _meta_tensor(out.shape, bool_dtype, a.device)
+
+
+def _meta_argmax_meta(a, dim=None, keepdim=False):
+    shape = list(a.shape)
+    if dim is None:
+        dims = list(range(len(shape)))
+    elif isinstance(dim, int):
+        dims = [dim]
+    else:
+        dims = list(dim)
+    for d in sorted(dims):
+        shape[d] = 1
+    if not keepdim:
+        shape = [s for i, s in enumerate(shape) if i not in dims]
+    # PyTorch argmax returns int64
+    return _meta_tensor(tuple(shape), int64_dtype, a.device)
+
+
 def _meta_view_meta(a, shape):
     return _meta_tensor(tuple(shape), a.dtype, a.device)
 
@@ -170,6 +192,8 @@ __all__ = [
     "_meta_addcdiv_meta",
     "_meta_matmul_meta",
     "_meta_sum_meta",
+    "_meta_reduce_bool_meta",
+    "_meta_argmax_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

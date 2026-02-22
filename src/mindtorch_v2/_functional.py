@@ -270,6 +270,18 @@ def sum(a, dim=None, keepdim=False):
     return dispatch("sum", a.device.type, a, dim=dim, keepdim=keepdim)
 
 
+def all(a, dim=None, keepdim=False):
+    return dispatch("all", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def any(a, dim=None, keepdim=False):
+    return dispatch("any", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def argmax(a, dim=None, keepdim=False):
+    return dispatch("argmax", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 
