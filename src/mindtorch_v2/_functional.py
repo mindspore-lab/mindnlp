@@ -305,6 +305,171 @@ def count_nonzero(a, dim=None, keepdim=False):
     return dispatch("count_nonzero", a.device.type, a, dim=dim, keepdim=keepdim)
 
 
+def cumsum(a, dim=0):
+    return dispatch("cumsum", a.device.type, a, dim)
+
+
+def cumprod(a, dim=0):
+    return dispatch("cumprod", a.device.type, a, dim)
+
+
+def cummax(a, dim=0):
+    return dispatch("cummax", a.device.type, a, dim)
+
+
+def argsort(a, dim=-1, descending=False, stable=False, out=None):
+    result = dispatch("argsort", a.device.type, a, dim=dim, descending=descending, stable=stable)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def sort(a, dim=-1, descending=False, stable=False, out=None):
+    values, indices = dispatch("sort", a.device.type, a, dim=dim, descending=descending, stable=stable)
+    if out is not None:
+        out_values, out_indices = out
+        out_values._storage = values.storage()
+        out_values.shape = values.shape
+        out_values.stride = values.stride
+        out_values.offset = values.offset
+        out_values._base = values._base
+        out_values._view_meta = values._view_meta
+        out_indices._storage = indices.storage()
+        out_indices.shape = indices.shape
+        out_indices.stride = indices.stride
+        out_indices.offset = indices.offset
+        out_indices._base = indices._base
+        out_indices._view_meta = indices._view_meta
+        return out_values, out_indices
+    return values, indices
+
+
+def topk(a, k, dim=-1, largest=True, sorted=True, out=None):
+    values, indices = dispatch("topk", a.device.type, a, k, dim=dim, largest=largest, sorted=sorted)
+    if out is not None:
+        out_values, out_indices = out
+        out_values._storage = values.storage()
+        out_values.shape = values.shape
+        out_values.stride = values.stride
+        out_values.offset = values.offset
+        out_values._base = values._base
+        out_values._view_meta = values._view_meta
+        out_indices._storage = indices.storage()
+        out_indices.shape = indices.shape
+        out_indices.stride = indices.stride
+        out_indices.offset = indices.offset
+        out_indices._base = indices._base
+        out_indices._view_meta = indices._view_meta
+        return out_values, out_indices
+    return values, indices
+
+
+def stack(tensors, dim=0, out=None):
+    result = dispatch("stack", tensors[0].device.type, tensors, dim=dim)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def cat(tensors, dim=0, out=None):
+    result = dispatch("cat", tensors[0].device.type, tensors, dim=dim)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def concat(tensors, dim=0, out=None):
+    return cat(tensors, dim=dim, out=out)
+
+
+def hstack(tensors, out=None):
+    result = dispatch("hstack", tensors[0].device.type, tensors)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def vstack(tensors, out=None):
+    result = dispatch("vstack", tensors[0].device.type, tensors)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def column_stack(tensors, out=None):
+    result = dispatch("column_stack", tensors[0].device.type, tensors)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
+    return dispatch(
+        "pad_sequence",
+        seqs[0].device.type,
+        seqs,
+        batch_first=batch_first,
+        padding_value=padding_value,
+        padding_side=padding_side,
+    )
+
+
+def block_diag(*tensors):
+    return dispatch("block_diag", tensors[0].device.type, *tensors)
+
+
+def cartesian_prod(*tensors):
+    return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
+
+
+def chunk(a, chunks, dim=0):
+    return dispatch("chunk", a.device.type, a, chunks, dim)
+
+
+def split(a, split_size_or_sections, dim=0):
+    return dispatch("split", a.device.type, a, split_size_or_sections, dim)
+
+
+def unbind(a, dim=0):
+    return dispatch("unbind", a.device.type, a, dim)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return dispatch("allclose", a.device.type, a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
