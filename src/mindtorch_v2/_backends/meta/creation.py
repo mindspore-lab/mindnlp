@@ -70,6 +70,22 @@ def logspace_create_meta(start, end, steps, dtype=None, device=None):
     return Tensor(storage, arr.shape, stride)
 
 
+def eye_create_meta(n, m=None, dtype=None, device=None):
+    if m is None:
+        m = n
+    arr = np.eye(n, m, dtype=to_numpy_dtype(dtype))
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
+    return Tensor(storage, arr.shape, stride)
+
+
+def range_create_meta(start, end, step=1, dtype=None, device=None):
+    arr = np.arange(start, end + step, step, dtype=to_numpy_dtype(dtype))
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
+    return Tensor(storage, arr.shape, stride)
+
+
 __all__ = [
     "tensor_create_meta",
     "zeros_create_meta",
@@ -79,4 +95,6 @@ __all__ = [
     "linspace_create_meta",
     "full_create_meta",
     "logspace_create_meta",
+    "eye_create_meta",
+    "range_create_meta",
 ]

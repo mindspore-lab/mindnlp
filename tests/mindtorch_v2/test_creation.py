@@ -1,3 +1,4 @@
+import numpy as np
 import mindtorch_v2 as torch
 
 
@@ -18,6 +19,19 @@ def test_creation_device_index_cpu_meta():
     meta_tensor = torch.ones((1,), device="meta:1")
     assert meta_tensor.device.type == "meta"
     assert meta_tensor.device.index == 1
+
+
+def test_eye_cpu():
+    x = torch.eye(3, 2)
+    expected = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]]
+    assert x.shape == (3, 2)
+    assert x.numpy().tolist() == expected
+
+
+def test_range_cpu():
+    x = torch.range(0.0, 2.0, 0.5)
+    expected = np.arange(0.0, 2.0 + 0.5, 0.5)
+    np.testing.assert_allclose(x.numpy(), expected)
 
 
 def test_arange_cpu():

@@ -125,6 +125,18 @@ def test_meta_logspace_shape():
     assert x.shape == (3,)
 
 
+def test_meta_eye_shape():
+    x = torch.eye(3, 2, device="meta")
+    assert x.device.type == "meta"
+    assert x.shape == (3, 2)
+
+
+def test_meta_range_shape():
+    x = torch.range(0.0, 2.0, 0.5, device="meta")
+    assert x.device.type == "meta"
+    assert x.shape == (5,)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)

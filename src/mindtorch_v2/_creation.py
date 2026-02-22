@@ -7,6 +7,8 @@ from ._functional import arange as arange_dispatch
 from ._functional import linspace as linspace_dispatch
 from ._functional import full as full_dispatch
 from ._functional import logspace as logspace_dispatch
+from ._functional import eye as eye_dispatch
+from ._functional import range as range_dispatch
 
 
 def tensor(data, dtype=float32, device=None, requires_grad=False):
@@ -39,3 +41,11 @@ def full(shape, fill_value, dtype=float32, device=None):
 
 def logspace(start, end, steps, dtype=float32, device=None):
     return logspace_dispatch(start, end, steps, dtype=dtype, device=device)
+
+
+def eye(n, m=None, dtype=float32, device=None):
+    return eye_dispatch(n, m, dtype=dtype, device=device)
+
+
+def range(start, end, step=1, dtype=float32, device=None):
+    return range_dispatch(start, end, step=step, dtype=dtype, device=device)
