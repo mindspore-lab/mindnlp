@@ -374,6 +374,29 @@ def test_meta_index_select_shape():
         torch.index_select(x, dim=1, index=bad_index)
 
 
+def test_meta_gather_shape():
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="meta")
+    index = torch.tensor([[0, 2], [1, 0]], device="meta", dtype=torch.int64)
+    out = torch.gather(x, dim=1, index=index)
+    assert out.device.type == "meta"
+    assert out.shape == index.shape
+    bad_index = torch.tensor([[0, 1, 2]], device="meta", dtype=torch.int64)
+    with pytest.raises(ValueError):
+        torch.gather(x, dim=1, index=bad_index)
+
+
+def test_meta_scatter_shape():
+    x = torch.tensor([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]], device="meta")
+    index = torch.tensor([[0, 2], [1, 0]], device="meta", dtype=torch.int64)
+    src = torch.tensor([[5.0, 6.0], [7.0, 8.0]], device="meta")
+    out = torch.scatter(x, dim=1, index=index, src=src)
+    assert out.device.type == "meta"
+    assert out.shape == x.shape
+    bad_index = torch.tensor([[0, 1, 2]], device="meta", dtype=torch.int64)
+    with pytest.raises(ValueError):
+        torch.scatter(x, dim=1, index=bad_index, src=src)
+
+
 def test_meta_tril_triu_shape():
     x = torch.tensor([[1.0, 2.0]], device="meta")
     out = torch.tril(x, diagonal=-1)
