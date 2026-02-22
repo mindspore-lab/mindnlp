@@ -40,6 +40,9 @@ from .ops import (
     _meta_topk_meta,
     _meta_stack_meta,
     _meta_cat_meta,
+    _meta_hstack_meta,
+    _meta_vstack_meta,
+    _meta_column_stack_meta,
 )
 
 registry.register("add", "meta", _meta_binary_meta)
@@ -102,6 +105,9 @@ registry.register("topk", "meta", _meta_topk_meta)
 registry.register("stack", "meta", _meta_stack_meta)
 registry.register("cat", "meta", _meta_cat_meta)
 registry.register("concat", "meta", _meta_cat_meta)
+registry.register("hstack", "meta", _meta_hstack_meta)
+registry.register("vstack", "meta", _meta_vstack_meta)
+registry.register("column_stack", "meta", _meta_column_stack_meta)
 registry.register("allclose", "meta", _meta_reduce_bool_meta)
 registry.register("isclose", "meta", _meta_binary_meta)
 registry.register("equal", "meta", _meta_equal_meta)

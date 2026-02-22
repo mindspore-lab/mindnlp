@@ -490,6 +490,37 @@ def test_cat_out_cpu():
     np.testing.assert_allclose(out.numpy(), expected)
 
 
+def test_hstack_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    expected = np.hstack([a.numpy(), b.numpy()])
+    np.testing.assert_allclose(torch.hstack([a, b]).numpy(), expected)
+
+
+def test_vstack_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    expected = np.vstack([a.numpy(), b.numpy()])
+    np.testing.assert_allclose(torch.vstack([a, b]).numpy(), expected)
+
+
+def test_column_stack_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    expected = np.column_stack([a.numpy(), b.numpy()])
+    np.testing.assert_allclose(torch.column_stack([a, b]).numpy(), expected)
+
+
+def test_hstack_out_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    out = torch.empty((4,))
+    result = torch.hstack([a, b], out=out)
+    assert result is out
+    expected = np.hstack([a.numpy(), b.numpy()])
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

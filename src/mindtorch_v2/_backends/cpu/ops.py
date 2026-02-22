@@ -161,6 +161,26 @@ def cat(tensors, dim=0):
     return _from_numpy(np.concatenate(arrays, axis=dim), tensors[0].dtype, tensors[0].device)
 
 
+def hstack(tensors):
+    if tensors[0].dim() == 1:
+        return cat(tensors, dim=0)
+    return cat(tensors, dim=1)
+
+
+def vstack(tensors):
+    if tensors[0].dim() == 1:
+        expanded = [t.reshape((1, t.shape[0])) for t in tensors]
+        return cat(expanded, dim=0)
+    return cat(tensors, dim=0)
+
+
+def column_stack(tensors):
+    if tensors[0].dim() == 1:
+        expanded = [t.reshape((t.shape[0], 1)) for t in tensors]
+        return cat(expanded, dim=1)
+    return cat(tensors, dim=1)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),

@@ -412,6 +412,45 @@ def concat(tensors, dim=0, out=None):
     return cat(tensors, dim=dim, out=out)
 
 
+def hstack(tensors, out=None):
+    result = dispatch("hstack", tensors[0].device.type, tensors)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def vstack(tensors, out=None):
+    result = dispatch("vstack", tensors[0].device.type, tensors)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
+def column_stack(tensors, out=None):
+    result = dispatch("column_stack", tensors[0].device.type, tensors)
+    if out is not None:
+        out._storage = result.storage()
+        out.shape = result.shape
+        out.stride = result.stride
+        out.offset = result.offset
+        out._base = result._base
+        out._view_meta = result._view_meta
+        return out
+    return result
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 

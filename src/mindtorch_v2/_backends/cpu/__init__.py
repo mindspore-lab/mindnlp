@@ -33,6 +33,9 @@ from .ops import (
     topk,
     stack,
     cat,
+    hstack,
+    vstack,
+    column_stack,
     allclose,
     isclose,
     equal,
@@ -181,6 +184,9 @@ registry.register("topk", "cpu", topk, meta=meta_infer.infer_topk)
 registry.register("stack", "cpu", stack, meta=meta_infer.infer_stack)
 registry.register("cat", "cpu", cat, meta=meta_infer.infer_cat)
 registry.register("concat", "cpu", cat, meta=meta_infer.infer_cat)
+registry.register("hstack", "cpu", hstack, meta=meta_infer.infer_hstack)
+registry.register("vstack", "cpu", vstack, meta=meta_infer.infer_vstack)
+registry.register("column_stack", "cpu", column_stack, meta=meta_infer.infer_column_stack)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)
