@@ -53,3 +53,7 @@ from .modules.padding import (
 
 # Upsampling
 from .modules.upsampling import Upsample
+
+# Parallel
+from . import parallel
+from .parallel import DistributedDataParallel

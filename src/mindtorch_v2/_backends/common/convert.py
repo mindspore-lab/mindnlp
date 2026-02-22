@@ -13,11 +13,25 @@ from ..._tensor import Tensor
 def to_device(a, dev, dtype=None, non_blocking=False, copy=False, memory_format=None):
     if dtype is not None:
         a = a._to_dtype(dtype)
-    if copy:
-        a = a.clone()
     if isinstance(dev, str):
         dev = Device(dev)
+    # Check if already on target device
     if a.device.type == dev.type and a.device.index == dev.index:
+        if copy:
+            if dev.type == "cpu":
+                arr = a.storage().data.copy()
+                storage = typed_storage_from_numpy(arr, a.dtype, device=dev)
+                return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+            if dev.type == "npu":
+                from ..npu import runtime as npu_runtime
+                runtime = npu_runtime.get_runtime(dev.index or 0)
+                runtime.synchronize()
+                arr = npu_runtime._copy_npu_to_cpu(
+                    a.storage().data_ptr(), a.storage().nbytes(), a.shape, a.dtype, runtime=runtime
+                )
+                ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
+                storage = npu_typed_storage_from_ptr(ptr, arr.size, a.dtype, device=dev)
+                return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
         return a
     if a.device.type == "meta":
         if dev.type == "meta":
