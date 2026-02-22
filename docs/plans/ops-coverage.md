@@ -109,3 +109,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::argsort` | CPU | done | - | numpy impl + meta + tests |
 | `aten::sort` | CPU | done | - | numpy impl + meta + tests |
 | `aten::topk` | CPU | done | - | numpy impl + meta + tests |
+| `aten::stack` | CPU | done | - | numpy impl + meta + tests |
+| `aten::cat` | CPU | done | - | numpy impl + meta + tests |
+| `aten::concat` | CPU | done | - | numpy impl + meta + tests |

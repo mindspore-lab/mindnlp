@@ -31,6 +31,8 @@ from .ops import (
     argsort,
     sort,
     topk,
+    stack,
+    cat,
     allclose,
     isclose,
     equal,
@@ -176,6 +178,9 @@ registry.register("cummax", "cpu", cummax, meta=meta_infer.infer_cummax)
 registry.register("argsort", "cpu", argsort, meta=meta_infer.infer_argsort)
 registry.register("sort", "cpu", sort, meta=meta_infer.infer_sort)
 registry.register("topk", "cpu", topk, meta=meta_infer.infer_topk)
+registry.register("stack", "cpu", stack, meta=meta_infer.infer_stack)
+registry.register("cat", "cpu", cat, meta=meta_infer.infer_cat)
+registry.register("concat", "cpu", cat, meta=meta_infer.infer_cat)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)
