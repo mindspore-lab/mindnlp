@@ -229,6 +229,30 @@ def test_meta_column_stack_shape():
     assert out.shape == (2, 2)
 
 
+def test_meta_pad_sequence_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0], device="meta")
+    out = torch.pad_sequence([a, b], batch_first=True)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
+def test_meta_block_diag_shape():
+    a = torch.tensor([[1.0, 2.0]], device="meta")
+    b = torch.tensor([[3.0]], device="meta")
+    out = torch.block_diag(a, b)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 3)
+
+
+def test_meta_cartesian_prod_shape():
+    a = torch.tensor([1.0, 2.0], device="meta")
+    b = torch.tensor([3.0], device="meta")
+    out = torch.cartesian_prod(a, b)
+    assert out.device.type == "meta"
+    assert out.shape == (2, 2)
+
+
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")
     out = torch.pow(x, 2.0)

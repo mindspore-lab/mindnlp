@@ -521,6 +521,52 @@ def test_hstack_out_cpu():
     np.testing.assert_allclose(out.numpy(), expected)
 
 
+def test_pad_sequence_cpu_right():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0])
+    out = torch.pad_sequence(
+        [a, b],
+        batch_first=True,
+        padding_value=0.0,
+        padding_side="right",
+    )
+    expected = np.array([[1.0, 2.0], [3.0, 0.0]])
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_pad_sequence_cpu_left():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0])
+    out = torch.pad_sequence(
+        [a, b],
+        batch_first=True,
+        padding_value=-1.0,
+        padding_side="left",
+    )
+    expected = np.array([[1.0, 2.0], [-1.0, 3.0]])
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_block_diag_cpu():
+    a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    b = torch.tensor([[5.0]])
+    out = torch.block_diag(a, b)
+    expected = np.array([
+        [1.0, 2.0, 0.0],
+        [3.0, 4.0, 0.0],
+        [0.0, 0.0, 5.0],
+    ])
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_cartesian_prod_cpu():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    out = torch.cartesian_prod(a, b)
+    expected = np.array([[1.0, 3.0], [1.0, 4.0], [2.0, 3.0], [2.0, 4.0]])
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

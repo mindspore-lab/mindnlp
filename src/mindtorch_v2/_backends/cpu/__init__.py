@@ -36,6 +36,9 @@ from .ops import (
     hstack,
     vstack,
     column_stack,
+    pad_sequence,
+    block_diag,
+    cartesian_prod,
     allclose,
     isclose,
     equal,
@@ -187,6 +190,9 @@ registry.register("concat", "cpu", cat, meta=meta_infer.infer_cat)
 registry.register("hstack", "cpu", hstack, meta=meta_infer.infer_hstack)
 registry.register("vstack", "cpu", vstack, meta=meta_infer.infer_vstack)
 registry.register("column_stack", "cpu", column_stack, meta=meta_infer.infer_column_stack)
+registry.register("pad_sequence", "cpu", pad_sequence, meta=meta_infer.infer_pad_sequence)
+registry.register("block_diag", "cpu", block_diag, meta=meta_infer.infer_block_diag)
+registry.register("cartesian_prod", "cpu", cartesian_prod, meta=meta_infer.infer_cartesian_prod)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)

@@ -181,6 +181,43 @@ def column_stack(tensors):
     return cat(tensors, dim=1)
 
 
+def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
+    arrays = [_to_numpy(t) for t in seqs]
+    max_len = max(a.shape[0] for a in arrays)
+    batch = len(arrays)
+    trailing = arrays[0].shape[1:]
+    out_shape = (batch, max_len, *trailing) if batch_first else (max_len, batch, *trailing)
+    out = np.full(out_shape, padding_value, dtype=arrays[0].dtype)
+    for i, a in enumerate(arrays):
+        length = a.shape[0]
+        start = max_len - length if padding_side == "left" else 0
+        if batch_first:
+            out[i, start:start + length, ...] = a
+        else:
+            out[start:start + length, i, ...] = a
+    return _from_numpy(out, seqs[0].dtype, seqs[0].device)
+
+
+def block_diag(*tensors):
+    arrays = [_to_numpy(t) for t in tensors]
+    rows = sum(a.shape[0] for a in arrays)
+    cols = sum(a.shape[1] for a in arrays)
+    out = np.zeros((rows, cols), dtype=arrays[0].dtype)
+    r = c = 0
+    for a in arrays:
+        out[r:r + a.shape[0], c:c + a.shape[1]] = a
+        r += a.shape[0]
+        c += a.shape[1]
+    return _from_numpy(out, tensors[0].dtype, tensors[0].device)
+
+
+def cartesian_prod(*tensors):
+    arrays = [_to_numpy(t) for t in tensors]
+    grids = np.meshgrid(*arrays, indexing="ij")
+    stacked = np.stack([g.reshape(-1) for g in grids], axis=1)
+    return _from_numpy(stacked, tensors[0].dtype, tensors[0].device)
+
+
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return np.allclose(
         _to_numpy(a),

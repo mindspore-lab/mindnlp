@@ -138,6 +138,31 @@ def infer_column_stack(tensors):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
 
 
+def infer_pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
+    max_len = max(t.shape[0] for t in seqs)
+    batch = len(seqs)
+    trailing = seqs[0].shape[1:]
+    shape = (batch, max_len, *trailing) if batch_first else (max_len, batch, *trailing)
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=seqs[0].dtype)
+
+
+def infer_block_diag(*tensors):
+    rows = sum(t.shape[0] for t in tensors)
+    cols = sum(t.shape[1] for t in tensors)
+    shape = (rows, cols)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
+def infer_cartesian_prod(*tensors):
+    rows = 1
+    for t in tensors:
+        rows *= t.shape[0]
+    cols = len(tensors)
+    shape = (rows, cols)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=tensors[0].dtype)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1

@@ -200,6 +200,28 @@ def _meta_column_stack_meta(tensors):
     return _meta_tensor(shape, tensors[0].dtype, tensors[0].device)
 
 
+def _meta_pad_sequence_meta(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
+    max_len = max(t.shape[0] for t in seqs)
+    batch = len(seqs)
+    trailing = seqs[0].shape[1:]
+    shape = (batch, max_len, *trailing) if batch_first else (max_len, batch, *trailing)
+    return _meta_tensor(tuple(shape), seqs[0].dtype, seqs[0].device)
+
+
+def _meta_block_diag_meta(*tensors):
+    rows = sum(t.shape[0] for t in tensors)
+    cols = sum(t.shape[1] for t in tensors)
+    return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
+
+
+def _meta_cartesian_prod_meta(*tensors):
+    rows = 1
+    for t in tensors:
+        rows *= t.shape[0]
+    cols = len(tensors)
+    return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
+
+
 def _meta_argmax_meta(a, dim=None, keepdim=False):
     shape = list(a.shape)
     if dim is None:
@@ -282,6 +304,9 @@ __all__ = [
     "_meta_hstack_meta",
     "_meta_vstack_meta",
     "_meta_column_stack_meta",
+    "_meta_pad_sequence_meta",
+    "_meta_block_diag_meta",
+    "_meta_cartesian_prod_meta",
     "_meta_transpose_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

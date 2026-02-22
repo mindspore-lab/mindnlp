@@ -115,3 +115,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::hstack` | CPU | done | - | numpy impl + meta + tests |
 | `aten::vstack` | CPU | done | - | numpy impl + meta + tests |
 | `aten::column_stack` | CPU | done | - | numpy impl + meta + tests |
+| `aten::pad_sequence` | CPU | done | - | numpy impl + meta + tests |
+| `aten::block_diag` | CPU | done | - | numpy impl + meta + tests |
+| `aten::cartesian_prod` | CPU | done | - | numpy impl + meta + tests |

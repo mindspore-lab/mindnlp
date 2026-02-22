@@ -451,6 +451,25 @@ def column_stack(tensors, out=None):
     return result
 
 
+def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
+    return dispatch(
+        "pad_sequence",
+        seqs[0].device.type,
+        seqs,
+        batch_first=batch_first,
+        padding_value=padding_value,
+        padding_side=padding_side,
+    )
+
+
+def block_diag(*tensors):
+    return dispatch("block_diag", tensors[0].device.type, *tensors)
+
+
+def cartesian_prod(*tensors):
+    return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 
