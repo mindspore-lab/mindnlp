@@ -12,7 +12,11 @@ class Pipeline:
     def record(self, entry, *, pending=None):
         self.queue.append(entry)
         if pending is not None:
-            self.outputs[id(pending)] = pending
+            if isinstance(pending, (tuple, list)):
+                for item in pending:
+                    self.outputs[id(item)] = item
+            else:
+                self.outputs[id(pending)] = pending
             entry.out = pending
 
     def flush(self):

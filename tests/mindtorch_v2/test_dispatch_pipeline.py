@@ -20,3 +20,14 @@ def test_pipeline_flushes_on_backward():
         b.backward()
         assert getattr(b, "_pending", False) is False
         assert a.grad is not None
+
+
+def test_pipeline_handles_multi_output():
+    with torch.pipeline() as pipe:
+        x = torch.tensor([1.0, 2.0])
+        values, indices = torch.cummax(x, dim=0)
+        assert getattr(values, "_pending", False) is True
+        assert getattr(indices, "_pending", False) is True
+        pipe.flush()
+        assert getattr(values, "_pending", False) is False
+        assert getattr(indices, "_pending", False) is False

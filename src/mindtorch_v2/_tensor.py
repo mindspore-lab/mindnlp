@@ -40,6 +40,7 @@ from ._functional import hypot as hypot_dispatch, remainder as remainder_dispatc
 from ._functional import all as all_dispatch, any as any_dispatch, argmax as argmax_dispatch
 from ._functional import argmin as argmin_dispatch, count_nonzero as count_nonzero_dispatch
 from ._functional import allclose as allclose_dispatch, isclose as isclose_dispatch, equal as equal_dispatch
+from ._functional import cumsum as cumsum_dispatch, cumprod as cumprod_dispatch, cummax as cummax_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -661,6 +662,15 @@ class Tensor:
 
     def count_nonzero(self, dim=None, keepdim=False):
         return count_nonzero_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def cumsum(self, dim=0):
+        return cumsum_dispatch(self, dim)
+
+    def cumprod(self, dim=0):
+        return cumprod_dispatch(self, dim)
+
+    def cummax(self, dim=0):
+        return cummax_dispatch(self, dim)
 
     def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
         return allclose_dispatch(self, other, rtol=rtol, atol=atol, equal_nan=equal_nan)

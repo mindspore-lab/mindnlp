@@ -34,6 +34,7 @@ from .ops import (
     _meta_view_meta,
     _meta_contiguous_meta,
     _meta_equal_meta,
+    _meta_cummax_meta,
 )
 
 registry.register("add", "meta", _meta_binary_meta)
@@ -87,6 +88,9 @@ registry.register("any", "meta", _meta_reduce_bool_meta)
 registry.register("argmax", "meta", _meta_argmax_meta)
 registry.register("argmin", "meta", _meta_argmax_meta)
 registry.register("count_nonzero", "meta", _meta_argmax_meta)
+registry.register("cumsum", "meta", _meta_unary_meta)
+registry.register("cumprod", "meta", _meta_unary_meta)
+registry.register("cummax", "meta", _meta_cummax_meta)
 registry.register("allclose", "meta", _meta_reduce_bool_meta)
 registry.register("isclose", "meta", _meta_binary_meta)
 registry.register("equal", "meta", _meta_equal_meta)

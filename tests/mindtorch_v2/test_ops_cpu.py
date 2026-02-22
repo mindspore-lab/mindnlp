@@ -376,6 +376,27 @@ def test_count_nonzero_cpu():
     )
 
 
+def test_cumsum_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    expected = np.cumsum(x.numpy(), axis=1)
+    np.testing.assert_allclose(torch.cumsum(x, dim=1).numpy(), expected)
+
+
+def test_cumprod_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    expected = np.cumprod(x.numpy(), axis=1)
+    np.testing.assert_allclose(torch.cumprod(x, dim=1).numpy(), expected)
+
+
+def test_cummax_cpu():
+    x = torch.tensor([[1.0, 3.0, 2.0], [4.0, 0.0, 5.0]])
+    values, indices = torch.cummax(x, dim=1)
+    expected_vals = np.maximum.accumulate(x.numpy(), axis=1)
+    np.testing.assert_allclose(values.numpy(), expected_vals)
+    expected_idx = np.array([[0, 1, 1], [0, 0, 2]], dtype=np.int64)
+    np.testing.assert_array_equal(indices.numpy(), expected_idx)
+
+
 def test_logspace_cpu():
     x = torch.logspace(0.0, 2.0, 3)
     expected = np.logspace(0.0, 2.0, 3)

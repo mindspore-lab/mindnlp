@@ -25,6 +25,9 @@ from .ops import (
     argmax,
     argmin,
     count_nonzero,
+    cumsum,
+    cumprod,
+    cummax,
     allclose,
     isclose,
     equal,
@@ -164,6 +167,9 @@ registry.register("any", "cpu", any_, meta=meta_infer.infer_reduce_bool)
 registry.register("argmax", "cpu", argmax, meta=meta_infer.infer_argmax)
 registry.register("argmin", "cpu", argmin, meta=meta_infer.infer_argmax)
 registry.register("count_nonzero", "cpu", count_nonzero, meta=meta_infer.infer_argmax)
+registry.register("cumsum", "cpu", cumsum, meta=meta_infer.infer_unary)
+registry.register("cumprod", "cpu", cumprod, meta=meta_infer.infer_unary)
+registry.register("cummax", "cpu", cummax, meta=meta_infer.infer_cummax)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)

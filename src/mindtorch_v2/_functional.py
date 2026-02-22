@@ -317,6 +317,18 @@ def range(start, end, step=1, dtype=None, device=None):
     return dispatch("range", dev, start, end, step, dtype=dtype)
 
 
+def cumsum(a, dim=0):
+    return dispatch("cumsum", a.device.type, a, dim)
+
+
+def cumprod(a, dim=0):
+    return dispatch("cumprod", a.device.type, a, dim)
+
+
+def cummax(a, dim=0):
+    return dispatch("cummax", a.device.type, a, dim)
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 
