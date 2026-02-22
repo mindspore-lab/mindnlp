@@ -49,6 +49,8 @@ from .ops import (
     relu_,
     zero_,
     contiguous,
+    getitem,
+    setitem,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -107,5 +109,7 @@ registry.register("tensor", "npu", tensor_create)
 registry.register("zeros", "npu", zeros_create)
 registry.register("ones", "npu", ones_create)
 registry.register("empty", "npu", empty_create)
+registry.register("getitem", "npu", getitem)
+registry.register("setitem", "npu", setitem)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]

@@ -214,6 +214,27 @@ class Tensor:
             raise RuntimeError("numpy() is only available for CPU tensors")
         return self._numpy_view()
 
+    def item(self):
+        if self.numel() != 1:
+            raise ValueError("only one element tensors can be converted to Python scalars")
+        if self.device.type != "cpu":
+            return self.to("cpu").item()
+        return self._numpy_view().flat[0].item()
+
+    def tolist(self):
+        if self.device.type != "cpu":
+            return self.to("cpu").tolist()
+        return self._numpy_view().tolist()
+
+    def __int__(self):
+        return int(self.item())
+
+    def __float__(self):
+        return float(self.item())
+
+    def __bool__(self):
+        return bool(self.item())
+
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         if self._pending:
             from ._dispatch.pipeline import current_pipeline
@@ -650,8 +671,67 @@ class Tensor:
     def equal(self, other):
         return equal_dispatch(self, other)
 
+    def __getitem__(self, key):
+        from ._dispatch.dispatcher import dispatch
+
+        return dispatch("getitem", self.device.type, self, key)
+
+    def __setitem__(self, key, value):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        dispatch("setitem", self.device.type, self, key, value)
+        self._bump_version()
+
     def __repr__(self):
         return format_tensor(self)
 
     def __str__(self):
         return format_tensor(self)
+
+    def __len__(self):
+        if self.dim() == 0:
+            raise TypeError("len() of a 0-d tensor")
+        return self.shape[0]
+
+    def __iter__(self):
+        if self.dim() == 0:
+            raise TypeError("iteration over a 0-d tensor")
+        for i in range(len(self)):
+            yield self[i]
+
+    def __gt__(self, other):
+        if isinstance(other, Tensor):
+            if self.numel() == 1 and other.numel() == 1:
+                return self.item() > other.item()
+        return self.item() > other
+
+    def __lt__(self, other):
+        if isinstance(other, Tensor):
+            if self.numel() == 1 and other.numel() == 1:
+                return self.item() < other.item()
+        return self.item() < other
+
+    def __ge__(self, other):
+        if isinstance(other, Tensor):
+            if self.numel() == 1 and other.numel() == 1:
+                return self.item() >= other.item()
+        return self.item() >= other
+
+    def __le__(self, other):
+        if isinstance(other, Tensor):
+            if self.numel() == 1 and other.numel() == 1:
+                return self.item() <= other.item()
+        return self.item() <= other
+
+    def __eq__(self, other):
+        if isinstance(other, Tensor):
+            if self.numel() == 1 and other.numel() == 1:
+                return self.item() == other.item()
+        return self.item() == other
+
+    def __ne__(self, other):
+        if isinstance(other, Tensor):
+            if self.numel() == 1 and other.numel() == 1:
+                return self.item() != other.item()
+        return self.item() != other

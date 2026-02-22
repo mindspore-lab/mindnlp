@@ -22,6 +22,8 @@ def tensor_create(data, dtype=None, device=None, requires_grad=False):
 
 
 def zeros_create(shape, dtype=None, device=None, requires_grad=False):
+    if isinstance(shape, int):
+        shape = (shape,)
     shape = tuple(shape)
     storage = typed_storage_from_numpy(np.zeros(shape, dtype=to_numpy_dtype(dtype)), dtype, device=device)
     stride = _contiguous_stride(shape)
@@ -29,6 +31,8 @@ def zeros_create(shape, dtype=None, device=None, requires_grad=False):
 
 
 def ones_create(shape, dtype=None, device=None, requires_grad=False):
+    if isinstance(shape, int):
+        shape = (shape,)
     shape = tuple(shape)
     storage = typed_storage_from_numpy(np.ones(shape, dtype=to_numpy_dtype(dtype)), dtype, device=device)
     stride = _contiguous_stride(shape)
@@ -36,6 +40,8 @@ def ones_create(shape, dtype=None, device=None, requires_grad=False):
 
 
 def empty_create(shape, dtype=None, device=None, requires_grad=False):
+    if isinstance(shape, int):
+        shape = (shape,)
     shape = tuple(shape)
     storage = typed_storage_from_numpy(np.empty(shape, dtype=to_numpy_dtype(dtype)), dtype, device=device)
     stride = _contiguous_stride(shape)
