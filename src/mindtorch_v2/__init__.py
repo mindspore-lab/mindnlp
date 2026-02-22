@@ -24,7 +24,7 @@ from ._functional import clamp, clamp_min, clamp_max, relu6, hardtanh
 from ._functional import min, max, amin, amax, fmin, fmax, where
 from ._functional import atan, atan2, asin, acos, lerp, addcmul, addcdiv
 from ._printing import set_printoptions, get_printoptions
-from ._dispatch import pipeline_context
+from ._dispatch import pipeline_context, functionalize_context
 from ._backends import cpu
 from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad
 from . import _autograd as autograd
@@ -35,6 +35,10 @@ from . import distributed
 
 def pipeline():
     return pipeline_context()
+
+
+def functionalize():
+    return functionalize_context()
 
 
 __all__ = [
@@ -115,6 +119,8 @@ __all__ = [
     # pipeline
     "pipeline",
     "pipeline_context",
+    "functionalize",
+    "functionalize_context",
     # device
     "get_default_device",
     "set_default_device",

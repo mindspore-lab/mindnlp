@@ -6,6 +6,7 @@ class DispatchKey(Enum):
     NPU = auto()
     Meta = auto()
     Autograd = auto()
+    Functionalize = auto()
     Pipeline = auto()
 
 
@@ -16,7 +17,7 @@ class DispatchKeySet(set):
         return DispatchKeySet({key for key in self if key != keys})
 
     @classmethod
-    def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, device=None):
+    def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, functionalize_enabled=False, device=None):
         keys = cls()
         has_meta = False
         has_npu = False
@@ -53,6 +54,8 @@ class DispatchKeySet(set):
             keys.add(DispatchKey.CPU)
         if grad_enabled and requires_grad:
             keys.add(DispatchKey.Autograd)
+        if functionalize_enabled:
+            keys.add(DispatchKey.Functionalize)
         if pipeline_enabled and not has_meta:
             keys.add(DispatchKey.Pipeline)
         return keys
