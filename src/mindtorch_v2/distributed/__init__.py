@@ -483,12 +483,121 @@ def _reduce_scatter_base(output, input, op=ReduceOp.SUM, group=None,
 
 def all_to_all(output_tensor_list, input_tensor_list, group=None,
                async_op=False):
-    raise NotImplementedError("all_to_all is not supported by HCCL")
+    pg = group or _default_pg
+    world_size = pg.size()
+    if len(output_tensor_list) != world_size:
+        raise ValueError(
+            f"output_tensor_list length ({len(output_tensor_list)}) "
+            f"!= world_size ({world_size})"
+        )
+    if len(input_tensor_list) != world_size:
+        raise ValueError(
+            f"input_tensor_list length ({len(input_tensor_list)}) "
+            f"!= world_size ({world_size})"
+        )
+    work = pg.all_to_all(output_tensor_list, input_tensor_list)
+    if not async_op:
+        work.wait()
+        return None
+    return work
 
 
 def all_to_all_single(output, input, output_split_sizes=None,
                       input_split_sizes=None, group=None, async_op=False):
-    raise NotImplementedError("all_to_all_single is not supported by HCCL")
+    import mindtorch_v2 as torch
+    pg = group or _default_pg
+    world_size = pg.size()
+
+    if input_split_sizes is None:
+        assert input.numel() % world_size == 0
+        chunk_size = input.numel() // world_size
+        input_split_sizes = [chunk_size] * world_size
+    if output_split_sizes is None:
+        assert output.numel() % world_size == 0
+        chunk_size = output.numel() // world_size
+        output_split_sizes = [chunk_size] * world_size
+
+    equal_split = (len(set(input_split_sizes)) == 1 and
+                   len(set(output_split_sizes)) == 1)
+
+    device_type = input.device.type if hasattr(input.device, 'type') else 'cpu'
+
+    if device_type == "npu" and isinstance(pg, ProcessGroupHCCL):
+        # HCCL path: operate directly on contiguous buffers
+        if equal_split:
+            count_per_rank = input_split_sizes[0]
+            work = pg.all_to_all_single(output, input, count_per_rank)
+            if not async_op:
+                work.wait()
+                return None
+            return work
+        else:
+            # Unequal split: split into tensor lists, use all_to_all
+            from .._backends.npu import runtime as npu_runtime
+            ACL_MEMCPY_D2D = 3
+            itemsize = input.dtype.itemsize
+
+            # Split input into tensor list via D2D memcpy
+            input_list = []
+            src_base = input.storage().data_ptr()
+            offset = 0
+            for size in input_split_sizes:
+                t = torch.empty(size, dtype=input.dtype, device=input.device)
+                nbytes = size * itemsize
+                ret = npu_runtime.acl.rt.memcpy(
+                    t.storage().data_ptr(), nbytes,
+                    src_base + offset, nbytes, ACL_MEMCPY_D2D,
+                )
+                if ret != 0:
+                    raise RuntimeError(f"D2D memcpy failed: {ret}")
+                input_list.append(t)
+                offset += nbytes
+
+            output_list = [torch.empty(s, dtype=output.dtype,
+                                       device=output.device)
+                           for s in output_split_sizes]
+            work = pg.all_to_all(output_list, input_list)
+            if not async_op:
+                work.wait()
+                dst_base = output.storage().data_ptr()
+                offset = 0
+                for t in output_list:
+                    nbytes = t.numel() * itemsize
+                    ret = npu_runtime.acl.rt.memcpy(
+                        dst_base + offset, nbytes,
+                        t.storage().data_ptr(), nbytes, ACL_MEMCPY_D2D,
+                    )
+                    if ret != 0:
+                        raise RuntimeError(f"D2D memcpy failed: {ret}")
+                    offset += nbytes
+                return None
+            return work
+    else:
+        # Gloo / CPU path: use numpy views
+        input_np = input._numpy_view().ravel()
+        input_list = []
+        offset = 0
+        for size in input_split_sizes:
+            chunk_np = input_np[offset:offset + size].copy()
+            input_list.append(torch.tensor(chunk_np, dtype=input.dtype,
+                                           device=input.device))
+            offset += size
+
+        output_list = [torch.empty(s, dtype=output.dtype, device=output.device)
+                       for s in output_split_sizes]
+
+        work = pg.all_to_all(output_list, input_list)
+        if not async_op:
+            work.wait()
+            output_np = output._numpy_view().ravel()
+            offset = 0
+            for t in output_list:
+                t_np = t._numpy_view().ravel()
+                n = t_np.size
+                output_np[offset:offset + n] = t_np
+                offset += n
+            return None
+        return work
 
 
 # ---------------------------------------------------------------------------

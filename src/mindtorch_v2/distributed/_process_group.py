@@ -270,6 +270,162 @@ class ProcessGroupHCCL(ProcessGroup):
         _check(ret, "HcclRecv")
         return self._make_work(stream, source_rank=src)
 
+    def _p2p_exchange(self, send_ptr, recv_ptr, count, hccl_dtype, peer,
+                      stream, bindings, _check):
+        """Send/recv with a single peer using deadlock-free ordering."""
+        if self._rank < peer:
+            ret = bindings.send(
+                send_ptr, ctypes.c_uint64(count), hccl_dtype,
+                ctypes.c_uint32(peer), self._comm,
+                ctypes.c_void_p(int(stream)))
+            _check(ret, f"HcclSend to {peer}")
+            ret = bindings.recv(
+                recv_ptr, ctypes.c_uint64(count), hccl_dtype,
+                ctypes.c_uint32(peer), self._comm,
+                ctypes.c_void_p(int(stream)))
+            _check(ret, f"HcclRecv from {peer}")
+        else:
+            ret = bindings.recv(
+                recv_ptr, ctypes.c_uint64(count), hccl_dtype,
+                ctypes.c_uint32(peer), self._comm,
+                ctypes.c_void_p(int(stream)))
+            _check(ret, f"HcclRecv from {peer}")
+            ret = bindings.send(
+                send_ptr, ctypes.c_uint64(count), hccl_dtype,
+                ctypes.c_uint32(peer), self._comm,
+                ctypes.c_void_p(int(stream)))
+            _check(ret, f"HcclSend to {peer}")
+
+    def all_to_all(self, output_tensors, input_tensors):
+        """All-to-all using native HcclAlltoAll (2 ranks) or P2P (>2 ranks).
+
+        HcclAlltoAll works correctly on 2 ranks but is broken on CANN 8.3.RC2
+        for >2 ranks, so we use P2P send/recv fallback for larger world sizes.
+        """
+        from .._backends.npu import runtime as npu_runtime
+        get_bindings, _, _, _, _, _, _, dtype_to_hccl, _check = self._load_bindings()
+        bindings = get_bindings()
+        stream = self._stream()
+        ACL_MEMCPY_D2D = 3
+
+        # Fast path for 2 ranks: use native HcclAlltoAll
+        if self._size == 2:
+            import mindtorch_v2 as torch
+            count_per_rank = input_tensors[0].numel()
+            dtype = input_tensors[0].dtype
+            itemsize = dtype.itemsize
+
+            # Pack into contiguous buffers
+            total_count = count_per_rank * 2
+            send_flat = torch.empty(total_count, dtype=dtype, device=input_tensors[0].device)
+            recv_flat = torch.empty(total_count, dtype=dtype, device=output_tensors[0].device)
+
+            dst_base = send_flat.storage().data_ptr()
+            for i, t in enumerate(input_tensors):
+                ret = npu_runtime.acl.rt.memcpy(
+                    dst_base + i * count_per_rank * itemsize,
+                    count_per_rank * itemsize,
+                    t.storage().data_ptr(),
+                    count_per_rank * itemsize,
+                    ACL_MEMCPY_D2D)
+                if ret != 0:
+                    raise RuntimeError(f"D2D memcpy pack failed: {ret}")
+
+            # Call HcclAlltoAll
+            ret = bindings.all_to_all(
+                ctypes.c_void_p(send_flat.storage().data_ptr()),
+                ctypes.c_uint64(count_per_rank),
+                ctypes.c_int32(dtype_to_hccl(dtype)),
+                ctypes.c_void_p(recv_flat.storage().data_ptr()),
+                ctypes.c_uint64(count_per_rank),
+                ctypes.c_int32(dtype_to_hccl(dtype)),
+                self._comm,
+                ctypes.c_void_p(int(stream)))
+            _check(ret, "HcclAlltoAll")
+
+            # Sync and unpack
+            dev_id = self._device_id if self._device_id is not None else 0
+            npu_runtime.get_runtime(dev_id).synchronize_stream(stream)
+
+            src_base = recv_flat.storage().data_ptr()
+            for i, t in enumerate(output_tensors):
+                ret = npu_runtime.acl.rt.memcpy(
+                    t.storage().data_ptr(),
+                    count_per_rank * itemsize,
+                    src_base + i * count_per_rank * itemsize,
+                    count_per_rank * itemsize,
+                    ACL_MEMCPY_D2D)
+                if ret != 0:
+                    raise RuntimeError(f"D2D memcpy unpack failed: {ret}")
+
+            return self._make_work(stream)
+
+        # Fallback for >2 ranks: use P2P
+        for peer in range(self._size):
+            numel = input_tensors[peer].numel()
+            hccl_dt = ctypes.c_int32(dtype_to_hccl(input_tensors[peer].dtype))
+            itemsize = input_tensors[peer].dtype.itemsize
+            if peer == self._rank:
+                nbytes = numel * itemsize
+                ret = npu_runtime.acl.rt.memcpy(
+                    output_tensors[peer].storage().data_ptr(), nbytes,
+                    input_tensors[peer].storage().data_ptr(), nbytes,
+                    ACL_MEMCPY_D2D)
+                if ret != 0:
+                    raise RuntimeError(f"D2D memcpy failed: {ret}")
+            else:
+                send_ptr = ctypes.c_void_p(input_tensors[peer].storage().data_ptr())
+                recv_ptr = ctypes.c_void_p(output_tensors[peer].storage().data_ptr())
+                self._p2p_exchange(send_ptr, recv_ptr, numel, hccl_dt,
+                                   peer, stream, bindings, _check)
+
+        return self._make_work(stream)
+
+    def all_to_all_single(self, output, input, count_per_rank):
+        """All-to-all on contiguous buffers using native API (2 ranks) or P2P (>2 ranks)."""
+        from .._backends.npu import runtime as npu_runtime
+        get_bindings, _, _, _, _, _, _, dtype_to_hccl, _check = self._load_bindings()
+        bindings = get_bindings()
+        stream = self._stream()
+
+        # Fast path for 2 ranks: use native HcclAlltoAll directly
+        if self._size == 2:
+            ret = bindings.all_to_all(
+                ctypes.c_void_p(input.storage().data_ptr()),
+                ctypes.c_uint64(count_per_rank),
+                ctypes.c_int32(dtype_to_hccl(input.dtype)),
+                ctypes.c_void_p(output.storage().data_ptr()),
+                ctypes.c_uint64(count_per_rank),
+                ctypes.c_int32(dtype_to_hccl(output.dtype)),
+                self._comm,
+                ctypes.c_void_p(int(stream)))
+            _check(ret, "HcclAlltoAll")
+            return self._make_work(stream)
+
+        # Fallback for >2 ranks: use P2P
+        ACL_MEMCPY_D2D = 3
+        hccl_dt = ctypes.c_int32(dtype_to_hccl(input.dtype))
+        itemsize = input.dtype.itemsize
+        chunk_bytes = count_per_rank * itemsize
+        in_base = input.storage().data_ptr()
+        out_base = output.storage().data_ptr()
+
+        for peer in range(self._size):
+            if peer == self._rank:
+                ret = npu_runtime.acl.rt.memcpy(
+                    out_base + peer * chunk_bytes, chunk_bytes,
+                    in_base + peer * chunk_bytes, chunk_bytes,
+                    ACL_MEMCPY_D2D)
+                if ret != 0:
+                    raise RuntimeError(f"D2D memcpy failed: {ret}")
+            else:
+                send_ptr = ctypes.c_void_p(in_base + peer * chunk_bytes)
+                recv_ptr = ctypes.c_void_p(out_base + peer * chunk_bytes)
+                self._p2p_exchange(send_ptr, recv_ptr, count_per_rank,
+                                   hccl_dt, peer, stream, bindings, _check)
+
+        return self._make_work(stream)
+
     def destroy(self):
         if self._comm is not None:
             get_bindings = self._load_bindings()[0]

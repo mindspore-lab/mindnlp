@@ -182,6 +182,12 @@ class HcclBindings:
         self.recv = _bind(
             lib, "HcclRecv", i32,
             [vp, u64, i32, u32, vp, vp])
+        self.all_to_all = _bind(
+            lib, "HcclAlltoAll", i32,
+            [vp, u64, i32, vp, u64, i32, vp, vp])
+        self.all_to_all_v = _bind(
+            lib, "HcclAlltoAllV", i32,
+            [vp, vp, vp, i32, vp, vp, vp, i32, vp, vp])
         self.comm_destroy = _bind(
             lib, "HcclCommDestroy", i32,
             [vp])
