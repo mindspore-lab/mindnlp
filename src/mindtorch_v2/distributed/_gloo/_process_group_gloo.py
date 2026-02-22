@@ -272,6 +272,48 @@ class ProcessGroupGloo(ProcessGroup):
         work._source_rank = src
         return work
 
+    def all_to_all(self, output_tensors, input_tensors):
+        """All-to-all: each rank sends tensor i to rank i, receives from all.
+
+        Uses P2P send/recv with deadlock-free ordering:
+        - For peer < rank: recv first, then send
+        - For peer > rank: send first, then recv
+        - For peer == rank: local copy
+        """
+        if self._size == 1:
+            np.copyto(output_tensors[0]._numpy_view(), input_tensors[0]._numpy_view())
+            return self._make_work()
+
+        # Local copy first (rank sends to itself)
+        np.copyto(output_tensors[self._rank]._numpy_view(),
+                  input_tensors[self._rank]._numpy_view())
+
+        # P2P exchange with deadlock-free ordering
+        for peer in range(self._size):
+            if peer == self._rank:
+                continue
+
+            if self._rank < peer:
+                # Lower rank sends first, then receives
+                arr = self._tensor_to_numpy(input_tensors[peer])
+                serialized = serialize_array(arr)
+                self._transport.send_to(peer, serialized)
+
+                data = self._transport.recv_from(peer)
+                arr = deserialize_array(data)
+                self._write_numpy_to_tensor(arr, output_tensors[peer])
+            else:
+                # Higher rank receives first, then sends
+                data = self._transport.recv_from(peer)
+                arr = deserialize_array(data)
+                self._write_numpy_to_tensor(arr, output_tensors[peer])
+
+                arr = self._tensor_to_numpy(input_tensors[peer])
+                serialized = serialize_array(arr)
+                self._transport.send_to(peer, serialized)
+
+        return self._make_work()
+
     def destroy(self):
         """Clean up transport resources."""
         self._transport.close()
