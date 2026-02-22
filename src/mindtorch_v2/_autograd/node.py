@@ -5,6 +5,7 @@ class SavedTensor:
     def __init__(self, tensor):
         self._tensor_ref = tensor
         self._saved_version = tensor._version_counter.value
+        self._released = False
         hooks = current_saved_tensors_hooks()
         self._hooks = hooks
         if hooks is None:
@@ -13,7 +14,16 @@ class SavedTensor:
             pack, _ = hooks
             self._packed = pack(tensor)
 
+    def release(self):
+        self._released = True
+
     def materialize(self):
+        if self._released:
+            raise RuntimeError(
+                "Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed). "
+                "Saved intermediate values of the graph are freed when you call .backward() or autograd.grad(). "
+                "Specify retain_graph=True if you need to backward through the graph a second time or if you need to access saved tensors after calling backward."
+            )
         if self._tensor_ref._version_counter.value != self._saved_version:
             raise RuntimeError(
                 "one of the variables needed for gradient computation has been modified by an inplace operation"
@@ -35,3 +45,7 @@ class Node:
 
     def saved_tensors(self):
         return tuple(saved.materialize() for saved in self._saved_tensors)
+
+    def release_saved_tensors(self):
+        for saved in self._saved_tensors:
+            saved.release()
