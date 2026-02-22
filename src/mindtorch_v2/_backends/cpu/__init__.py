@@ -20,6 +20,9 @@ from .ops import (
     all_,
     any_,
     argmax,
+    allclose,
+    isclose,
+    equal,
     add_,
     mul_,
     relu_,
@@ -150,6 +153,9 @@ registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("any", "cpu", any_, meta=meta_infer.infer_reduce_bool)
 registry.register("argmax", "cpu", argmax, meta=meta_infer.infer_argmax)
+registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
+registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
+registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "cpu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "cpu", relu_, meta=meta_infer.infer_unary)

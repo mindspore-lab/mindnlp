@@ -107,6 +107,15 @@ def test_meta_unary_elementwise_ops_shape():
         assert out.device.type == "meta"
         assert out.shape == ()
 
+    for op in (
+        lambda t: torch.allclose(t, t),
+        lambda t: torch.isclose(t, t),
+        lambda t: torch.equal(t, t),
+    ):
+        out = op(x)
+        assert out.device.type == "meta"
+        assert out.shape in ((), x.shape)
+
 
 def test_meta_pow_shape():
     x = torch.tensor([1.0, 2.0, 3.0], device="meta")

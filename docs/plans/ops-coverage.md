@@ -95,3 +95,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::all` | CPU | done | - | numpy impl + meta + tests |
 | `aten::any` | CPU | done | - | numpy impl + meta + tests |
 | `aten::argmax` | CPU | done | - | numpy impl + meta + tests |
+| `aten::allclose` | CPU | done | - | numpy impl + meta + tests |
+| `aten::isclose` | CPU | done | - | numpy impl + meta + tests |
+| `aten::equal` | CPU | done | - | numpy impl + meta + tests |

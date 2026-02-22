@@ -30,6 +30,7 @@ from .ops import (
     _meta_addcdiv_meta,
     _meta_view_meta,
     _meta_contiguous_meta,
+    _meta_equal_meta,
 )
 
 registry.register("add", "meta", _meta_binary_meta)
@@ -81,6 +82,9 @@ registry.register("amax", "meta", _meta_sum_meta)
 registry.register("all", "meta", _meta_reduce_bool_meta)
 registry.register("any", "meta", _meta_reduce_bool_meta)
 registry.register("argmax", "meta", _meta_argmax_meta)
+registry.register("allclose", "meta", _meta_reduce_bool_meta)
+registry.register("isclose", "meta", _meta_binary_meta)
+registry.register("equal", "meta", _meta_equal_meta)
 registry.register("fmin", "meta", _meta_binary_meta)
 registry.register("fmax", "meta", _meta_binary_meta)
 registry.register("where", "meta", _meta_where_meta)
