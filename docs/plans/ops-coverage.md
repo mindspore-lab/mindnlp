@@ -101,3 +101,5 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::argmin` | CPU | done | - | numpy impl + meta + tests |
 | `aten::count_nonzero` | CPU | done | - | numpy impl + meta + tests |
 | `aten::logspace` | CPU | done | - | numpy impl + meta + tests |
+| `aten::eye` | CPU | done | - | numpy impl + meta + tests |
+| `aten::range` | CPU | done | - | numpy impl + meta + tests |

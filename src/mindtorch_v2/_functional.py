@@ -307,6 +307,16 @@ def logspace(start, end, steps, dtype=None, device=None):
     return dispatch("logspace", dev, start, end, steps, dtype=dtype)
 
 
+def eye(n, m=None, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("eye", dev, n, m, dtype=dtype)
+
+
+def range(start, end, step=1, dtype=None, device=None):
+    dev = _as_device(device)
+    return dispatch("range", dev, start, end, step, dtype=dtype)
+
+
 def reshape(a, shape):
     return dispatch("reshape", a.device.type, a, shape)
 

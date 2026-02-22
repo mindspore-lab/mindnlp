@@ -5,9 +5,11 @@ from .creation import (
     arange_create_meta,
     empty_create_meta,
     full_create_meta,
+    eye_create_meta,
     linspace_create_meta,
     logspace_create_meta,
     ones_create_meta,
+    range_create_meta,
     tensor_create_meta,
     zeros_create_meta,
 )
@@ -118,3 +120,5 @@ registry.register("arange", "meta", arange_create_meta)
 registry.register("linspace", "meta", linspace_create_meta)
 registry.register("full", "meta", full_create_meta)
 registry.register("logspace", "meta", logspace_create_meta)
+registry.register("eye", "meta", eye_create_meta)
+registry.register("range", "meta", range_create_meta)

@@ -72,3 +72,19 @@ def logspace_create(start, end, steps, dtype=None, device=None):
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
     return Tensor(storage, arr.shape, stride)
+
+
+def eye_create(n, m=None, dtype=None, device=None):
+    if m is None:
+        m = n
+    arr = np.eye(n, m, dtype=to_numpy_dtype(dtype))
+    storage = typed_storage_from_numpy(arr, dtype, device=device)
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    return Tensor(storage, arr.shape, stride)
+
+
+def range_create(start, end, step=1, dtype=None, device=None):
+    arr = np.arange(start, end + step, step, dtype=to_numpy_dtype(dtype))
+    storage = typed_storage_from_numpy(arr, dtype, device=device)
+    stride = tuple(np.array(arr.strides) // arr.itemsize)
+    return Tensor(storage, arr.shape, stride)

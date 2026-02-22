@@ -6,9 +6,11 @@ from .creation import (
     arange_create,
     empty_create,
     full_create,
+    eye_create,
     linspace_create,
     logspace_create,
     ones_create,
+    range_create,
     tensor_create,
     zeros_create,
 )
@@ -178,3 +180,5 @@ registry.register("arange", "cpu", arange_create)
 registry.register("linspace", "cpu", linspace_create)
 registry.register("full", "cpu", full_create)
 registry.register("logspace", "cpu", logspace_create)
+registry.register("eye", "cpu", eye_create)
+registry.register("range", "cpu", range_create)
