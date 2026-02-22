@@ -750,6 +750,9 @@ class Tensor:
                 return self.item() == other.item()
         return self.item() == other
 
+    def __hash__(self):
+        return id(self)
+
     def __ne__(self, other):
         if isinstance(other, Tensor):
             if self.numel() == 1 and other.numel() == 1:
