@@ -226,6 +226,48 @@ def _indices_device(device):
     return str(device)
 
 
+def _ensure_integer_indices(arr, name):
+    if not np.issubdtype(arr.dtype, np.integer):
+        raise TypeError(f"{name} must be integer dtype")
+    return arr
+
+
+def take(a, index):
+    arr = _to_numpy(a).reshape(-1)
+    idx = _ensure_integer_indices(_to_numpy(index), "index").astype(np.int64, copy=False)
+    out = np.take(arr, idx)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def take_along_dim(a, indices, dim):
+    arr = _to_numpy(a)
+    idx = _ensure_integer_indices(_to_numpy(indices), "indices").astype(np.int64, copy=False)
+    if dim < 0:
+        dim += arr.ndim
+    if dim < 0 or dim >= arr.ndim:
+        raise ValueError("dim out of range")
+    if idx.ndim != arr.ndim:
+        raise ValueError("indices shape mismatch")
+    for i, size in enumerate(idx.shape):
+        if i != dim and size != arr.shape[i]:
+            raise ValueError("indices shape mismatch")
+    out = np.take_along_axis(arr, idx, axis=dim)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def index_select(a, dim, index):
+    arr = _to_numpy(a)
+    idx = _ensure_integer_indices(_to_numpy(index), "index").astype(np.int64, copy=False)
+    if idx.ndim != 1:
+        raise ValueError("index must be 1D")
+    if dim < 0:
+        dim += arr.ndim
+    if dim < 0 or dim >= arr.ndim:
+        raise ValueError("dim out of range")
+    out = np.take(arr, idx, axis=dim)
+    return _from_numpy(out, a.dtype, a.device)
+
+
 def tril_indices(row, col, offset=0, dtype=None, device=None, layout=None):
     _check_indices_layout(layout)
     if row < 0 or col < 0:

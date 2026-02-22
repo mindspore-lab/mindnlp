@@ -331,6 +331,38 @@ def infer_unbind(a, dim=0):
     return tuple(specs)
 
 
+def infer_take(a, index):
+    shape = tuple(index.shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_take_along_dim(a, indices, dim):
+    if dim < 0:
+        dim += len(a.shape)
+    if dim < 0 or dim >= len(a.shape):
+        raise ValueError("dim out of range")
+    if len(indices.shape) != len(a.shape):
+        raise ValueError("indices shape mismatch")
+    for i, size in enumerate(indices.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("indices shape mismatch")
+    shape = tuple(indices.shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_index_select(a, dim, index):
+    if len(index.shape) != 1:
+        raise ValueError("index must be 1D")
+    if dim < 0:
+        dim += len(a.shape)
+    if dim < 0 or dim >= len(a.shape):
+        raise ValueError("dim out of range")
+    shape = list(a.shape)
+    shape[dim] = index.shape[0]
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_view(a, shape):
     shape = tuple(shape)
     size = 1

@@ -504,6 +504,18 @@ def dsplit(a, split_size_or_sections):
     return dispatch("dsplit", a.device.type, a, split_size_or_sections)
 
 
+def take(a, index):
+    return dispatch("take", a.device.type, a, index)
+
+
+def take_along_dim(a, indices, dim):
+    return dispatch("take_along_dim", a.device.type, a, indices, dim)
+
+
+def index_select(a, dim, index):
+    return dispatch("index_select", a.device.type, a, dim, index)
+
+
 def unbind(a, dim=0):
     return dispatch("unbind", a.device.type, a, dim)
 
