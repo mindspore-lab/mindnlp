@@ -17,6 +17,9 @@ from .ops import (
     mul,
     relu,
     sum_,
+    all_,
+    any_,
+    argmax,
     add_,
     mul_,
     relu_,
@@ -144,6 +147,9 @@ registry.register("remainder", "cpu", remainder, meta=meta_infer.infer_binary)
 registry.register("fmod", "cpu", fmod, meta=meta_infer.infer_binary)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
+registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
+registry.register("any", "cpu", any_, meta=meta_infer.infer_reduce_bool)
+registry.register("argmax", "cpu", argmax, meta=meta_infer.infer_argmax)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "cpu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "cpu", relu_, meta=meta_infer.infer_unary)

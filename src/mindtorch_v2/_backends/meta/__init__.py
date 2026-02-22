@@ -15,6 +15,8 @@ from .ops import (
     _meta_binary_or_scalar_meta,
     _meta_matmul_meta,
     _meta_sum_meta,
+    _meta_reduce_bool_meta,
+    _meta_argmax_meta,
     _meta_transpose_meta,
     _meta_unary_meta,
     _meta_unary_bool_meta,
@@ -76,6 +78,9 @@ registry.register("min", "meta", _meta_binary_meta)
 registry.register("max", "meta", _meta_binary_meta)
 registry.register("amin", "meta", _meta_sum_meta)
 registry.register("amax", "meta", _meta_sum_meta)
+registry.register("all", "meta", _meta_reduce_bool_meta)
+registry.register("any", "meta", _meta_reduce_bool_meta)
+registry.register("argmax", "meta", _meta_argmax_meta)
 registry.register("fmin", "meta", _meta_binary_meta)
 registry.register("fmax", "meta", _meta_binary_meta)
 registry.register("where", "meta", _meta_where_meta)

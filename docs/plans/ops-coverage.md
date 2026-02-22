@@ -92,3 +92,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::arange` | CPU | done | - | numpy impl + meta + tests |
 | `aten::linspace` | CPU | done | - | numpy impl + meta + tests |
 | `aten::full` | CPU | done | - | numpy impl + meta + tests |
+| `aten::all` | CPU | done | - | numpy impl + meta + tests |
+| `aten::any` | CPU | done | - | numpy impl + meta + tests |
+| `aten::argmax` | CPU | done | - | numpy impl + meta + tests |

@@ -37,6 +37,7 @@ from ._functional import lerp as lerp_dispatch
 from ._functional import addcmul as addcmul_dispatch, addcdiv as addcdiv_dispatch
 from ._functional import logaddexp as logaddexp_dispatch, logaddexp2 as logaddexp2_dispatch
 from ._functional import hypot as hypot_dispatch, remainder as remainder_dispatch, fmod as fmod_dispatch
+from ._functional import all as all_dispatch, any as any_dispatch, argmax as argmax_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
 from ._autograd.engine import backward as _backward
@@ -622,6 +623,15 @@ class Tensor:
         return fmod_dispatch(self, other)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
+
+    def all(self, dim=None, keepdim=False):
+        return all_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def any(self, dim=None, keepdim=False):
+        return any_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def argmax(self, dim=None, keepdim=False):
+        return argmax_dispatch(self, dim=dim, keepdim=keepdim)
 
     def __repr__(self):
         return format_tensor(self)
