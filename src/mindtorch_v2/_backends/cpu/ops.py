@@ -189,6 +189,18 @@ def cosh(a):
     return _from_numpy(np.cosh(_to_numpy(a)), a.dtype, a.device)
 
 
+def asinh(a):
+    return _from_numpy(np.arcsinh(_to_numpy(a)), a.dtype, a.device)
+
+
+def acosh(a):
+    return _from_numpy(np.arccosh(_to_numpy(a)), a.dtype, a.device)
+
+
+def atanh(a):
+    return _from_numpy(np.arctanh(_to_numpy(a)), a.dtype, a.device)
+
+
 def erf(a):
     arr = _to_numpy(a)
     out = np.vectorize(math.erf)(arr)

@@ -127,6 +127,18 @@ def cosh(a):
     return dispatch("cosh", a.device.type, a)
 
 
+def asinh(a):
+    return dispatch("asinh", a.device.type, a)
+
+
+def acosh(a):
+    return dispatch("acosh", a.device.type, a)
+
+
+def atanh(a):
+    return dispatch("atanh", a.device.type, a)
+
+
 def erf(a):
     return dispatch("erf", a.device.type, a)
 
