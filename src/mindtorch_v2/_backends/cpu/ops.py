@@ -94,6 +94,19 @@ def masked_select(a, mask):
     return _from_numpy(out, a.dtype, a.device)
 
 
+def nonzero(a, as_tuple=False):
+    idx = np.nonzero(_to_numpy(a))
+    if as_tuple:
+        return tuple(
+            _from_numpy(
+                np.ascontiguousarray(dim_idx, dtype=np.int64), int64_dtype, a.device
+            )
+            for dim_idx in idx
+        )
+    stacked = np.stack(idx, axis=1).astype(np.int64, copy=False)
+    return _from_numpy(np.ascontiguousarray(stacked), int64_dtype, a.device)
+
+
 def cumsum(a, dim=0):
     return _from_numpy(np.cumsum(_to_numpy(a), axis=dim), a.dtype, a.device)
 

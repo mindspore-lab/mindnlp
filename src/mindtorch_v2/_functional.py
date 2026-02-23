@@ -206,7 +206,9 @@ def fmax(a, b):
     return dispatch("fmax", a.device.type, a, b)
 
 
-def where(cond, x, y):
+def where(cond, x=None, y=None):
+    if x is None and y is None:
+        return nonzero(cond, as_tuple=True)
     return dispatch("where", x.device.type, cond, x, y)
 
 
@@ -303,6 +305,10 @@ def argmin(a, dim=None, keepdim=False):
 
 def count_nonzero(a, dim=None, keepdim=False):
     return dispatch("count_nonzero", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def nonzero(a, as_tuple=False):
+    return dispatch("nonzero", a.device.type, a, as_tuple=as_tuple)
 
 
 def masked_select(a, mask):

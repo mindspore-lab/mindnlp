@@ -839,6 +839,28 @@ def test_masked_select_cpu():
     np.testing.assert_array_equal(out.numpy(), np.array([1, 4]))
 
 
+def test_nonzero_cpu():
+    x = torch.tensor([[0, 1], [2, 0]])
+    out = torch.nonzero(x)
+    np.testing.assert_array_equal(out.numpy(), np.array([[0, 1], [1, 0]]))
+
+
+def test_nonzero_as_tuple_cpu():
+    x = torch.tensor([[0, 1], [2, 0]])
+    out = torch.nonzero(x, as_tuple=True)
+    assert isinstance(out, tuple)
+    np.testing.assert_array_equal(out[0].numpy(), np.array([0, 1]))
+    np.testing.assert_array_equal(out[1].numpy(), np.array([1, 0]))
+
+
+def test_where_condition_cpu():
+    cond = torch.tensor([[True, False], [False, True]])
+    out = torch.where(cond)
+    assert isinstance(out, tuple)
+    np.testing.assert_array_equal(out[0].numpy(), np.array([0, 1]))
+    np.testing.assert_array_equal(out[1].numpy(), np.array([0, 1]))
+
+
 def test_lerp_scalar_cpu():
     x = torch.tensor([0.0, 1.0, 2.0])
     y = torch.tensor([2.0, 3.0, 4.0])

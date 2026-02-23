@@ -445,3 +445,10 @@ def infer_matmul(a, b):
 def infer_masked_select(a, mask):
     return TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=a.dtype)
 
+
+def infer_nonzero(a, as_tuple=False):
+    if as_tuple:
+        spec = TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=int64_dtype)
+        return tuple(spec for _ in range(len(a.shape)))
+    shape = (0, len(a.shape))
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=int64_dtype)
