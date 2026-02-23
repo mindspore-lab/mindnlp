@@ -58,6 +58,10 @@ from .ops import (
     all_,
     any_,
     count_nonzero,
+    stack,
+    cat,
+    concatenate,
+    where,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -127,5 +131,11 @@ registry.register("ones", "npu", ones_create)
 registry.register("empty", "npu", empty_create)
 registry.register("getitem", "npu", getitem)
 registry.register("setitem", "npu", setitem)
+
+registry.register("stack", "npu", stack, meta=meta_infer.infer_stack)
+registry.register("cat", "npu", cat, meta=meta_infer.infer_cat)
+registry.register("concat", "npu", cat, meta=meta_infer.infer_cat)
+registry.register("concatenate", "npu", concatenate, meta=meta_infer.infer_cat)
+registry.register("where", "npu", where, meta=meta_infer.infer_binary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
