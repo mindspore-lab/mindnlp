@@ -139,3 +139,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::unbind` | CPU | done | - | numpy impl + meta + tests |
 | `aten::masked_select` | CPU | done | - | numpy impl + meta + tests |
 | `aten::nonzero` | CPU | done | - | numpy impl + meta + tests |
+| `aten::flip` | CPU | done | - | numpy impl + meta + tests |
+| `aten::roll` | CPU | done | - | numpy impl + meta + tests |
+| `aten::rot90` | CPU | done | - | numpy impl + meta + tests |
