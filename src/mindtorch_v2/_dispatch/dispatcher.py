@@ -190,6 +190,10 @@ def _infer_dispatch_device(dispatch_device, tensors, keyset):
     for tensor in tensors:
         if hasattr(tensor, "device"):
             return tensor.device
+    if not tensors:
+        from .._device import get_default_device
+
+        return get_default_device()
     if DispatchKey.Meta in keyset:
         return "meta"
     if DispatchKey.NPU in keyset:
