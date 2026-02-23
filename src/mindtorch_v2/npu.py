@@ -222,12 +222,7 @@ def _reset_init_for_test():
 
 
 def _get_memory_stats(device=None):
-    try:
-        import mindspore
-
-        return mindspore.hal.memory_stats()
-    except Exception:
-        return {}
+    return {}
 
 
 def _enforce_memory_fraction(requested_bytes, device=None):

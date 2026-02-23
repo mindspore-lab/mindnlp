@@ -154,6 +154,206 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+
+        self.aclnn_sub_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSubGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_sub = _optional_symbol(
+            libs,
+            "aclnnSub",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_div_get_workspace = _optional_symbol(
+            libs,
+            "aclnnDivGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_div = _optional_symbol(
+            libs,
+            "aclnnDiv",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_add_scalar_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAddsGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_add_scalar = _optional_symbol(
+            libs,
+            "aclnnAdds",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_sub_scalar_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSubsGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_sub_scalar = _optional_symbol(
+            libs,
+            "aclnnSubs",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_maximum_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMaximumGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_maximum = _optional_symbol(
+            libs,
+            "aclnnMaximum",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_minimum_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMinimumGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_minimum = _optional_symbol(
+            libs,
+            "aclnnMinimum",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_atan_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAtanGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_atan = _optional_symbol(
+            libs,
+            "aclnnAtan",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_atan2_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAtan2GetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_atan2 = _optional_symbol(
+            libs,
+            "aclnnAtan2",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_asin_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAsinGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_asin = _optional_symbol(
+            libs,
+            "aclnnAsin",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_acos_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAcosGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_acos = _optional_symbol(
+            libs,
+            "aclnnAcos",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_asinh_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAsinhGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_asinh = _optional_symbol(
+            libs,
+            "aclnnAsinh",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_acosh_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAcoshGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_acosh = _optional_symbol(
+            libs,
+            "aclnnAcosh",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_atanh_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAtanhGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_atanh = _optional_symbol(
+            libs,
+            "aclnnAtanh",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
         self.aclnn_relu_get_workspace = _bind_symbol(
             libs,
             "aclnnReluGetWorkspaceSize",
@@ -387,6 +587,26 @@ class AclnnBindings:
                 ctypes.POINTER(ctypes.c_uint64),
                 ctypes.POINTER(ctypes.c_void_p),
             ],
+        )
+
+        self.aclnn_swhere_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSWhereGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_swhere = _optional_symbol(
+            libs,
+            "aclnnSWhere",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
         self.aclnn_logical_xor = _optional_symbol(
             libs,
@@ -1364,14 +1584,15 @@ def is_available():
         return False
 
 
-def add(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+def add(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+        out_shape, out_stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
     bindings = get_bindings()
-    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
-    other_tensor, other_keep = _create_tensor(bindings, shape, stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
     scalar = None
     alpha_arr = None
     executor = ctypes.c_void_p()
@@ -1415,14 +1636,15 @@ def add(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime, stream=None
         _ = (self_keep, other_keep, out_keep, alpha_arr)
 
 
-def mul(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+def mul(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+        out_shape, out_stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
     bindings = get_bindings()
-    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
-    other_tensor, other_keep = _create_tensor(bindings, shape, stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
@@ -1458,6 +1680,412 @@ def mul(self_ptr, other_ptr, out_ptr, shape, stride, dtype, runtime, stream=None
         if workspace is not None:
             runtime.defer_free(workspace)
         _ = (self_keep, other_keep, out_keep)
+
+
+def sub(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+        out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_sub_get_workspace is None or bindings.aclnn_sub is None:
+        raise RuntimeError("aclnnSub symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    scalar = None
+    alpha_arr = None
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        scalar, alpha_arr = _create_scalar(bindings, 1, dtype)
+        ret = bindings.aclnn_sub_get_workspace(
+            self_tensor,
+            other_tensor,
+            scalar,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSubGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_sub(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSub failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        if scalar:
+            bindings.acl_destroy_scalar(scalar)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, other_keep, out_keep, alpha_arr)
+
+
+def div(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+        out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_div_get_workspace is None or bindings.aclnn_div is None:
+        raise RuntimeError("aclnnDiv symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_div_get_workspace(
+            self_tensor,
+            other_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnDivGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_div(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnDiv failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, other_keep, out_keep)
+
+
+def add_scalar(self_ptr, scalar_value, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_add_scalar_get_workspace is None or bindings.aclnn_add_scalar is None:
+        raise RuntimeError("aclnnAdds symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
+    scalar, scalar_keep = _create_scalar(bindings, scalar_value, dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_add_scalar_get_workspace(
+            self_tensor,
+            scalar,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAddsGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_add_scalar(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAdds failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_scalar(scalar)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, scalar_keep)
+
+
+def sub_scalar(self_ptr, scalar_value, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_sub_scalar_get_workspace is None or bindings.aclnn_sub_scalar is None:
+        raise RuntimeError("aclnnSubs symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
+    scalar, scalar_keep = _create_scalar(bindings, scalar_value, dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_sub_scalar_get_workspace(
+            self_tensor,
+            scalar,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSubsGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_sub_scalar(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSubs failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_scalar(scalar)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, scalar_keep)
+
+
+def maximum(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride, out_shape, out_stride,
+            dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_maximum_get_workspace is None or bindings.aclnn_maximum is None:
+        raise RuntimeError("aclnnMaximum symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_maximum_get_workspace(
+            self_tensor,
+            other_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaximumGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_maximum(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaximum failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, other_keep, out_keep)
+
+
+def minimum(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride, out_shape, out_stride,
+            dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_minimum_get_workspace is None or bindings.aclnn_minimum is None:
+        raise RuntimeError("aclnnMinimum symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_minimum_get_workspace(
+            self_tensor,
+            other_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMinimumGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_minimum(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMinimum failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, other_keep, out_keep)
+
+
+def atan(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_atan_get_workspace is None or bindings.aclnn_atan is None:
+        raise RuntimeError("aclnnAtan symbols not available")
+    return _unary_call(bindings, "aclnnAtan", bindings.aclnn_atan_get_workspace, bindings.aclnn_atan,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def atan2(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride, out_shape, out_stride,
+          dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_atan2_get_workspace is None or bindings.aclnn_atan2 is None:
+        raise RuntimeError("aclnnAtan2 symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_atan2_get_workspace(
+            self_tensor,
+            other_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAtan2GetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_atan2(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAtan2 failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, other_keep, out_keep)
+
+
+def asin(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_asin_get_workspace is None or bindings.aclnn_asin is None:
+        raise RuntimeError("aclnnAsin symbols not available")
+    return _unary_call(bindings, "aclnnAsin", bindings.aclnn_asin_get_workspace, bindings.aclnn_asin,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def acos(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_acos_get_workspace is None or bindings.aclnn_acos is None:
+        raise RuntimeError("aclnnAcos symbols not available")
+    return _unary_call(bindings, "aclnnAcos", bindings.aclnn_acos_get_workspace, bindings.aclnn_acos,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def asinh(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_asinh_get_workspace is None or bindings.aclnn_asinh is None:
+        raise RuntimeError("aclnnAsinh symbols not available")
+    return _unary_call(bindings, "aclnnAsinh", bindings.aclnn_asinh_get_workspace, bindings.aclnn_asinh,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def acosh(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_acosh_get_workspace is None or bindings.aclnn_acosh is None:
+        raise RuntimeError("aclnnAcosh symbols not available")
+    return _unary_call(bindings, "aclnnAcosh", bindings.aclnn_acosh_get_workspace, bindings.aclnn_acosh,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def atanh(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_atanh_get_workspace is None or bindings.aclnn_atanh is None:
+        raise RuntimeError("aclnnAtanh symbols not available")
+    return _unary_call(bindings, "aclnnAtanh", bindings.aclnn_atanh_get_workspace, bindings.aclnn_atanh,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
 
 
 def relu(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
@@ -1881,6 +2509,8 @@ def cast(self_ptr, out_ptr, shape, stride, src_dtype, dst_dtype, runtime, stream
         if workspace is not None:
             runtime.defer_free(workspace)
         _ = (self_keep, out_keep)
+
+
 def _unary_call(bindings, name, get_workspace_fn, exec_fn, self_ptr, out_ptr, shape, stride, dtype, runtime, stream, out_dtype=None):
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
     if out_dtype is None:
@@ -1965,7 +2595,7 @@ def logical_xor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
         raise RuntimeError("aclnnLogicalXor symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
     other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
@@ -2012,7 +2642,7 @@ def logical_or(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shap
         raise RuntimeError("aclnnLogicalOr symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
     other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
@@ -2059,7 +2689,7 @@ def logical_and(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
         raise RuntimeError("aclnnLogicalAnd symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
     other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
@@ -2095,6 +2725,59 @@ def logical_and(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
         if workspace is not None:
             runtime.defer_free(workspace)
         _ = (self_keep, other_keep, out_keep)
+
+
+
+def swhere(cond_ptr, self_ptr, other_ptr, out_ptr, cond_shape, cond_stride, self_shape, self_stride,
+          other_shape, other_stride, out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_swhere_get_workspace is None or bindings.aclnn_swhere is None:
+        raise RuntimeError("aclnnSWhere symbols not available")
+    cond_tensor, cond_keep = _create_tensor(bindings, cond_shape, cond_stride, "bool", cond_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_swhere_get_workspace(
+            cond_tensor,
+            self_tensor,
+            other_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSWhereGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_swhere(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSWhere failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(cond_tensor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (cond_keep, self_keep, other_keep, out_keep)
+
 
 def logical_not(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
     global acl
@@ -2644,7 +3327,7 @@ def eq_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape
         raise RuntimeError("aclnnEqTensor symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
     other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
@@ -2691,7 +3374,7 @@ def ne_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape
         raise RuntimeError("aclnnNeTensor symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
     other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
