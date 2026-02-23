@@ -2053,36 +2053,3 @@ def stack(tensors, dim=0):
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, first.dtype, device=first.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
-
-
-def where(condition, x, y):
-    """Element-wise where using aclnnSWhere."""
-    runtime = npu_runtime.get_runtime((condition.device.index or 0))
-    stream = npu_state.current_stream((condition.device.index or 0))
-
-    if not aclnn.s_where_symbols_ok():
-        raise RuntimeError("aclnnSWhere not available")
-
-    # Compute broadcast output shape
-    out_shape = _broadcast_shape(_broadcast_shape(condition.shape, x.shape), y.shape)
-    out_stride = npu_runtime._contiguous_stride(out_shape)
-    out_numel = _numel(out_shape)
-    itemsize = _dtype_itemsize(x.dtype)
-    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
-
-    aclnn.s_where(
-        _unwrap_storage(condition).data_ptr(),
-        _unwrap_storage(x).data_ptr(),
-        _unwrap_storage(y).data_ptr(),
-        out_ptr,
-        condition.shape, condition.stride, condition.dtype,
-        x.shape, x.stride, x.dtype,
-        y.shape, y.stride, y.dtype,
-        out_shape, out_stride, x.dtype,
-        runtime, stream=stream.stream
-    )
-
-    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, x.dtype, device=x.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
-
-
