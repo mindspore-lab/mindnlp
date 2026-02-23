@@ -120,6 +120,7 @@ from .ops import (
     roll,
     rot90,
     repeat,
+    repeat_interleave,
     nonzero,
     masked_select,
     gather,
@@ -198,6 +199,7 @@ registry.register("flip", "cpu", flip, meta=meta_infer.infer_flip)
 registry.register("roll", "cpu", roll, meta=meta_infer.infer_roll)
 registry.register("rot90", "cpu", rot90, meta=meta_infer.infer_rot90)
 registry.register("repeat", "cpu", repeat, meta=meta_infer.infer_repeat)
+registry.register("repeat_interleave", "cpu", repeat_interleave, meta=meta_infer.infer_repeat_interleave)
 registry.register("nonzero", "cpu", nonzero, meta=meta_infer.infer_nonzero)
 registry.register("masked_select", "cpu", masked_select, meta=meta_infer.infer_masked_select)
 registry.register("gather", "cpu", gather, meta=meta_infer.infer_gather)

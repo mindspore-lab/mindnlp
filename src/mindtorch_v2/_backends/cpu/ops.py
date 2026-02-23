@@ -118,6 +118,13 @@ def repeat(a, repeats):
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
+def repeat_interleave(a, repeats, dim=None):
+    arr = _to_numpy(a)
+    axis = None if dim is None else dim
+    out = np.repeat(arr, repeats, axis=axis)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def nonzero(a, as_tuple=False):
     idx = np.nonzero(_to_numpy(a))
     if as_tuple:

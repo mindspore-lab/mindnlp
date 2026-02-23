@@ -456,6 +456,18 @@ def test_meta_repeat_shape():
     assert out.shape == (4, 9)
 
 
+def test_meta_repeat_interleave_shape():
+    x = torch.empty((2, 3), device="meta")
+    out = torch.repeat_interleave(x, repeats=2, dim=1)
+    assert out.shape == (2, 6)
+
+
+def test_meta_tile_shape():
+    x = torch.empty((2, 3), device="meta")
+    out = torch.tile(x, (2, 3))
+    assert out.shape == (4, 9)
+
+
 def test_meta_nonzero_shape():
     x = torch.empty((2, 3), device="meta")
     out = torch.nonzero(x)

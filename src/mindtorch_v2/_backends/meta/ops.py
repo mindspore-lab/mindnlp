@@ -524,6 +524,26 @@ def _meta_repeat_meta(a, repeats):
     return _meta_tensor(shape, a.dtype, a.device)
 
 
+def _meta_repeat_interleave_meta(a, repeats, dim=None):
+    shape = list(a.shape)
+    if dim is None:
+        total = 1
+        for s in shape:
+            total *= s
+        if isinstance(repeats, int):
+            total *= repeats
+        else:
+            total = len(repeats)
+        return _meta_tensor((total,), a.dtype, a.device)
+    if dim < 0:
+        dim += len(shape)
+    if isinstance(repeats, int):
+        shape[dim] *= repeats
+    else:
+        shape[dim] = len(repeats)
+    return _meta_tensor(tuple(shape), a.dtype, a.device)
+
+
 def _meta_nonzero_meta(a, as_tuple=False):
     if as_tuple:
         return tuple(_meta_tensor((0,), int64_dtype, a.device) for _ in range(len(a.shape)))
@@ -583,6 +603,7 @@ __all__ = [
     "_meta_roll_meta",
     "_meta_rot90_meta",
     "_meta_repeat_meta",
+    "_meta_repeat_interleave_meta",
     "_meta_nonzero_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

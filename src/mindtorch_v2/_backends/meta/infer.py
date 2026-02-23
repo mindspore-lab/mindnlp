@@ -474,6 +474,27 @@ def infer_repeat(a, repeats):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
+def infer_repeat_interleave(a, repeats, dim=None):
+    shape = list(a.shape)
+    if dim is None:
+        total = 1
+        for s in shape:
+            total *= s
+        if isinstance(repeats, int):
+            total *= repeats
+        else:
+            total = len(repeats)
+        return TensorSpec(shape=(total,), stride=_contiguous_stride((total,)), dtype=a.dtype)
+    if dim < 0:
+        dim += len(shape)
+    if isinstance(repeats, int):
+        shape[dim] *= repeats
+    else:
+        shape[dim] = len(repeats)
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_nonzero(a, as_tuple=False):
     if as_tuple:
         spec = TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=int64_dtype)

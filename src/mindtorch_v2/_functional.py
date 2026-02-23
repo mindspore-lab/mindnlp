@@ -331,6 +331,10 @@ def repeat(a, repeats):
     return dispatch("repeat", a.device.type, a, repeats)
 
 
+def repeat_interleave(a, repeats, dim=None):
+    return dispatch("repeat_interleave", a.device.type, a, repeats, dim)
+
+
 
 
 
