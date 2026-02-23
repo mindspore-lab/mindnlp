@@ -35,6 +35,7 @@ from . import npu
 from . import _C
 from . import distributed
 from . import futures
+from . import amp
 
 
 def pipeline():
@@ -194,4 +195,6 @@ __all__ = [
     "autograd",
     # distributed
     "distributed",
+    # amp
+    "amp",
 ]

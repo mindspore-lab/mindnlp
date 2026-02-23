@@ -54,6 +54,9 @@ from .modules.padding import (
 # Upsampling
 from .modules.upsampling import Upsample
 
+# Utils
+from . import utils
+
 # Parallel
 from . import parallel
 from .parallel import DistributedDataParallel, DataParallel
