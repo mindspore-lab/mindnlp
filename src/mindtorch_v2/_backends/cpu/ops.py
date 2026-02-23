@@ -125,6 +125,12 @@ def repeat_interleave(a, repeats, dim=None):
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
+def tile(a, dims):
+    arr = _to_numpy(a)
+    out = np.tile(arr, dims)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def nonzero(a, as_tuple=False):
     idx = np.nonzero(_to_numpy(a))
     if as_tuple:

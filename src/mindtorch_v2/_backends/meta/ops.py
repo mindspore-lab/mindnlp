@@ -544,6 +544,17 @@ def _meta_repeat_interleave_meta(a, repeats, dim=None):
     return _meta_tensor(tuple(shape), a.dtype, a.device)
 
 
+def _meta_tile_meta(a, dims):
+    if isinstance(dims, int):
+        dims = (dims,)
+    if len(dims) < len(a.shape):
+        dims = (1,) * (len(a.shape) - len(dims)) + tuple(dims)
+    if len(dims) != len(a.shape):
+        raise ValueError("dims must match input rank")
+    shape = tuple(s * d for s, d in zip(a.shape, dims))
+    return _meta_tensor(shape, a.dtype, a.device)
+
+
 def _meta_nonzero_meta(a, as_tuple=False):
     if as_tuple:
         return tuple(_meta_tensor((0,), int64_dtype, a.device) for _ in range(len(a.shape)))
@@ -604,6 +615,7 @@ __all__ = [
     "_meta_rot90_meta",
     "_meta_repeat_meta",
     "_meta_repeat_interleave_meta",
+    "_meta_tile_meta",
     "_meta_nonzero_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

@@ -495,6 +495,17 @@ def infer_repeat_interleave(a, repeats, dim=None):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
+def infer_tile(a, dims):
+    if isinstance(dims, int):
+        dims = (dims,)
+    if len(dims) < len(a.shape):
+        dims = (1,) * (len(a.shape) - len(dims)) + tuple(dims)
+    if len(dims) != len(a.shape):
+        raise ValueError("dims must match input rank")
+    shape = tuple(s * d for s, d in zip(a.shape, dims))
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_nonzero(a, as_tuple=False):
     if as_tuple:
         spec = TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=int64_dtype)

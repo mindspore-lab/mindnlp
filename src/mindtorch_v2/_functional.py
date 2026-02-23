@@ -335,6 +335,10 @@ def repeat_interleave(a, repeats, dim=None):
     return dispatch("repeat_interleave", a.device.type, a, repeats, dim)
 
 
+def tile(a, dims):
+    return dispatch("tile", a.device.type, a, dims)
+
+
 
 
 
