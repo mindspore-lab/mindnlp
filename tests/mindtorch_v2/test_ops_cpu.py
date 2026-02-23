@@ -832,6 +832,13 @@ def test_tensor_where_scalar_cpu():
     np.testing.assert_allclose(x.where(cond, 0.5).numpy(), expected)
 
 
+def test_masked_select_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    mask = torch.tensor([[True, False], [False, True]])
+    out = torch.masked_select(x, mask)
+    np.testing.assert_array_equal(out.numpy(), np.array([1, 4]))
+
+
 def test_lerp_scalar_cpu():
     x = torch.tensor([0.0, 1.0, 2.0])
     y = torch.tensor([2.0, 3.0, 4.0])

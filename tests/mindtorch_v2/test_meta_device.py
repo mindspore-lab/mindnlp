@@ -423,3 +423,10 @@ def test_meta_pow_shape():
     out = torch.pow(x, 2.0)
     assert out.device.type == "meta"
     assert out.shape == x.shape
+
+
+def test_meta_masked_select_shape():
+    x = torch.empty((2, 3), device="meta")
+    mask = torch.empty((2, 3), device="meta", dtype=torch.bool)
+    out = torch.masked_select(x, mask)
+    assert out.shape == (0,)

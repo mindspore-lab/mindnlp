@@ -305,6 +305,12 @@ def count_nonzero(a, dim=None, keepdim=False):
     return dispatch("count_nonzero", a.device.type, a, dim=dim, keepdim=keepdim)
 
 
+def masked_select(a, mask):
+    return dispatch("masked_select", a.device.type, a, mask)
+
+
+
+
 def cumsum(a, dim=0):
     return dispatch("cumsum", a.device.type, a, dim)
 

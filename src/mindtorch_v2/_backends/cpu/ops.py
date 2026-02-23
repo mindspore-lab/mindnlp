@@ -87,6 +87,13 @@ def count_nonzero(a, dim=None, keepdim=False):
     return _from_numpy(out, int64_dtype, a.device)
 
 
+def masked_select(a, mask):
+    arr = _to_numpy(a)
+    mask_arr = _to_numpy(mask).astype(bool)
+    out = arr[mask_arr]
+    return _from_numpy(out, a.dtype, a.device)
+
+
 def cumsum(a, dim=0):
     return _from_numpy(np.cumsum(_to_numpy(a), axis=dim), a.dtype, a.device)
 

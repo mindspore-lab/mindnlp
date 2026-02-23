@@ -440,3 +440,8 @@ def infer_matmul(a, b):
         batch = _broadcast_shape(a_shape[:-2], b_shape[:-2])
         out_shape = batch + (a_shape[-2], b_shape[-1])
     return TensorSpec(shape=tuple(out_shape), stride=_contiguous_stride(out_shape), dtype=a.dtype)
+
+
+def infer_masked_select(a, mask):
+    return TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=a.dtype)
+

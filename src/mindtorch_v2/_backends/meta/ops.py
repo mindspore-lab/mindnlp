@@ -493,6 +493,12 @@ def _meta_matmul_meta(a, b):
     return _meta_tensor(out_shape, a.dtype, a.device)
 
 
+def _meta_masked_select_meta(a, mask):
+    return _meta_tensor((0,), a.dtype, a.device)
+
+
+
+
 
 def _meta_contiguous_meta(a):
     return _meta_tensor(a.shape, a.dtype, a.device)
@@ -539,6 +545,7 @@ __all__ = [
     "_meta_gather_meta",
     "_meta_scatter_meta",
     "_meta_transpose_meta",
+    "_meta_masked_select_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",
     "_meta_clamp_meta",
