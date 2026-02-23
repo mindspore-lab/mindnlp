@@ -497,6 +497,10 @@ def _meta_masked_select_meta(a, mask):
     return _meta_tensor((0,), a.dtype, a.device)
 
 
+def _meta_flip_meta(a, dims):
+    return _meta_tensor(a.shape, a.dtype, a.device)
+
+
 def _meta_nonzero_meta(a, as_tuple=False):
     if as_tuple:
         return tuple(_meta_tensor((0,), int64_dtype, a.device) for _ in range(len(a.shape)))
@@ -552,6 +556,7 @@ __all__ = [
     "_meta_scatter_meta",
     "_meta_transpose_meta",
     "_meta_masked_select_meta",
+    "_meta_flip_meta",
     "_meta_nonzero_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

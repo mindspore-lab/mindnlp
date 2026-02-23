@@ -315,6 +315,10 @@ def masked_select(a, mask):
     return dispatch("masked_select", a.device.type, a, mask)
 
 
+def flip(a, dims):
+    return dispatch("flip", a.device.type, a, dims)
+
+
 
 
 def cumsum(a, dim=0):

@@ -16,7 +16,7 @@ from ._tensor import Tensor
 from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range
 from ._functional import zeros_like
 from ._storage import UntypedStorage, TypedStorage
-from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, masked_select, nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, concatenate, hstack, vstack, row_stack, dstack, column_stack, pad_sequence, block_diag, tril, triu, diag, cartesian_prod, chunk, split, vsplit, hsplit, dsplit, unbind, tril_indices, triu_indices, take, take_along_dim, index_select, gather, scatter, abs, neg, exp, log, sqrt
+from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, masked_select, flip, nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, concatenate, hstack, vstack, row_stack, dstack, column_stack, pad_sequence, block_diag, tril, triu, diag, cartesian_prod, chunk, split, vsplit, hsplit, dsplit, unbind, tril_indices, triu_indices, take, take_along_dim, index_select, gather, scatter, abs, neg, exp, log, sqrt
 from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac
 from ._functional import pow, log2, log10, exp2, rsqrt
 from ._functional import sign, signbit, isnan, isinf, isfinite
@@ -86,6 +86,7 @@ __all__ = [
     "argmin",
     "count_nonzero",
     "masked_select",
+    "flip",
     "nonzero",
     "cumsum",
     "cumprod",

@@ -94,6 +94,12 @@ def masked_select(a, mask):
     return _from_numpy(out, a.dtype, a.device)
 
 
+def flip(a, dims):
+    arr = _to_numpy(a)
+    out = np.flip(arr, axis=dims)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def nonzero(a, as_tuple=False):
     idx = np.nonzero(_to_numpy(a))
     if as_tuple:
