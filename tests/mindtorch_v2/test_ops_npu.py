@@ -13,6 +13,9 @@ def test_npu_add():
     assert z.storage().data.tolist() == [4.0, 6.0]
 
 
+
+
+
 def test_npu_matmul_2d():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
