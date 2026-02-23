@@ -872,6 +872,13 @@ def test_rot90_cpu():
     np.testing.assert_array_equal(out.numpy(), expected)
 
 
+def test_repeat_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = torch.repeat(x, (2, 3))
+    expected = np.tile(x.numpy(), (2, 3))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
 def test_nonzero_cpu():
     x = torch.tensor([[0, 1], [2, 0]])
     out = torch.nonzero(x)

@@ -513,6 +513,17 @@ def _meta_rot90_meta(a, k=1, dims=(0, 1)):
     return _meta_tensor(tuple(shape), a.dtype, a.device)
 
 
+def _meta_repeat_meta(a, repeats):
+    if isinstance(repeats, int):
+        repeats = (repeats,)
+    if len(repeats) < len(a.shape):
+        repeats = (1,) * (len(a.shape) - len(repeats)) + tuple(repeats)
+    if len(repeats) != len(a.shape):
+        raise ValueError("repeats must match input rank")
+    shape = tuple(s * r for s, r in zip(a.shape, repeats))
+    return _meta_tensor(shape, a.dtype, a.device)
+
+
 def _meta_nonzero_meta(a, as_tuple=False):
     if as_tuple:
         return tuple(_meta_tensor((0,), int64_dtype, a.device) for _ in range(len(a.shape)))
@@ -571,6 +582,7 @@ __all__ = [
     "_meta_flip_meta",
     "_meta_roll_meta",
     "_meta_rot90_meta",
+    "_meta_repeat_meta",
     "_meta_nonzero_meta",
     "_meta_unary_meta",
     "_meta_unary_bool_meta",

@@ -450,6 +450,12 @@ def test_meta_rot90_shape():
     assert out.shape == (4, 3, 2)
 
 
+def test_meta_repeat_shape():
+    x = torch.empty((2, 3), device="meta")
+    out = torch.repeat(x, (2, 3))
+    assert out.shape == (4, 9)
+
+
 def test_meta_nonzero_shape():
     x = torch.empty((2, 3), device="meta")
     out = torch.nonzero(x)

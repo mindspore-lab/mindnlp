@@ -327,6 +327,12 @@ def rot90(a, k=1, dims=(0, 1)):
     return dispatch("rot90", a.device.type, a, k, dims)
 
 
+def repeat(a, repeats):
+    return dispatch("repeat", a.device.type, a, repeats)
+
+
+
+
 
 
 def cumsum(a, dim=0):

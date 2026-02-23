@@ -463,6 +463,17 @@ def infer_rot90(a, k=1, dims=(0, 1)):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
+def infer_repeat(a, repeats):
+    if isinstance(repeats, int):
+        repeats = (repeats,)
+    if len(repeats) < len(a.shape):
+        repeats = (1,) * (len(a.shape) - len(repeats)) + tuple(repeats)
+    if len(repeats) != len(a.shape):
+        raise ValueError("repeats must match input rank")
+    shape = tuple(s * r for s, r in zip(a.shape, repeats))
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_nonzero(a, as_tuple=False):
     if as_tuple:
         spec = TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=int64_dtype)

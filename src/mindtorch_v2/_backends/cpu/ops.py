@@ -112,6 +112,12 @@ def rot90(a, k=1, dims=(0, 1)):
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
+def repeat(a, repeats):
+    arr = _to_numpy(a)
+    out = np.tile(arr, repeats)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def nonzero(a, as_tuple=False):
     idx = np.nonzero(_to_numpy(a))
     if as_tuple:

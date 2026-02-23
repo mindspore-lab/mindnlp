@@ -24,6 +24,7 @@ from .ops import (
     _meta_flip_meta,
     _meta_roll_meta,
     _meta_rot90_meta,
+    _meta_repeat_meta,
     _meta_nonzero_meta,
     _meta_transpose_meta,
     _meta_unary_meta,
@@ -123,6 +124,7 @@ registry.register("masked_select", "meta", _meta_masked_select_meta)
 registry.register("flip", "meta", _meta_flip_meta)
 registry.register("roll", "meta", _meta_roll_meta)
 registry.register("rot90", "meta", _meta_rot90_meta)
+registry.register("repeat", "meta", _meta_repeat_meta)
 registry.register("nonzero", "meta", _meta_nonzero_meta)
 registry.register("cumsum", "meta", _meta_unary_meta)
 registry.register("cumprod", "meta", _meta_unary_meta)
