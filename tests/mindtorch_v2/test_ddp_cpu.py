@@ -9,7 +9,7 @@ Usage:
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 import mindtorch_v2 as torch
 import mindtorch_v2.nn as nn
