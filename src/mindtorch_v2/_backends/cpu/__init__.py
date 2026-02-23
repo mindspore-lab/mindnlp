@@ -118,6 +118,7 @@ from .ops import (
     fmod,
     flip,
     roll,
+    rot90,
     nonzero,
     masked_select,
     gather,
@@ -194,6 +195,7 @@ registry.register("remainder", "cpu", remainder, meta=meta_infer.infer_binary)
 registry.register("fmod", "cpu", fmod, meta=meta_infer.infer_binary)
 registry.register("flip", "cpu", flip, meta=meta_infer.infer_flip)
 registry.register("roll", "cpu", roll, meta=meta_infer.infer_roll)
+registry.register("rot90", "cpu", rot90, meta=meta_infer.infer_rot90)
 registry.register("nonzero", "cpu", nonzero, meta=meta_infer.infer_nonzero)
 registry.register("masked_select", "cpu", masked_select, meta=meta_infer.infer_masked_select)
 registry.register("gather", "cpu", gather, meta=meta_infer.infer_gather)

@@ -323,6 +323,10 @@ def roll(a, shifts, dims=None):
     return dispatch("roll", a.device.type, a, shifts, dims)
 
 
+def rot90(a, k=1, dims=(0, 1)):
+    return dispatch("rot90", a.device.type, a, k, dims)
+
+
 
 
 def cumsum(a, dim=0):

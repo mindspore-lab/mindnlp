@@ -454,6 +454,15 @@ def infer_roll(a, shifts, dims=None):
     return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=a.dtype)
 
 
+def infer_rot90(a, k=1, dims=(0, 1)):
+    dim0, dim1 = dims
+    shape = list(a.shape)
+    if k % 2 != 0:
+        shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_nonzero(a, as_tuple=False):
     if as_tuple:
         spec = TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=int64_dtype)
