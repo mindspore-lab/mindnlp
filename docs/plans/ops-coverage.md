@@ -137,3 +137,5 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::hsplit` | CPU | done | - | numpy impl + meta + tests |
 | `aten::dsplit` | CPU | done | - | numpy impl + meta + tests |
 | `aten::unbind` | CPU | done | - | numpy impl + meta + tests |
+| `aten::masked_select` | CPU | done | - | numpy impl + meta + tests |
+| `aten::nonzero` | CPU | done | - | numpy impl + meta + tests |
