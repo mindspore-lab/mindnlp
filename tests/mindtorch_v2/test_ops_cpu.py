@@ -839,6 +839,39 @@ def test_masked_select_cpu():
     np.testing.assert_array_equal(out.numpy(), np.array([1, 4]))
 
 
+def test_flip_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = torch.flip(x, dims=(0,))
+    expected = np.flip(x.numpy(), axis=0)
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+    out = torch.flip(x, dims=(0, 1))
+    expected = np.flip(x.numpy(), axis=(0, 1))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
+def test_roll_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = torch.roll(x, shifts=1, dims=0)
+    expected = np.roll(x.numpy(), shift=1, axis=0)
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+    out = torch.roll(x, shifts=(1, -1), dims=(0, 1))
+    expected = np.roll(x.numpy(), shift=(1, -1), axis=(0, 1))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
+def test_rot90_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = torch.rot90(x, k=1, dims=(0, 1))
+    expected = np.rot90(x.numpy(), k=1, axes=(0, 1))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+    out = torch.rot90(x, k=-1, dims=(0, 1))
+    expected = np.rot90(x.numpy(), k=-1, axes=(0, 1))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
 def test_nonzero_cpu():
     x = torch.tensor([[0, 1], [2, 0]])
     out = torch.nonzero(x)

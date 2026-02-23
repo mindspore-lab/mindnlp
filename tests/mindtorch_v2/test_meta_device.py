@@ -432,6 +432,24 @@ def test_meta_masked_select_shape():
     assert out.shape == (0,)
 
 
+def test_meta_flip_shape():
+    x = torch.empty((2, 3, 4), device="meta")
+    out = torch.flip(x, dims=(0, 2))
+    assert out.shape == x.shape
+
+
+def test_meta_roll_shape():
+    x = torch.empty((2, 3, 4), device="meta")
+    out = torch.roll(x, shifts=1, dims=2)
+    assert out.shape == x.shape
+
+
+def test_meta_rot90_shape():
+    x = torch.empty((2, 3, 4), device="meta")
+    out = torch.rot90(x, k=1, dims=(0, 2))
+    assert out.shape == (4, 3, 2)
+
+
 def test_meta_nonzero_shape():
     x = torch.empty((2, 3), device="meta")
     out = torch.nonzero(x)

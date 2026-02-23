@@ -315,6 +315,18 @@ def masked_select(a, mask):
     return dispatch("masked_select", a.device.type, a, mask)
 
 
+def flip(a, dims):
+    return dispatch("flip", a.device.type, a, dims)
+
+
+def roll(a, shifts, dims=None):
+    return dispatch("roll", a.device.type, a, shifts, dims)
+
+
+def rot90(a, k=1, dims=(0, 1)):
+    return dispatch("rot90", a.device.type, a, k, dims)
+
+
 
 
 def cumsum(a, dim=0):
