@@ -3,10 +3,10 @@ from ..._dtype import int32 as int32_dtype
 from ..._dtype import int64 as int64_dtype
 from ..._dtype import float32 as float_dtype
 from ..._storage import npu_typed_storage_from_ptr
+from ..common import convert as convert_backend
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
-from ..common import convert as convert_backend
 
 
 def _unwrap_storage(tensor):
@@ -1572,3 +1572,211 @@ def setitem(tensor, key, value):
         return tensor
 
     raise NotImplementedError(f"NPU setitem not implemented for key type: {type(key)}")
+
+
+def cat(tensors, dim=0):
+    """Concatenate tensors along an existing dimension on NPU using D2D memcpy."""
+    if not tensors:
+        raise RuntimeError("cat requires at least one tensor")
+    if len(tensors) == 1:
+        return contiguous(tensors[0])
+
+    first = tensors[0]
+    runtime = npu_runtime.get_runtime((first.device.index or 0))
+    stream = npu_state.current_stream((first.device.index or 0))
+    ndim = len(first.shape)
+    if dim < 0:
+        dim += ndim
+
+    # Validate shapes and compute output shape
+    out_shape = list(first.shape)
+    for t in tensors[1:]:
+        if len(t.shape) != ndim:
+            raise RuntimeError("cat: tensors must have the same number of dimensions")
+        for d in range(ndim):
+            if d != dim and t.shape[d] != first.shape[d]:
+                raise RuntimeError(f"cat: dimension {d} size mismatch")
+        out_shape[dim] += t.shape[dim]
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(first.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    # Copy each tensor's data into the output buffer
+    # For contiguous tensors along dim, we can compute the byte offset
+    # and use D2D memcpy for each slice
+    offset = 0
+    for t in tensors:
+        t_contig = contiguous(t)
+        t_storage = _unwrap_storage(t_contig)
+        t_bytes = _numel(t.shape) * itemsize
+        dst = out_ptr + offset
+        ret = npu_runtime.acl.rt.memcpy(dst, t_bytes, t_storage.data_ptr(), t_bytes, 3)  # D2D
+        if ret != npu_runtime.ACL_ERROR_CODE:
+            raise RuntimeError(f"cat D2D memcpy failed: {ret}")
+        offset += t_bytes
+
+    # The simple byte-concatenation only works when dim == 0 for arbitrary shapes,
+    # or when the tensor is contiguous and we're concatenating along the leading dim.
+    # For non-zero dim, we need a more sophisticated approach.
+    if dim != 0:
+        # Fallback: reshape so that dim becomes the leading dimension,
+        # then cat along dim 0, then reshape back.
+        # Actually, we can handle this by computing proper strides.
+        # For general dim, use a loop-based copy with proper offsets.
+        # Re-allocate and do a proper strided copy.
+        npu_runtime.acl.rt.free(out_ptr)
+
+        # Strategy: flatten dims before `dim` into one, then cat is along the
+        # "inner" dimension. We copy row-by-row.
+        outer = 1
+        for d in range(dim):
+            outer *= first.shape[d]
+        inner_sizes = [_numel(t.shape) // outer for t in tensors]
+        total_inner = sum(inner_sizes)
+
+        out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+        for row in range(outer):
+            dst_offset = row * total_inner * itemsize
+            src_inner_offset = 0
+            for ti, t in enumerate(tensors):
+                t_contig = contiguous(t)
+                t_storage = _unwrap_storage(t_contig)
+                row_bytes = inner_sizes[ti] * itemsize
+                src_offset = row * inner_sizes[ti] * itemsize
+                ret = npu_runtime.acl.rt.memcpy(
+                    out_ptr + dst_offset + src_inner_offset,
+                    row_bytes,
+                    t_storage.data_ptr() + src_offset,
+                    row_bytes,
+                    3,  # D2D
+                )
+                if ret != npu_runtime.ACL_ERROR_CODE:
+                    raise RuntimeError(f"cat D2D memcpy failed: {ret}")
+                src_inner_offset += row_bytes
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, first.dtype, device=first.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def concatenate(tensors, dim=0):
+    return cat(tensors, dim=dim)
+
+
+def stack(tensors, dim=0):
+    """Stack tensors along a new dimension on NPU."""
+    if not tensors:
+        raise RuntimeError("stack requires at least one tensor")
+
+    # stack = unsqueeze each tensor at dim, then cat along dim
+    first = tensors[0]
+    ndim = len(first.shape)
+    if dim < 0:
+        dim += ndim + 1
+
+    # Compute shape with new dimension inserted
+    new_shape = list(first.shape[:dim]) + [1] + list(first.shape[dim:])
+    new_shape = tuple(new_shape)
+
+    from ..common import view as view_backend
+    reshaped = [view_backend.reshape(t, new_shape) for t in tensors]
+    return cat(reshaped, dim=dim)
+
+
+def where(condition, x, y):
+    """Element-wise where on NPU.
+
+    Implemented as: result = condition * x + (1 - condition) * y
+    using existing mul and add kernels.
+    """
+    runtime = npu_runtime.get_runtime((condition.device.index or 0))
+    stream = npu_state.current_stream((condition.device.index or 0))
+
+    # Cast condition to same dtype as x for arithmetic
+    if condition.dtype != x.dtype:
+        # Use aclnn.cast to convert condition to x.dtype
+        out_shape = condition.shape
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(x.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        cond_storage = _unwrap_storage(condition)
+        if not aclnn.cast_symbols_ok():
+            raise RuntimeError("aclnnCast not available")
+        aclnn.cast(
+            cond_storage.data_ptr(),
+            out_ptr,
+            condition.shape,
+            condition.stride,
+            condition.dtype,
+            x.dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        cond_storage_out = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), x.dtype, device=condition.device)
+        cond_float = _wrap_tensor(cond_storage_out, out_shape, out_stride)
+    else:
+        cond_float = condition
+
+    # result = cond * x + (1 - cond) * y
+    # Compute cond * x
+    cx = _binary_op(cond_float, x, aclnn.mul, "where_mul1")
+
+    # Compute (1 - cond): negate then add 1
+    neg_cond = neg(cond_float)
+    # Add 1 via a ones tensor
+    from .creation import ones_create
+    ones = ones_create(cond_float.shape, dtype=cond_float.dtype, device=cond_float.device)
+    one_minus_cond = _binary_op(ones, neg_cond, aclnn.add, "where_add1")
+
+    # Compute (1 - cond) * y
+    ncy = _binary_op(one_minus_cond, y, aclnn.mul, "where_mul2")
+
+    # result = cond*x + (1-cond)*y
+    return _binary_op(cx, ncy, aclnn.add, "where_add2")
+
+
+def nonzero(a):
+    """Find indices of non-zero elements on NPU.
+
+    Falls back to CPU since there's no aclnn nonzero kernel bound.
+    """
+    from ..._device import device as Device
+
+    # Transfer to CPU, compute, transfer back
+    cpu_tensor = convert_backend.to_device(a, Device("cpu"))
+    import numpy as np
+    from ..._dtype import int64 as int64_dtype
+
+    arr = cpu_tensor._numpy_view()
+    indices = np.argwhere(arr)
+    if indices.size == 0:
+        indices = indices.reshape(0, len(a.shape))
+
+    # Create result tensor on CPU then move to NPU
+    from .creation import tensor_create
+    result_cpu = tensor_create(indices.tolist(), dtype=int64_dtype, device=Device("cpu"))
+    result = convert_backend.to_device(result_cpu, a.device)
+    return result
+
+
+def masked_select(a, mask):
+    """Select elements where mask is True on NPU.
+
+    Falls back to CPU since there's no aclnn masked_select kernel bound.
+    """
+    from ..._device import device as Device
+
+    cpu_a = convert_backend.to_device(a, Device("cpu"))
+    cpu_mask = convert_backend.to_device(mask, Device("cpu"))
+
+    import numpy as np
+    arr = cpu_a._numpy_view()
+    mask_arr = cpu_mask._numpy_view().astype(bool)
+    selected = arr[mask_arr]
+
+    from .creation import tensor_create
+    result_cpu = tensor_create(selected.tolist(), dtype=a.dtype, device=Device("cpu"))
+    result = convert_backend.to_device(result_cpu, a.device)
+    return result
