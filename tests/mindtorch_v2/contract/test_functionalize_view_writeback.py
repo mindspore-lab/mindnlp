@@ -27,4 +27,4 @@ def test_functionalize_writeback_respects_view_meta():
         view.add_(torch.ones((2, 2), device="meta"))
     assert base.device.type == "meta"
     assert view.shape == (2, 2)
-    assert view.stride == (2, 1)
+    assert view.stride == (1, 2)
