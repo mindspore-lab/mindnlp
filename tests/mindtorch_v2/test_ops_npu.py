@@ -255,8 +255,64 @@ def test_npu_pow(dtype):
         rtol=1e-3,
     )
 
-    scalar_out = torch.pow(base, 2.0)
-    scalar_expected = np.power(base.to("cpu").numpy(), 2.0)
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_elementwise_batch2(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    base = np.array([-2.0, -0.5, 0.5, 2.0], dtype=np.float32)
+    x = torch.tensor(base, device="npu", dtype=dtype)
+    y = torch.tensor(base[::-1], device="npu", dtype=dtype)
+
+    expected_asin = np.arcsin(base).astype(np.float32)
+    expected_acos = np.arccos(base).astype(np.float32)
+    out_asin = torch.asin(x).to("cpu").numpy().astype(np.float32)
+    out_acos = torch.acos(x).to("cpu").numpy().astype(np.float32)
+    if dtype == torch.float16:
+        valid = np.abs(base) <= 1.0
+        assert np.allclose(out_asin[valid], expected_asin[valid], atol=1e-3, rtol=1e-3)
+        assert np.allclose(out_acos[valid], expected_acos[valid], atol=1e-3, rtol=1e-3)
+    else:
+        assert np.allclose(out_asin, expected_asin, atol=1e-3, rtol=1e-3, equal_nan=True)
+        assert np.allclose(out_acos, expected_acos, atol=1e-3, rtol=1e-3, equal_nan=True)
+    assert np.allclose(torch.atan(x).to("cpu").numpy(), np.arctan(base).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.atan2(x, y).to("cpu").numpy(), np.arctan2(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.asinh(x).to("cpu").numpy(), np.arcsinh(base).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.acosh(torch.abs(x) + 1.5).to("cpu").numpy(), np.arccosh(np.abs(base) + 1.5).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.atanh(x * 0.25).to("cpu").numpy(), np.arctanh(base * 0.25).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+    assert np.allclose(torch.addcmul(x, x, y).to("cpu").numpy(), (base + base * base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.addcdiv(x, x, y).to("cpu").numpy(), (base + base / base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+    assert np.allclose(torch.logaddexp(x, y).to("cpu").numpy(), np.logaddexp(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.logaddexp2(x, y).to("cpu").numpy(), np.logaddexp2(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.hypot(x, y).to("cpu").numpy(), np.hypot(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+    assert np.allclose(torch.remainder(x, y).to("cpu").numpy(), np.remainder(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.fmod(x, y).to("cpu").numpy(), np.fmod(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+    assert np.allclose(torch.fmin(x, y).to("cpu").numpy(), np.fmin(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.fmax(x, y).to("cpu").numpy(), np.fmax(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.min(x, y).to("cpu").numpy(), np.minimum(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+    assert np.allclose(torch.max(x, y).to("cpu").numpy(), np.maximum(base, base[::-1]).astype(np.float32), atol=1e-3, rtol=1e-3)
+
+    where_cond = torch.tensor([True, False, True, False], device="npu")
+    where_out = torch.where(where_cond, x, y)
+    expected_where = np.where(np.array([True, False, True, False]), base, base[::-1]).astype(np.float32)
+    assert np.allclose(where_out.to("cpu").numpy().astype(np.float32), expected_where, atol=1e-3, rtol=1e-3)
+
+    lerp_out = torch.lerp(x, y, 0.25).to("cpu").numpy()
+    expected_lerp = (base + 0.25 * (base[::-1] - base)).astype(np.float32)
+    assert np.allclose(lerp_out, expected_lerp, atol=1e-3, rtol=1e-3)
+
+    assert torch.allclose(x, y) == np.allclose(base, base[::-1])
+    isclose_out = torch.isclose(x, y).to("cpu").numpy()
+    assert np.all(isclose_out == np.isclose(base, base[::-1]))
+    assert torch.equal(x, y) == np.array_equal(base, base[::-1])
+
+
+    scalar_base = torch.tensor(base, device="npu", dtype=dtype)
+    scalar_out = torch.pow(scalar_base, 2.0)
+    scalar_expected = np.power(base, 2.0)
     assert np.allclose(
         scalar_out.to("cpu").numpy().astype(np.float32),
         scalar_expected.astype(np.float32),

@@ -62,6 +62,31 @@ from .ops import (
     cat,
     concatenate,
     where,
+    sub,
+    div,
+    acosh,
+    addcdiv,
+    addcmul,
+    allclose,
+    asin,
+    asinh,
+    atan,
+    atan2,
+    atanh,
+    equal,
+    fmax,
+    fmin,
+    fmod,
+    hypot,
+    isclose,
+    lerp,
+    logaddexp,
+    logaddexp2,
+    max_,
+    min_,
+    remainder,
+    where,
+    acos,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -110,6 +135,8 @@ registry.register("clamp_min", "npu", clamp_min, meta=meta_infer.infer_unary)
 registry.register("clamp_max", "npu", clamp_max, meta=meta_infer.infer_unary)
 registry.register("relu6", "npu", relu6, meta=meta_infer.infer_unary)
 registry.register("hardtanh", "npu", hardtanh, meta=meta_infer.infer_unary)
+registry.register("min", "npu", min_, meta=meta_infer.infer_binary)
+registry.register("max", "npu", max_, meta=meta_infer.infer_binary)
 registry.register("pow", "npu", pow, meta=meta_infer.infer_binary)
 
 registry.register("amin", "npu", amin, meta=meta_infer.infer_sum)
@@ -120,6 +147,31 @@ registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "npu", zero_, meta=meta_infer.infer_unary)
+registry.register("sub", "npu", sub, meta=meta_infer.infer_binary)
+registry.register("div", "npu", div, meta=meta_infer.infer_binary)
+registry.register("asin", "npu", asin, meta=meta_infer.infer_unary)
+registry.register("acos", "npu", acos, meta=meta_infer.infer_unary)
+registry.register("atan", "npu", atan, meta=meta_infer.infer_unary)
+registry.register("atan2", "npu", atan2, meta=meta_infer.infer_binary)
+registry.register("asinh", "npu", asinh, meta=meta_infer.infer_unary)
+registry.register("acosh", "npu", acosh, meta=meta_infer.infer_unary)
+registry.register("atanh", "npu", atanh, meta=meta_infer.infer_unary)
+registry.register("min_", "npu", min_, meta=meta_infer.infer_binary)
+registry.register("max_", "npu", max_, meta=meta_infer.infer_binary)
+registry.register("fmin", "npu", fmin, meta=meta_infer.infer_binary)
+registry.register("fmax", "npu", fmax, meta=meta_infer.infer_binary)
+registry.register("where", "npu", where, meta=meta_infer.infer_binary)
+registry.register("lerp", "npu", lerp, meta=meta_infer.infer_binary)
+registry.register("addcmul", "npu", addcmul, meta=meta_infer.infer_binary)
+registry.register("addcdiv", "npu", addcdiv, meta=meta_infer.infer_binary)
+registry.register("logaddexp", "npu", logaddexp, meta=meta_infer.infer_binary)
+registry.register("logaddexp2", "npu", logaddexp2, meta=meta_infer.infer_binary)
+registry.register("hypot", "npu", hypot, meta=meta_infer.infer_binary)
+registry.register("remainder", "npu", remainder, meta=meta_infer.infer_binary)
+registry.register("fmod", "npu", fmod, meta=meta_infer.infer_binary)
+registry.register("allclose", "npu", allclose, meta=meta_infer.infer_reduce_bool)
+registry.register("isclose", "npu", isclose, meta=meta_infer.infer_unary_bool)
+registry.register("equal", "npu", equal, meta=meta_infer.infer_reduce_bool)
 registry.register("reshape", "npu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "npu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "npu", view_backend.transpose, meta=meta_infer.infer_transpose)
