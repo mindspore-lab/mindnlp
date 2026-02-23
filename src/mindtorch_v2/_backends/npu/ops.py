@@ -3,10 +3,10 @@ from ..._dtype import int32 as int32_dtype
 from ..._dtype import int64 as int64_dtype
 from ..._dtype import float32 as float_dtype
 from ..._storage import npu_typed_storage_from_ptr
+from ..common import convert as convert_backend
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
-from ..common import convert as convert_backend
 
 
 def _unwrap_storage(tensor):
@@ -1572,3 +1572,134 @@ def setitem(tensor, key, value):
         return tensor
 
     raise NotImplementedError(f"NPU setitem not implemented for key type: {type(key)}")
+
+
+def cat(tensors, dim=0):
+    """Concatenate tensors along an existing dimension using aclnnCat."""
+    if not tensors:
+        raise RuntimeError("cat requires at least one tensor")
+    if len(tensors) == 1:
+        return contiguous(tensors[0])
+
+    first = tensors[0]
+    runtime = npu_runtime.get_runtime((first.device.index or 0))
+    stream = npu_state.current_stream((first.device.index or 0))
+
+    if not aclnn.cat_symbols_ok():
+        raise RuntimeError("aclnnCat not available")
+
+    ndim = len(first.shape)
+    if dim < 0:
+        dim += ndim
+
+    # Validate shapes and compute output shape
+    out_shape = list(first.shape)
+    for t in tensors[1:]:
+        if len(t.shape) != ndim:
+            raise RuntimeError("cat: tensors must have the same number of dimensions")
+        for d in range(ndim):
+            if d != dim and t.shape[d] != first.shape[d]:
+                raise RuntimeError(f"cat: dimension {d} size mismatch")
+        out_shape[dim] += t.shape[dim]
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(first.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    # Prepare inputs for aclnn
+    tensor_ptrs = [_unwrap_storage(t).data_ptr() for t in tensors]
+    shapes = [t.shape for t in tensors]
+    strides = [t.stride for t in tensors]
+    dtypes = [t.dtype for t in tensors]
+
+    aclnn.cat(
+        tensor_ptrs, shapes, strides, dtypes,
+        dim, out_ptr, out_shape, out_stride, first.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, first.dtype, device=first.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def concatenate(tensors, dim=0):
+    return cat(tensors, dim=dim)
+
+
+def stack(tensors, dim=0):
+    """Stack tensors along a new dimension using aclnnStack."""
+    if not tensors:
+        raise RuntimeError("stack requires at least one tensor")
+
+    first = tensors[0]
+    runtime = npu_runtime.get_runtime((first.device.index or 0))
+    stream = npu_state.current_stream((first.device.index or 0))
+
+    if not aclnn.stack_symbols_ok():
+        raise RuntimeError("aclnnStack not available")
+
+    ndim = len(first.shape)
+    if dim < 0:
+        dim += ndim + 1
+
+    # Validate shapes
+    for t in tensors[1:]:
+        if t.shape != first.shape:
+            raise RuntimeError("stack: all tensors must have the same shape")
+
+    # Compute output shape: insert new dimension with size = len(tensors)
+    out_shape = list(first.shape[:dim]) + [len(tensors)] + list(first.shape[dim:])
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(first.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    # Prepare inputs for aclnn
+    tensor_ptrs = [_unwrap_storage(t).data_ptr() for t in tensors]
+    shapes = [t.shape for t in tensors]
+    strides = [t.stride for t in tensors]
+    dtypes = [t.dtype for t in tensors]
+
+    aclnn.stack(
+        tensor_ptrs, shapes, strides, dtypes,
+        dim, out_ptr, out_shape, out_stride, first.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, first.dtype, device=first.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def where(condition, x, y):
+    """Element-wise where using aclnnSWhere."""
+    runtime = npu_runtime.get_runtime((condition.device.index or 0))
+    stream = npu_state.current_stream((condition.device.index or 0))
+
+    if not aclnn.s_where_symbols_ok():
+        raise RuntimeError("aclnnSWhere not available")
+
+    # Compute broadcast output shape
+    out_shape = _broadcast_shape(_broadcast_shape(condition.shape, x.shape), y.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(x.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.s_where(
+        _unwrap_storage(condition).data_ptr(),
+        _unwrap_storage(x).data_ptr(),
+        _unwrap_storage(y).data_ptr(),
+        out_ptr,
+        condition.shape, condition.stride, condition.dtype,
+        x.shape, x.stride, x.dtype,
+        y.shape, y.stride, y.dtype,
+        out_shape, out_stride, x.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, x.dtype, device=x.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+

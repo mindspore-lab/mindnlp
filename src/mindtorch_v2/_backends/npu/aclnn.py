@@ -998,6 +998,77 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # TensorList support
+        self.acl_create_tensor_list = _optional_symbol(
+            libs,
+            "aclCreateTensorList",
+            ctypes.c_void_p,
+            [ctypes.POINTER(ctypes.c_void_p), ctypes.c_uint64],
+        )
+        self.acl_destroy_tensor_list = _optional_symbol(
+            libs,
+            "aclDestroyTensorList",
+            ctypes.c_int32,
+            [ctypes.c_void_p],
+        )
+        # Cat
+        self.aclnn_cat_get_workspace = _optional_symbol(
+            libs,
+            "aclnnCatGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # tensorList
+                ctypes.c_int64,   # dim
+                ctypes.c_void_p,  # out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_cat = _optional_symbol(
+            libs,
+            "aclnnCat",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # Stack
+        self.aclnn_stack_get_workspace = _optional_symbol(
+            libs,
+            "aclnnStackGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # tensorList
+                ctypes.c_int64,   # dim
+                ctypes.c_void_p,  # out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_stack = _optional_symbol(
+            libs,
+            "aclnnStack",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # Where (SWhere = Select Where)
+        self.aclnn_s_where_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSWhereGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # condition
+                ctypes.c_void_p,  # self
+                ctypes.c_void_p,  # other
+                ctypes.c_void_p,  # out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_s_where = _optional_symbol(
+            libs,
+            "aclnnSWhere",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
 
 
 _ACL_DTYPE = {
@@ -3130,3 +3201,223 @@ def isneginf_symbols_ok():
         return all([bindings.aclnn_isneginf_get_workspace, bindings.aclnn_isneginf])
     except Exception:
         return False
+
+
+def _create_tensor_list(bindings, tensor_ptrs, shapes, strides, dtypes):
+    """Create aclTensorList from multiple tensors."""
+    if bindings.acl_create_tensor_list is None:
+        raise RuntimeError("aclCreateTensorList not available")
+
+    num_tensors = len(tensor_ptrs)
+    tensor_array = (ctypes.c_void_p * num_tensors)()
+    tensor_keeps = []
+
+    for i in range(num_tensors):
+        tensor, keep = _create_tensor(bindings, shapes[i], strides[i], dtypes[i], tensor_ptrs[i])
+        tensor_array[i] = tensor
+        tensor_keeps.append((tensor, keep))
+
+    tensor_list = bindings.acl_create_tensor_list(tensor_array, ctypes.c_uint64(num_tensors))
+    if not tensor_list:
+        raise RuntimeError("aclCreateTensorList failed")
+
+    return tensor_list, tensor_keeps
+
+
+def cat(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_stride, out_dtype, runtime, stream=None):
+    """Concatenate tensors along an existing dimension using aclnnCat."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_cat_get_workspace is None or bindings.aclnn_cat is None:
+        raise RuntimeError("aclnnCat symbols not available")
+
+    tensor_list, tensor_keeps = _create_tensor_list(bindings, tensor_ptrs, shapes, strides, dtypes)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_cat_get_workspace(
+            tensor_list,
+            ctypes.c_int64(dim),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnCatGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_cat(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnCat failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        for tensor, _ in tensor_keeps:
+            bindings.acl_destroy_tensor(tensor)
+        if bindings.acl_destroy_tensor_list:
+            bindings.acl_destroy_tensor_list(tensor_list)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def stack(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_stride, out_dtype, runtime, stream=None):
+    """Stack tensors along a new dimension using aclnnStack."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_stack_get_workspace is None or bindings.aclnn_stack is None:
+        raise RuntimeError("aclnnStack symbols not available")
+
+    tensor_list, tensor_keeps = _create_tensor_list(bindings, tensor_ptrs, shapes, strides, dtypes)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_stack_get_workspace(
+            tensor_list,
+            ctypes.c_int64(dim),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnStackGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_stack(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnStack failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        for tensor, _ in tensor_keeps:
+            bindings.acl_destroy_tensor(tensor)
+        if bindings.acl_destroy_tensor_list:
+            bindings.acl_destroy_tensor_list(tensor_list)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def s_where(condition_ptr, self_ptr, other_ptr, out_ptr,
+            condition_shape, condition_stride, condition_dtype,
+            self_shape, self_stride, self_dtype,
+            other_shape, other_stride, other_dtype,
+            out_shape, out_stride, out_dtype,
+            runtime, stream=None):
+    """Element-wise where using aclnnSWhere."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_s_where_get_workspace is None or bindings.aclnn_s_where is None:
+        raise RuntimeError("aclnnSWhere symbols not available")
+
+    condition_tensor, condition_keep = _create_tensor(bindings, condition_shape, condition_stride, condition_dtype, condition_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, other_dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_s_where_get_workspace(
+            condition_tensor,
+            self_tensor,
+            other_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSWhereGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_s_where(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSWhere failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(condition_tensor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (condition_keep, self_keep, other_keep, out_keep)
+
+
+def cat_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.acl_create_tensor_list,
+            bindings.acl_destroy_tensor_list,
+            bindings.aclnn_cat_get_workspace,
+            bindings.aclnn_cat
+        ])
+    except Exception:
+        return False
+
+
+def stack_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.acl_create_tensor_list,
+            bindings.acl_destroy_tensor_list,
+            bindings.aclnn_stack_get_workspace,
+            bindings.aclnn_stack
+        ])
+    except Exception:
+        return False
+
+
+def s_where_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_s_where_get_workspace, bindings.aclnn_s_where])
+    except Exception:
+        return False
+
