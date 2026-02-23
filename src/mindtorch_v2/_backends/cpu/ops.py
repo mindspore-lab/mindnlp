@@ -100,6 +100,12 @@ def flip(a, dims):
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
+def roll(a, shifts, dims=None):
+    arr = _to_numpy(a)
+    out = np.roll(arr, shift=shifts, axis=dims)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def nonzero(a, as_tuple=False):
     idx = np.nonzero(_to_numpy(a))
     if as_tuple:

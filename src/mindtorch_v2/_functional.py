@@ -319,6 +319,10 @@ def flip(a, dims):
     return dispatch("flip", a.device.type, a, dims)
 
 
+def roll(a, shifts, dims=None):
+    return dispatch("roll", a.device.type, a, shifts, dims)
+
+
 
 
 def cumsum(a, dim=0):
