@@ -423,3 +423,34 @@ def test_meta_pow_shape():
     out = torch.pow(x, 2.0)
     assert out.device.type == "meta"
     assert out.shape == x.shape
+
+
+def test_meta_masked_select_shape():
+    x = torch.empty((2, 3), device="meta")
+    mask = torch.empty((2, 3), device="meta", dtype=torch.bool)
+    out = torch.masked_select(x, mask)
+    assert out.shape == (0,)
+
+
+def test_meta_nonzero_shape():
+    x = torch.empty((2, 3), device="meta")
+    out = torch.nonzero(x)
+    assert out.shape == (0, 2)
+
+
+def test_meta_nonzero_as_tuple_shape():
+    x = torch.empty((2, 3), device="meta")
+    out = torch.nonzero(x, as_tuple=True)
+    assert isinstance(out, tuple)
+    assert len(out) == 2
+    assert out[0].shape == (0,)
+    assert out[1].shape == (0,)
+
+
+def test_meta_where_condition_shape():
+    cond = torch.empty((2, 3), device="meta", dtype=torch.bool)
+    out = torch.where(cond)
+    assert isinstance(out, tuple)
+    assert len(out) == 2
+    assert out[0].shape == (0,)
+    assert out[1].shape == (0,)

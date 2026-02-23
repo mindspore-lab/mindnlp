@@ -20,6 +20,8 @@ from .ops import (
     _meta_sum_meta,
     _meta_reduce_bool_meta,
     _meta_argmax_meta,
+    _meta_masked_select_meta,
+    _meta_nonzero_meta,
     _meta_transpose_meta,
     _meta_unary_meta,
     _meta_unary_bool_meta,
@@ -114,6 +116,8 @@ registry.register("any", "meta", _meta_reduce_bool_meta)
 registry.register("argmax", "meta", _meta_argmax_meta)
 registry.register("argmin", "meta", _meta_argmax_meta)
 registry.register("count_nonzero", "meta", _meta_argmax_meta)
+registry.register("masked_select", "meta", _meta_masked_select_meta)
+registry.register("nonzero", "meta", _meta_nonzero_meta)
 registry.register("cumsum", "meta", _meta_unary_meta)
 registry.register("cumprod", "meta", _meta_unary_meta)
 registry.register("cummax", "meta", _meta_cummax_meta)
