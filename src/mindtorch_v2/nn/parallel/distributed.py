@@ -67,7 +67,17 @@ class _Reducer:
         self._param_to_bucket = {}  # param_idx -> bucket_idx
         self._build_buckets(bucket_cap_bytes)
 
-        # Per-iteration state
+        # static_graph support
+        self._static_graph = False
+        self._cached_unused_param_indices = None
+
+        # gradient_as_bucket_view support
+        self._gradient_as_bucket_view = False
+        self._bucket_buffers = []       # flat 1-D tensor per bucket
+        self._bucket_views = {}         # param_idx -> view into bucket buffer
+        self._bucket_offsets = {}       # param_idx -> (start, end) in flat buffer
+
+        # Per-iteration state (must be after _gradient_as_bucket_view init)
         self._bucket_pending = []
         self._bucket_grads = []
         self._reset_state()
@@ -94,7 +104,42 @@ class _Reducer:
 
     def _reset_state(self):
         self._bucket_pending = [len(b) for b in self.buckets]
+        if self._gradient_as_bucket_view and self._bucket_buffers:
+            # Zero out bucket buffers; views will reflect zeroed buffer
+            from ..._autograd.grad_mode import no_grad
+            with no_grad():
+                for buf in self._bucket_buffers:
+                    buf.zero_()
         self._bucket_grads = [{} for _ in self.buckets]
+
+    def _init_bucket_views(self):
+        """Initialize bucket buffers and views for gradient_as_bucket_view mode."""
+        from ..._functional import zeros
+        from ..._autograd.grad_mode import no_grad
+
+        with no_grad():
+            for bucket_idx, bucket in enumerate(self.buckets):
+                # Compute total elements in bucket
+                total_elems = sum(p.numel() for _, p in bucket)
+
+                # Get dtype and device from first param in bucket
+                first_param = bucket[0][1]
+                dtype = first_param.dtype
+                device = first_param.device
+
+                # Allocate flat buffer
+                flat_buffer = zeros((total_elems,), dtype=dtype, device=device)
+                self._bucket_buffers.append(flat_buffer)
+
+                # Create views for each param
+                offset = 0
+                for param_idx, param in bucket:
+                    param_elems = param.numel()
+                    # Create view by slicing the flat buffer and reshaping
+                    view = flat_buffer[offset:offset + param_elems].reshape(param.shape)
+                    self._bucket_views[param_idx] = view
+                    self._bucket_offsets[param_idx] = (offset, offset + param_elems)
+                    offset += param_elems
 
     def register_hooks(self):
         for idx, param in self.grad_params:
@@ -106,16 +151,22 @@ class _Reducer:
             if not self._require_backward_grad_sync:
                 return grad
             bucket_idx = self._param_to_bucket[param_idx]
-            self._bucket_grads[bucket_idx][param_idx] = grad
+
+            if self._gradient_as_bucket_view:
+                from ..._autograd.grad_mode import no_grad
+                # Copy grad data into the pre-allocated view
+                view = self._bucket_views[param_idx]
+                with no_grad():
+                    view[...] = grad
+                self._bucket_grads[bucket_idx][param_idx] = view
+            else:
+                self._bucket_grads[bucket_idx][param_idx] = grad
+
             self._bucket_pending[bucket_idx] -= 1
             if self._bucket_pending[bucket_idx] == 0:
                 self._reduce_bucket(bucket_idx)
-                # Return the averaged grad for this param
-                return self._bucket_grads[bucket_idx][param_idx]
-            # Not the last param in bucket — allreduce hasn't happened yet.
-            # We return grad as-is; it will be overwritten after the bucket
-            # is reduced (via param.grad assignment in _reduce_bucket).
-            return grad
+            # Return the (possibly averaged) grad for this param
+            return self._bucket_grads[bucket_idx][param_idx]
         return hook
 
     def _reduce_bucket(self, bucket_idx):
@@ -127,17 +178,29 @@ class _Reducer:
         grads = self._bucket_grads[bucket_idx]
 
         with no_grad():
-            if self.comm_hook is not None:
-                self._run_comm_hook(bucket_idx, bucket, grads)
+            if self._gradient_as_bucket_view:
+                # Allreduce the single flat buffer; views update automatically
+                flat_buf = self._bucket_buffers[bucket_idx]
+                if self.comm_hook is not None:
+                    self._run_comm_hook_flat(bucket_idx, bucket, flat_buf)
+                else:
+                    dist.all_reduce(flat_buf, op=dist.ReduceOp.SUM, group=self.process_group)
+                    self._bucket_buffers[bucket_idx] = mul(flat_buf, 1.0 / self.world_size)
+                    # Rebuild views from the new buffer (mul creates a new tensor)
+                    self._rebuild_views_from_buffer(bucket_idx)
+                # Views are already param.grad (engine assigns hook return),
+                # but for earlier-arriving params we still need to overwrite.
+                for pi, param in bucket:
+                    param.grad = self._bucket_views[pi]
             else:
-                self._run_default_allreduce(bucket, grads, dist)
+                if self.comm_hook is not None:
+                    self._run_comm_hook(bucket_idx, bucket, grads)
+                else:
+                    self._run_default_allreduce(bucket, grads, dist)
 
-            # Write averaged grads back to all params in bucket.
-            # For the last-arriving param, the hook returns the updated grad.
-            # For earlier params, their hook already returned the original grad
-            # (which the engine assigned to param.grad), so we overwrite here.
-            for pi, param in bucket:
-                param.grad = grads[pi]
+                # Write averaged grads back to all params in bucket.
+                for pi, param in bucket:
+                    param.grad = grads[pi]
 
     def _run_default_allreduce(self, bucket, grads, dist):
         from ..._functional import mul
@@ -160,10 +223,53 @@ class _Reducer:
             future = self.comm_hook(self.comm_hook_state, grad_bucket)
             grads[pi] = future.wait()
 
+    def _rebuild_views_from_buffer(self, bucket_idx):
+        """Rebuild param views after buffer replacement (e.g. after mul)."""
+        bucket = self.buckets[bucket_idx]
+        flat_buf = self._bucket_buffers[bucket_idx]
+        for param_idx, param in bucket:
+            start, end = self._bucket_offsets[param_idx]
+            self._bucket_views[param_idx] = flat_buf[start:end].reshape(param.shape)
+            self._bucket_grads[bucket_idx][param_idx] = self._bucket_views[param_idx]
+
+    def _run_comm_hook_flat(self, bucket_idx, bucket, flat_buf):
+        """Run comm hook on the flat bucket buffer."""
+        params = [p for _, p in bucket]
+        offsets = [self._bucket_offsets[pi][0] for pi, _ in bucket]
+        grad_bucket = GradBucket(
+            index=bucket_idx,
+            buffer=flat_buf,
+            params=params,
+            offsets=offsets,
+            is_last=(bucket_idx == len(self.buckets) - 1),
+        )
+        future = self.comm_hook(self.comm_hook_state, grad_bucket)
+        result = future.wait()
+        self._bucket_buffers[bucket_idx] = result
+        self._rebuild_views_from_buffer(bucket_idx)
+
     def _find_unused_params(self, outputs):
         """Mark unused parameters' buckets as ready with zero gradients."""
         from ..._functional import zeros_like
         from ..._autograd.grad_mode import no_grad
+
+        # If static_graph and we have cached unused params, use the cache
+        if self._static_graph and self._cached_unused_param_indices is not None:
+            with no_grad():
+                for idx in self._cached_unused_param_indices:
+                    bucket_idx = self._param_to_bucket.get(idx)
+                    if bucket_idx is not None:
+                        if self._gradient_as_bucket_view:
+                            # Zero out the view in the bucket buffer
+                            view = self._bucket_views[idx]
+                            view.zero_()
+                            self._bucket_grads[bucket_idx][idx] = view
+                        else:
+                            self._bucket_grads[bucket_idx][idx] = zeros_like(self.params[idx])
+                        self._bucket_pending[bucket_idx] -= 1
+                        if self._bucket_pending[bucket_idx] == 0:
+                            self._reduce_bucket(bucket_idx)
+            return
 
         # Flatten outputs to tensors with grad_fn
         if isinstance(outputs, dict):
@@ -190,16 +296,29 @@ class _Reducer:
                 else:
                     stack.append(inp.grad_fn)
 
+        # Collect unused param indices
+        unused_indices = set()
         # For each unused grad param, simulate hook firing with zero grad
         with no_grad():
             for idx, param in self.grad_params:
                 if id(param) not in used:
+                    unused_indices.add(idx)
                     bucket_idx = self._param_to_bucket.get(idx)
                     if bucket_idx is not None:
-                        self._bucket_grads[bucket_idx][idx] = zeros_like(param)
+                        if self._gradient_as_bucket_view:
+                            # Zero out the view in the bucket buffer
+                            view = self._bucket_views[idx]
+                            view.zero_()
+                            self._bucket_grads[bucket_idx][idx] = view
+                        else:
+                            self._bucket_grads[bucket_idx][idx] = zeros_like(param)
                         self._bucket_pending[bucket_idx] -= 1
                         if self._bucket_pending[bucket_idx] == 0:
                             self._reduce_bucket(bucket_idx)
+
+        # Cache unused indices for static_graph
+        if self._static_graph and self._cached_unused_param_indices is None:
+            self._cached_unused_param_indices = unused_indices
 
     def prepare_for_backward(self):
         self._reset_state()
@@ -258,6 +377,15 @@ class DistributedDataParallel(Module):
             self.world_size,
             bucket_cap_bytes,
         )
+
+        # Configure reducer flags
+        self.reducer._static_graph = static_graph
+        self.reducer._gradient_as_bucket_view = gradient_as_bucket_view
+
+        # Initialize bucket views if gradient_as_bucket_view is enabled
+        if gradient_as_bucket_view:
+            self.reducer._init_bucket_views()
+
         self.reducer.register_hooks()
 
     def _sync_params_and_buffers(self):
@@ -276,8 +404,10 @@ class DistributedDataParallel(Module):
         self.reducer._require_backward_grad_sync = self._require_backward_grad_sync
         self.reducer.prepare_for_backward()
         output = self.module(*args, **kwargs)
-        if self.find_unused_parameters and self._require_backward_grad_sync:
-            self.reducer._find_unused_params(output)
+        if self._require_backward_grad_sync:
+            # static_graph implies find_unused_parameters behavior
+            if self.static_graph or self.find_unused_parameters:
+                self.reducer._find_unused_params(output)
         return output
 
     @contextmanager
