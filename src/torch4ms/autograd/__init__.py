@@ -312,6 +312,12 @@ def _run_backward(
             grad_fn = grad_op(forward_fn)
             
             try:
+                # 用当前 forward 的实际输出构造 sens，避免最后一批 batch size 不同时 sens 与 out 形状不一致
+                try:
+                    actual_out = forward_fn(*ms_inputs)
+                    grad_output = ops.ones_like(actual_out)
+                except Exception:
+                    pass  # 保持原 grad_output
                 # 调用 grad_fn: grad_fn(*inputs, grad_output)
                 grads = grad_fn(*ms_inputs, grad_output)
 
@@ -683,6 +689,12 @@ def _run_grad(
             grad_fn = grad_op(forward_fn)
             
             try:
+                # 用当前 forward 的实际输出构造 sens，避免 batch size 不同时 sens 与 out 形状不一致
+                try:
+                    actual_out = forward_fn(*ms_inputs)
+                    grad_output = ops.ones_like(actual_out)
+                except Exception:
+                    pass
                 # 调用 grad_fn: grad_fn(*inputs, grad_output)
                 grads = grad_fn(*ms_inputs, grad_output)
                 

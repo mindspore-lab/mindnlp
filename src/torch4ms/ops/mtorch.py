@@ -665,8 +665,8 @@ def svd(a, some=True, compute_uv=True):
 
 @register_function(torch.cdist)
 def _cdist(x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"):
-    # Use MindSpore's cdist implementation
-    return mnp.linalg.cdist(x1, x2, p=p)
+    # MindSpore 的 numpy 无 linalg，使用 mindspore.ops.cdist
+    return mops.cdist(x1, x2, p=float(p))
 
 
 @register_function(torch.lu)
