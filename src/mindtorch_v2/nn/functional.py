@@ -25,15 +25,22 @@ def tanh(input):
 
 
 def softmax(input, dim=None, _stacklevel=3, dtype=None):
-    raise NotImplementedError("softmax is not yet implemented")
+    from .._dispatch import dispatch
+    if dim is None:
+        dim = -1
+    return dispatch("softmax", input.device.type, input, dim)
 
 
 def log_softmax(input, dim=None, _stacklevel=3, dtype=None):
-    raise NotImplementedError("log_softmax is not yet implemented")
+    from .._dispatch import dispatch
+    if dim is None:
+        dim = -1
+    return dispatch("log_softmax", input.device.type, input, dim)
 
 
 def gelu(input, approximate='none'):
-    raise NotImplementedError("gelu is not yet implemented")
+    from .._dispatch import dispatch
+    return dispatch("gelu", input.device.type, input)
 
 
 def silu(input, inplace=False):
@@ -63,7 +70,8 @@ def dropout(input, p=0.5, training=True, inplace=False):
 
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
-    raise NotImplementedError("layer_norm is not yet implemented")
+    from .._dispatch import dispatch
+    return dispatch("layer_norm", input.device.type, input, normalized_shape, weight, bias, eps)
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
@@ -77,7 +85,8 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None,
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0,
               scale_grad_by_freq=False, sparse=False):
-    raise NotImplementedError("embedding is not yet implemented")
+    from .._dispatch import dispatch
+    return dispatch("embedding", weight.device.type, weight, input, padding_idx, scale_grad_by_freq, sparse)
 
 
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
