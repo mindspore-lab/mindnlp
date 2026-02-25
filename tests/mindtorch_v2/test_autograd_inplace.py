@@ -31,6 +31,14 @@ def test_inplace_increments_version():
     assert t._version_counter.value == v0 + 1
 
 
+def test_dispatch_inplace_bumps_version():
+    t = torch.tensor([1.0])
+    v0 = t._version_counter.value
+    from mindtorch_v2._dispatch.dispatcher import dispatch
+    dispatch("add_", t.device.type, t, torch.tensor([1.0]))
+    assert t._version_counter.value == v0 + 1
+
+
 def test_saved_tensor_version_mismatch_raises():
     a = torch.tensor([1.0, 2.0])
     a.requires_grad = True

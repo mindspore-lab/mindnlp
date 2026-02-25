@@ -68,14 +68,61 @@ def _prepare_kwargs(func, kwargs, device):
     return filtered
 
 
+def _mutating_args(schema_obj, args, kwargs):
+    if schema_obj is None:
+        return []
+    if kwargs is None:
+        kwargs = {}
+    params = schema_obj.params
+    positional = [p for p in params if not p.kw_only]
+    bound = {}
+    for idx, value in enumerate(args):
+        if idx < len(positional):
+            bound[positional[idx].name] = value
+    for key, value in kwargs.items():
+        bound[key] = value
+    mutated = []
+    for param in params:
+        if not param.mutates:
+            continue
+        if param.name in bound:
+            mutated.append(bound[param.name])
+    return mutated
+
+
+def _bump_versions(schema_obj, args, kwargs):
+    if schema_obj is None:
+        return
+    mutated = _mutating_args(schema_obj, args, kwargs)
+    seen = set()
+    for target in mutated:
+        counter = getattr(target, "_version_counter", None)
+        if counter is None:
+            continue
+        base = getattr(target, "_base", None)
+        if base is not None:
+            target = base
+        if getattr(target, "device", None) is not None and target.device.type == "meta":
+            continue
+        counter = getattr(target, "_version_counter", None)
+        if counter is None:
+            continue
+        key = id(counter)
+        if key in seen:
+            continue
+        counter.bump()
+        seen.add(key)
+
+
 class _PendingOp:
-    def __init__(self, impl, args, kwargs, out, keyset, key):
+    def __init__(self, impl, args, kwargs, out, keyset, key, schema_obj=None):
         self.impl = impl
         self.args = args
         self.kwargs = kwargs
         self.out = out
         self.keyset = keyset
         self.key = key
+        self.schema_obj = schema_obj
 
     def _copy_result(self, pending, result):
         prev_requires_grad = pending.requires_grad
@@ -104,6 +151,7 @@ class _PendingOp:
                 self._copy_result(pending, item)
         else:
             self._copy_result(self.out, result)
+        _bump_versions(self.schema_obj, self.args, self.kwargs)
 
 class _FunctionalizePendingOp:
     def __init__(self, target, thunk, keyset, key):
@@ -125,6 +173,9 @@ class _FunctionalizePendingOp:
         self.target._base = result._base
         self.target._view_meta = result._view_meta
         self.target._pending = False
+        target = self.target._base if self.target._base is not None else self.target
+        if getattr(target, "device", None) is None or target.device.type != "meta":
+            target._version_counter.bump()
 
 
 
@@ -227,9 +278,11 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
         _push_dispatch_context(keyset, key)
         try:
-            return kernel(*args, **impl_kwargs)
+            result = kernel(*args, **impl_kwargs)
         finally:
             _pop_dispatch_context()
+        _bump_versions(entry.schema_obj, args, impl_kwargs)
+        return result
     if pipe is not None and DispatchKey.Pipeline in keyset:
         meta = entry.kernels.get(DispatchKey.Meta)
         if meta is None:
@@ -247,7 +300,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         if impl is None:
             raise RuntimeError(f"pipeline requires backend kernel for op {name}")
         impl_kwargs = _prepare_kwargs(impl, kwargs, dispatch_device)
-        pipe.record(_PendingOp(impl, args, impl_kwargs, out, keyset.without(DispatchKey.Pipeline), impl_key), pending=out)
+        pipe.record(_PendingOp(impl, args, impl_kwargs, out, keyset.without(DispatchKey.Pipeline), impl_key, schema_obj=entry.schema_obj), pending=out)
         return out
     if pipe is not None and DispatchKey.Pipeline in keyset:
         pipe.flush()

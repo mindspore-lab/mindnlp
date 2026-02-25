@@ -336,7 +336,6 @@ class Tensor:
 
         self._check_inplace()
         out = dispatch("add_", self.device.type, self, other)
-        self._bump_version()
         return out
 
     def mul_(self, other):
@@ -344,7 +343,6 @@ class Tensor:
 
         self._check_inplace()
         out = dispatch("mul_", self.device.type, self, other)
-        self._bump_version()
         return out
 
     def relu_(self):
@@ -352,7 +350,6 @@ class Tensor:
 
         self._check_inplace()
         out = dispatch("relu_", self.device.type, self)
-        self._bump_version()
         return out
 
     def zero_(self):
@@ -360,7 +357,6 @@ class Tensor:
 
         self._check_inplace()
         out = dispatch("zero_", self.device.type, self)
-        self._bump_version()
         return out
 
     def to(self, *args, **kwargs):
@@ -774,7 +770,6 @@ class Tensor:
 
         self._check_inplace()
         dispatch("setitem", self.device.type, self, key, value)
-        self._bump_version()
 
     def __repr__(self):
         return format_tensor(self)
