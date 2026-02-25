@@ -2,7 +2,7 @@ import inspect
 
 from .registry import registry
 from .pipeline import current_pipeline
-from .keys import DispatchKey, DispatchKeySet
+from .keys import DispatchKey, DispatchKeySet, apply_tls_masks
 from .functionalize import functionalize_op, is_functionalize_enabled, should_functionalize
 import threading
 
@@ -221,24 +221,7 @@ def _kernel_for_entry(entry, key_order):
 
 
 def _key_order(keyset):
-    order = [
-        DispatchKey.Pipeline,
-        DispatchKey.Functionalize,
-        DispatchKey.Autograd,
-        DispatchKey.Meta,
-        DispatchKey.NPU,
-        DispatchKey.CPU,
-        DispatchKey.Python,
-        DispatchKey.Autocast,
-        DispatchKey.BackendSelect,
-        DispatchKey.ADInplaceOrView,
-        DispatchKey.AutogradOther,
-        DispatchKey.AutogradCPU,
-        DispatchKey.AutogradNPU,
-        DispatchKey.AutogradXPU,
-        DispatchKey.AutogradMeta,
-    ]
-    return [key for key in order if key in keyset]
+    return list(keyset.iter_keys())
 
 
 def _extract_tensors(args, kwargs):
@@ -259,15 +242,16 @@ def _infer_dispatch_device(dispatch_device, tensors, keyset):
         from .._device import get_default_device
 
         return get_default_device()
-    if DispatchKey.Meta in keyset:
+    if keyset.has(DispatchKey.Meta):
         return "meta"
-    if DispatchKey.NPU in keyset:
+    if keyset.has(DispatchKey.NPU):
         return "npu"
     return "cpu"
 
 
 def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     tensors = _extract_tensors(args, kwargs)
+    keyset = apply_tls_masks(keyset)
     pipe = current_pipeline()
     dispatch_device = _infer_dispatch_device(dispatch_device, tensors, keyset)
     alias_name = name
@@ -278,8 +262,8 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         entry.schema_obj.bind(args, kwargs, op_name=alias_name, error_overrides=entry.error_overrides)
         _check_inplace_targets(entry.schema_obj, args, kwargs)
 
-    if DispatchKey.Functionalize in keyset and should_functionalize(entry):
-        if pipe is not None and DispatchKey.Pipeline in keyset:
+    if keyset.has(DispatchKey.Functionalize) and should_functionalize(entry):
+        if pipe is not None and keyset.has(DispatchKey.Pipeline):
             pending = functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, pipeline=pipe, dispatch_device=dispatch_device)
             return pending
         return functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, dispatch_device=dispatch_device)
@@ -288,7 +272,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         kernel, key = _kernel_for_entry(entry, _key_order(keyset))
         if kernel is None:
             raise RuntimeError(
-                f"could not find kernel for op {name} with keys {sorted(k.name for k in keyset)}"
+                f"could not find kernel for op {name} with keys {[k.name for k in _key_order(keyset)]}"
             )
         impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
         _push_dispatch_context(keyset, key)
@@ -298,7 +282,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
             _pop_dispatch_context()
         _bump_versions(entry.schema_obj, args, impl_kwargs)
         return result
-    if pipe is not None and DispatchKey.Pipeline in keyset:
+    if pipe is not None and keyset.has(DispatchKey.Pipeline):
         meta = entry.kernels.get(DispatchKey.Meta)
         if meta is None:
             raise RuntimeError(f"pipeline requires meta kernel for op {name}")
@@ -317,7 +301,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         impl_kwargs = _prepare_kwargs(impl, kwargs, dispatch_device)
         pipe.record(_PendingOp(impl, args, impl_kwargs, out, keyset.without(DispatchKey.Pipeline), impl_key, schema_obj=entry.schema_obj), pending=out)
         return out
-    if pipe is not None and DispatchKey.Pipeline in keyset:
+    if pipe is not None and keyset.has(DispatchKey.Pipeline):
         pipe.flush()
     return _run_kernel()
 
