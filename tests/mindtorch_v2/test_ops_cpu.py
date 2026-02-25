@@ -872,6 +872,32 @@ def test_rot90_cpu():
     np.testing.assert_array_equal(out.numpy(), expected)
 
 
+def test_repeat_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = torch.repeat(x, (2, 3))
+    expected = np.tile(x.numpy(), (2, 3))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
+def test_repeat_interleave_cpu():
+    x = torch.tensor([1, 2, 3])
+    out = torch.repeat_interleave(x, repeats=2)
+    expected = np.repeat(x.numpy(), 2)
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+    y = torch.tensor([[1, 2], [3, 4]])
+    out = torch.repeat_interleave(y, repeats=2, dim=1)
+    expected = np.repeat(y.numpy(), 2, axis=1)
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
+def test_tile_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = torch.tile(x, (2, 3))
+    expected = np.tile(x.numpy(), (2, 3))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
 def test_nonzero_cpu():
     x = torch.tensor([[0, 1], [2, 0]])
     out = torch.nonzero(x)

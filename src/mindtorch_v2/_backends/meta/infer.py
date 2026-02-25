@@ -463,6 +463,49 @@ def infer_rot90(a, k=1, dims=(0, 1)):
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
+def infer_repeat(a, repeats):
+    if isinstance(repeats, int):
+        repeats = (repeats,)
+    if len(repeats) < len(a.shape):
+        repeats = (1,) * (len(a.shape) - len(repeats)) + tuple(repeats)
+    if len(repeats) != len(a.shape):
+        raise ValueError("repeats must match input rank")
+    shape = tuple(s * r for s, r in zip(a.shape, repeats))
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_repeat_interleave(a, repeats, dim=None):
+    shape = list(a.shape)
+    if dim is None:
+        total = 1
+        for s in shape:
+            total *= s
+        if isinstance(repeats, int):
+            total *= repeats
+        else:
+            total = len(repeats)
+        return TensorSpec(shape=(total,), stride=_contiguous_stride((total,)), dtype=a.dtype)
+    if dim < 0:
+        dim += len(shape)
+    if isinstance(repeats, int):
+        shape[dim] *= repeats
+    else:
+        shape[dim] = len(repeats)
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_tile(a, dims):
+    if isinstance(dims, int):
+        dims = (dims,)
+    if len(dims) < len(a.shape):
+        dims = (1,) * (len(a.shape) - len(dims)) + tuple(dims)
+    if len(dims) != len(a.shape):
+        raise ValueError("dims must match input rank")
+    shape = tuple(s * d for s, d in zip(a.shape, dims))
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
 def infer_nonzero(a, as_tuple=False):
     if as_tuple:
         spec = TensorSpec(shape=(0,), stride=_contiguous_stride((0,)), dtype=int64_dtype)

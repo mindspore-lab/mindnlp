@@ -112,6 +112,25 @@ def rot90(a, k=1, dims=(0, 1)):
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
+def repeat(a, repeats):
+    arr = _to_numpy(a)
+    out = np.tile(arr, repeats)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def repeat_interleave(a, repeats, dim=None):
+    arr = _to_numpy(a)
+    axis = None if dim is None else dim
+    out = np.repeat(arr, repeats, axis=axis)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def tile(a, dims):
+    arr = _to_numpy(a)
+    out = np.tile(arr, dims)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def nonzero(a, as_tuple=False):
     idx = np.nonzero(_to_numpy(a))
     if as_tuple:

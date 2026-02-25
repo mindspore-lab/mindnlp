@@ -327,6 +327,20 @@ def rot90(a, k=1, dims=(0, 1)):
     return dispatch("rot90", a.device.type, a, k, dims)
 
 
+def repeat(a, repeats):
+    return dispatch("repeat", a.device.type, a, repeats)
+
+
+def repeat_interleave(a, repeats, dim=None):
+    return dispatch("repeat_interleave", a.device.type, a, repeats, dim)
+
+
+def tile(a, dims):
+    return dispatch("tile", a.device.type, a, dims)
+
+
+
+
 
 
 def cumsum(a, dim=0):
