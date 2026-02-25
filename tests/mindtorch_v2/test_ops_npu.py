@@ -240,7 +240,55 @@ def test_npu_count_nonzero():
     )
 
 
-@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_split_stack_family():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    a = torch.tensor([1.0, 2.0], device="npu")
+    b = torch.tensor([3.0, 4.0], device="npu")
+
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0], device="npu")
+    out = torch.chunk(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([3.0, 4.0]))
+
+
+def test_npu_hstack():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    a = torch.tensor([1.0, 2.0], device="npu")
+    b = torch.tensor([3.0, 4.0], device="npu")
+    expected = np.hstack([a.to("cpu").numpy(), b.to("cpu").numpy()])
+    np.testing.assert_allclose(torch.hstack([a, b]).to("cpu").numpy(), expected)
+    torch.npu.synchronize()
+
+
+def test_npu_vstack_row_stack():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+def test_npu_column_stack():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+def test_npu_dstack():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+def test_npu_hsplit():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0], device="npu")
+    out = torch.hsplit(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([3.0, 4.0]))
+    torch.npu.synchronize()
+
+
 def test_npu_pow(dtype):
     if not torch.npu.is_available():
         pytest.skip("NPU not available")

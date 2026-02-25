@@ -61,6 +61,17 @@ from .ops import (
     stack,
     cat,
     concatenate,
+    chunk,
+    split,
+    vsplit,
+    hsplit,
+    dsplit,
+    unbind,
+    hstack,
+    vstack,
+    row_stack,
+    dstack,
+    column_stack,
     where,
     sub,
     div,
@@ -195,6 +206,17 @@ registry.register("stack", "npu", stack, meta=meta_infer.infer_stack)
 registry.register("cat", "npu", cat, meta=meta_infer.infer_cat)
 registry.register("concat", "npu", cat, meta=meta_infer.infer_cat)
 registry.register("concatenate", "npu", concatenate, meta=meta_infer.infer_cat)
+registry.register("chunk", "npu", chunk)
+registry.register("split", "npu", split)
+registry.register("vsplit", "npu", vsplit)
+registry.register("hsplit", "npu", hsplit)
+registry.register("dsplit", "npu", dsplit)
+registry.register("unbind", "npu", unbind)
+registry.register("hstack", "npu", hstack, meta=meta_infer.infer_hstack)
+registry.register("vstack", "npu", vstack, meta=meta_infer.infer_vstack)
+registry.register("row_stack", "npu", row_stack, meta=meta_infer.infer_vstack)
+registry.register("dstack", "npu", dstack, meta=meta_infer.infer_dstack)
+registry.register("column_stack", "npu", column_stack, meta=meta_infer.infer_column_stack)
 registry.register("where", "npu", where, meta=meta_infer.infer_binary)
 
 # Critical tier operations
