@@ -441,3 +441,163 @@ def test_npu_to_cpu_synchronizes(monkeypatch):
     t = torch.ones((1,), device="npu")
     _ = t.to("cpu")
     assert "sync" in calls
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_div(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a_data = np.array([4.0, 6.0, 9.0, 10.0], dtype=np.float32)
+    b_data = np.array([2.0, 3.0, 3.0, 5.0], dtype=np.float32)
+    a = torch.tensor(a_data, device="npu", dtype=dtype)
+    b = torch.tensor(b_data, device="npu", dtype=dtype)
+    out = torch.div(a, b)
+    expected = (a_data / b_data).astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_mean(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+
+    # Mean along dim 1
+    out = torch.mean(x, dim=1)
+    expected = np.mean(data, axis=1).astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+    # Mean along dim 0
+    out0 = torch.mean(x, dim=0)
+    expected0 = np.mean(data, axis=0).astype(np.float32)
+    assert np.allclose(out0.to("cpu").numpy().astype(np.float32), expected0, atol=1e-3, rtol=1e-3)
+
+    # Global mean
+    out_all = torch.mean(x)
+    expected_all = np.mean(data).astype(np.float32)
+    assert np.allclose(out_all.to("cpu").numpy().astype(np.float32), expected_all, atol=1e-3, rtol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_softmax(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([[1.0, 2.0, 3.0], [1.0, 1.0, 1.0]], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+
+    from mindtorch_v2.nn import functional as F
+    out = F.softmax(x, dim=-1)
+
+    # Compute expected using numpy
+    def numpy_softmax(x, axis=-1):
+        e_x = np.exp(x - np.max(x, axis=axis, keepdims=True))
+        return e_x / np.sum(e_x, axis=axis, keepdims=True)
+
+    expected = numpy_softmax(data).astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+    # Check that each row sums to ~1.0
+    row_sums = np.sum(out.to("cpu").numpy().astype(np.float32), axis=1)
+    assert np.allclose(row_sums, np.ones(2), atol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_log_softmax(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([[1.0, 2.0, 3.0], [1.0, 1.0, 1.0]], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+
+    from mindtorch_v2.nn import functional as F
+    out = F.log_softmax(x, dim=-1)
+
+    def numpy_log_softmax(x, axis=-1):
+        e_x = np.exp(x - np.max(x, axis=axis, keepdims=True))
+        return np.log(e_x / np.sum(e_x, axis=axis, keepdims=True))
+
+    expected = numpy_log_softmax(data).astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_gelu(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([-2.0, -1.0, 0.0, 1.0, 2.0], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+
+    from mindtorch_v2.nn import functional as F
+    out = F.gelu(x)
+
+    # GELU formula: x * 0.5 * (1 + erf(x / sqrt(2)))
+    from scipy.special import erf as scipy_erf
+    expected = (data * 0.5 * (1.0 + scipy_erf(data / np.sqrt(2.0)))).astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_layer_norm(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    # Test with 1-row input (works)
+    data_1row = np.array([[1.0, 2.0, 3.0]], dtype=np.float32)
+    x_1row = torch.tensor(data_1row, device="npu", dtype=dtype)
+
+    from mindtorch_v2.nn import functional as F
+    out_1row = F.layer_norm(x_1row, (3,))
+
+    mean_val = np.mean(data_1row, axis=-1, keepdims=True)
+    var_val = np.var(data_1row, axis=-1, keepdims=True)
+    expected = ((data_1row - mean_val) / np.sqrt(var_val + 1e-5)).astype(np.float32)
+    assert np.allclose(out_1row.to("cpu").numpy().astype(np.float32), expected, atol=1e-2, rtol=1e-2)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_layer_norm_multirow(dtype):
+    """Test layer_norm with multi-row input (batch_size > 1)."""
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    data = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
+    x = torch.tensor(data, device="npu", dtype=dtype)
+
+    from mindtorch_v2.nn import functional as F
+    out = F.layer_norm(x, (3,))
+
+    # Compute expected manually
+    mean_val = np.mean(data, axis=-1, keepdims=True)
+    var_val = np.var(data, axis=-1, keepdims=True)
+    expected = ((data - mean_val) / np.sqrt(var_val + 1e-5)).astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-2, rtol=1e-2)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_embedding(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    weight_data = np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]], dtype=np.float32)
+    weight = torch.tensor(weight_data, device="npu", dtype=dtype)
+    indices = torch.tensor([0, 2, 1], device="npu", dtype=torch.int64)
+
+    from mindtorch_v2.nn import functional as F
+    out = F.embedding(indices, weight)
+
+    expected = weight_data[np.array([0, 2, 1])].astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_npu_embedding_2d_indices(dtype):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    weight_data = np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8]], dtype=np.float32)
+    weight = torch.tensor(weight_data, device="npu", dtype=dtype)
+    indices = torch.tensor([[0, 2], [1, 3]], device="npu", dtype=torch.int64)
+
+    from mindtorch_v2.nn import functional as F
+    out = F.embedding(indices, weight)
+
+    assert out.shape == (2, 2, 2)
+    expected = weight_data[np.array([[0, 2], [1, 3]])].astype(np.float32)
+    assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)

@@ -2053,3 +2053,260 @@ def stack(tensors, dim=0):
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, first.dtype, device=first.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def where(condition, x, y):
+    """Element-wise where using aclnnSWhere."""
+    runtime = npu_runtime.get_runtime((condition.device.index or 0))
+    stream = npu_state.current_stream((condition.device.index or 0))
+
+    if not aclnn.s_where_symbols_ok():
+        raise RuntimeError("aclnnSWhere not available")
+
+    # Compute broadcast output shape
+    out_shape = _broadcast_shape(_broadcast_shape(condition.shape, x.shape), y.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(x.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.s_where(
+        _unwrap_storage(condition).data_ptr(),
+        _unwrap_storage(x).data_ptr(),
+        _unwrap_storage(y).data_ptr(),
+        out_ptr,
+        condition.shape, condition.stride, condition.dtype,
+        x.shape, x.stride, x.dtype,
+        y.shape, y.stride, y.dtype,
+        out_shape, out_stride, x.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, x.dtype, device=x.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def mean(a, dim=None, keepdim=False):
+    """Compute mean along dimensions using aclnnMean."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.mean_symbols_ok():
+        raise RuntimeError("aclnnMean not available")
+
+    # Compute output shape
+    if dim is None:
+        dims = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        dims = [dim if dim >= 0 else dim + len(a.shape)]
+    else:
+        dims = [d if d >= 0 else d + len(a.shape) for d in dim]
+
+    out_shape = list(a.shape)
+    for d in sorted(dims, reverse=True):
+        if keepdim:
+            out_shape[d] = 1
+        else:
+            out_shape.pop(d)
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.mean(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        dims, keepdim,
+        out_shape, out_stride,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def softmax(a, dim=-1):
+    """Compute softmax along a dimension using aclnnSoftmax."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.softmax_symbols_ok():
+        raise RuntimeError("aclnnSoftmax not available")
+
+    # Normalize dim
+    if dim < 0:
+        dim += len(a.shape)
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.softmax(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        dim,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def log_softmax(a, dim=-1):
+    """Compute log_softmax along a dimension using aclnnLogSoftmax."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.log_softmax_symbols_ok():
+        raise RuntimeError("aclnnLogSoftmax not available")
+
+    # Normalize dim
+    if dim < 0:
+        dim += len(a.shape)
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.log_softmax(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        dim,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def gelu(a):
+    """Compute GELU activation using aclnnGelu."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.gelu_symbols_ok():
+        raise RuntimeError("aclnnGelu not available")
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.gelu(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    """Compute layer normalization using aclnnLayerNorm."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    if not aclnn.layer_norm_symbols_ok():
+        raise RuntimeError("aclnnLayerNorm not available")
+
+    # Compute stats shape (all dims except normalized dims)
+    if isinstance(normalized_shape, int):
+        normalized_shape = (normalized_shape,)
+
+    num_normalized_dims = len(normalized_shape)
+    # Stats (mean/rstd) must have same rank as input, with normalized dims replaced by 1
+    if num_normalized_dims > 0:
+        stats_shape = tuple(
+            s if i < len(input.shape) - num_normalized_dims else 1
+            for i, s in enumerate(input.shape)
+        )
+    else:
+        stats_shape = input.shape
+    stats_stride = npu_runtime._contiguous_stride(stats_shape)
+    stats_numel = _numel(stats_shape)
+
+    out_shape = input.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+    # Mean and rstd are always float32
+    mean_ptr = npu_runtime._alloc_device(stats_numel * 4, runtime=runtime)  # float32 = 4 bytes
+    rstd_ptr = npu_runtime._alloc_device(stats_numel * 4, runtime=runtime)  # float32 = 4 bytes
+
+    weight_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
+    bias_ptr = _unwrap_storage(bias).data_ptr() if bias is not None else None
+
+    aclnn.layer_norm(
+        _unwrap_storage(input).data_ptr(),
+        weight_ptr,
+        bias_ptr,
+        out_ptr,
+        mean_ptr,
+        rstd_ptr,
+        input.shape, input.stride,
+        weight.shape if weight is not None else (),
+        weight.stride if weight is not None else (),
+        bias.shape if bias is not None else (),
+        bias.stride if bias is not None else (),
+        out_shape, out_stride,
+        stats_shape, stats_stride,
+        normalized_shape,
+        eps,
+        input.dtype,
+        runtime, stream=stream.stream
+    )
+
+    runtime.defer_free(mean_ptr)
+    runtime.defer_free(rstd_ptr)
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, sparse=False):
+    """Compute embedding lookup using aclnnEmbedding."""
+    runtime = npu_runtime.get_runtime((weight.device.index or 0))
+    stream = npu_state.current_stream((weight.device.index or 0))
+
+    if not aclnn.embedding_symbols_ok():
+        raise RuntimeError("aclnnEmbedding not available")
+
+    # Output shape: indices.shape + (embedding_dim,)
+    embedding_dim = weight.shape[1] if len(weight.shape) > 1 else weight.shape[0]
+    out_shape = indices.shape + (embedding_dim,)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(weight.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    # Note: aclnnEmbedding doesn't support padding_idx, scale_grad_by_freq, sparse parameters
+    # These are ignored for now
+    aclnn.embedding(
+        _unwrap_storage(weight).data_ptr(),
+        _unwrap_storage(indices).data_ptr(),
+        out_ptr,
+        weight.shape, weight.stride,
+        indices.shape, indices.stride,
+        out_shape, out_stride,
+        weight.dtype,
+        indices.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, weight.dtype, device=weight.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+

@@ -87,6 +87,12 @@ from .ops import (
     remainder,
     where,
     acos,
+    mean,
+    softmax,
+    log_softmax,
+    gelu,
+    layer_norm,
+    embedding,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -149,6 +155,7 @@ registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "npu", zero_, meta=meta_infer.infer_unary)
 registry.register("sub", "npu", sub, meta=meta_infer.infer_binary)
 registry.register("div", "npu", div, meta=meta_infer.infer_binary)
+registry.register("true_divide", "npu", div, meta=meta_infer.infer_binary)
 registry.register("asin", "npu", asin, meta=meta_infer.infer_unary)
 registry.register("acos", "npu", acos, meta=meta_infer.infer_unary)
 registry.register("atan", "npu", atan, meta=meta_infer.infer_unary)
@@ -189,5 +196,13 @@ registry.register("cat", "npu", cat, meta=meta_infer.infer_cat)
 registry.register("concat", "npu", cat, meta=meta_infer.infer_cat)
 registry.register("concatenate", "npu", concatenate, meta=meta_infer.infer_cat)
 registry.register("where", "npu", where, meta=meta_infer.infer_binary)
+
+# Critical tier operations
+registry.register("mean", "npu", mean, meta=meta_infer.infer_sum)
+registry.register("softmax", "npu", softmax, meta=meta_infer.infer_unary)
+registry.register("log_softmax", "npu", log_softmax, meta=meta_infer.infer_unary)
+registry.register("gelu", "npu", gelu, meta=meta_infer.infer_unary)
+registry.register("layer_norm", "npu", layer_norm, meta=meta_infer.infer_unary)
+registry.register("embedding", "npu", embedding, meta=meta_infer.infer_binary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]

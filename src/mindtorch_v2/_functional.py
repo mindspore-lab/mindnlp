@@ -259,6 +259,19 @@ def remainder(a, b):
 def fmod(a, b):
     return dispatch("fmod", a.device.type, a, b)
 
+
+def div(a, b, *, rounding_mode=None):
+    return dispatch("div", a.device.type, a, b)
+
+
+def true_divide(a, b):
+    return dispatch("true_divide", a.device.type, a, b)
+
+
+def mean(a, dim=None, keepdim=False, *, dtype=None):
+    return dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 
