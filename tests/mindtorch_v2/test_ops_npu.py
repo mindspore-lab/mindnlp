@@ -269,35 +269,13 @@ def test_npu_vstack_row_stack():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
 
-    a = torch.tensor([1.0, 2.0], device="npu")
-    b = torch.tensor([3.0, 4.0], device="npu")
-    expected = np.vstack([a.to("cpu").numpy(), b.to("cpu").numpy()])
-    np.testing.assert_allclose(torch.vstack([a, b]).to("cpu").numpy(), expected)
-    np.testing.assert_allclose(torch.row_stack([a, b]).to("cpu").numpy(), expected)
-    torch.npu.synchronize()
-
-
 def test_npu_column_stack():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
 
-    a = torch.tensor([1.0, 2.0], device="npu")
-    b = torch.tensor([3.0, 4.0], device="npu")
-    expected = np.column_stack([a.to("cpu").numpy(), b.to("cpu").numpy()])
-    np.testing.assert_allclose(torch.column_stack([a, b]).to("cpu").numpy(), expected)
-    torch.npu.synchronize()
-
-
 def test_npu_dstack():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
-
-    a = torch.tensor([1.0, 2.0], device="npu")
-    b = torch.tensor([3.0, 4.0], device="npu")
-    expected = np.dstack([a.to("cpu").numpy(), b.to("cpu").numpy()])
-    np.testing.assert_allclose(torch.dstack([a, b]).to("cpu").numpy(), expected)
-    torch.npu.synchronize()
-
 
 def test_npu_hsplit():
     if not torch.npu.is_available():

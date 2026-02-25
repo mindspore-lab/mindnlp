@@ -4265,10 +4265,10 @@ def cat(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_strid
         _maybe_sync(runtime)
     finally:
         _defer_executor(executor)
-        for tensor, _ in tensor_keeps:
-            bindings.acl_destroy_tensor(tensor)
         if bindings.acl_destroy_tensor_list:
             bindings.acl_destroy_tensor_list(tensor_list)
+        for tensor, _ in tensor_keeps:
+            bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
             runtime.defer_free(workspace)
@@ -4317,10 +4317,10 @@ def stack(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_str
         _maybe_sync(runtime)
     finally:
         _defer_executor(executor)
-        for tensor, _ in tensor_keeps:
-            bindings.acl_destroy_tensor(tensor)
         if bindings.acl_destroy_tensor_list:
             bindings.acl_destroy_tensor_list(tensor_list)
+        for tensor, _ in tensor_keeps:
+            bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
             runtime.defer_free(workspace)
