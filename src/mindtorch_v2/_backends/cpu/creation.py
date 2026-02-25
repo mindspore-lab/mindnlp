@@ -94,3 +94,13 @@ def range_create(start, end, step=1, dtype=None, device=None):
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
     return Tensor(storage, arr.shape, stride)
+
+
+def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
+    if isinstance(shape, int):
+        shape = (shape,)
+    shape = tuple(shape)
+    arr = np.random.randn(*shape).astype(to_numpy_dtype(dtype))
+    storage = typed_storage_from_numpy(arr, dtype, device=device)
+    stride = _contiguous_stride(shape)
+    return Tensor(storage, shape, stride, requires_grad=requires_grad)

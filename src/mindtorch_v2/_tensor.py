@@ -192,6 +192,14 @@ class Tensor:
     def transpose(self, dim0, dim1):
         return transpose_dispatch(self, dim0, dim1)
 
+    def t(self):
+        """Transpose for 2D tensors. Expects input to be <= 2-D tensor and transposes dimensions 0 and 1."""
+        if len(self.shape) > 2:
+            raise RuntimeError(f"t() expects a tensor with <= 2 dimensions, but self is {len(self.shape)}D")
+        if len(self.shape) < 2:
+            return self
+        return self.transpose(0, 1)
+
     def _ones_like(self):
         if self.device.type == "meta":
             storage = meta_typed_storage_from_shape(self.shape, self.dtype, device=self.device)

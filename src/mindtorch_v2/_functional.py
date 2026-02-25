@@ -648,6 +648,13 @@ def empty(shape, *, dtype=None, device=None, memory_format=None):
     return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
+def randn(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
+    dev = _as_device(device)
+    return dispatch("randn", dev, shape, dtype=dtype, memory_format=memory_format)
+
+
 def arange(start, end=None, step=1, dtype=None, device=None):
     dev = _as_device(device)
     if end is None:
