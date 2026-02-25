@@ -11,6 +11,7 @@ from .creation import (
     logspace_create,
     ones_create,
     range_create,
+    randn_create,
     tensor_create,
     zeros_create,
 )
@@ -269,3 +270,4 @@ registry.register("full", "cpu", full_create)
 registry.register("logspace", "cpu", logspace_create)
 registry.register("eye", "cpu", eye_create)
 registry.register("range", "cpu", range_create)
+registry.register("randn", "cpu", randn_create)

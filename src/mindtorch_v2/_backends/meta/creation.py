@@ -86,6 +86,15 @@ def range_create_meta(start, end, step=1, dtype=None, device=None):
     return Tensor(storage, arr.shape, stride)
 
 
+def randn_create_meta(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
+    if isinstance(shape, int):
+        shape = (shape,)
+    shape = tuple(shape)
+    stride = _contiguous_stride(shape)
+    storage = meta_typed_storage_from_shape(shape, dtype, device=device)
+    return Tensor(storage, shape, stride, requires_grad=requires_grad)
+
+
 __all__ = [
     "tensor_create_meta",
     "zeros_create_meta",
@@ -97,4 +106,5 @@ __all__ = [
     "logspace_create_meta",
     "eye_create_meta",
     "range_create_meta",
+    "randn_create_meta",
 ]

@@ -10,6 +10,7 @@ from .creation import (
     logspace_create_meta,
     ones_create_meta,
     range_create_meta,
+    randn_create_meta,
     tensor_create_meta,
     zeros_create_meta,
 )
@@ -199,3 +200,4 @@ registry.register("full", "meta", full_create_meta)
 registry.register("logspace", "meta", logspace_create_meta)
 registry.register("eye", "meta", eye_create_meta)
 registry.register("range", "meta", range_create_meta)
+registry.register("randn", "meta", randn_create_meta)
