@@ -1,9 +1,12 @@
+import ctypes
 from ..._dtype import bool as bool_dtype
 from ..._dtype import int32 as int32_dtype
 from ..._dtype import int64 as int64_dtype
 from ..._dtype import float32 as float_dtype
 from ..._storage import npu_typed_storage_from_ptr
 from ..common import convert as convert_backend
+from ..common import view as view_backend
+reshape = view_backend.reshape
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
@@ -1289,6 +1292,31 @@ def where(cond, x, y):
     out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), x.dtype, device=x.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
+
+
+# helper + ops block inserted before nonzero()
+
+def _check_index_range_cpu(indices, dim_size, name):
+    idx = indices.to("cpu").numpy()
+    if idx.size == 0:
+        return
+    if idx.min() < 0 or idx.max() >= dim_size:
+        raise IndexError(f"{name} indices out of range")
+
+
+def _normalize_indices_cpu(index, dim_size, name):
+    idx = index.to("cpu").numpy().astype(int)
+    if idx.size == 0:
+        return index
+    idx = idx.copy()
+    idx[idx < 0] += dim_size
+    if idx.min() < 0 or idx.max() >= dim_size:
+        raise IndexError(f"{name} indices out of range")
+    from ..._dtype import int64 as cpu_int64
+    from .creation import tensor_create
+    from ..._device import device as Device
+    cpu_tensor = tensor_create(idx.tolist(), dtype=cpu_int64, device=Device("cpu"))
+    return cpu_tensor.to(index.device)
 
 
 def nonzero(a):
@@ -2868,9 +2896,196 @@ def dstack(tensors):
     return cat(expanded, dim=2)
 
 
+
+
+
+
 def column_stack(tensors):
     from ..common import view as view_backend
     if tensors[0].dim() == 1:
         expanded = [view_backend.reshape(t, (t.shape[0], 1)) for t in tensors]
         return cat(expanded, dim=1)
     return cat(tensors, dim=1)
+
+
+def _read_bool_scalar(tensor):
+    runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+    stream = npu_state.current_stream((tensor.device.index or 0))
+    runtime.activate()
+    if hasattr(runtime, "synchronize_stream"):
+        runtime.synchronize_stream(stream.stream)
+    buf = (ctypes.c_uint8 * 1)()
+    ret = npu_runtime.acl.rt.memcpy(
+        ctypes.addressof(buf),
+        1,
+        _unwrap_storage(tensor).data_ptr(),
+        1,
+        npu_runtime.ACL_MEMCPY_DEVICE_TO_HOST,
+    )
+    if ret != npu_runtime.ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.memcpy D2H failed: {ret}")
+    return bool(buf[0])
+
+
+def _read_int64_scalar(tensor):
+    runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+    stream = npu_state.current_stream((tensor.device.index or 0))
+    runtime.activate()
+    if hasattr(runtime, "synchronize_stream"):
+        runtime.synchronize_stream(stream.stream)
+    buf = ctypes.c_int64()
+    size = ctypes.sizeof(buf)
+    ret = npu_runtime.acl.rt.memcpy(
+        ctypes.addressof(buf),
+        size,
+        _unwrap_storage(tensor).data_ptr(),
+        size,
+        npu_runtime.ACL_MEMCPY_DEVICE_TO_HOST,
+    )
+    if ret != npu_runtime.ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.memcpy D2H failed: {ret}")
+    return int(buf.value)
+
+
+def _require_int64_indices(indices, name):
+    if indices.dtype != int64_dtype:
+        raise ValueError(f"{name} indices must be int64")
+    if indices.device.type != "npu":
+        raise ValueError(f"{name} indices must be on NPU")
+    return indices
+
+
+def _validate_index_bounds(indices, dim_size, allow_negative, name):
+    if indices.numel() == 0:
+        return
+    if allow_negative:
+        min_ok = _scalar_to_npu_tensor(-int(dim_size), indices)
+        max_ok = _scalar_to_npu_tensor(int(dim_size - 1), indices)
+    else:
+        min_ok = _scalar_to_npu_tensor(0, indices)
+        max_ok = _scalar_to_npu_tensor(int(dim_size - 1), indices)
+    below_min = lt(indices, min_ok)
+    above_max = gt(indices, max_ok)
+    if _read_bool_scalar(any_(below_min)) or _read_bool_scalar(any_(above_max)):
+        raise IndexError(f"{name} indices out of range")
+
+def _normalize_negative_indices(indices, dim_size):
+    neg_mask = lt(indices, _scalar_to_npu_tensor(0, indices))
+    if not _read_bool_scalar(any_(neg_mask)):
+        return indices
+    return where(neg_mask, add(indices, _scalar_to_npu_tensor(int(dim_size), indices)), indices)
+
+def gather(a, dim, index):
+    dim = _normalize_dim(dim, a.dim())
+    _require_int64_indices(index, "gather")
+    if index.dim() != a.dim():
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(index.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("index shape mismatch")
+    _validate_index_bounds(index, a.shape[dim], allow_negative=False, name="gather")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = index.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(a.dtype), runtime=runtime)
+    aclnn.gather(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(index).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        index.shape,
+        index.stride,
+        index.dtype,
+        out_shape,
+        out_stride,
+        a.dtype,
+        dim,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def index_select(a, dim, index):
+    dim = _normalize_dim(dim, a.dim())
+    _require_int64_indices(index, "index_select")
+    if index.dim() != 1:
+        raise ValueError("index must be 1D")
+    dim_size = a.shape[dim]
+    _validate_index_bounds(index, dim_size, allow_negative=True, name="index_select")
+    norm_index = _normalize_negative_indices(index, dim_size)
+    index_shape = list(a.shape)
+    index_shape[dim] = norm_index.shape[0]
+    index_shape = tuple(index_shape)
+    expand_shape = [1] * a.dim()
+    expand_shape[dim] = norm_index.shape[0]
+    expanded = view_backend.reshape(norm_index, tuple(expand_shape))
+    expanded = _npu_broadcast_to(expanded, index_shape)
+    return gather(a, dim, expanded)
+
+def take(a, index):
+    _require_int64_indices(index, "take")
+    flat = view_backend.reshape(a, (a.numel(),))
+    dim_size = flat.shape[0]
+    _validate_index_bounds(index, dim_size, allow_negative=True, name="take")
+    norm_index = _normalize_negative_indices(index, dim_size)
+    index_shape = norm_index.shape
+    gather_index = norm_index
+    if gather_index.dim() == 0:
+        gather_index = gather_index.reshape((1,))
+    if gather_index.dim() != 1:
+        gather_index = gather_index.reshape((gather_index.numel(),))
+    out = gather(flat, 0, gather_index)
+    return out.reshape(index_shape)
+
+def take_along_dim(a, indices, dim):
+    dim = _normalize_dim(dim, a.dim())
+    _require_int64_indices(indices, "take_along_dim")
+    if indices.dim() != a.dim():
+        raise ValueError("indices shape mismatch")
+    for i, size in enumerate(indices.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("indices shape mismatch")
+    dim_size = a.shape[dim]
+    _validate_index_bounds(indices, dim_size, allow_negative=True, name="take_along_dim")
+    norm_indices = _normalize_negative_indices(indices, dim_size)
+    return gather(a, dim, norm_indices)
+
+
+def masked_select(a, mask):
+    if mask.dtype != bool_dtype:
+        mask = ne(mask, _scalar_to_npu_tensor(0, mask))
+    if mask.shape != a.shape:
+        raise ValueError("mask shape mismatch")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    mask_count = count_nonzero(mask, dim=None, keepdim=False)
+    out_numel = _read_int64_scalar(mask_count)
+    out_shape = (a.numel(),)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(max(a.numel(), 1) * _dtype_itemsize(a.dtype), runtime=runtime)
+    aclnn.masked_select(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(mask).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        mask.shape,
+        mask.stride,
+        mask.dtype,
+        out_shape,
+        out_stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    full_storage = npu_typed_storage_from_ptr(out_ptr, max(a.numel(), 1), a.dtype, device=a.device)
+    full = _wrap_tensor(full_storage, out_shape, out_stride)
+    if out_numel == out_shape[0]:
+        return full
+    return _slice_along_dim(full, 0, out_numel, 0)

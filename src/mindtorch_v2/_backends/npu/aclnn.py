@@ -1634,19 +1634,20 @@ class AclnnBindings:
         # Gather
         self.aclnn_gather_get_workspace = _optional_symbol(
             libs,
-            aclnnGatherGetWorkspaceSize,
+            "aclnnGatherGetWorkspaceSize",
             ctypes.c_int32,
             [
                 ctypes.c_void_p,  # self
                 ctypes.c_int64,   # dim
                 ctypes.c_void_p,  # index
+                ctypes.c_void_p,  # out
                 ctypes.POINTER(ctypes.c_uint64),
                 ctypes.POINTER(ctypes.c_void_p),
             ],
         )
         self.aclnn_gather = _optional_symbol(
             libs,
-            aclnnGather,
+            "aclnnGather",
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
@@ -1654,7 +1655,7 @@ class AclnnBindings:
         # MaskedSelect
         self.aclnn_masked_select_get_workspace = _optional_symbol(
             libs,
-            aclnnMaskedSelectGetWorkspaceSize,
+            "aclnnMaskedSelectGetWorkspaceSize",
             ctypes.c_int32,
             [
                 ctypes.c_void_p,  # self
@@ -1666,7 +1667,7 @@ class AclnnBindings:
         )
         self.aclnn_masked_select = _optional_symbol(
             libs,
-            aclnnMaskedSelect,
+            "aclnnMaskedSelect",
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
@@ -5071,7 +5072,7 @@ def gather(self_ptr, index_ptr, out_ptr,
            index_shape, index_stride, index_dtype,
            out_shape, out_stride, out_dtype,
            dim, runtime, stream=None):
-    """Gather elements along dim using aclnnGather."""
+    """Gather elements along dim using "aclnnGather"."""
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -5091,6 +5092,7 @@ def gather(self_ptr, index_ptr, out_ptr,
             self_tensor,
             ctypes.c_int64(dim),
             index_tensor,
+            out_tensor,
             ctypes.byref(workspace_size),
             ctypes.byref(executor),
         )
@@ -5126,7 +5128,7 @@ def masked_select(self_ptr, mask_ptr, out_ptr,
                   mask_shape, mask_stride, mask_dtype,
                   out_shape, out_stride, out_dtype,
                   runtime, stream=None):
-    """Masked select using aclnnMaskedSelect."""
+    """Masked select using "aclnnMaskedSelect"."""
     global acl
     if acl is None:
         acl = ensure_acl()
