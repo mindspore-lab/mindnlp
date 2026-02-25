@@ -42,6 +42,10 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 
+def mean_(a, dim=None, keepdim=False):
+    return _from_numpy(_to_numpy(a).mean(axis=dim, keepdims=keepdim), a.dtype, a.device)
+
+
 def all_(a, dim=None, keepdim=False):
     return _from_numpy(np.all(_to_numpy(a), axis=dim, keepdims=keepdim), bool_dtype, a.device)
 
@@ -756,6 +760,37 @@ def softplus(a):
     return _from_numpy(out, a.dtype, a.device)
 
 
+def silu(a):
+    arr = _to_numpy(a)
+    out = arr / (1.0 + np.exp(-arr))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def leaky_relu(a, negative_slope=0.01):
+    arr = _to_numpy(a)
+    out = np.where(arr > 0, arr, negative_slope * arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def elu(a, alpha=1.0):
+    arr = _to_numpy(a)
+    out = np.where(arr > 0, arr, alpha * (np.exp(arr) - 1))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def mish(a):
+    arr = _to_numpy(a)
+    out = arr * np.tanh(np.log1p(np.exp(arr)))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def prelu(a, weight):
+    arr = _to_numpy(a)
+    weight_arr = _to_numpy(weight)
+    out = np.where(arr > 0, arr, arr * weight_arr)
+    return _from_numpy(out, a.dtype, a.device)
+
+
 def clamp(a, min_val=None, max_val=None):
     arr = _to_numpy(a)
     out = np.clip(arr, min_val, max_val)
@@ -905,3 +940,102 @@ def setitem(tensor, key, value):
     else:
         arr[key] = value
     return tensor
+
+
+def batch_norm(input, running_mean, running_var, weight=None, bias=None,
+               training=False, momentum=0.1, eps=1e-5):
+    arr = _to_numpy(input)
+    ndim = len(arr.shape)
+
+    if training:
+        axes = (0,) + tuple(range(2, ndim))
+        mean = arr.mean(axis=axes)
+        var = arr.var(axis=axes)
+        if running_mean is not None:
+            rm = _to_numpy(running_mean)
+            rm[:] = (1 - momentum) * rm + momentum * mean
+        if running_var is not None:
+            rv = _to_numpy(running_var)
+            rv[:] = (1 - momentum) * rv + momentum * var
+    else:
+        mean = _to_numpy(running_mean)
+        var = _to_numpy(running_var)
+
+    shape = [1, -1] + [1] * (ndim - 2)
+    normalized = (arr - mean.reshape(shape)) / np.sqrt(var.reshape(shape) + eps)
+
+    if weight is not None:
+        normalized = normalized * _to_numpy(weight).reshape(shape)
+    if bias is not None:
+        normalized = normalized + _to_numpy(bias).reshape(shape)
+
+    return _from_numpy(normalized, input.dtype, input.device)
+
+
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    arr = _to_numpy(input)
+    N, C = arr.shape[:2]
+    spatial = arr.shape[2:]
+
+    grouped = arr.reshape(N, num_groups, C // num_groups, *spatial)
+    axes = tuple(range(2, len(grouped.shape)))
+    mean = grouped.mean(axis=axes, keepdims=True)
+    var = grouped.var(axis=axes, keepdims=True)
+    normalized = (grouped - mean) / np.sqrt(var + eps)
+    normalized = normalized.reshape(arr.shape)
+
+    if weight is not None:
+        shape = [1, C] + [1] * len(spatial)
+        normalized = normalized * _to_numpy(weight).reshape(shape)
+    if bias is not None:
+        shape = [1, C] + [1] * len(spatial)
+        normalized = normalized + _to_numpy(bias).reshape(shape)
+
+    return _from_numpy(normalized, input.dtype, input.device)
+
+
+def dropout(a, p=0.5, training=True):
+    if not training or p == 0:
+        return a
+    arr = _to_numpy(a)
+    mask = (np.random.random(arr.shape) >= p).astype(arr.dtype)
+    return _from_numpy(arr * mask / (1.0 - p), a.dtype, a.device)
+
+
+def pad(a, pad_widths, mode='constant', value=0):
+    arr = _to_numpy(a)
+    ndim = len(arr.shape)
+    np_pad = [(0, 0)] * ndim
+    # PyTorch pad format: (left, right, top, bottom, front, back, ...)
+    # Applied to last dims first
+    n_pairs = len(pad_widths) // 2
+    for i in range(n_pairs):
+        dim = ndim - 1 - i
+        np_pad[dim] = (int(pad_widths[2 * i]), int(pad_widths[2 * i + 1]))
+    if mode == 'constant':
+        result = np.pad(arr, np_pad, mode='constant', constant_values=value)
+    elif mode == 'reflect':
+        result = np.pad(arr, np_pad, mode='reflect')
+    elif mode == 'replicate':
+        result = np.pad(arr, np_pad, mode='edge')
+    elif mode == 'circular':
+        result = np.pad(arr, np_pad, mode='wrap')
+    else:
+        raise ValueError(f"Unsupported pad mode: {mode}")
+    return _from_numpy(result, a.dtype, a.device)
+
+
+def softmax(a, dim):
+    arr = _to_numpy(a)
+    exp_arr = np.exp(arr - np.max(arr, axis=dim, keepdims=True))
+    result = exp_arr / np.sum(exp_arr, axis=dim, keepdims=True)
+    return _from_numpy(result, a.dtype, a.device)
+
+
+def log_softmax(a, dim):
+    arr = _to_numpy(a)
+    max_arr = np.max(arr, axis=dim, keepdims=True)
+    exp_arr = np.exp(arr - max_arr)
+    log_sum_exp = np.log(np.sum(exp_arr, axis=dim, keepdims=True))
+    result = arr - max_arr - log_sum_exp
+    return _from_numpy(result, a.dtype, a.device)
