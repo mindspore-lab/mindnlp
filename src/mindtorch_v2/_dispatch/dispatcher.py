@@ -114,6 +114,20 @@ def _bump_versions(schema_obj, args, kwargs):
         seen.add(key)
 
 
+def _check_inplace_targets(schema_obj, args, kwargs):
+    mutated = _mutating_args(schema_obj, args, kwargs)
+    seen = set()
+    for target in mutated:
+        check = getattr(target, "_check_inplace", None)
+        if check is None:
+            continue
+        key = id(target)
+        if key in seen:
+            continue
+        check()
+        seen.add(key)
+
+
 class _PendingOp:
     def __init__(self, impl, args, kwargs, out, keyset, key, schema_obj=None):
         self.impl = impl
@@ -262,6 +276,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
 
     if entry.schema_obj is not None:
         entry.schema_obj.bind(args, kwargs, op_name=alias_name, error_overrides=entry.error_overrides)
+        _check_inplace_targets(entry.schema_obj, args, kwargs)
 
     if DispatchKey.Functionalize in keyset and should_functionalize(entry):
         if pipe is not None and DispatchKey.Pipeline in keyset:
