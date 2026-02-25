@@ -649,3 +649,116 @@ def test_npu_embedding_2d_indices(dtype):
     assert out.shape == (2, 2, 2)
     expected = weight_data[np.array([[0, 2], [1, 3]])].astype(np.float32)
     assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
+
+
+def test_npu_take():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu")
+    index = torch.tensor([0, 3, 1], dtype=torch.int64, device="npu")
+    expected = np.take(
+        x.to("cpu").numpy().reshape(-1),
+        index.to("cpu").numpy().astype(np.int64),
+    )
+    np.testing.assert_allclose(torch.take(x, index).to("cpu").numpy(), expected)
+    neg_index = torch.tensor([-1, 0], dtype=torch.int64, device="npu")
+    expected_neg = np.take(
+        x.to("cpu").numpy().reshape(-1),
+        neg_index.to("cpu").numpy().astype(np.int64),
+    )
+    np.testing.assert_allclose(torch.take(x, neg_index).to("cpu").numpy(), expected_neg)
+    out_of_range = torch.tensor([4], dtype=torch.int64, device="npu")
+    with pytest.raises(IndexError):
+        torch.take(x, out_of_range)
+
+
+def test_npu_take_along_dim():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="npu")
+    indices = torch.tensor([[0, 2, 1], [2, 0, 1]], dtype=torch.int64, device="npu")
+    expected = np.take_along_axis(
+        x.to("cpu").numpy(),
+        indices.to("cpu").numpy().astype(np.int64),
+        axis=1,
+    )
+    np.testing.assert_allclose(
+        torch.take_along_dim(x, indices, dim=1).to("cpu").numpy(),
+        expected,
+    )
+    neg_indices = torch.tensor([[-1, 0, 1], [1, -2, 0]], dtype=torch.int64, device="npu")
+    expected_neg = np.take_along_axis(
+        x.to("cpu").numpy(),
+        neg_indices.to("cpu").numpy().astype(np.int64),
+        axis=1,
+    )
+    np.testing.assert_allclose(
+        torch.take_along_dim(x, neg_indices, dim=1).to("cpu").numpy(),
+        expected_neg,
+    )
+    out_of_range = torch.tensor([[3, 0, 1], [1, 2, 0]], dtype=torch.int64, device="npu")
+    with pytest.raises(IndexError):
+        torch.take_along_dim(x, out_of_range, dim=1)
+
+
+def test_npu_index_select():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="npu")
+    index = torch.tensor([2, 0], dtype=torch.int64, device="npu")
+    expected = np.take(
+        x.to("cpu").numpy(),
+        index.to("cpu").numpy().astype(np.int64),
+        axis=1,
+    )
+    np.testing.assert_allclose(
+        torch.index_select(x, dim=1, index=index).to("cpu").numpy(),
+        expected,
+    )
+    neg_index = torch.tensor([-1, 0], dtype=torch.int64, device="npu")
+    expected_neg = np.take(
+        x.to("cpu").numpy(),
+        neg_index.to("cpu").numpy().astype(np.int64),
+        axis=1,
+    )
+    np.testing.assert_allclose(
+        torch.index_select(x, dim=1, index=neg_index).to("cpu").numpy(),
+        expected_neg,
+    )
+    out_of_range = torch.tensor([3], dtype=torch.int64, device="npu")
+    with pytest.raises(IndexError):
+        torch.index_select(x, dim=1, index=out_of_range)
+    bad_index = torch.tensor([[0, 1]], dtype=torch.int64, device="npu")
+    with pytest.raises(ValueError):
+        torch.index_select(x, dim=1, index=bad_index)
+
+
+def test_npu_gather():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="npu")
+    index = torch.tensor([[0, 2], [1, 0]], dtype=torch.int64, device="npu")
+    expected = np.take_along_axis(
+        x.to("cpu").numpy(),
+        index.to("cpu").numpy().astype(np.int64),
+        axis=1,
+    )
+    np.testing.assert_allclose(
+        torch.gather(x, dim=1, index=index).to("cpu").numpy(),
+        expected,
+    )
+    neg_index = torch.tensor([[0, -1], [1, 0]], dtype=torch.int64, device="npu")
+    with pytest.raises(IndexError):
+        torch.gather(x, dim=1, index=neg_index)
+    out_of_range = torch.tensor([[3, 0], [1, 0]], dtype=torch.int64, device="npu")
+    with pytest.raises(IndexError):
+        torch.gather(x, dim=1, index=out_of_range)
+
+
+def test_npu_masked_select():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    mask = torch.tensor([[True, False], [False, True]], device="npu")
+    out = torch.masked_select(x, mask)
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.array([1, 4]))
