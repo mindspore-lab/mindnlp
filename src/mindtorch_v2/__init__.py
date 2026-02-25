@@ -36,6 +36,11 @@ from . import _C
 from . import distributed
 from . import futures
 from . import amp
+from ._random import (
+    manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
+    Generator, default_generator,
+)
+from . import _random as random
 
 
 def pipeline():

@@ -7,6 +7,8 @@ from ._device import device as Device
 
 _MEMORY_FRACTION = None
 _NPU_INITIALIZED = False
+_NPU_SEED = None
+_NPU_SEED_OFFSET = 0
 
 
 
@@ -374,3 +376,38 @@ def memory_snapshot():
         "device": current_device() if _backend_is_available() else 0,
         "allocator": "npu",
     }
+
+
+def manual_seed(seed: int):
+    """Set the seed for generating random numbers for the current NPU device.
+
+    Args:
+        seed (int): The desired seed.
+
+    Note: This seed is used by ACLNN random kernels (dropout, inplace_normal, etc.).
+    """
+    global _NPU_SEED, _NPU_SEED_OFFSET
+    _NPU_SEED = int(seed)
+    _NPU_SEED_OFFSET = 0
+
+
+def manual_seed_all(seed: int):
+    """Set the seed for generating random numbers on all NPU devices.
+
+    Args:
+        seed (int): The desired seed.
+    """
+    manual_seed(seed)
+
+
+def _get_seed():
+    """Get current NPU seed (or default 0)."""
+    return _NPU_SEED if _NPU_SEED is not None else 0
+
+
+def _get_and_advance_offset(advance=1):
+    """Get current offset and advance it for next operation."""
+    global _NPU_SEED_OFFSET
+    offset = _NPU_SEED_OFFSET
+    _NPU_SEED_OFFSET += advance
+    return offset

@@ -1651,6 +1651,69 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # Dropout GenMask + DoMask (two-step dropout)
+        self.aclnn_dropout_gen_mask_get_workspace = _optional_symbol(
+            libs,
+            "aclnnDropoutGenMaskGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # shape (IntArray)
+                ctypes.c_double,  # prob
+                ctypes.c_int64,   # seed
+                ctypes.c_int64,   # offset
+                ctypes.c_void_p,  # out (uint8 mask)
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_dropout_gen_mask = _optional_symbol(
+            libs,
+            "aclnnDropoutGenMask",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        self.aclnn_dropout_do_mask_get_workspace = _optional_symbol(
+            libs,
+            "aclnnDropoutDoMaskGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # self (input)
+                ctypes.c_void_p,  # mask
+                ctypes.c_double,  # prob
+                ctypes.c_void_p,  # out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_dropout_do_mask = _optional_symbol(
+            libs,
+            "aclnnDropoutDoMask",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # InplaceNormal (for randn)
+        self.aclnn_inplace_normal_get_workspace = _optional_symbol(
+            libs,
+            "aclnnInplaceNormalGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # self
+                ctypes.c_float,   # mean
+                ctypes.c_float,   # std
+                ctypes.c_int64,   # seed
+                ctypes.c_int64,   # offset
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_inplace_normal = _optional_symbol(
+            libs,
+            "aclnnInplaceNormal",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -5536,5 +5599,199 @@ def gather(self_ptr, index_ptr, out_ptr, shape, stride, index_shape, index_strid
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(index_tensor)
         bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def dropout_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_dropout_gen_mask_get_workspace,
+            bindings.aclnn_dropout_gen_mask,
+            bindings.aclnn_dropout_do_mask_get_workspace,
+            bindings.aclnn_dropout_do_mask,
+        ])
+    except Exception:
+        return False
+
+
+def inplace_normal_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_inplace_normal_get_workspace, bindings.aclnn_inplace_normal])
+    except Exception:
+        return False
+
+
+def _align_up(n, alignment):
+    return (n + alignment - 1) // alignment * alignment
+
+
+def dropout_gen_mask(shape, p, seed, offset, mask_ptr, mask_numel, runtime, stream=None):
+    """Generate dropout mask using aclnnDropoutGenMask.
+
+    The mask is bit-packed: output shape is (align(numel, 128) / 8,) with dtype uint8.
+    """
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_dropout_gen_mask_get_workspace is None:
+        raise RuntimeError("aclnnDropoutGenMask symbols not available")
+
+    # Create shape IntArray using aclCreateIntArray
+    shape_data = _make_int64_array(shape)
+    shape_arr = bindings.acl_create_int_array(shape_data, ctypes.c_uint64(len(shape)))
+
+    # Create output tensor: bit-packed mask
+    mask_shape = (mask_numel,)
+    mask_stride = (1,)
+    mask_tensor, mask_keep = _create_tensor(bindings, mask_shape, mask_stride, "uint8", mask_ptr)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_dropout_gen_mask_get_workspace(
+            shape_arr,
+            ctypes.c_double(p),
+            ctypes.c_int64(seed),
+            ctypes.c_int64(offset),
+            mask_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnDropoutGenMaskGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_dropout_gen_mask(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnDropoutGenMask failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(mask_tensor)
+        if shape_arr:
+            bindings.acl_destroy_int_array(shape_arr)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def dropout_do_mask(input_ptr, mask_ptr, out_ptr, shape, stride, dtype, mask_numel, p, runtime, stream=None):
+    """Apply dropout mask using aclnnDropoutDoMask."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_dropout_do_mask_get_workspace is None:
+        raise RuntimeError("aclnnDropoutDoMask symbols not available")
+
+    input_tensor, input_keep = _create_tensor(bindings, shape, stride, dtype, input_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
+
+    # mask is bit-packed uint8
+    mask_shape = (mask_numel,)
+    mask_stride = (1,)
+    mask_tensor, mask_keep = _create_tensor(bindings, mask_shape, mask_stride, "uint8", mask_ptr)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_dropout_do_mask_get_workspace(
+            input_tensor,
+            mask_tensor,
+            ctypes.c_double(p),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnDropoutDoMaskGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_dropout_do_mask(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnDropoutDoMask failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(input_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_tensor(mask_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def inplace_normal(self_ptr, shape, stride, dtype, mean, std, seed, offset, runtime, stream=None):
+    """Fill tensor with normal distribution using aclnnInplaceNormal."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_inplace_normal_get_workspace is None or bindings.aclnn_inplace_normal is None:
+        raise RuntimeError("aclnnInplaceNormal symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_inplace_normal_get_workspace(
+            self_tensor,
+            ctypes.c_float(mean),
+            ctypes.c_float(std),
+            ctypes.c_int64(seed),
+            ctypes.c_int64(offset),
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceNormalGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_inplace_normal(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceNormal failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
         if workspace is not None:
             runtime.defer_free(workspace)

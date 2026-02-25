@@ -997,8 +997,10 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
 def dropout(a, p=0.5, training=True):
     if not training or p == 0:
         return a
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
     arr = _to_numpy(a)
-    mask = (np.random.random(arr.shape) >= p).astype(arr.dtype)
+    mask = (rng.random(arr.shape) >= p).astype(arr.dtype)
     return _from_numpy(arr * mask / (1.0 - p), a.dtype, a.device)
 
 

@@ -100,7 +100,9 @@ def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_for
     if isinstance(shape, int):
         shape = (shape,)
     shape = tuple(shape)
-    arr = np.random.randn(*shape).astype(to_numpy_dtype(dtype))
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.randn(*shape).astype(to_numpy_dtype(dtype))
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = _contiguous_stride(shape)
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
