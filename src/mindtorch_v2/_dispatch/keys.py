@@ -1,4 +1,5 @@
 from enum import IntEnum
+import threading
 class DispatchKey(IntEnum):
     BackendSelect = 1 << 0
     Pipeline = 1 << 1
@@ -46,6 +47,86 @@ DISPATCH_KEY_PRIORITY = [
     DispatchKey.PrivateUse2,
     DispatchKey.PrivateUse3,
 ]
+
+
+_TLS = threading.local()
+
+
+def _tls_state():
+    state = getattr(_TLS, "dispatch_tls", None)
+    if state is None:
+        state = {"include": [], "exclude": []}
+        _TLS.dispatch_tls = state
+    return state
+
+
+def _mask_from_keys(keys):
+    if isinstance(keys, DispatchKey):
+        return int(keys)
+    if isinstance(keys, int):
+        return int(keys)
+    mask = 0
+    for key in keys:
+        mask |= int(key)
+    return mask
+
+
+def _push_mask(stack, keys):
+    mask = _mask_from_keys(keys)
+    stack.append(mask)
+    return mask
+
+
+def _pop_mask(stack):
+    if stack:
+        stack.pop()
+
+
+class include_keys:
+    def __init__(self, keys):
+        self._keys = keys
+        self._stack = None
+
+    def __enter__(self):
+        state = _tls_state()
+        self._stack = state["include"]
+        _push_mask(self._stack, self._keys)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        _pop_mask(self._stack)
+
+
+class exclude_keys:
+    def __init__(self, keys):
+        self._keys = keys
+        self._stack = None
+
+    def __enter__(self):
+        state = _tls_state()
+        self._stack = state["exclude"]
+        _push_mask(self._stack, self._keys)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        _pop_mask(self._stack)
+
+
+def _effective_mask(base_mask):
+    state = _tls_state()
+    include_mask = 0
+    for mask in state["include"]:
+        include_mask |= mask
+    exclude_mask = 0
+    for mask in state["exclude"]:
+        exclude_mask |= mask
+    return (int(base_mask) | include_mask) & ~exclude_mask
+
+
+def apply_tls_masks(keyset):
+    if isinstance(keyset, DispatchKeySet):
+        return DispatchKeySet(_effective_mask(keyset.mask))
+    return DispatchKeySet(_effective_mask(keyset))
 
 
 class DispatchKeySet:

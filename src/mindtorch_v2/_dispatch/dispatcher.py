@@ -2,7 +2,7 @@ import inspect
 
 from .registry import registry
 from .pipeline import current_pipeline
-from .keys import DispatchKey, DispatchKeySet
+from .keys import DispatchKey, DispatchKeySet, apply_tls_masks
 from .functionalize import functionalize_op, is_functionalize_enabled, should_functionalize
 import threading
 
@@ -251,6 +251,7 @@ def _infer_dispatch_device(dispatch_device, tensors, keyset):
 
 def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     tensors = _extract_tensors(args, kwargs)
+    keyset = apply_tls_masks(keyset)
     pipe = current_pipeline()
     dispatch_device = _infer_dispatch_device(dispatch_device, tensors, keyset)
     alias_name = name
@@ -271,7 +272,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         kernel, key = _kernel_for_entry(entry, _key_order(keyset))
         if kernel is None:
             raise RuntimeError(
-                f"could not find kernel for op {name} with keys {sorted(k.name for k in _key_order(keyset))}"
+                f"could not find kernel for op {name} with keys {[k.name for k in _key_order(keyset)]}"
             )
         impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
         _push_dispatch_context(keyset, key)
