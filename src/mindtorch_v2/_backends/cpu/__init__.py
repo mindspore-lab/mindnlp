@@ -21,6 +21,7 @@ from .ops import (
     mul,
     relu,
     sum_,
+    mean_,
     all_,
     any_,
     argmax,
@@ -93,6 +94,11 @@ from .ops import (
     erf,
     erfc,
     softplus,
+    silu,
+    leaky_relu,
+    elu,
+    mish,
+    prelu,
     clamp,
     clamp_min,
     clamp_max,
@@ -134,6 +140,12 @@ from .ops import (
     triu_indices,
     getitem,
     setitem,
+    batch_norm,
+    group_norm,
+    dropout,
+    pad,
+    softmax,
+    log_softmax,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -178,6 +190,11 @@ registry.register("clamp_min", "cpu", clamp_min, meta=meta_infer.infer_unary)
 registry.register("clamp_max", "cpu", clamp_max, meta=meta_infer.infer_unary)
 registry.register("relu6", "cpu", relu6, meta=meta_infer.infer_unary)
 registry.register("hardtanh", "cpu", hardtanh, meta=meta_infer.infer_unary)
+registry.register("silu", "cpu", silu, meta=meta_infer.infer_unary)
+registry.register("leaky_relu", "cpu", leaky_relu, meta=meta_infer.infer_unary)
+registry.register("elu", "cpu", elu, meta=meta_infer.infer_unary)
+registry.register("mish", "cpu", mish, meta=meta_infer.infer_unary)
+registry.register("prelu", "cpu", prelu, meta=meta_infer.infer_binary)
 registry.register("min", "cpu", min_, meta=meta_infer.infer_binary)
 registry.register("max", "cpu", max_, meta=meta_infer.infer_binary)
 registry.register("amin", "cpu", amin, meta=meta_infer.infer_sum)
@@ -216,7 +233,14 @@ registry.register("getitem", "cpu", getitem)
 registry.register("setitem", "cpu", setitem)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
+registry.register("mean", "cpu", mean_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
+registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
+registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)
+registry.register("dropout", "cpu", dropout, meta=meta_infer.infer_unary)
+registry.register("pad", "cpu", pad, meta=meta_infer.infer_unary)
+registry.register("softmax", "cpu", softmax, meta=meta_infer.infer_unary)
+registry.register("log_softmax", "cpu", log_softmax, meta=meta_infer.infer_unary)
 registry.register("any", "cpu", any_, meta=meta_infer.infer_reduce_bool)
 registry.register("argmax", "cpu", argmax, meta=meta_infer.infer_argmax)
 registry.register("argmin", "cpu", argmin, meta=meta_infer.infer_argmax)
