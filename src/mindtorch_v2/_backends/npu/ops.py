@@ -2417,137 +2417,180 @@ def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, spars
 
 
 def silu(a):
-    """Compute SiLU (Swish) activation: x * sigmoid(x)."""
-    # Compose from existing ops: silu(x) = x * sigmoid(x)
-    sig = sigmoid(a)
-    return mul(a, sig)
+    """Compute SiLU (Swish) activation using aclnnSilu."""
+    if not aclnn.silu_symbols_ok():
+        raise RuntimeError("aclnnSilu not available")
+    return _unary_op(a, aclnn.silu, "silu")
 
 
 def leaky_relu(a, negative_slope=0.01):
-    """Compute Leaky ReLU activation: max(x, negative_slope * x)."""
-    # Compose: where(x > 0, x, negative_slope * x)
-    zero = _scalar_to_npu_tensor(0.0, a)
-    slope_tensor = _scalar_to_npu_tensor(negative_slope, a)
-    mask = gt(a, zero)
-    negative_part = mul(slope_tensor, a)
-    return where(mask, a, negative_part)
+    """Compute Leaky ReLU activation using aclnnLeakyRelu."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.leaky_relu_symbols_ok():
+        raise RuntimeError("aclnnLeakyRelu not available")
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.leaky_relu(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        negative_slope,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def elu(a, alpha=1.0):
-    """Compute ELU activation: x if x > 0 else alpha * (exp(x) - 1)."""
-    # Compose: where(x > 0, x, alpha * (exp(x) - 1))
-    zero = _scalar_to_npu_tensor(0.0, a)
-    one = _scalar_to_npu_tensor(1.0, a)
-    alpha_tensor = _scalar_to_npu_tensor(alpha, a)
-    mask = gt(a, zero)
-    exp_part = exp(a)
-    exp_minus_one = sub(exp_part, one)
-    negative_part = mul(alpha_tensor, exp_minus_one)
-    return where(mask, a, negative_part)
+    """Compute ELU activation using aclnnElu."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.elu_symbols_ok():
+        raise RuntimeError("aclnnElu not available")
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.elu(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        alpha,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def mish(a):
-    """Compute Mish activation: x * tanh(softplus(x))."""
-    # Compose: x * tanh(softplus(x))
-    sp = softplus(a)
-    tanh_sp = tanh(sp)
-    return mul(a, tanh_sp)
+    """Compute Mish activation using aclnnMish."""
+    if not aclnn.mish_symbols_ok():
+        raise RuntimeError("aclnnMish not available")
+    return _unary_op(a, aclnn.mish, "mish")
 
 
 def prelu(a, weight):
-    """Compute PReLU activation: max(0, x) + weight * min(0, x)."""
-    # Compose: where(x > 0, x, weight * x)
-    zero = _scalar_to_npu_tensor(0.0, a)
-    mask = gt(a, zero)
-    negative_part = mul(weight, a)
-    return where(mask, a, negative_part)
+    """Compute PReLU activation using aclnnPrelu."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.prelu_symbols_ok():
+        raise RuntimeError("aclnnPrelu not available")
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.prelu(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(weight).data_ptr(),
+        out_ptr,
+        a.shape, a.stride,
+        weight.shape, weight.stride,
+        a.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None,
                training=False, momentum=0.1, eps=1e-5):
-    """Compute batch normalization.
+    """Compute batch normalization using aclnnBatchNorm."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
 
-    Note: This is a simplified implementation that doesn't update running statistics
-    during training mode. For full training support, ACLNN kernel would be needed.
-    """
-    # Use running statistics (eval mode behavior)
-    # Normalize: (x - mean) / sqrt(var + eps)
+    if not aclnn.batch_norm_symbols_ok():
+        raise RuntimeError("aclnnBatchNorm not available")
 
-    # Reshape mean and var to broadcast: (1, C, 1, 1, ...)
-    ndim = len(input.shape)
-    if ndim < 2:
-        raise ValueError("batch_norm requires at least 2D input")
+    out_shape = input.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
 
-    num_channels = input.shape[1]
-    broadcast_shape = (1, num_channels) + (1,) * (ndim - 2)
+    weight_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
+    bias_ptr = _unwrap_storage(bias).data_ptr() if bias is not None else None
+    running_mean_ptr = _unwrap_storage(running_mean).data_ptr() if running_mean is not None else None
+    running_var_ptr = _unwrap_storage(running_var).data_ptr() if running_var is not None else None
 
-    # Create broadcast tensors for mean and var
-    mean_broadcast = running_mean.view(broadcast_shape)
-    var_broadcast = running_var.view(broadcast_shape)
+    aclnn.batch_norm(
+        _unwrap_storage(input).data_ptr(),
+        weight_ptr,
+        bias_ptr,
+        running_mean_ptr,
+        running_var_ptr,
+        out_ptr,
+        input.shape, input.stride,
+        weight.shape if weight is not None else (),
+        weight.stride if weight is not None else (),
+        bias.shape if bias is not None else (),
+        bias.stride if bias is not None else (),
+        running_mean.shape if running_mean is not None else (),
+        running_mean.stride if running_mean is not None else (),
+        running_var.shape if running_var is not None else (),
+        running_var.stride if running_var is not None else (),
+        out_shape, out_stride,
+        training, momentum, eps,
+        input.dtype,
+        runtime, stream=stream.stream
+    )
 
-    # Normalize
-    eps_tensor = _scalar_to_npu_tensor(eps, input)
-    var_plus_eps = add(var_broadcast, eps_tensor)
-    std = sqrt(var_plus_eps)
-
-    centered = sub(input, mean_broadcast)
-    normalized = div(centered, std)
-
-    # Apply affine transformation if provided
-    if weight is not None:
-        weight_broadcast = weight.view(broadcast_shape)
-        normalized = mul(normalized, weight_broadcast)
-    if bias is not None:
-        bias_broadcast = bias.view(broadcast_shape)
-        normalized = add(normalized, bias_broadcast)
-
-    return normalized
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    """Compute group normalization.
+    """Compute group normalization using aclnnGroupNorm."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
 
-    Groups channels and normalizes within each group.
-    """
-    N, C = input.shape[:2]
-    if C % num_groups != 0:
-        raise ValueError(f"num_channels ({C}) must be divisible by num_groups ({num_groups})")
+    if not aclnn.group_norm_symbols_ok():
+        raise RuntimeError("aclnnGroupNorm not available")
 
-    # Reshape to (N, num_groups, C // num_groups, ...)
-    group_shape = (N, num_groups, C // num_groups) + input.shape[2:]
-    grouped = input.view(group_shape)
+    out_shape = input.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
 
-    # Compute mean and var over group dimensions (dims 2+)
-    reduce_dims = list(range(2, len(group_shape)))
+    weight_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
+    bias_ptr = _unwrap_storage(bias).data_ptr() if bias is not None else None
 
-    # Mean
-    group_mean = mean(grouped, dim=reduce_dims, keepdim=True)
+    aclnn.group_norm(
+        _unwrap_storage(input).data_ptr(),
+        weight_ptr,
+        bias_ptr,
+        out_ptr,
+        input.shape, input.stride,
+        weight.shape if weight is not None else (),
+        weight.stride if weight is not None else (),
+        bias.shape if bias is not None else (),
+        bias.stride if bias is not None else (),
+        out_shape, out_stride,
+        num_groups, eps,
+        input.dtype,
+        runtime, stream=stream.stream
+    )
 
-    # Variance: E[(x - mean)^2]
-    centered = sub(grouped, group_mean)
-    squared = mul(centered, centered)
-    group_var = mean(squared, dim=reduce_dims, keepdim=True)
-
-    # Normalize
-    eps_tensor = _scalar_to_npu_tensor(eps, grouped)
-    var_plus_eps = add(group_var, eps_tensor)
-    std = sqrt(var_plus_eps)
-    normalized = div(centered, std)
-
-    # Reshape back to original shape
-    normalized = normalized.view(input.shape)
-
-    # Apply affine transformation if provided
-    if weight is not None:
-        broadcast_shape = (1, C) + (1,) * (len(input.shape) - 2)
-        weight_broadcast = weight.view(broadcast_shape)
-        normalized = mul(normalized, weight_broadcast)
-    if bias is not None:
-        broadcast_shape = (1, C) + (1,) * (len(input.shape) - 2)
-        bias_broadcast = bias.view(broadcast_shape)
-        normalized = add(normalized, bias_broadcast)
-
-    return normalized
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def dropout(a, p=0.5, training=True):
@@ -2574,18 +2617,36 @@ def pad(input, pad, mode='constant', value=0):
 
 
 def gather(a, dim, index):
-    """Gather values along an axis specified by dim.
+    """Gather values along an axis specified by dim using aclnnGather."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
 
-    Note: This is a simplified implementation for NPU that converts to CPU,
-    performs the gather, and converts back. For better performance, an ACLNN
-    kernel would be needed.
-    """
-    # Convert to CPU, perform gather, convert back
-    from ..cpu.ops import gather as cpu_gather
-    a_cpu = a.to("cpu")
-    index_cpu = index.to("cpu")
-    result_cpu = cpu_gather(a_cpu, dim, index_cpu)
-    return result_cpu.to(a.device)
+    if not aclnn.gather_symbols_ok():
+        raise RuntimeError("aclnnGather not available")
+
+    # Output shape is same as index shape
+    out_shape = index.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    aclnn.gather(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(index).data_ptr(),
+        out_ptr,
+        a.shape, a.stride,
+        index.shape, index.stride,
+        out_shape, out_stride,
+        dim,
+        a.dtype,
+        index.dtype,
+        runtime, stream=stream.stream
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
 
 
 def _normalize_dim(dim, ndim):
