@@ -2416,6 +2416,178 @@ def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, spars
 
 
 
+def silu(a):
+    """Compute SiLU (Swish) activation: x * sigmoid(x)."""
+    # Compose from existing ops: silu(x) = x * sigmoid(x)
+    sig = sigmoid(a)
+    return mul(a, sig)
+
+
+def leaky_relu(a, negative_slope=0.01):
+    """Compute Leaky ReLU activation: max(x, negative_slope * x)."""
+    # Compose: where(x > 0, x, negative_slope * x)
+    zero = _scalar_to_npu_tensor(0.0, a)
+    slope_tensor = _scalar_to_npu_tensor(negative_slope, a)
+    mask = gt(a, zero)
+    negative_part = mul(slope_tensor, a)
+    return where(mask, a, negative_part)
+
+
+def elu(a, alpha=1.0):
+    """Compute ELU activation: x if x > 0 else alpha * (exp(x) - 1)."""
+    # Compose: where(x > 0, x, alpha * (exp(x) - 1))
+    zero = _scalar_to_npu_tensor(0.0, a)
+    one = _scalar_to_npu_tensor(1.0, a)
+    alpha_tensor = _scalar_to_npu_tensor(alpha, a)
+    mask = gt(a, zero)
+    exp_part = exp(a)
+    exp_minus_one = sub(exp_part, one)
+    negative_part = mul(alpha_tensor, exp_minus_one)
+    return where(mask, a, negative_part)
+
+
+def mish(a):
+    """Compute Mish activation: x * tanh(softplus(x))."""
+    # Compose: x * tanh(softplus(x))
+    sp = softplus(a)
+    tanh_sp = tanh(sp)
+    return mul(a, tanh_sp)
+
+
+def prelu(a, weight):
+    """Compute PReLU activation: max(0, x) + weight * min(0, x)."""
+    # Compose: where(x > 0, x, weight * x)
+    zero = _scalar_to_npu_tensor(0.0, a)
+    mask = gt(a, zero)
+    negative_part = mul(weight, a)
+    return where(mask, a, negative_part)
+
+
+def batch_norm(input, running_mean, running_var, weight=None, bias=None,
+               training=False, momentum=0.1, eps=1e-5):
+    """Compute batch normalization.
+
+    Note: This is a simplified implementation that doesn't update running statistics
+    during training mode. For full training support, ACLNN kernel would be needed.
+    """
+    # Use running statistics (eval mode behavior)
+    # Normalize: (x - mean) / sqrt(var + eps)
+
+    # Reshape mean and var to broadcast: (1, C, 1, 1, ...)
+    ndim = len(input.shape)
+    if ndim < 2:
+        raise ValueError("batch_norm requires at least 2D input")
+
+    num_channels = input.shape[1]
+    broadcast_shape = (1, num_channels) + (1,) * (ndim - 2)
+
+    # Create broadcast tensors for mean and var
+    mean_broadcast = running_mean.view(broadcast_shape)
+    var_broadcast = running_var.view(broadcast_shape)
+
+    # Normalize
+    eps_tensor = _scalar_to_npu_tensor(eps, input)
+    var_plus_eps = add(var_broadcast, eps_tensor)
+    std = sqrt(var_plus_eps)
+
+    centered = sub(input, mean_broadcast)
+    normalized = div(centered, std)
+
+    # Apply affine transformation if provided
+    if weight is not None:
+        weight_broadcast = weight.view(broadcast_shape)
+        normalized = mul(normalized, weight_broadcast)
+    if bias is not None:
+        bias_broadcast = bias.view(broadcast_shape)
+        normalized = add(normalized, bias_broadcast)
+
+    return normalized
+
+
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    """Compute group normalization.
+
+    Groups channels and normalizes within each group.
+    """
+    N, C = input.shape[:2]
+    if C % num_groups != 0:
+        raise ValueError(f"num_channels ({C}) must be divisible by num_groups ({num_groups})")
+
+    # Reshape to (N, num_groups, C // num_groups, ...)
+    group_shape = (N, num_groups, C // num_groups) + input.shape[2:]
+    grouped = input.view(group_shape)
+
+    # Compute mean and var over group dimensions (dims 2+)
+    reduce_dims = list(range(2, len(group_shape)))
+
+    # Mean
+    group_mean = mean(grouped, dim=reduce_dims, keepdim=True)
+
+    # Variance: E[(x - mean)^2]
+    centered = sub(grouped, group_mean)
+    squared = mul(centered, centered)
+    group_var = mean(squared, dim=reduce_dims, keepdim=True)
+
+    # Normalize
+    eps_tensor = _scalar_to_npu_tensor(eps, grouped)
+    var_plus_eps = add(group_var, eps_tensor)
+    std = sqrt(var_plus_eps)
+    normalized = div(centered, std)
+
+    # Reshape back to original shape
+    normalized = normalized.view(input.shape)
+
+    # Apply affine transformation if provided
+    if weight is not None:
+        broadcast_shape = (1, C) + (1,) * (len(input.shape) - 2)
+        weight_broadcast = weight.view(broadcast_shape)
+        normalized = mul(normalized, weight_broadcast)
+    if bias is not None:
+        broadcast_shape = (1, C) + (1,) * (len(input.shape) - 2)
+        bias_broadcast = bias.view(broadcast_shape)
+        normalized = add(normalized, bias_broadcast)
+
+    return normalized
+
+
+def dropout(a, p=0.5, training=True):
+    """Compute dropout with scaling.
+
+    Note: This is a placeholder that returns input unchanged.
+    Full dropout requires random number generation on NPU.
+    """
+    if not training or p == 0:
+        return a
+    # TODO: Implement with NPU random number generation
+    # For now, return input unchanged (equivalent to p=0)
+    raise NotImplementedError("NPU dropout requires random number generation support")
+
+
+def pad(input, pad, mode='constant', value=0):
+    """Pad tensor.
+
+    Note: This is a placeholder implementation.
+    Full pad support requires ACLNN kernel or complex slicing/concatenation.
+    """
+    # TODO: Implement using slicing and concatenation
+    raise NotImplementedError("NPU pad not yet implemented - use CPU fallback")
+
+
+def gather(a, dim, index):
+    """Gather values along an axis specified by dim.
+
+    Note: This is a simplified implementation for NPU that converts to CPU,
+    performs the gather, and converts back. For better performance, an ACLNN
+    kernel would be needed.
+    """
+    # Convert to CPU, perform gather, convert back
+    from ..cpu.ops import gather as cpu_gather
+    a_cpu = a.to("cpu")
+    index_cpu = index.to("cpu")
+    result_cpu = cpu_gather(a_cpu, dim, index_cpu)
+    return result_cpu.to(a.device)
+
+
 def _normalize_dim(dim, ndim):
     if dim < 0:
         dim += ndim
