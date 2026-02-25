@@ -7,7 +7,6 @@ from ..common import convert as convert_backend
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
-from .creation import zeros_create
 
 
 def _unwrap_storage(tensor):
@@ -65,14 +64,6 @@ def _broadcast_shape(a_shape, b_shape):
     return tuple(reversed(result))
 
 
-def _npu_broadcast_to(tensor, shape):
-    shape = tuple(shape)
-    if tensor.shape == shape:
-        return tensor
-    zeros = zeros_create(shape, dtype=tensor.dtype, device=tensor.device)
-    return _binary_op(tensor, zeros, aclnn.add, "add")
-
-
 def _npu_arange_1d(size, device):
     runtime = npu_runtime.get_runtime((device.index or 0))
     stream = npu_state.current_stream((device.index or 0))
@@ -124,13 +115,12 @@ def _npu_linear_index(view_shape, view_stride, view_offset, device):
         target_shape = _broadcast_shape_checked(tuple(shape), tuple(view_shape), "view-index")
         if target_shape != tuple(view_shape):
             raise RuntimeError("NPU view index broadcast mismatch")
-        idx = _npu_broadcast_to(idx, view_shape)
         if view_stride[dim] != 1:
             idx = idx * _scalar_to_npu_tensor(view_stride[dim], idx)
         if linear is None:
             linear = idx
         else:
-            linear = linear + idx
+            linear = _binary_op(linear, idx, aclnn.add, "add")
     return _npu_add_scalar_(linear, view_offset)
 
 
