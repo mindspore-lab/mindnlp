@@ -166,20 +166,22 @@ def mse_loss(input, target, size_average=None, reduce=None, reduction='mean'):
 
 def binary_cross_entropy(input, target, weight=None, size_average=None,
                          reduce=None, reduction='mean'):
-    import numpy as np
-    from .._functional import mean, sum as _sum
-    from .._creation import tensor
-    pn = input.numpy()
-    tn = target.numpy()
+    from .._functional import add, neg, mul, log, mean, sum as _sum
     eps = 1e-12
-    losses = -(tn * np.log(pn + eps) + (1 - tn) * np.log(1 - pn + eps))
-    result = tensor(losses.tolist(), device=input.device)
+    # -(target * log(input + eps) + (1 - target) * log(1 - input + eps))
+    from .._creation import tensor as _tensor
+    eps_t = _tensor(eps, device=input.device)
+    one_t = _tensor(1.0, device=input.device)
+    log_input = log(add(input, eps_t))
+    log_one_minus_input = log(add(add(neg(input), one_t), eps_t))
+    one_minus_target = add(neg(target), one_t)
+    losses = neg(add(mul(target, log_input), mul(one_minus_target, log_one_minus_input)))
     if reduction == 'none':
-        return result
+        return losses
     elif reduction == 'mean':
-        return mean(result)
+        return mean(losses)
     elif reduction == 'sum':
-        return _sum(result)
+        return _sum(losses)
     raise ValueError(f"Invalid reduction mode: {reduction}")
 
 
@@ -191,20 +193,25 @@ def binary_cross_entropy_with_logits(input, target, weight=None, size_average=No
 
 def nll_loss(input, target, weight=None, size_average=None, ignore_index=-100,
              reduce=None, reduction='mean'):
-    import numpy as np
-    from .._functional import mean, sum as _sum
-    from .._creation import tensor
-    log_probs = input.numpy()
-    targets = target.numpy().astype(int)
-    batch_size = log_probs.shape[0]
-    losses = np.array([-log_probs[i, targets[i]] for i in range(batch_size)], dtype=np.float32)
-    result = tensor(losses.tolist(), device=input.device)
+    from .._functional import mean, sum as _sum, neg
+    from .._dispatch import dispatch
+    from .._dtype import int64 as int64_dtype
+    # Gather log probabilities at target indices: -log_probs[i, target[i]]
+    batch_size = input.shape[0]
+    # Ensure target is int64 for gather
+    if target.dtype != int64_dtype:
+        target = target.to(dtype=int64_dtype)
+    # unsqueeze target: (batch_size,) -> (batch_size, 1) for gather
+    target_2d = target.view((batch_size, 1))
+    gathered = dispatch("gather", input.device.type, input, 1, target_2d)
+    # squeeze: (batch_size, 1) -> (batch_size,)
+    losses = neg(gathered.view((batch_size,)))
     if reduction == 'none':
-        return result
+        return losses
     elif reduction == 'mean':
-        return mean(result)
+        return mean(losses)
     elif reduction == 'sum':
-        return _sum(result)
+        return _sum(losses)
     raise ValueError(f"Invalid reduction mode: {reduction}")
 
 
@@ -223,16 +230,21 @@ def l1_loss(input, target, size_average=None, reduce=None, reduction='mean'):
 
 def smooth_l1_loss(input, target, size_average=None, reduce=None, reduction='mean',
                    beta=1.0):
-    from .._functional import abs as _abs, add, neg, mean, sum as _sum
+    from .._functional import abs as _abs, add, neg, mean, sum as _sum, mul, where, signbit
+    from .._creation import tensor as _tensor
     diff = add(input, neg(target))
     abs_diff = _abs(diff)
     # Compute element-wise: if |diff| < beta: 0.5 * diff^2 / beta, else |diff| - 0.5 * beta
-    # Use numpy for the conditional since we're on CPU
-    import numpy as np
-    d = abs_diff.numpy()
-    result_arr = np.where(d < beta, 0.5 * d ** 2 / beta, d - 0.5 * beta).astype(np.float32)
-    from .._creation import tensor
-    result = tensor(result_arr.tolist())
+    beta_t = _tensor(beta, device=input.device)
+    half_t = _tensor(0.5, device=input.device)
+    # signbit(abs_diff - beta) is True when abs_diff < beta
+    mask = signbit(add(abs_diff, neg(beta_t)))
+    # smooth part: 0.5 * diff^2 / beta
+    squared = mul(diff, diff)
+    smooth_part = mul(mul(half_t, squared), _tensor(1.0 / beta, device=input.device))
+    # linear part: |diff| - 0.5 * beta
+    linear_part = add(abs_diff, mul(neg(half_t), beta_t))
+    result = where(mask, smooth_part, linear_part)
     if reduction == 'none':
         return result
     elif reduction == 'mean':
@@ -244,22 +256,25 @@ def smooth_l1_loss(input, target, size_average=None, reduce=None, reduction='mea
 
 def kl_div(input, target, size_average=None, reduce=None, reduction='mean',
            log_target=False):
-    import numpy as np
-    from .._functional import mean, sum as _sum
-    from .._creation import tensor
-    log_pred = input.numpy()
-    tn = target.numpy()
+    from .._functional import mean, sum as _sum, mul, add, neg, exp, log
+    from .._creation import tensor as _tensor
+    eps_t = _tensor(1e-12, device=input.device)
     if log_target:
-        losses = np.exp(tn) * (tn - log_pred)
+        # exp(target) * (target - input)
+        exp_target = exp(target)
+        diff = add(target, neg(input))
+        losses = mul(exp_target, diff)
     else:
-        losses = tn * (np.log(tn + 1e-12) - log_pred)
-    result = tensor(losses.tolist(), device=input.device)
+        # target * (log(target + eps) - input)
+        log_target_val = log(add(target, eps_t))
+        diff = add(log_target_val, neg(input))
+        losses = mul(target, diff)
     if reduction == 'none':
-        return result
+        return losses
     elif reduction == 'mean':
-        return mean(result)
+        return mean(losses)
     elif reduction == 'sum':
-        return _sum(result)
+        return _sum(losses)
     raise ValueError(f"Invalid reduction mode: {reduction}")
 
 

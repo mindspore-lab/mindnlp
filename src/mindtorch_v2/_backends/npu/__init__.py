@@ -104,6 +104,14 @@ from .ops import (
     gelu,
     layer_norm,
     embedding,
+    silu,
+    leaky_relu,
+    elu,
+    mish,
+    prelu,
+    batch_norm,
+    group_norm,
+    gather,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -226,5 +234,19 @@ registry.register("log_softmax", "npu", log_softmax, meta=meta_infer.infer_unary
 registry.register("gelu", "npu", gelu, meta=meta_infer.infer_unary)
 registry.register("layer_norm", "npu", layer_norm, meta=meta_infer.infer_unary)
 registry.register("embedding", "npu", embedding, meta=meta_infer.infer_binary)
+
+# Activation functions (composite ops)
+registry.register("silu", "npu", silu, meta=meta_infer.infer_unary)
+registry.register("leaky_relu", "npu", leaky_relu, meta=meta_infer.infer_unary)
+registry.register("elu", "npu", elu, meta=meta_infer.infer_unary)
+registry.register("mish", "npu", mish, meta=meta_infer.infer_unary)
+registry.register("prelu", "npu", prelu, meta=meta_infer.infer_binary)
+
+# Normalization (composite ops)
+registry.register("batch_norm", "npu", batch_norm, meta=meta_infer.infer_unary)
+registry.register("group_norm", "npu", group_norm, meta=meta_infer.infer_unary)
+
+# Tensor operations
+registry.register("gather", "npu", gather, meta=meta_infer.infer_gather)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
