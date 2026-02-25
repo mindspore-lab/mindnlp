@@ -142,3 +142,6 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::flip` | CPU | done | - | numpy impl + meta + tests |
 | `aten::roll` | CPU | done | - | numpy impl + meta + tests |
 | `aten::rot90` | CPU | done | - | numpy impl + meta + tests |
+| `aten::repeat` | CPU | done | - | numpy impl + meta + tests |
+| `aten::repeat_interleave` | CPU | done | - | numpy impl + meta + tests |
+| `aten::tile` | CPU | done | - | numpy impl + meta + tests |
