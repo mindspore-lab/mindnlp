@@ -25,6 +25,9 @@ class UntypedStorage:
     def share_memory_(self):
         raise NotImplementedError
 
+    def buffer(self):
+        raise NotImplementedError("Subclass must implement buffer()")
+
     def is_shared(self):
         return False
 
@@ -144,6 +147,9 @@ class _NPUUntypedStorage(UntypedStorage):
 
     def is_pinned(self):
         return False
+
+    def buffer(self):
+        raise RuntimeError("Cannot get buffer of NPU storage on CPU")
 
     def resize_(self, new_nbytes):
         new_nbytes = int(new_nbytes)
@@ -346,6 +352,13 @@ class PendingStorage:
 
     def data_ptr(self):
         raise RuntimeError("pending tensor has no data")
+
+    @property
+    def data(self):
+        raise RuntimeError(
+            "PendingStorage has no data. Call flush() on the pipeline context "
+            "to materialize the storage, or move the tensor to a device."
+        )
 
     def untyped_storage(self):
         return self

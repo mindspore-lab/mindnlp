@@ -168,6 +168,9 @@ class Tensor:
     def _numpy_view(self):
         if self.device.type == "meta":
             raise RuntimeError("meta tensor has no data")
+        if self.device.type != "cpu":
+            # Convert to CPU to get numpy view
+            return self.to("cpu")._numpy_view()
         base = self._storage.data.ravel()
         itemsize = base.itemsize
         strides = tuple(s * itemsize for s in self.stride)
