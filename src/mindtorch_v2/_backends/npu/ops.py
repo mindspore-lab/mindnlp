@@ -2594,16 +2594,53 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
 
 
 def dropout(a, p=0.5, training=True):
-    """Compute dropout with scaling.
-
-    Note: This is a placeholder that returns input unchanged.
-    Full dropout requires random number generation on NPU.
-    """
+    """Compute dropout using aclnnDropoutGenMask + aclnnDropoutDoMask."""
     if not training or p == 0:
         return a
-    # TODO: Implement with NPU random number generation
-    # For now, return input unchanged (equivalent to p=0)
-    raise NotImplementedError("NPU dropout requires random number generation support")
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if not aclnn.dropout_symbols_ok():
+        raise RuntimeError("aclnnDropout symbols not available")
+
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    # Allocate mask (bit-packed: align(numel, 128) / 8 bytes)
+    mask_numel = (out_numel + 127) // 128 * 128 // 8
+    mask_ptr = npu_runtime._alloc_device(mask_numel, runtime=runtime)
+
+    # Get seed and offset from npu module
+    from ... import npu as npu_mod
+    seed = npu_mod._get_seed()
+    offset = npu_mod._get_and_advance_offset(advance=out_numel)
+
+    # Step 1: Generate mask
+    aclnn.dropout_gen_mask(
+        a.shape, p, seed, offset,
+        mask_ptr, mask_numel,
+        runtime, stream=stream.stream
+    )
+
+    # Step 2: Apply mask
+    aclnn.dropout_do_mask(
+        _unwrap_storage(a).data_ptr(),
+        mask_ptr,
+        out_ptr,
+        a.shape, a.stride, a.dtype,
+        mask_numel, p,
+        runtime, stream=stream.stream
+    )
+
+    # Free mask - we don't need it
+    runtime.defer_free(mask_ptr)
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def pad(input, pad, mode='constant', value=0):

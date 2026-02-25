@@ -2,7 +2,7 @@ from ..common import convert as convert_backend
 from ..common import view as view_backend
 from ..meta import infer as meta_infer
 from ..._dispatch.registry import registry
-from .creation import empty_create, ones_create, tensor_create, zeros_create
+from .creation import empty_create, ones_create, tensor_create, zeros_create, randn_create
 from .ops import (
     abs,
     add,
@@ -112,6 +112,7 @@ from .ops import (
     batch_norm,
     group_norm,
     gather,
+    dropout,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -207,6 +208,7 @@ registry.register("tensor", "npu", tensor_create)
 registry.register("zeros", "npu", zeros_create)
 registry.register("ones", "npu", ones_create)
 registry.register("empty", "npu", empty_create)
+registry.register("randn", "npu", randn_create)
 registry.register("getitem", "npu", getitem)
 registry.register("setitem", "npu", setitem)
 
@@ -248,5 +250,8 @@ registry.register("group_norm", "npu", group_norm, meta=meta_infer.infer_unary)
 
 # Tensor operations
 registry.register("gather", "npu", gather, meta=meta_infer.infer_gather)
+
+# Random operations
+registry.register("dropout", "npu", dropout, meta=meta_infer.infer_unary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
