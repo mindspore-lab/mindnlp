@@ -1265,24 +1265,36 @@ def where(cond, x, y):
         raise ValueError("NPU where requires matching dtypes")
     if cond.dtype != bool_dtype:
         cond = ne(cond, _scalar_to_npu_tensor(0, cond))
-    cond_bool = cond
+    if not aclnn.s_where_symbols_ok():
+        raise RuntimeError("aclnnSWhere symbols not available")
+
+    out_shape = _broadcast_shape(cond.shape, x.shape)
+    out_shape = _broadcast_shape(out_shape, y.shape)
+    if out_shape != x.shape:
+        x = _npu_broadcast_to(x, out_shape)
+    if out_shape != y.shape:
+        y = _npu_broadcast_to(y, out_shape)
+    if out_shape != cond.shape:
+        cond = _npu_broadcast_to(cond, out_shape)
+
     runtime = npu_runtime.get_runtime((x.device.index or 0))
     stream = npu_state.current_stream((x.device.index or 0))
-    out_shape = _broadcast_shape(cond_bool.shape, x.shape)
-    out_shape = _broadcast_shape(out_shape, y.shape)
     out_stride = npu_runtime._contiguous_stride(out_shape)
     out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(x.dtype), runtime=runtime)
-    aclnn.swhere(
-        _unwrap_storage(cond_bool).data_ptr(),
+    aclnn.s_where(
+        _unwrap_storage(cond).data_ptr(),
         _unwrap_storage(x).data_ptr(),
         _unwrap_storage(y).data_ptr(),
         out_ptr,
-        cond_bool.shape,
-        cond_bool.stride,
+        cond.shape,
+        cond.stride,
+        cond.dtype,
         x.shape,
         x.stride,
+        x.dtype,
         y.shape,
         y.stride,
+        y.dtype,
         out_shape,
         out_stride,
         x.dtype,
@@ -1292,9 +1304,6 @@ def where(cond, x, y):
     out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), x.dtype, device=x.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
-
-
-# helper + ops block inserted before nonzero()
 
 def _check_index_range_cpu(indices, dim_size, name):
     idx = indices.to("cpu").numpy()
@@ -2185,37 +2194,6 @@ def stack(tensors, dim=0):
     )
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, first.dtype, device=first.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
-
-
-def where(condition, x, y):
-    """Element-wise where using aclnnSWhere."""
-    runtime = npu_runtime.get_runtime((condition.device.index or 0))
-    stream = npu_state.current_stream((condition.device.index or 0))
-
-    if not aclnn.s_where_symbols_ok():
-        raise RuntimeError("aclnnSWhere not available")
-
-    # Compute broadcast output shape
-    out_shape = _broadcast_shape(_broadcast_shape(condition.shape, x.shape), y.shape)
-    out_stride = npu_runtime._contiguous_stride(out_shape)
-    out_numel = _numel(out_shape)
-    itemsize = _dtype_itemsize(x.dtype)
-    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
-
-    aclnn.s_where(
-        _unwrap_storage(condition).data_ptr(),
-        _unwrap_storage(x).data_ptr(),
-        _unwrap_storage(y).data_ptr(),
-        out_ptr,
-        condition.shape, condition.stride, condition.dtype,
-        x.shape, x.stride, x.dtype,
-        y.shape, y.stride, y.dtype,
-        out_shape, out_stride, x.dtype,
-        runtime, stream=stream.stream
-    )
-
-    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, x.dtype, device=x.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
