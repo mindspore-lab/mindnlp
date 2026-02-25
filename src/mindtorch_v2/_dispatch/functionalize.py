@@ -133,6 +133,8 @@ def _writeback(target, result, op_name=None):
             target.offset = result.offset
             target._base = result._base
             target._view_meta = result._view_meta
+        bump_target = target._base if target._base is not None else target
+        bump_target._version_counter.bump()
         return target
     if target.device.type != "cpu":
         raise RuntimeError(f"aten::{op_name} is not implemented for NPU")
@@ -149,6 +151,8 @@ def _writeback(target, result, op_name=None):
         target.offset = result.offset
         target._base = result._base
         target._view_meta = result._view_meta
+    bump_target = target._base if target._base is not None else target
+    bump_target._version_counter.bump()
     return target
 
 
