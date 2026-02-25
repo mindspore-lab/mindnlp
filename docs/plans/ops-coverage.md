@@ -142,6 +142,17 @@ This document is about collaboration rules only (not defining the op scope).
 | `aten::flip` | CPU | done | - | numpy impl + meta + tests |
 | `aten::roll` | CPU | done | - | numpy impl + meta + tests |
 | `aten::rot90` | CPU | done | - | numpy impl + meta + tests |
+| `aten::chunk` | NPU | done | - | D2D split on contiguous tensors |
+| `aten::split` | NPU | done | - | D2D split on contiguous tensors |
+| `aten::vsplit` | NPU | done | - | D2D split on contiguous tensors |
+| `aten::hsplit` | NPU | done | - | D2D split on contiguous tensors |
+| `aten::dsplit` | NPU | done | - | D2D split on contiguous tensors |
+| `aten::unbind` | NPU | done | - | D2D split on contiguous tensors |
+| `aten::hstack` | NPU | done | - | cat-based (aclnnCat) |
+| `aten::vstack` | NPU | done | - | cat-based (aclnnCat) |
+| `aten::row_stack` | NPU | done | - | vstack alias |
+| `aten::dstack` | NPU | done | - | cat-based (aclnnCat) |
+| `aten::column_stack` | NPU | done | - | cat-based (aclnnCat) |
 | `aten::repeat` | CPU | done | - | numpy impl + meta + tests |
 | `aten::repeat_interleave` | CPU | done | - | numpy impl + meta + tests |
 | `aten::tile` | CPU | done | - | numpy impl + meta + tests |

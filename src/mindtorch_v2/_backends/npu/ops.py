@@ -2423,3 +2423,194 @@ def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, spars
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, weight.dtype, device=weight.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+
+def _normalize_dim(dim, ndim):
+    if dim < 0:
+        dim += ndim
+    if dim < 0 or dim >= ndim:
+        raise ValueError("dim out of range")
+    return dim
+
+
+def _split_sections_from_count(dim_size, sections):
+    if sections <= 0:
+        raise ValueError("sections must be > 0")
+    size, extra = divmod(dim_size, sections)
+    return [size + 1] * extra + [size] * (sections - extra)
+
+
+def _slice_along_dim(a, start, end, dim):
+    if a.device.type != "npu":
+        raise ValueError("NPU slice expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+    if not a.is_contiguous():
+        raise NotImplementedError("NPU split only supports contiguous input")
+    dim_size = a.shape[dim]
+    length = max(0, end - start)
+    out_shape = list(a.shape)
+    out_shape[dim] = length
+    out_shape = tuple(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+
+    if out_numel == 0:
+        out_stride = npu_runtime._contiguous_stride(out_shape) if out_shape else ()
+        out_ptr = npu_runtime._alloc_device(max(itemsize, 1), runtime=runtime)
+        storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+        return _wrap_tensor(storage, out_shape, out_stride)
+
+    inner = 1
+    for d in a.shape[dim + 1:]:
+        inner *= d
+    outer = 1
+    for d in a.shape[:dim]:
+        outer *= d
+
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    src_base = int(_unwrap_storage(a).data_ptr()) + a.offset * itemsize
+    dst_base = int(out_ptr)
+
+    if inner == 1:
+        block_bytes = length * itemsize
+        for outer_idx in range(outer):
+            src_ptr = src_base + (outer_idx * dim_size + start) * itemsize
+            dst_ptr = dst_base + outer_idx * length * itemsize
+            ret = npu_runtime.acl.rt.memcpy(dst_ptr, block_bytes, src_ptr, block_bytes, 3)
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
+    else:
+        block_bytes = inner * itemsize
+        for outer_idx in range(outer):
+            src_outer = src_base + outer_idx * dim_size * inner * itemsize
+            dst_outer = dst_base + outer_idx * length * inner * itemsize
+            for i in range(length):
+                src_ptr = src_outer + (start + i) * inner * itemsize
+                dst_ptr = dst_outer + i * inner * itemsize
+                ret = npu_runtime.acl.rt.memcpy(dst_ptr, block_bytes, src_ptr, block_bytes, 3)
+                if ret != npu_runtime.ACL_ERROR_CODE:
+                    raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
+
+    storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(storage, out_shape, out_stride)
+
+
+def chunk(a, chunks, dim=0):
+    dim = _normalize_dim(dim, a.dim())
+    dim_size = a.shape[dim]
+    if chunks <= 0:
+        raise ValueError("chunks must be > 0")
+    actual_chunks = min(chunks, dim_size) if dim_size > 0 else chunks
+    if actual_chunks == 0:
+        return tuple()
+    chunk_size = (dim_size + actual_chunks - 1) // actual_chunks
+    outputs = []
+    for i in range(actual_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, dim_size)
+        if start >= end:
+            break
+        outputs.append(_slice_along_dim(a, start, end, dim))
+    return tuple(outputs)
+
+
+def split(a, split_size_or_sections, dim=0):
+    dim = _normalize_dim(dim, a.dim())
+    dim_size = a.shape[dim]
+    outputs = []
+    if isinstance(split_size_or_sections, int):
+        if split_size_or_sections <= 0:
+            raise ValueError("split_size must be > 0")
+        step = split_size_or_sections
+        for start in range(0, dim_size, step):
+            end = min(start + step, dim_size)
+            outputs.append(_slice_along_dim(a, start, end, dim))
+    else:
+        sizes = list(split_size_or_sections)
+        if sum(sizes) != dim_size:
+            raise ValueError("split sections must sum to dim size")
+        start = 0
+        for size in sizes:
+            end = start + size
+            outputs.append(_slice_along_dim(a, start, end, dim))
+            start = end
+    return tuple(outputs)
+
+
+def vsplit(a, split_size_or_sections):
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[0], split_size_or_sections)
+        return split(a, sizes, dim=0)
+    return split(a, split_size_or_sections, dim=0)
+
+
+def hsplit(a, split_size_or_sections):
+    dim = 0 if a.dim() == 1 else 1
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[dim], split_size_or_sections)
+        return split(a, sizes, dim=dim)
+    return split(a, split_size_or_sections, dim=dim)
+
+
+def dsplit(a, split_size_or_sections):
+    if a.dim() < 3:
+        raise ValueError("dsplit expects input with at least 3 dimensions")
+    if isinstance(split_size_or_sections, int):
+        sizes = _split_sections_from_count(a.shape[2], split_size_or_sections)
+        return split(a, sizes, dim=2)
+    return split(a, split_size_or_sections, dim=2)
+
+
+def unbind(a, dim=0):
+    dim = _normalize_dim(dim, a.dim())
+    dim_size = a.shape[dim]
+    outputs = []
+    from ..common import view as view_backend
+    for i in range(dim_size):
+        sliced = _slice_along_dim(a, i, i + 1, dim)
+        out_shape = a.shape[:dim] + a.shape[dim + 1:]
+        outputs.append(view_backend.reshape(sliced, out_shape))
+    return tuple(outputs)
+
+
+def hstack(tensors):
+    if tensors[0].dim() == 1:
+        return cat(tensors, dim=0)
+    return cat(tensors, dim=1)
+
+
+def vstack(tensors):
+    from ..common import view as view_backend
+    if tensors[0].dim() == 1:
+        expanded = [view_backend.reshape(t, (1, t.shape[0])) for t in tensors]
+        return cat(expanded, dim=0)
+    return cat(tensors, dim=0)
+
+
+def row_stack(tensors):
+    return vstack(tensors)
+
+
+def dstack(tensors):
+    from ..common import view as view_backend
+    expanded = []
+    for t in tensors:
+        if t.dim() == 1:
+            expanded.append(view_backend.reshape(t, (1, t.shape[0], 1)))
+        elif t.dim() == 2:
+            expanded.append(view_backend.reshape(t, (t.shape[0], t.shape[1], 1)))
+        else:
+            expanded.append(t)
+    return cat(expanded, dim=2)
+
+
+def column_stack(tensors):
+    from ..common import view as view_backend
+    if tensors[0].dim() == 1:
+        expanded = [view_backend.reshape(t, (t.shape[0], 1)) for t in tensors]
+        return cat(expanded, dim=1)
+    return cat(tensors, dim=1)

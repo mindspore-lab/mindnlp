@@ -240,6 +240,42 @@ def test_npu_count_nonzero():
     )
 
 
+def test_npu_split_stack_family():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    a = torch.tensor([1.0, 2.0], device="npu")
+    b = torch.tensor([3.0, 4.0], device="npu")
+
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0], device="npu")
+    out = torch.chunk(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([3.0, 4.0]))
+
+    out = torch.split(x, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([3.0, 4.0]))
+
+    y = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu")
+    out = torch.vsplit(y, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([[1.0, 2.0]]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([[3.0, 4.0]]))
+
+    z = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], device="npu")
+    out = torch.dsplit(z, 2)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([[[1.0], [3.0]]]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([[[2.0], [4.0]]]))
+
+    out = torch.unbind(y, dim=0)
+    assert len(out) == 2
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([3.0, 4.0]))
+
+
 @pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
 def test_npu_pow(dtype):
     if not torch.npu.is_available():
