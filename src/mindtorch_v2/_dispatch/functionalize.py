@@ -99,22 +99,34 @@ def _writeback(target, result, op_name=None):
     # View-aware writeback: only update the logical elements of `target`.
     # This matches torch in-place semantics for views.
     if target.device.type == "npu":
-        if not _is_contiguous_view(target):
-            raise RuntimeError(f"aten::{op_name} is not implemented for NPU")
         from .._backends.npu import runtime as npu_runtime
+        from .._backends.npu import ops as npu_ops
 
-        itemsize = result.element_size()
         base = target._base if target._base is not None else target
-        base_storage = base.storage()
-        src_storage = result.storage()
-        runtime = npu_runtime.get_runtime((result.device.index or 0))
-        numel = result.numel()
-        copy_size = int(numel * itemsize)
-        dst_ptr = int(base_storage.data_ptr()) + int(target.offset * itemsize)
-        src_ptr = int(src_storage.data_ptr()) + int(result.offset * itemsize)
-        ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 3)
-        if ret != npu_runtime.ACL_ERROR_CODE:
-            raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+        if _is_contiguous_view(target):
+            itemsize = result.element_size()
+            base_storage = base.storage()
+            src_storage = result.storage()
+            runtime = npu_runtime.get_runtime((result.device.index or 0))
+            numel = result.numel()
+            copy_size = int(numel * itemsize)
+            dst_ptr = int(base_storage.data_ptr()) + int(target.offset * itemsize)
+            src_ptr = int(src_storage.data_ptr()) + int(result.offset * itemsize)
+            ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 3)
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+        else:
+            if not npu_ops.aclnn.arange_symbols_ok():
+                raise RuntimeError("aclnnArange symbols not available")
+            if not npu_ops.aclnn.index_put_impl_symbols_ok():
+                raise RuntimeError("aclnnIndexPutImpl symbols not available")
+            if target.numel() != result.numel():
+                raise RuntimeError("functionalize writeback shape mismatch")
+            base_flat = base.reshape((base.numel(),))
+            values = result.reshape((result.numel(),))
+            linear = npu_ops._npu_linear_index(target.shape, target.stride, target.offset, target.device)
+            linear = linear.reshape((linear.numel(),))
+            npu_ops.npu_index_put_impl(base_flat, linear, values, accumulate=False, unsafe=False)
         if target._view_meta is None:
             target.shape = result.shape
             target.stride = result.stride

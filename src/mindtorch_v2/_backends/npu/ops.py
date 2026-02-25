@@ -7,6 +7,7 @@ from ..common import convert as convert_backend
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
+from .creation import zeros_create
 
 
 def _unwrap_storage(tensor):
@@ -19,6 +20,23 @@ def _wrap_tensor(storage, shape, stride):
     from ..._tensor import Tensor
 
     return Tensor(storage, shape, stride)
+
+
+def _broadcast_shape_checked(a_shape, b_shape, name):
+    max_len = max(len(a_shape), len(b_shape))
+    result = []
+    for i in range(1, max_len + 1):
+        a_dim = a_shape[-i] if i <= len(a_shape) else 1
+        b_dim = b_shape[-i] if i <= len(b_shape) else 1
+        if a_dim == 1:
+            result.append(b_dim)
+        elif b_dim == 1:
+            result.append(a_dim)
+        elif a_dim == b_dim:
+            result.append(a_dim)
+        else:
+            raise ValueError(f"NPU {name} shape mismatch")
+    return tuple(reversed(result))
 
 
 def _dtype_itemsize(dtype):
@@ -45,6 +63,103 @@ def _broadcast_shape(a_shape, b_shape):
         else:
             raise ValueError("matmul shape mismatch")
     return tuple(reversed(result))
+
+
+def _npu_broadcast_to(tensor, shape):
+    shape = tuple(shape)
+    if tensor.shape == shape:
+        return tensor
+    zeros = zeros_create(shape, dtype=tensor.dtype, device=tensor.device)
+    return _binary_op(tensor, zeros, aclnn.add, "add")
+
+
+def _npu_arange_1d(size, device):
+    runtime = npu_runtime.get_runtime((device.index or 0))
+    stream = npu_state.current_stream((device.index or 0))
+    if not aclnn.arange_symbols_ok():
+        raise RuntimeError("aclnnArange symbols not available")
+    shape = (int(size),)
+    stride = npu_runtime._contiguous_stride(shape)
+    out_size = _numel(shape) * _dtype_itemsize(int64_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.arange(0, int(size), 1, out_ptr, shape, stride, int64_dtype, runtime, stream=stream.stream)
+    storage = npu_typed_storage_from_ptr(out_ptr, _numel(shape), int64_dtype, device=device)
+    return _wrap_tensor(storage, shape, stride)
+
+
+def _npu_add_scalar_(tensor, scalar):
+    runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+    stream = npu_state.current_stream((tensor.device.index or 0))
+    if not aclnn.add_scalar_symbols_ok():
+        raise RuntimeError("aclnnAdds symbols not available")
+    storage = _unwrap_storage(tensor)
+    aclnn.add_scalar(
+        storage.data_ptr(),
+        scalar,
+        storage.data_ptr(),
+        tensor.shape,
+        tensor.stride,
+        tensor.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return tensor
+
+
+def _npu_linear_index(view_shape, view_stride, view_offset, device):
+    ndim = len(view_shape)
+    if ndim == 0:
+        runtime = npu_runtime.get_runtime((device.index or 0))
+        stream = npu_state.current_stream((device.index or 0))
+        out_ptr = npu_runtime._alloc_device(_dtype_itemsize(int64_dtype), runtime=runtime)
+        storage = npu_typed_storage_from_ptr(out_ptr, 1, int64_dtype, device=device)
+        out = _wrap_tensor(storage, (), ())
+        return _npu_add_scalar_(out, view_offset)
+    linear = None
+    for dim, size in enumerate(view_shape):
+        idx = _npu_arange_1d(size, device)
+        shape = [1] * ndim
+        shape[dim] = int(size)
+        idx = idx.reshape(shape)
+        target_shape = _broadcast_shape_checked(tuple(shape), tuple(view_shape), "view-index")
+        if target_shape != tuple(view_shape):
+            raise RuntimeError("NPU view index broadcast mismatch")
+        idx = _npu_broadcast_to(idx, view_shape)
+        if view_stride[dim] != 1:
+            idx = idx * _scalar_to_npu_tensor(view_stride[dim], idx)
+        if linear is None:
+            linear = idx
+        else:
+            linear = linear + idx
+    return _npu_add_scalar_(linear, view_offset)
+
+
+def npu_index_put_impl(self_tensor, index_tensor, values, accumulate=False, unsafe=False):
+    runtime = npu_runtime.get_runtime((self_tensor.device.index or 0))
+    stream = npu_state.current_stream((self_tensor.device.index or 0))
+    if not aclnn.index_put_impl_symbols_ok():
+        raise RuntimeError("aclnnIndexPutImpl symbols not available")
+    self_storage = _unwrap_storage(self_tensor)
+    index_storage = _unwrap_storage(index_tensor)
+    values_storage = _unwrap_storage(values)
+    aclnn.index_put_impl(
+        self_storage.data_ptr(),
+        self_tensor.shape,
+        self_tensor.stride,
+        self_tensor.dtype,
+        [index_storage.data_ptr()],
+        [index_tensor.shape],
+        [index_tensor.stride],
+        [index_tensor.dtype],
+        values_storage.data_ptr(),
+        values.shape,
+        values.stride,
+        values.dtype,
+        bool(accumulate),
+        bool(unsafe),
+        runtime,
+        stream=stream.stream,
+    )
 
 
 def _numel(shape):
@@ -2308,5 +2423,3 @@ def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, spars
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, weight.dtype, device=weight.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
-
-
