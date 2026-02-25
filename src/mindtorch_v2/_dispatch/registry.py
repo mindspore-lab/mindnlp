@@ -101,6 +101,11 @@ def _register_global_fallthroughs():
         DispatchKey.AutogradMeta,
         DispatchKey.Python,
         DispatchKey.Autocast,
+        DispatchKey.CompositeImplicitAutograd,
+        DispatchKey.CompositeExplicitAutograd,
+        DispatchKey.PrivateUse1,
+        DispatchKey.PrivateUse2,
+        DispatchKey.PrivateUse3,
     }
     registry._global_fallthrough = placeholders
 
