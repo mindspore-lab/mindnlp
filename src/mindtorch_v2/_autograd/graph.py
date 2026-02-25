@@ -30,3 +30,6 @@ def saved_tensors_hooks(pack_hook, unpack_hook):
         yield
     finally:
         stack.pop()
+
+
+__all__ = ['saved_tensors_hooks']
