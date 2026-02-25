@@ -1631,6 +1631,46 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # Gather
+        self.aclnn_gather_get_workspace = _optional_symbol(
+            libs,
+            aclnnGatherGetWorkspaceSize,
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # self
+                ctypes.c_int64,   # dim
+                ctypes.c_void_p,  # index
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_gather = _optional_symbol(
+            libs,
+            aclnnGather,
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # MaskedSelect
+        self.aclnn_masked_select_get_workspace = _optional_symbol(
+            libs,
+            aclnnMaskedSelectGetWorkspaceSize,
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # self
+                ctypes.c_void_p,  # mask
+                ctypes.c_void_p,  # out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_masked_select = _optional_symbol(
+            libs,
+            aclnnMaskedSelect,
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
         # Embedding
         self.aclnn_embedding_get_workspace = _optional_symbol(
             libs,
@@ -5023,6 +5063,133 @@ def embedding(weight_ptr, indices_ptr, out_ptr, weight_shape, weight_stride,
         if workspace is not None:
             runtime.defer_free(workspace)
 
+
+
+
+def gather(self_ptr, index_ptr, out_ptr,
+           self_shape, self_stride, self_dtype,
+           index_shape, index_stride, index_dtype,
+           out_shape, out_stride, out_dtype,
+           dim, runtime, stream=None):
+    """Gather elements along dim using aclnnGather."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_gather_get_workspace is None or bindings.aclnn_gather is None:
+        raise RuntimeError("aclnnGather symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, index_shape, index_stride, index_dtype, index_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_gather_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            index_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGatherGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_gather(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGather failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def masked_select(self_ptr, mask_ptr, out_ptr,
+                  self_shape, self_stride, self_dtype,
+                  mask_shape, mask_stride, mask_dtype,
+                  out_shape, out_stride, out_dtype,
+                  runtime, stream=None):
+    """Masked select using aclnnMaskedSelect."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_masked_select_get_workspace is None or bindings.aclnn_masked_select is None:
+        raise RuntimeError("aclnnMaskedSelect symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    mask_tensor, mask_keep = _create_tensor(bindings, mask_shape, mask_stride, mask_dtype, mask_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_masked_select_get_workspace(
+            self_tensor,
+            mask_tensor,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaskedSelectGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_masked_select(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaskedSelect failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(mask_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def gather_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_gather_get_workspace, bindings.aclnn_gather])
+    except Exception:
+        return False
+
+
+def masked_select_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_masked_select_get_workspace, bindings.aclnn_masked_select])
+    except Exception:
+        return False
 
 def mean_symbols_ok():
     try:
