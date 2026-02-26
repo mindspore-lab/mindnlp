@@ -237,6 +237,20 @@ def _extract_tensors(args, kwargs):
     return tensors
 
 
+def _validate_tensor_devices(tensors):
+    if not tensors:
+        return
+    expected = tensors[0].device
+    expected_type = expected.type if hasattr(expected, "type") else expected
+    for tensor in tensors[1:]:
+        device = tensor.device
+        dev_type = device.type if hasattr(device, "type") else device
+        if dev_type != expected_type:
+            raise RuntimeError(
+                f"Tensor on device {dev_type} is not on the expected device {expected_type}!"
+            )
+
+
 def _infer_dispatch_device(dispatch_device, tensors, keyset):
     if dispatch_device is not None:
         return dispatch_device
@@ -256,6 +270,7 @@ def _infer_dispatch_device(dispatch_device, tensors, keyset):
 
 def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
     tensors = _extract_tensors(args, kwargs)
+    _validate_tensor_devices(tensors)
     keyset = apply_tls_masks(keyset)
     pipe = current_pipeline()
     dispatch_device = _infer_dispatch_device(dispatch_device, tensors, keyset)

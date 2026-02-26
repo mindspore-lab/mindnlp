@@ -209,6 +209,12 @@ class DispatchKeySet:
             mask |= int(DispatchKey.CPU)
         if grad_enabled and requires_grad:
             mask |= int(DispatchKey.Autograd)
+            if has_meta:
+                mask |= int(DispatchKey.AutogradMeta)
+            elif has_npu:
+                mask |= int(DispatchKey.AutogradNPU)
+            else:
+                mask |= int(DispatchKey.AutogradCPU)
         if functionalize_enabled:
             mask |= int(DispatchKey.Functionalize)
         if pipeline_enabled and not has_meta:
