@@ -85,6 +85,8 @@ def _mutating_args(schema_obj, args, kwargs):
     for param in params:
         if not param.mutates:
             continue
+        if getattr(param, "alias_set", None) in (None, ""):
+            continue
         if param.name in bound:
             mutated.append(bound[param.name])
     return mutated

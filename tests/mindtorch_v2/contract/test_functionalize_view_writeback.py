@@ -38,3 +38,24 @@ def test_functionalize_writeback_respects_view_meta():
     assert base.device.type == "meta"
     assert view.shape == (2, 2)
     assert view.stride == (1, 2)
+
+
+def test_functionalize_view_writeback_bumps_shared_version_once():
+    base = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    view = base.view((2, 2))
+    v0 = base._version_counter.value
+    with torch.functionalize():
+        view.add_(torch.ones((2, 2)))
+    assert base._version_counter.value == v0 + 1
+    assert view._version_counter.value == v0 + 1
+
+
+def test_functionalize_base_and_view_inplace_sequence_bumps_twice():
+    base = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    view = base.view((2, 2))
+    v0 = base._version_counter.value
+    with torch.functionalize():
+        base.add_(torch.ones((4,)))
+        view.add_(torch.ones((2, 2)))
+    assert base._version_counter.value == v0 + 2
+    assert view._version_counter.value == v0 + 2
