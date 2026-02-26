@@ -1,21 +1,15 @@
-"""PyTorch-compatible dtype definitions backed by MindSpore dtypes."""
-
-import builtins as _builtins
-
 import numpy as np
-import mindspore
 
 
 class DType:
-    """Represents a tensor data type, wrapping a MindSpore dtype."""
-
-    def __init__(self, name, ms_dtype, np_dtype, size, is_float=False, is_complex_type=False):
+    def __init__(self, name, numpy_dtype, itemsize, is_floating_point=False,
+                 is_complex=False, is_signed=True):
         self.name = name
-        self._ms_dtype = ms_dtype
-        self._np_dtype = np_dtype
-        self._itemsize = size
-        self._is_floating_point = is_float
-        self._is_complex = is_complex_type
+        self._numpy_dtype = numpy_dtype
+        self.itemsize = itemsize
+        self._is_floating_point = is_floating_point
+        self._is_complex = is_complex
+        self._is_signed = is_signed
 
     @property
     def is_floating_point(self):
@@ -26,109 +20,110 @@ class DType:
         return self._is_complex
 
     @property
-    def itemsize(self):
-        return self._itemsize
-
-    def to_mindspore(self):
-        return self._ms_dtype
-
-    def to_numpy(self):
-        return self._np_dtype
+    def is_signed(self):
+        return self._is_signed
 
     def __repr__(self):
         return f"torch.{self.name}"
-
-    def __str__(self):
-        return f"torch.{self.name}"
-
-    def __hash__(self):
-        return hash(self.name)
 
     def __eq__(self, other):
         if isinstance(other, DType):
             return self.name == other.name
         return NotImplemented
 
+    def __hash__(self):
+        return hash(self.name)
 
-# --- Core dtypes ---
-float16 = DType("float16", mindspore.float16, np.float16, 2, is_float=True)
-float32 = DType("float32", mindspore.float32, np.float32, 4, is_float=True)
-float64 = DType("float64", mindspore.float64, np.float64, 8, is_float=True)
-bfloat16 = DType("bfloat16", mindspore.bfloat16, None, 2, is_float=True)
 
-# Float8 dtypes (stub - MindSpore may not natively support these)
-float8_e4m3fn = DType("float8_e4m3fn", None, None, 1, is_float=True)
-float8_e4m3fnuz = DType("float8_e4m3fnuz", None, None, 1, is_float=True)
-float8_e5m2 = DType("float8_e5m2", None, None, 1, is_float=True)
-float8_e5m2fnuz = DType("float8_e5m2fnuz", None, None, 1, is_float=True)
+# Floating point types
+float16 = DType("float16", np.float16, 2, is_floating_point=True)
+float32 = DType("float32", np.float32, 4, is_floating_point=True)
+float64 = DType("float64", np.float64, 8, is_floating_point=True)
+# bfloat16: stored as uint16 bit pattern on CPU, computed in float32
+bfloat16 = DType("bfloat16", np.uint16, 2, is_floating_point=True)
 
-int8 = DType("int8", mindspore.int8, np.int8, 1)
-int16 = DType("int16", mindspore.int16, np.int16, 2)
-int32 = DType("int32", mindspore.int32, np.int32, 4)
-int64 = DType("int64", mindspore.int64, np.int64, 8)
+# Integer types
+int8 = DType("int8", np.int8, 1)
+int16 = DType("int16", np.int16, 2)
+int32 = DType("int32", np.int32, 4)
+int64 = DType("int64", np.int64, 8)
+uint8 = DType("uint8", np.uint8, 1, is_signed=False)
 
-uint8 = DType("uint8", mindspore.uint8, np.uint8, 1)
-uint16 = DType("uint16", mindspore.uint16, np.uint16, 2)
-uint32 = DType("uint32", mindspore.uint32, np.uint32, 4)
-uint64 = DType("uint64", mindspore.uint64, np.uint64, 8)
+# Boolean
+bool = DType("bool", np.bool_, 1, is_signed=False)
 
-bool = DType("bool", mindspore.bool_, np.bool_, 1)
+# Complex types
+complex64 = DType("complex64", np.complex64, 8, is_complex=True)
+complex128 = DType("complex128", np.complex128, 16, is_complex=True)
 
-complex64 = DType("complex64", mindspore.complex64, np.complex64, 8, is_complex_type=True)
-complex128 = DType("complex128", mindspore.complex128, np.complex128, 16, is_complex_type=True)
-
-# --- Aliases ---
+# Aliases (matching PyTorch)
 half = float16
 float = float32
 double = float64
-long = int64
-int = int32
 short = int16
-
+int = int32
+long = int64
+byte = uint8
 cfloat = complex64
 cdouble = complex128
 
-# --- Conversion maps ---
-_ms_to_dtype = {
-    mindspore.float16: float16,
-    mindspore.float32: float32,
-    mindspore.float64: float64,
-    mindspore.bfloat16: bfloat16,
-    mindspore.int8: int8,
-    mindspore.int16: int16,
-    mindspore.int32: int32,
-    mindspore.int64: int64,
-    mindspore.uint8: uint8,
-    mindspore.uint16: uint16,
-    mindspore.uint32: uint32,
-    mindspore.uint64: uint64,
-    mindspore.bool_: bool,
-    mindspore.complex64: complex64,
-    mindspore.complex128: complex128,
+
+_NUMPY_DTYPE_MAP = {
+    float16: np.float16,
+    float32: np.float32,
+    float64: np.float64,
+    bfloat16: np.uint16,
+    int8: np.int8,
+    int16: np.int16,
+    int32: np.int32,
+    int64: np.int64,
+    uint8: np.uint8,
+    bool: np.bool_,
+    complex64: np.complex64,
+    complex128: np.complex128,
 }
 
-_dtype_to_np = {d: d._np_dtype for d in _ms_to_dtype.values() if d._np_dtype is not None}
+# Reverse map: numpy dtype -> DType
+_FROM_NUMPY_MAP = {
+    np.dtype(np.float16): float16,
+    np.dtype(np.float32): float32,
+    np.dtype(np.float64): float64,
+    np.dtype(np.int8): int8,
+    np.dtype(np.int16): int16,
+    np.dtype(np.int32): int32,
+    np.dtype(np.int64): int64,
+    np.dtype(np.uint8): uint8,
+    np.dtype(np.bool_): bool,
+    np.dtype(np.complex64): complex64,
+    np.dtype(np.complex128): complex128,
+}
 
-_np_to_dtype = {v: k for k, v in _dtype_to_np.items()}
-
-_py_to_dtype = {
-    _builtins.bool: bool,
-    _builtins.float: float,
-    _builtins.int: int64,
+# Name -> DType lookup
+_NAME_MAP = {
+    "float16": float16, "half": float16,
+    "float32": float32, "float": float32,
+    "float64": float64, "double": float64,
+    "bfloat16": bfloat16,
+    "int8": int8,
+    "int16": int16, "short": int16,
+    "int32": int32, "int": int32,
+    "int64": int64, "long": int64,
+    "uint8": uint8, "byte": uint8,
+    "bool": bool,
+    "complex64": complex64, "cfloat": complex64,
+    "complex128": complex128, "cdouble": complex128,
 }
 
 
-def from_mindspore_dtype(ms_dtype):
-    """Convert MindSpore dtype to mindtorch_v2 dtype."""
-    return _ms_to_dtype.get(ms_dtype)
+def to_numpy_dtype(dtype):
+    return _NUMPY_DTYPE_MAP.get(dtype, np.float32)
 
 
-def dtype_to_numpy(dtype):
-    """Convert mindtorch_v2 dtype to numpy dtype."""
-    return _dtype_to_np.get(dtype)
+def from_numpy_dtype(np_dtype):
+    """Convert a numpy dtype to a mindtorch DType."""
+    return _FROM_NUMPY_MAP.get(np.dtype(np_dtype), float32)
 
 
-def numpy_to_dtype(np_dtype):
-    """Convert numpy dtype to mindtorch_v2 dtype."""
-    np_dtype = np.dtype(np_dtype).type
-    return _np_to_dtype.get(np_dtype)
+def from_name(name):
+    """Convert a dtype name string to a DType."""
+    return _NAME_MAP.get(name)

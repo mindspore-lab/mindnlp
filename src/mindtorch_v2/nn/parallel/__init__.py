@@ -1,8 +1,4 @@
-"""Parallel module package for mindtorch_v2.
+from .distributed import DistributedDataParallel
+from .data_parallel import DataParallel, data_parallel
 
-Provides DataParallel and DistributedDataParallel compatibility classes.
-"""
-
-from ..modules.parallel import DataParallel, DistributedDataParallel
-
-__all__ = ['DataParallel', 'DistributedDataParallel']
+__all__ = ["DistributedDataParallel", "DataParallel", "data_parallel"]

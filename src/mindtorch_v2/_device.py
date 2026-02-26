@@ -1,84 +1,44 @@
-"""PyTorch-compatible device representation."""
-
-# Avoid conflict with Python builtins
-import builtins as _builtins
-import threading
-
-_int = _builtins.int
-
-# Thread-local storage for default device context
-_device_context = threading.local()
-
-
-def _get_default_device():
-    """Get the current default device from context, or None."""
-    return getattr(_device_context, 'device', None)
-
-
-def _set_default_device(dev):
-    """Set the current default device in context."""
-    _device_context.device = dev
-
-
 class device:
-    """Represents the device on which a tensor is or will be allocated.
-
-    Matches torch.device API:
-        device("cpu")
-        device("cuda", 0)
-        device("cuda:1")
-    """
-
-    __slots__ = ("type", "index", "_prev_device")
-
-    def __init__(self, type_or_str, index=None):
-        if isinstance(type_or_str, device):
-            self.type = type_or_str.type
-            self.index = type_or_str.index
+    def __init__(self, dev, index=None):
+        if isinstance(dev, device):
+            self.type = dev.type
+            self.index = dev.index if index is None else int(index)
             return
-
-        if isinstance(type_or_str, str):
-            if ":" in type_or_str:
-                parts = type_or_str.split(":", 1)
-                self.type = parts[0]
-                self.index = _int(parts[1])
-            else:
-                self.type = type_or_str
-                self.index = index
-        else:
-            raise ValueError(f"Expected string or device, got {type(type_or_str)}")
+        if isinstance(dev, str) and ":" in dev:
+            dev, idx = dev.split(":", 1)
+            index = int(idx)
+        self.type = str(dev)
+        if self.type == "npu" and index is None:
+            index = 0
+        self.index = None if index is None else int(index)
 
     def __repr__(self):
-        if self.index is not None:
-            return f"device(type='{self.type}', index={self.index})"
-        return f"device(type='{self.type}')"
+        if self.index is None:
+            return f"device(type='{self.type}')"
+        return f"device(type='{self.type}', index={self.index})"
 
     def __str__(self):
-        if self.index is not None:
-            return f"{self.type}:{self.index}"
-        return self.type
+        if self.index is None:
+            return f"{self.type}"
+        return f"{self.type}:{self.index}"
 
     def __eq__(self, other):
-        if isinstance(other, device):
-            return self.type == other.type and self.index == other.index
-        if isinstance(other, str):
-            return self == device(other)
-        return NotImplemented
+        if not isinstance(other, device):
+            return NotImplemented
+        return self.type == other.type and self.index == other.index
 
     def __hash__(self):
         return hash((self.type, self.index))
 
-    def __reduce__(self):
-        """Support pickling."""
-        return (device, (self.type, self.index))
 
-    def __enter__(self):
-        """Enter device context - tensors created inside will use this device."""
-        self._prev_device = _get_default_device()
-        _set_default_device(self)
-        return self
+_default_device = device("cpu")
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit device context - restore previous default device."""
-        _set_default_device(self._prev_device)
-        return False
+
+def get_default_device():
+    return _default_device
+
+
+def set_default_device(dev):
+    global _default_device
+    _default_device = device(dev)
+    return _default_device

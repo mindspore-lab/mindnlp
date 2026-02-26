@@ -1,403 +1,175 @@
-"""Module base class for neural network layers."""
+from __future__ import annotations
 
-from typing import Iterator, Tuple, Dict, Optional, Any, Set
 from collections import OrderedDict
 
 from .parameter import Parameter
-from .._tensor import Tensor
 
 
 class Module:
-    """Base class for all neural network modules.
-
-    Subclasses should implement the forward() method.
-    """
-
-    _version: int = 1
-    training: bool
-
     def __init__(self):
-        self._parameters: Dict[str, Optional[Parameter]] = OrderedDict()
-        self._buffers: Dict[str, Optional[Tensor]] = OrderedDict()
-        self._modules: Dict[str, Optional['Module']] = OrderedDict()
-        self._non_persistent_buffers_set: Set[str] = set()
+        self._parameters = {}
+        self._modules = {}
+        self._buffers = {}
+        self._non_persistent_buffers_set = set()
         self.training = True
 
-    def forward(self, *args, **kwargs):
-        raise NotImplementedError(
-            f"Module [{type(self).__name__}] is missing the required 'forward' function"
-        )
+    def __setattr__(self, name, value):
+        if isinstance(value, Parameter):
+            self._parameters[name] = value
+        elif isinstance(value, Module):
+            self._modules[name] = value
+        super().__setattr__(name, value)
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        # Handle Parameter assignment
-        if isinstance(value, Parameter):
-            if '_parameters' not in self.__dict__:
-                self._parameters = OrderedDict()
-            self._parameters[name] = value
-        elif isinstance(value, Module):
-            if '_modules' not in self.__dict__:
-                self._modules = OrderedDict()
-            self._modules[name] = value
-        elif isinstance(value, Tensor):
-            # If setting a Tensor to a name that was previously a Parameter,
-            # update _parameters as well (needed for weight tying)
-            if '_parameters' in self.__dict__ and name in self._parameters:
-                self._parameters[name] = value
-        object.__setattr__(self, name, value)
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError
 
-    def __getattr__(self, name: str) -> Any:
-        if '_parameters' in self.__dict__:
-            _parameters = self.__dict__['_parameters']
-            if name in _parameters:
-                return _parameters[name]
-        if '_buffers' in self.__dict__:
-            _buffers = self.__dict__['_buffers']
-            if name in _buffers:
-                return _buffers[name]
-        if '_modules' in self.__dict__:
-            _modules = self.__dict__['_modules']
-            if name in _modules:
-                return _modules[name]
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-    def __delattr__(self, name: str) -> None:
-        if name in self._parameters:
-            del self._parameters[name]
-        elif name in self._buffers:
-            del self._buffers[name]
-        elif name in self._modules:
-            del self._modules[name]
-        else:
-            object.__delattr__(self, name)
-
-    def register_buffer(self, name: str, tensor: Optional[Tensor], persistent: bool = True) -> None:
-        """Add a buffer to the module.
-
-        Args:
-            name: Name of the buffer
-            tensor: Tensor to register (or None)
-            persistent: If True, buffer will be part of state_dict. Default: True.
-        """
-        if '_buffers' not in self.__dict__:
-            self._buffers = OrderedDict()
-        if '_non_persistent_buffers_set' not in self.__dict__:
-            self._non_persistent_buffers_set = set()
-
+    def register_buffer(self, name, tensor, persistent=True):
         self._buffers[name] = tensor
-
-        if persistent:
-            self._non_persistent_buffers_set.discard(name)
-        else:
+        if not persistent:
             self._non_persistent_buffers_set.add(name)
+        if tensor is not None:
+            super().__setattr__(name, tensor)
 
-        object.__setattr__(self, name, tensor)
-
-    def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
-        """Add a parameter to the module."""
+    def register_parameter(self, name, param):
         self._parameters[name] = param
-        object.__setattr__(self, name, param)
+        if param is not None:
+            super().__setattr__(name, param)
 
-    def add_module(self, name: str, module: Optional['Module']) -> None:
-        """Add a child module."""
-        self._modules[name] = module
-        object.__setattr__(self, name, module)
-
-    def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
-        """Return an iterator over module parameters."""
+    def parameters(self, recurse=True):
         for name, param in self.named_parameters(recurse=recurse):
             yield param
 
-    def named_parameters(self, prefix: str = '', recurse: bool = True, remove_duplicate: bool = True) -> Iterator[Tuple[str, Parameter]]:
-        """Return an iterator over module parameters with names.
+    def named_parameters(self, prefix='', recurse=True):
+        yield from self._named_members(
+            lambda m: m._parameters.items(), prefix=prefix, recurse=recurse
+        )
 
-        Args:
-            prefix: Prefix to prepend to parameter names
-            recurse: If True, recursively include parameters from submodules
-            remove_duplicate: If True (default), remove duplicate parameters
-        """
-        memo: Set[int] = set() if remove_duplicate else None
-        for name, p in self._parameters.items():
-            if p is not None:
-                if memo is None or id(p) not in memo:
-                    if memo is not None:
-                        memo.add(id(p))
-                    yield prefix + name, p
-        if recurse:
-            for module_name, module in self._modules.items():
-                if module is not None:
-                    submodule_prefix = prefix + module_name + '.'
-                    for name, p in module.named_parameters(prefix=submodule_prefix, recurse=True, remove_duplicate=remove_duplicate):
-                        if memo is None or id(p) not in memo:
-                            if memo is not None:
-                                memo.add(id(p))
-                            yield name, p
-
-    def buffers(self, recurse: bool = True) -> Iterator[Tensor]:
-        """Return an iterator over module buffers."""
+    def buffers(self, recurse=True):
         for name, buf in self.named_buffers(recurse=recurse):
             yield buf
 
-    def named_buffers(self, prefix: str = '', recurse: bool = True, remove_duplicate: bool = True) -> Iterator[Tuple[str, Tensor]]:
-        """Return an iterator over module buffers with names."""
-        memo: Set[int] = set() if remove_duplicate else None
-        for name, b in self._buffers.items():
-            if b is not None:
-                if memo is None or id(b) not in memo:
-                    if memo is not None:
-                        memo.add(id(b))
-                    yield prefix + name, b
-        if recurse:
-            for module_name, module in self._modules.items():
-                if module is not None:
-                    submodule_prefix = prefix + module_name + '.'
-                    for name, b in module.named_buffers(prefix=submodule_prefix, recurse=True, remove_duplicate=remove_duplicate):
-                        if memo is None or id(b) not in memo:
-                            if memo is not None:
-                                memo.add(id(b))
-                            yield name, b
+    def named_buffers(self, prefix='', recurse=True):
+        yield from self._named_members(
+            lambda m: m._buffers.items(), prefix=prefix, recurse=recurse
+        )
 
-    def children(self) -> Iterator['Module']:
-        """Return an iterator over immediate child modules."""
-        for name, module in self._modules.items():
-            if module is not None:
-                yield module
-
-    def named_children(self) -> Iterator[Tuple[str, 'Module']]:
-        """Return an iterator over immediate child modules with names."""
-        for name, module in self._modules.items():
-            if module is not None:
-                yield name, module
-
-    def modules(self) -> Iterator['Module']:
-        """Return an iterator over all modules in the network."""
-        for name, module in self.named_modules():
+    def children(self):
+        for module in self._modules.values():
             yield module
 
-    def named_modules(self, memo: Optional[Set['Module']] = None, prefix: str = '', remove_duplicate: bool = True) -> Iterator[Tuple[str, 'Module']]:
-        """Return an iterator over all modules with names."""
+    def named_children(self):
+        for name, module in self._modules.items():
+            yield name, module
+
+    def modules(self):
+        for _, module in self.named_modules():
+            yield module
+
+    def named_modules(self, memo=None, prefix=''):
         if memo is None:
             memo = set()
-        if remove_duplicate:
-            if self in memo:
-                return
-            memo.add(self)
-        yield prefix, self
+        if id(self) not in memo:
+            memo.add(id(self))
+            yield prefix, self
+            for name, module in self._modules.items():
+                if module is None:
+                    continue
+                submodule_prefix = prefix + ('.' if prefix else '') + name
+                yield from module.named_modules(memo, submodule_prefix)
+
+    def state_dict(self, destination=None, prefix='', keep_vars=False):
+        if destination is None:
+            destination = OrderedDict()
+        for name, param in self._parameters.items():
+            if param is not None:
+                destination[prefix + name] = param if keep_vars else param.detach()
+        for name, buf in self._buffers.items():
+            if buf is not None and name not in self._non_persistent_buffers_set:
+                destination[prefix + name] = buf if keep_vars else (buf.detach() if hasattr(buf, 'detach') else buf)
         for name, module in self._modules.items():
             if module is not None:
-                submodule_prefix = prefix + ('.' if prefix else '') + name
-                for m in module.named_modules(memo=memo, prefix=submodule_prefix, remove_duplicate=remove_duplicate):
-                    yield m
+                module.state_dict(destination, prefix + name + '.', keep_vars)
+        return destination
 
-    def train(self, mode: bool = True) -> 'Module':
-        """Set the module in training mode."""
+    def train(self, mode=True):
         self.training = mode
         for module in self.children():
             module.train(mode)
         return self
 
-    def eval(self) -> 'Module':
-        """Set the module in evaluation mode."""
+    def eval(self):
         return self.train(False)
 
-    def requires_grad_(self, requires_grad: bool = True) -> 'Module':
-        """Set requires_grad for all parameters."""
-        for p in self.parameters():
-            p.requires_grad_(requires_grad)
+    def to(self, *args, **kwargs):
+        device = kwargs.get('device', None)
+        dtype = kwargs.get('dtype', None)
+        if len(args) == 1:
+            if isinstance(args[0], str):
+                device = args[0]
+            else:
+                dtype = args[0]
+        def convert(t):
+            return t.to(*args, **kwargs)
+        self._apply(convert)
         return self
 
-    def zero_grad(self, set_to_none: bool = True) -> None:
-        """Zero out gradients of all parameters."""
+    def cpu(self):
+        return self.to(device='cpu')
+
+    def float(self):
+        from .. import float32
+        return self.to(dtype=float32)
+
+    def half(self):
+        from .. import float16
+        return self.to(dtype=float16)
+
+    def double(self):
+        return self
+
+    def bfloat16(self):
+        return self
+
+    def requires_grad_(self, requires_grad=True):
+        for p in self.parameters():
+            p.requires_grad = requires_grad
+        return self
+
+    def zero_grad(self, set_to_none=True):
         for p in self.parameters():
             if p.grad is not None:
                 if set_to_none:
                     p.grad = None
                 else:
-                    p.grad.zero_grad_()
+                    p.grad.zero_()
 
-    def to(self, *args, **kwargs):
-        """Move module to device and/or change dtype.
-
-        Args:
-            device: Target device ('cpu', 'cuda', 'npu', etc.)
-            dtype: Target dtype
-
-        Can be called as:
-            module.to(device)
-            module.to(dtype)
-            module.to(device, dtype)
-            module.to(device=device, dtype=dtype)
-        """
-        from .._device import device as device_cls
-        from .. import dtype as dtype_mod
-
-        # Parse args
-        device = kwargs.get('device', None)
-        dtype = kwargs.get('dtype', None)
-
-        for arg in args:
-            if isinstance(arg, device_cls):
-                device = arg
-            elif isinstance(arg, str):
-                if arg in ('cpu', 'cuda', 'npu', 'mps') or ':' in arg:
-                    device = device_cls(arg)
-                else:
-                    # Might be dtype string
-                    try:
-                        dtype = getattr(dtype_mod, arg, None)
-                    except:
-                        pass
-            elif isinstance(arg, dtype_mod.DType):
-                dtype = arg
-
-        # Move all parameters
-        for name, param in self._parameters.items():
-            if param is not None:
-                new_param = param.to(device=device, dtype=dtype)
-                # Preserve Parameter type
-                if hasattr(param, 'requires_grad'):
-                    new_param.requires_grad_(param.requires_grad)
-                self._parameters[name] = new_param
-                object.__setattr__(self, name, new_param)
-
-        # Move all buffers
-        for name, buf in self._buffers.items():
-            if buf is not None:
-                # Handle meta buffers specially - they need proper initialization
-                if hasattr(buf, 'device') and hasattr(buf.device, 'type') and buf.device.type == 'meta':
-                    if device is not None and (not hasattr(device, 'type') or device.type != 'meta'):
-                        # Meta → real: reinitialize based on buffer name
-                        import numpy as np
-                        from .._dtype import dtype_to_numpy
-                        np_dtype = dtype_to_numpy(buf.dtype)
-                        if 'position_ids' in name:
-                            # position_ids should be arange(0, seq_len)
-                            total = 1
-                            for d in buf.shape:
-                                total *= d
-                            arr = np.arange(total, dtype=np_dtype).reshape(buf.shape)
-                        else:
-                            arr = np.zeros(buf.shape, dtype=np_dtype)
-                        from .._tensor import Tensor
-                        new_buf = Tensor(arr, dtype=buf.dtype, device=str(device))
-                        self._buffers[name] = new_buf
-                        object.__setattr__(self, name, new_buf)
-                        continue
-                new_buf = buf.to(device=device, dtype=dtype)
-                self._buffers[name] = new_buf
-                object.__setattr__(self, name, new_buf)
-
-        # Recursively apply to child modules
-        for module in self._modules.values():
-            if module is not None:
-                module.to(*args, **kwargs)
-
-        return self
-
-    def cuda(self, device=None):
-        """Move module to CUDA/NPU device."""
-        if device is None:
-            device = 'npu:0'  # Default to first NPU
-        elif isinstance(device, int):
-            device = f'npu:{device}'
-        return self.to(device=device)
-
-    def cpu(self):
-        """Move module to CPU."""
-        return self.to(device='cpu')
-
-    def xpu(self, device=None):
-        """Move module to XPU (maps to NPU in mindtorch_v2)."""
-        return self.cuda(device)
-
-    def type(self, dst_type):
-        """Cast module parameters to dst_type."""
-        from .. import dtype as dtype_mod
-        if isinstance(dst_type, str):
-            dtype_map = {
-                'torch.FloatTensor': dtype_mod.float32,
-                'torch.DoubleTensor': dtype_mod.float64,
-                'torch.HalfTensor': dtype_mod.float16,
-                'torch.BFloat16Tensor': dtype_mod.bfloat16,
-                'torch.LongTensor': dtype_mod.int64,
-                'torch.IntTensor': dtype_mod.int32,
-                'torch.cuda.FloatTensor': dtype_mod.float32,
-                'torch.cuda.DoubleTensor': dtype_mod.float64,
-                'torch.cuda.HalfTensor': dtype_mod.float16,
-            }
-            dtype = dtype_map.get(dst_type)
-            if dtype is not None:
-                return self.to(dtype=dtype)
-        return self
-
-    def float(self):
-        """Cast module to float32."""
-        from .. import float32
-        return self.to(dtype=float32)
-
-    def double(self):
-        """Cast module to float64."""
-        from .. import float64
-        return self.to(dtype=float64)
-
-    def half(self):
-        """Cast module to float16."""
-        from .. import float16
-        return self.to(dtype=float16)
-
-    def bfloat16(self):
-        """Cast module to bfloat16."""
-        from .. import bfloat16
-        return self.to(dtype=bfloat16)
-
-    def to_empty(self, *, device=None, recurse=True):
-        """Move module to device with empty parameters/buffers.
-
-        This is used for meta device initialization - parameters are empty but have correct shape/dtype.
-        """
-        return self.to(device=device)
-
-    def __repr__(self) -> str:
-        lines = [self.__class__.__name__ + '(']
-        for name, module in self._modules.items():
-            mod_str = repr(module).replace('\n', '\n  ')
-            lines.append(f'  ({name}): {mod_str}')
-        lines.append(')')
-        return '\n'.join(lines) if len(self._modules) > 0 else f'{self.__class__.__name__}()'
-
-    def extra_repr(self) -> str:
-        """Return extra representation string."""
+    def extra_repr(self):
         return ''
 
-    def state_dict(self, destination=None, prefix='', keep_vars=False):
-        """Return a dictionary containing the whole state of the module.
+    def __repr__(self):
+        extra = self.extra_repr()
+        extra_lines = extra.split('\n') if extra else []
+        child_lines = []
+        for key, module in self._modules.items():
+            child_lines.append(f'({key}): {repr(module)}')
+        lines = extra_lines + child_lines
+        main_str = self._get_name() + '('
+        if lines:
+            main_str += '\n  ' + '\n  '.join(lines) + '\n'
+        main_str += ')'
+        return main_str
 
-        Both parameters and persistent buffers are included.
-        Non-persistent buffers are excluded.
-        """
-        if destination is None:
-            destination = OrderedDict()
-
-        for name, param in self._parameters.items():
-            if param is not None:
-                # Check if __dict__ has a different value (e.g., from weight tying)
-                # If so, use __dict__ value since that's what the module actually uses
-                actual_param = self.__dict__.get(name, param)
-                destination[prefix + name] = actual_param if keep_vars else actual_param.data
-
-        # Only include persistent buffers
-        non_persistent = getattr(self, '_non_persistent_buffers_set', set())
-        for name, buf in self._buffers.items():
-            if buf is not None and name not in non_persistent:
-                destination[prefix + name] = buf if keep_vars else buf.data
-
-        for name, module in self._modules.items():
-            if module is not None:
-                module.state_dict(destination=destination, prefix=prefix + name + '.', keep_vars=keep_vars)
-
-        return destination
+    def __dir__(self):
+        module_attrs = dir(self.__class__)
+        attrs = list(self.__dict__.keys())
+        keys = module_attrs + attrs
+        keys += list(self._parameters.keys())
+        keys += list(self._modules.keys())
+        keys += list(self._buffers.keys())
+        return sorted(set(keys))
 
     def load_state_dict(self, state_dict, strict=True, assign=False):
         """Load a state dictionary into the module.
@@ -505,11 +277,15 @@ class Module:
 
         for key, param in self._parameters.items():
             if param is not None:
-                self._parameters[key] = fn(param)
+                new_param = fn(param)
+                self._parameters[key] = new_param
+                super().__setattr__(key, new_param)
 
         for key, buf in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                new_buf = fn(buf)
+                self._buffers[key] = new_buf
+                super().__setattr__(key, new_buf)
 
         return self
 

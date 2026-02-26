@@ -1,69 +1,57 @@
-# tests/mindtorch_v2/test_storage.py
-import numpy as np
 import mindtorch_v2 as torch
-from mindtorch_v2._storage import TypedStorage, UntypedStorage
 
 
-def test_storage_from_size():
-    """Create empty storage with a given number of elements."""
-    s = TypedStorage(10, dtype=torch.float32)
-    assert s.size() == 10
-    assert s.dtype is torch.float32
-    assert s.device == torch.device("cpu")
-    assert s.nbytes() == 40  # 10 * 4 bytes
+def test_typed_untyped_basic():
+    t = torch.tensor([1.0, 2.0])
+    st = t.storage()
+    ust = t.untyped_storage()
+    assert st.dtype.name == "float32"
+    assert st.nbytes() == 8
+    assert ust.nbytes() == st.nbytes()
 
 
-def test_storage_from_numpy():
-    """Create storage wrapping a numpy array."""
-    arr = np.array([1.0, 2.0, 3.0], dtype=np.float32)
-    s = TypedStorage._from_numpy(arr)
-    assert s.size() == 3
-    assert s.dtype is torch.float32
+def test_cpu_share_memory():
+    t = torch.tensor([1.0, 2.0])
+    ust = t.untyped_storage()
+    ust.share_memory_()
+    assert ust.is_shared() is True
 
 
-def test_storage_getitem():
-    """Index into storage."""
-    arr = np.array([10.0, 20.0, 30.0], dtype=np.float32)
-    s = TypedStorage._from_numpy(arr)
-    assert s[0] == 10.0
-    assert s[2] == 30.0
+def test_cpu_from_file(tmp_path):
+    path = tmp_path / "storage.bin"
+    path.write_bytes(b"\x00" * 16)
+    ust = torch.UntypedStorage.from_file(str(path), shared=False)
+    assert ust.nbytes() == 16
+    assert ust.filename() == str(path)
 
 
-def test_storage_setitem():
-    """Set element in storage."""
-    s = TypedStorage(3, dtype=torch.float32)
-    s[0] = 42.0
-    assert s[0] == 42.0
+def test_npu_storage_no_cpu_copy():
+    if not torch.npu.is_available():
+        return
+    t = torch.tensor([1.0, 2.0], device="npu")
+    st = t.storage()
+    assert st.device.type == "npu"
+    assert st.untyped_storage().data_ptr() != 0
 
 
-def test_storage_data_ptr():
-    """Storage exposes a data pointer (for compatibility)."""
-    s = TypedStorage(5, dtype=torch.float32)
-    ptr = s.data_ptr()
-    assert isinstance(ptr, int)
-    assert ptr != 0
+def test_meta_storage_no_data_ptr():
+    t = torch.tensor([1.0, 2.0], device="meta")
+    try:
+        _ = t.untyped_storage().data_ptr()
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("meta storage should not expose data_ptr")
 
+def test_pending_storage_basic():
+    from mindtorch_v2._dtype import float32
+    from mindtorch_v2._storage import PendingStorage
 
-def test_untyped_storage():
-    """UntypedStorage tracks bytes, not typed elements."""
-    s = UntypedStorage(40)  # 40 bytes
-    assert s.nbytes() == 40
-
-
-def test_storage_shared():
-    """Two references to same storage see the same data."""
-    s = TypedStorage(3, dtype=torch.float32)
-    s[0] = 1.0
-    s2 = s  # same object
-    assert s2[0] == 1.0
-    s2[0] = 99.0
-    assert s[0] == 99.0
-
-
-def test_storage_ms_tensor_property():
-    """Storage should expose underlying MindSpore tensor."""
-    import mindspore
-    storage = TypedStorage(10, dtype=torch.float32)
-    ms_tensor = storage.ms_tensor
-    assert isinstance(ms_tensor, mindspore.Tensor)
-    assert ms_tensor.shape == (10,)
+    storage = PendingStorage((2, 3), float32, "cpu")
+    assert storage.nbytes() == 2 * 3 * 4
+    try:
+        storage.data_ptr()
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("expected data_ptr to raise")
