@@ -524,6 +524,57 @@ def test_npu_eye():
     np.testing.assert_allclose(out.to("cpu").numpy(), np.eye(3, 2), atol=1e-6, rtol=1e-6)
 
 
+def test_npu_linspace_prefers_single_op(monkeypatch):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    from mindtorch_v2._backends.npu import aclnn as npu_aclnn
+
+    if hasattr(npu_aclnn, "linspace_symbols_ok") and not npu_aclnn.linspace_symbols_ok():
+        pytest.skip("aclnnLinspace not available")
+
+    def _forbid_arange(*args, **kwargs):
+        raise AssertionError("linspace should not call aclnn.arange")
+
+    monkeypatch.setattr(npu_aclnn, "arange", _forbid_arange)
+    out = torch.linspace(0.0, 1.0, 5, device="npu")
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.linspace(0.0, 1.0, 5), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_eye_prefers_single_op(monkeypatch):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    from mindtorch_v2._backends.npu import aclnn as npu_aclnn
+
+    if hasattr(npu_aclnn, "eye_symbols_ok") and not npu_aclnn.eye_symbols_ok():
+        pytest.skip("aclnnEye not available")
+
+    def _forbid_arange(*args, **kwargs):
+        raise AssertionError("eye should not call aclnn.arange")
+
+    monkeypatch.setattr(npu_aclnn, "arange", _forbid_arange)
+    out = torch.eye(3, 2, device="npu")
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.eye(3, 2), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_range_prefers_single_op(monkeypatch):
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    from mindtorch_v2._backends.npu import aclnn as npu_aclnn
+
+    if hasattr(npu_aclnn, "range_symbols_ok") and not npu_aclnn.range_symbols_ok():
+        pytest.skip("aclnnRange not available")
+
+    def _forbid_arange(*args, **kwargs):
+        raise AssertionError("range should not call aclnn.arange")
+
+    monkeypatch.setattr(npu_aclnn, "arange", _forbid_arange)
+    out = torch.range(0.0, 2.0, 0.5, device="npu")
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.arange(0.0, 2.0 + 0.5, 0.5), atol=1e-6, rtol=1e-6)
+
+
 def test_npu_to_cpu_synchronizes(monkeypatch):
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
