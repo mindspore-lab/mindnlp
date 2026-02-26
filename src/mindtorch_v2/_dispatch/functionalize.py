@@ -227,6 +227,28 @@ def _bump_writeback_versions(mutated):
         seen.add(key)
 
 
+def _functionalize_finalize(entry, alias_name, args, kwargs):
+    functional_name = _derive_functional_name(alias_name)
+    functional_schema_obj = None
+    if functional_name and registry.has(functional_name):
+        functional_schema_obj = registry.get(functional_name).schema_obj
+
+    def _finalize(out):
+        pairs = _resolve_writeback_pairs(entry.schema_obj, functional_schema_obj, args, kwargs, out, alias_name)
+        if not pairs:
+            return out
+
+        written = []
+        for target, result in pairs:
+            _writeback(target, result, op_name=alias_name)
+            target._pending = False
+            written.append(target)
+        _bump_writeback_versions(written)
+        return pairs[0][0]
+
+    return _finalize
+
+
 def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, pipeline=None, dispatch_device=None):
     functional_name = _derive_functional_name(name)
     if not functional_name or not registry.has(functional_name):
@@ -243,14 +265,33 @@ def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, 
             raise RuntimeError(f"pipeline requires meta kernel for op {name}")
         meta_kwargs = kwargs if kwargs is not None else {}
         spec = meta(*args, **meta_kwargs)
-        out = _pending_tensor_from_spec(spec, _infer_dispatch_device(dispatch_device, _extract_tensors(args, kwargs or {}), keyset))
-        out._pending = True
+        dispatch_dev = _infer_dispatch_device(dispatch_device, _extract_tensors(args, kwargs or {}), keyset)
+
+        slots = _mutating_slots(entry.schema_obj, args, kwargs)
+        finalize = None
+        if slots:
+            out = slots[0][1]
+            for _, target in slots:
+                target._pending = True
+            finalize = _functionalize_finalize(entry, alias_name, args, kwargs)
+        else:
+            out = _pending_tensor_from_spec(spec, dispatch_dev)
+            out._pending = True
 
         def _thunk():
             trimmed = keyset.without({DispatchKey.Functionalize, DispatchKey.Pipeline})
             return redispatch(functional_name, trimmed, *args, **kwargs)
 
-        pipeline.record(_FunctionalizePendingOp(out, _thunk, keyset.without(DispatchKey.Pipeline), DispatchKey.Functionalize), pending=out)
+        pipeline.record(
+            _FunctionalizePendingOp(
+                out,
+                _thunk,
+                keyset.without(DispatchKey.Pipeline),
+                DispatchKey.Functionalize,
+                finalize=finalize,
+            ),
+            pending=out,
+        )
         return out
 
     out = redispatch(functional_name, keyset.without(DispatchKey.Functionalize), *args, **kwargs)

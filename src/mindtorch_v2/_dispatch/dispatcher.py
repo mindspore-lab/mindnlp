@@ -170,11 +170,12 @@ class _PendingOp:
         _bump_versions(self.schema_obj, self.args, self.kwargs)
 
 class _FunctionalizePendingOp:
-    def __init__(self, target, thunk, keyset, key):
+    def __init__(self, target, thunk, keyset, key, finalize=None):
         self.target = target
         self.thunk = thunk
         self.keyset = keyset
         self.key = key
+        self.finalize = finalize
 
     def execute(self):
         _push_dispatch_context(self.keyset, self.key)
@@ -182,6 +183,11 @@ class _FunctionalizePendingOp:
             result = self.thunk()
         finally:
             _pop_dispatch_context()
+
+        if self.finalize is not None:
+            self.finalize(result)
+            return
+
         self.target._storage = result.storage()
         self.target.shape = result.shape
         self.target.stride = result.stride
