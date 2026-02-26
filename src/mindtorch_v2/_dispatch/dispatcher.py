@@ -221,6 +221,9 @@ def _kernel_for_entry(entry, key_order):
 
 
 def _key_order(keyset):
+    if isinstance(keyset, set):
+        from .keys import DispatchKeySet
+        keyset = DispatchKeySet(keyset)
     return list(keyset.iter_keys())
 
 

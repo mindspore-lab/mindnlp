@@ -289,6 +289,7 @@ def test_npu_hsplit():
     torch.npu.synchronize()
 
 
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
 def test_npu_pow(dtype):
     if not torch.npu.is_available():
         pytest.skip("NPU not available")

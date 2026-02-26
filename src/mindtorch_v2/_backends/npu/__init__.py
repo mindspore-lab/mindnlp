@@ -2,7 +2,7 @@ from ..common import convert as convert_backend
 from ..common import view as view_backend
 from ..meta import infer as meta_infer
 from ..._dispatch.registry import registry
-from .creation import empty_create, ones_create, tensor_create, zeros_create, randn_create
+from .creation import empty_create, ones_create, tensor_create, zeros_create, randn_create, rand_create
 from .ops import (
     abs,
     add,
@@ -209,6 +209,7 @@ registry.register("zeros", "npu", zeros_create)
 registry.register("ones", "npu", ones_create)
 registry.register("empty", "npu", empty_create)
 registry.register("randn", "npu", randn_create)
+registry.register("rand", "npu", rand_create)
 registry.register("getitem", "npu", getitem)
 registry.register("setitem", "npu", setitem)
 

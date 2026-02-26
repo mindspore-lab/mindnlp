@@ -131,7 +131,13 @@ def apply_tls_masks(keyset):
 
 class DispatchKeySet:
     def __init__(self, mask=0):
-        self.mask = int(mask)
+        if isinstance(mask, (set, list, tuple)):
+            # Convert set/list/tuple of DispatchKey to bitmask
+            self.mask = 0
+            for key in mask:
+                self.mask |= int(key)
+        else:
+            self.mask = int(mask)
 
     def __contains__(self, key):
         return bool(self.mask & int(key))

@@ -10,6 +10,7 @@ from ._functional import logspace as logspace_dispatch
 from ._functional import eye as eye_dispatch
 from ._functional import range as range_dispatch
 from ._functional import randn as randn_dispatch
+from ._functional import rand as rand_dispatch
 
 
 def tensor(data, *, dtype=float32, device=None, requires_grad=False):
@@ -54,3 +55,7 @@ def range(start, end, step=1, dtype=float32, device=None):
 
 def randn(*shape, dtype=float32, device=None, memory_format=None):
     return randn_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def rand(*shape, dtype=float32, device=None, memory_format=None):
+    return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
