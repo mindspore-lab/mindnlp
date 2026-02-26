@@ -20,21 +20,21 @@ def register_schemas():
             "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, torch.dtype dtype = None)\n * (Tensor input, tuple of ints dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, tuple of names dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
         },
     )
-    registry.register_schema("reshape", "reshape(Tensor input, int[] shape) -> Tensor")
+    registry.register_schema("reshape", "reshape(Tensor(a) input, int[] shape) -> Tensor(a)")
     registry.register_error_overrides(
         "reshape",
         {
             "missing": '{name}() missing 2 required positional argument: "input", "shape"',
         },
     )
-    registry.register_schema("view", "view(Tensor input, int[] shape) -> Tensor")
+    registry.register_schema("view", "view(Tensor(a) input, int[] shape) -> Tensor(a)")
     registry.register_error_overrides(
         "view",
         {
             "missing": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (torch.dtype dtype)\n * (tuple of ints size)\n",
         },
     )
-    registry.register_schema("transpose", "transpose(Tensor input, int dim0, int dim1) -> Tensor")
+    registry.register_schema("transpose", "transpose(Tensor(a) input, int dim0, int dim1) -> Tensor(a)")
     registry.register_error_overrides(
         "transpose",
         {
