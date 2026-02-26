@@ -255,3 +255,9 @@ registry.register("gather", "npu", gather, meta=meta_infer.infer_gather)
 registry.register("dropout", "npu", dropout, meta=meta_infer.infer_unary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
+
+registry.register("gather", "npu", ops.gather, meta=meta_infer.infer_gather)
+registry.register("index_select", "npu", ops.index_select, meta=meta_infer.infer_index_select)
+registry.register("take", "npu", ops.take, meta=meta_infer.infer_take)
+registry.register("take_along_dim", "npu", ops.take_along_dim, meta=meta_infer.infer_take_along_dim)
+registry.register("masked_select", "npu", ops.masked_select, meta=meta_infer.infer_masked_select)
