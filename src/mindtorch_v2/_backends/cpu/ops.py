@@ -19,7 +19,9 @@ def _from_numpy(arr, dtype, device):
 
 
 def add(a, b):
-    return _from_numpy(_to_numpy(a) + _to_numpy(b), a.dtype, a.device)
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(a_np + b_np, a.dtype, a.device)
 
 
 def mul(a, b):
@@ -34,6 +36,12 @@ def matmul(a, b):
 
 def relu(a):
     return _from_numpy(np.maximum(_to_numpy(a), 0), a.dtype, a.device)
+
+
+def gelu(a):
+    arr = _to_numpy(a)
+    out = 0.5 * arr * (1.0 + np.vectorize(math.erf)(arr / math.sqrt(2.0)))
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
 def sum_(a, dim=None, keepdim=False, dtype=None):
@@ -923,9 +931,22 @@ def fmod(a, b):
     return _from_numpy(np.fmod(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
 
+def _normalize_index_key(key):
+    if isinstance(key, Tensor):
+        arr = _to_numpy(key)
+        if np.issubdtype(arr.dtype, np.integer) or arr.dtype == np.bool_:
+            return arr
+        raise IndexError("tensors used as indices must be integer or boolean")
+    if isinstance(key, tuple):
+        return tuple(_normalize_index_key(k) for k in key)
+    if isinstance(key, list):
+        return [_normalize_index_key(k) for k in key]
+    return key
+
+
 def getitem(tensor, key):
     arr = _to_numpy(tensor)
-    result = arr[key]
+    result = arr[_normalize_index_key(key)]
     if isinstance(result, np.generic) or (isinstance(result, np.ndarray) and result.ndim == 0):
         # Return 0-dim tensor (matches PyTorch behavior)
         scalar_arr = np.array(result)
@@ -935,10 +956,11 @@ def getitem(tensor, key):
 
 def setitem(tensor, key, value):
     arr = _to_numpy(tensor)
+    norm_key = _normalize_index_key(key)
     if hasattr(value, 'numpy'):
-        arr[key] = value.numpy()
+        arr[norm_key] = value.numpy()
     else:
-        arr[key] = value
+        arr[norm_key] = value
     return tensor
 
 
@@ -1041,3 +1063,50 @@ def log_softmax(a, dim):
     log_sum_exp = np.log(np.sum(exp_arr, axis=dim, keepdims=True))
     result = arr - max_arr - log_sum_exp
     return _from_numpy(result, a.dtype, a.device)
+
+
+def one_hot(a, num_classes=-1):
+    arr = _to_numpy(a)
+    if not np.issubdtype(arr.dtype, np.integer):
+        raise TypeError("one_hot is only applicable to index tensor")
+    flat = arr.astype(np.int64, copy=False).reshape(-1)
+    if num_classes is None or int(num_classes) < 0:
+        num_classes = int(flat.max()) + 1 if flat.size > 0 else 0
+    num_classes = int(num_classes)
+    if (flat < 0).any():
+        raise ValueError("one_hot indices must be non-negative")
+    if (flat >= num_classes).any() and flat.size > 0:
+        raise ValueError("one_hot indices out of range")
+    out = np.eye(num_classes, dtype=np.int64)[flat]
+    out = out.reshape(arr.shape + (num_classes,))
+    return _from_numpy(np.ascontiguousarray(out), int64_dtype, a.device)
+
+
+def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, sparse=False):
+    weight_arr = _to_numpy(weight)
+    idx = _ensure_integer_indices(_to_numpy(indices), "indices").astype(np.int64, copy=False)
+    if idx.size and (idx.min() < 0 or idx.max() >= weight_arr.shape[0]):
+        raise IndexError("index out of range in self")
+    out = weight_arr[idx]
+    return _from_numpy(np.ascontiguousarray(out), weight.dtype, weight.device)
+
+
+def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    arr = _to_numpy(input)
+    norm_shape = tuple(normalized_shape)
+    if len(norm_shape) == 0:
+        raise ValueError("normalized_shape must be non-empty")
+    if tuple(arr.shape[-len(norm_shape):]) != norm_shape:
+        raise ValueError("normalized_shape mismatch")
+
+    axis = tuple(range(arr.ndim - len(norm_shape), arr.ndim))
+    mean = arr.mean(axis=axis, keepdims=True)
+    var = arr.var(axis=axis, keepdims=True)
+    out = (arr - mean) / np.sqrt(var + eps)
+
+    if weight is not None:
+        out = out * _to_numpy(weight).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
+    if bias is not None:
+        out = out + _to_numpy(bias).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
+
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
