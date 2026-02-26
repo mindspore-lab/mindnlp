@@ -51,6 +51,34 @@ def test_functionalize_multi_mutation_dedup_version_bump():
     assert x._version_counter.value == v0 + 1
 
 
+def test_functionalize_maps_writeback_by_return_alias_set():
+    registry.register_schema(
+        "swap_alias",
+        "swap_alias(Tensor a, Tensor b) -> (Tensor(b), Tensor(a))",
+    )
+    registry.register_schema(
+        "swap_alias_",
+        "swap_alias_(Tensor(a!) a, Tensor(b!) b) -> Tensor",
+    )
+
+    def swap_alias_kernel(a, b):
+        out_for_b = torch.tensor([10.0], device=a.device)
+        out_for_a = torch.tensor([20.0], device=a.device)
+        return out_for_b, out_for_a
+
+    registry.register_kernel("swap_alias", DispatchKey.CPU, swap_alias_kernel)
+    registry.register_kernel("swap_alias_", DispatchKey.CPU, swap_alias_kernel)
+
+    a = torch.tensor([1.0])
+    b = torch.tensor([2.0])
+
+    with torch.functionalize():
+        dispatch("swap_alias_", a.device.type, a, b)
+
+    assert a.storage().data.tolist() == [20.0]
+    assert b.storage().data.tolist() == [10.0]
+
+
 def test_functionalize_mutating_args_require_alias_set():
     from mindtorch_v2._dispatch.functionalize import _mutating_args
     from mindtorch_v2._dispatch.schema import OpSchema

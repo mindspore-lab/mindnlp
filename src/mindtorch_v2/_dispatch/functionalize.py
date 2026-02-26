@@ -39,7 +39,7 @@ def should_functionalize(entry):
 
 
 
-def _mutating_args(schema_obj, args, kwargs):
+def _mutating_slots(schema_obj, args, kwargs):
     if schema_obj is None:
         return []
     if kwargs is None:
@@ -52,16 +52,75 @@ def _mutating_args(schema_obj, args, kwargs):
             bound[positional[idx].name] = value
     for key, value in kwargs.items():
         bound[key] = value
-    mutated = []
+    slots = []
     for param in params:
         if not param.mutates:
             continue
-        if getattr(param, "alias_set", None) in (None, ""):
+        alias_set = getattr(param, "alias_set", None)
+        if alias_set in (None, ""):
             continue
         if param.name in bound:
-            mutated.append(bound[param.name])
-    return mutated
+            slots.append((alias_set, bound[param.name]))
+    return slots
 
+
+
+def _mutating_args(schema_obj, args, kwargs):
+    return [target for _, target in _mutating_slots(schema_obj, args, kwargs)]
+
+
+
+def _resolve_writeback_pairs(schema_obj, functional_schema_obj, args, kwargs, out, alias_name):
+    slots = _mutating_slots(schema_obj, args, kwargs)
+    if not slots:
+        return []
+
+    mutated = [target for _, target in slots]
+    if len(mutated) == 1:
+        return [(mutated[0], out)]
+
+    if not isinstance(out, (tuple, list)):
+        raise RuntimeError(f"functionalize: expected tuple output for op {alias_name}()")
+    if len(out) != len(mutated):
+        raise RuntimeError(f"functionalize: output count mismatch for op {alias_name}()")
+
+    returns = []
+    if functional_schema_obj is not None:
+        returns = getattr(functional_schema_obj, "returns", []) or []
+    if not returns:
+        return list(zip(mutated, out))
+
+    alias_slots = {}
+    for idx, (alias_set, _) in enumerate(slots):
+        alias_slots.setdefault(alias_set, []).append(idx)
+
+    # Prefer alias-driven mapping from functional returns to mutating inputs,
+    # and fall back to positional assignment for unmatched outputs.
+    remaining = list(range(len(mutated)))
+    pairs = []
+    for idx, result in enumerate(out):
+        alias_set = None
+        if idx < len(returns):
+            alias_set = getattr(returns[idx], "alias_set", None)
+
+        target_idx = None
+        if alias_set not in (None, ""):
+            queue = alias_slots.get(alias_set)
+            if queue:
+                target_idx = queue.pop(0)
+                for rem_pos, rem_idx in enumerate(remaining):
+                    if rem_idx == target_idx:
+                        remaining.pop(rem_pos)
+                        break
+
+        if target_idx is None:
+            if not remaining:
+                raise RuntimeError(f"functionalize: output count mismatch for op {alias_name}()")
+            target_idx = remaining.pop(0)
+
+        pairs.append((mutated[target_idx], result))
+
+    return pairs
 
 
 
@@ -195,18 +254,17 @@ def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, 
         return out
 
     out = redispatch(functional_name, keyset.without(DispatchKey.Functionalize), *args, **kwargs)
-    mutated = _mutating_args(entry.schema_obj, args, kwargs)
-    if not mutated:
+    functional_schema_obj = None
+    if registry.has(functional_name):
+        functional_schema_obj = registry.get(functional_name).schema_obj
+
+    pairs = _resolve_writeback_pairs(entry.schema_obj, functional_schema_obj, args, kwargs, out, alias_name)
+    if not pairs:
         return out
-    if len(mutated) == 1:
-        target = _writeback(mutated[0], out, op_name=alias_name)
-        _bump_writeback_versions((mutated[0],))
-        return target
-    if not isinstance(out, (tuple, list)):
-        raise RuntimeError(f"functionalize: expected tuple output for op {alias_name}()")
-    if len(out) != len(mutated):
-        raise RuntimeError(f"functionalize: output count mismatch for op {alias_name}()")
-    for target, result in zip(mutated, out):
+
+    written = []
+    for target, result in pairs:
         _writeback(target, result, op_name=alias_name)
-    _bump_writeback_versions(mutated)
-    return mutated[0]
+        written.append(target)
+    _bump_writeback_versions(written)
+    return pairs[0][0]
