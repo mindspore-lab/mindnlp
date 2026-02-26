@@ -13,7 +13,7 @@ from ._dtype import float as float  # noqa: F811
 from ._dtype import int as int  # noqa: F811
 from ._device import device as Device, _default_device, get_default_device, set_default_device
 from ._tensor import Tensor
-from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn
+from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand
 from ._functional import zeros_like
 from ._storage import UntypedStorage, TypedStorage
 from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, masked_select, flip, roll, rot90, repeat, repeat_interleave, tile, nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, concatenate, hstack, vstack, row_stack, dstack, column_stack, pad_sequence, block_diag, tril, triu, diag, cartesian_prod, chunk, split, vsplit, hsplit, dsplit, unbind, tril_indices, triu_indices, take, take_along_dim, index_select, gather, scatter, abs, neg, exp, log, sqrt, div, true_divide, mean
@@ -70,6 +70,7 @@ __all__ = [
     "ones",
     "empty",
     "randn",
+    "rand",
     "arange",
     "linspace",
     "full",

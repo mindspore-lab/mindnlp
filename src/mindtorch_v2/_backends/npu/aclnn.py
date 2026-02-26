@@ -1755,6 +1755,28 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # InplaceUniform (for rand)
+        self.aclnn_inplace_uniform_get_workspace = _optional_symbol(
+            libs,
+            "aclnnInplaceUniformGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # self
+                ctypes.c_double,  # from
+                ctypes.c_double,  # to
+                ctypes.c_int64,   # seed
+                ctypes.c_int64,   # offset
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_inplace_uniform = _optional_symbol(
+            libs,
+            "aclnnInplaceUniform",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -5864,7 +5886,6 @@ def dropout_do_mask(input_ptr, mask_ptr, out_ptr, shape, stride, dtype, mask_num
 
 
 def inplace_normal(self_ptr, shape, stride, dtype, mean, std, seed, offset, runtime, stream=None):
-    """Fill tensor with normal distribution using aclnnInplaceNormal."""
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -5905,6 +5926,55 @@ def inplace_normal(self_ptr, shape, stride, dtype, mean, std, seed, offset, runt
         )
         if ret != 0:
             raise RuntimeError(f"aclnnInplaceNormal failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+
+
+def inplace_uniform(self_ptr, shape, stride, dtype, low, high, seed, offset, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_inplace_uniform_get_workspace is None or bindings.aclnn_inplace_uniform is None:
+        raise RuntimeError("aclnnInplaceUniform symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_inplace_uniform_get_workspace(
+            self_tensor,
+            ctypes.c_double(low),
+            ctypes.c_double(high),
+            ctypes.c_int64(seed),
+            ctypes.c_int64(offset),
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceUniformGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_inplace_uniform(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceUniform failed: {ret}")
         _maybe_sync(runtime)
     finally:
         _defer_executor(executor)

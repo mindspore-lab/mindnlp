@@ -76,34 +76,40 @@ def empty_create(shape, dtype=None, device=None, requires_grad=False, memory_for
 def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
     """Create a tensor filled with random numbers from a normal distribution.
 
-    Uses aclnnInplaceNormal to generate random numbers directly on NPU.
+    Generates on CPU using the shared RNG state and copies to NPU.
     """
     runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
-    stream = npu_state.current_stream((device.index if hasattr(device, "index") else None) or 0)
     if isinstance(shape, int):
         shape = (shape,)
     shape = tuple(shape)
 
-    if not aclnn.inplace_normal_symbols_ok():
-        raise RuntimeError("aclnnInplaceNormal not available for randn on NPU")
-
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.randn(*shape).astype(npu_runtime._dtype_to_numpy(dtype))
     size = int(np.prod(shape))
-    out_size = size * np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
-    ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
     stride = npu_runtime._contiguous_stride(shape)
 
-    # Get seed and offset from npu module
-    from ... import npu as npu_mod
-    seed = npu_mod._get_seed()
-    offset = npu_mod._get_and_advance_offset(advance=size)
+    storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
+    return _wrap_tensor(storage, shape, stride, requires_grad)
 
-    aclnn.inplace_normal(
-        ptr, shape, stride, dtype,
-        0.0,  # mean
-        1.0,  # std
-        seed, offset,
-        runtime, stream=stream.stream
-    )
+
+def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
+    """Create a tensor filled with random numbers from a uniform distribution [0, 1).
+
+    Generates on CPU using the shared RNG state and copies to NPU.
+    """
+    runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
+    if isinstance(shape, int):
+        shape = (shape,)
+    shape = tuple(shape)
+
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.random_sample(shape).astype(npu_runtime._dtype_to_numpy(dtype))
+    size = int(np.prod(shape))
+    ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
+    stride = npu_runtime._contiguous_stride(shape)
 
     storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
     return _wrap_tensor(storage, shape, stride, requires_grad)
