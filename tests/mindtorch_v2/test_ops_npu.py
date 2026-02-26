@@ -575,6 +575,98 @@ def test_npu_range_prefers_single_op(monkeypatch):
     np.testing.assert_allclose(out.to("cpu").numpy(), np.arange(0.0, 2.0 + 0.5, 0.5), atol=1e-6, rtol=1e-6)
 
 
+def test_npu_flip():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    out = torch.flip(x, dims=(0,))
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.flip(x.to("cpu").numpy(), axis=0))
+
+
+def test_npu_roll():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    out = torch.roll(x, shifts=1, dims=0)
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.roll(x.to("cpu").numpy(), shift=1, axis=0))
+
+
+def test_npu_nonzero():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[0, 1], [2, 0]], device="npu")
+    out = torch.nonzero(x)
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.array([[0, 1], [1, 0]]))
+
+
+def test_npu_cumsum():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu")
+    out = torch.cumsum(x, dim=1)
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.cumsum(x.to("cpu").numpy(), axis=1), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_cumprod():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu")
+    out = torch.cumprod(x, dim=1)
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.cumprod(x.to("cpu").numpy(), axis=1), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_cummax():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 3.0, 2.0], [4.0, 0.0, 5.0]], device="npu")
+    values, indices = torch.cummax(x, dim=1)
+    expected_vals = np.maximum.accumulate(x.to("cpu").numpy(), axis=1)
+    expected_idx = np.array([[0, 1, 1], [0, 0, 2]], dtype=np.int64)
+    np.testing.assert_allclose(values.to("cpu").numpy(), expected_vals, atol=1e-6, rtol=1e-6)
+    np.testing.assert_array_equal(indices.to("cpu").numpy(), expected_idx)
+
+
+def test_npu_argsort():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[3.0, 1.0, 2.0], [0.0, -1.0, 5.0]], device="npu")
+    out = torch.argsort(x, dim=1)
+    expected = np.argsort(x.to("cpu").numpy(), axis=1)
+    np.testing.assert_array_equal(out.to("cpu").numpy(), expected)
+
+
+def test_npu_sort():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[3.0, 1.0, 2.0], [0.0, -1.0, 5.0]], device="npu")
+    values, indices = torch.sort(x, dim=1)
+    expected_indices = np.argsort(x.to("cpu").numpy(), axis=1)
+    expected_values = np.take_along_axis(x.to("cpu").numpy(), expected_indices, axis=1)
+    np.testing.assert_allclose(values.to("cpu").numpy(), expected_values, atol=1e-6, rtol=1e-6)
+    np.testing.assert_array_equal(indices.to("cpu").numpy(), expected_indices)
+
+
+def test_npu_topk():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[3.0, 1.0, 2.0], [0.0, -1.0, 5.0]], device="npu")
+    values, indices = torch.topk(x, k=2, dim=1, largest=True, sorted=True)
+    expected_indices = np.argsort(-x.to("cpu").numpy(), axis=1)[:, :2]
+    expected_values = np.take_along_axis(x.to("cpu").numpy(), expected_indices, axis=1)
+    np.testing.assert_allclose(values.to("cpu").numpy(), expected_values, atol=1e-6, rtol=1e-6)
+    np.testing.assert_array_equal(indices.to("cpu").numpy(), expected_indices)
+
+
+def test_npu_tril_triu():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu")
+    tril_out = torch.tril(x)
+    triu_out = torch.triu(x)
+    np.testing.assert_allclose(tril_out.to("cpu").numpy(), np.tril(x.to("cpu").numpy()), atol=1e-6, rtol=1e-6)
+    np.testing.assert_allclose(triu_out.to("cpu").numpy(), np.triu(x.to("cpu").numpy()), atol=1e-6, rtol=1e-6)
+
+
 def test_npu_to_cpu_synchronizes(monkeypatch):
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
