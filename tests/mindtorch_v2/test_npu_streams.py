@@ -93,8 +93,16 @@ def test_npu_current_device_thread_local(monkeypatch):
     assert torch.npu.current_device() == 0
 
 
-def test_npu_default_stream_thread_local(monkeypatch):
-    _stub_runtime(monkeypatch)
+def test_npu_default_stream_is_device_global(monkeypatch):
+    runtime = _stub_runtime(monkeypatch)
+    runtime._stream_id = 100
+
+    def _create_stream(priority=0):
+        runtime._stream_id += 1
+        return runtime._stream_id
+
+    runtime.create_stream = _create_stream
+
     s0 = torch.npu.default_stream()
     got = {}
 
@@ -104,7 +112,9 @@ def test_npu_default_stream_thread_local(monkeypatch):
     t = threading.Thread(target=worker)
     t.start()
     t.join()
-    assert s0 is not got["s1"]
+
+    assert s0.stream == got["s1"].stream
+    assert runtime._stream_id == 101
 
 
 def test_npu_stream_context_switches_device_and_stream(monkeypatch):

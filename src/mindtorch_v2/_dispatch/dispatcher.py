@@ -248,12 +248,16 @@ def _validate_tensor_devices(tensors):
         return
     expected = tensors[0].device
     expected_type = expected.type if hasattr(expected, "type") else expected
+    expected_index = expected.index if hasattr(expected, "index") else None
+    expected_label = expected_type if expected_index is None else f"{expected_type}:{expected_index}"
     for tensor in tensors[1:]:
         device = tensor.device
         dev_type = device.type if hasattr(device, "type") else device
-        if dev_type != expected_type:
+        dev_index = device.index if hasattr(device, "index") else None
+        dev_label = dev_type if dev_index is None else f"{dev_type}:{dev_index}"
+        if dev_type != expected_type or dev_index != expected_index:
             raise RuntimeError(
-                f"Tensor on device {dev_type} is not on the expected device {expected_type}!"
+                f"Tensor on device {dev_label} is not on the expected device {expected_label}!"
             )
 
 

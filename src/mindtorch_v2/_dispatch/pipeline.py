@@ -1,7 +1,8 @@
 import contextlib
+import threading
 
 
-_CURRENT = None
+_TLS = threading.local()
 
 
 class Pipeline:
@@ -27,17 +28,25 @@ class Pipeline:
         self.outputs.clear()
 
 
+def _get_current():
+    return getattr(_TLS, "current", None)
+
+
+def _set_current(pipe):
+    _TLS.current = pipe
+
+
 @contextlib.contextmanager
 def pipeline_context():
-    global _CURRENT
-    prev = _CURRENT
-    _CURRENT = Pipeline()
+    prev = _get_current()
+    pipe = Pipeline()
+    _set_current(pipe)
     try:
-        yield _CURRENT
+        yield pipe
     finally:
-        _CURRENT.flush()
-        _CURRENT = prev
+        pipe.flush()
+        _set_current(prev)
 
 
 def current_pipeline():
-    return _CURRENT
+    return _get_current()
