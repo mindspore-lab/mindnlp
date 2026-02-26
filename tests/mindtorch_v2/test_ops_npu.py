@@ -474,6 +474,56 @@ def test_npu_zeros():
     assert out.to("cpu").numpy().tolist() == [0.0, 0.0]
 
 
+
+def test_npu_arange():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    out = torch.arange(0, 5, device="npu")
+    assert out.device.type == "npu"
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.array([0, 1, 2, 3, 4]))
+
+
+def test_npu_range():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    out = torch.range(0.0, 2.0, 0.5, device="npu")
+    expected = np.arange(0.0, 2.0 + 0.5, 0.5)
+    assert out.device.type == "npu"
+    np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
+
+
+def test_npu_linspace():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    out = torch.linspace(0.0, 1.0, 5, device="npu")
+    assert out.device.type == "npu"
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.linspace(0.0, 1.0, 5), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_logspace():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    out = torch.logspace(0.0, 2.0, 3, device="npu")
+    assert out.device.type == "npu"
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.logspace(0.0, 2.0, 3), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_full():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    out = torch.full((2, 3), 1.5, device="npu")
+    assert out.device.type == "npu"
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.full((2, 3), 1.5), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_eye():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    out = torch.eye(3, 2, device="npu")
+    assert out.device.type == "npu"
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.eye(3, 2), atol=1e-6, rtol=1e-6)
+
+
 def test_npu_to_cpu_synchronizes(monkeypatch):
     if not torch.npu.is_available():
         pytest.skip("NPU not available")

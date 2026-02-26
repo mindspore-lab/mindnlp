@@ -2,7 +2,20 @@ from ..common import convert as convert_backend
 from ..common import view as view_backend
 from ..meta import infer as meta_infer
 from ..._dispatch.registry import registry
-from .creation import empty_create, ones_create, tensor_create, zeros_create, randn_create, rand_create
+from .creation import (
+    arange_create,
+    empty_create,
+    eye_create,
+    full_create,
+    linspace_create,
+    logspace_create,
+    ones_create,
+    range_create,
+    rand_create,
+    randn_create,
+    tensor_create,
+    zeros_create,
+)
 from .ops import (
     abs,
     add,
@@ -210,6 +223,12 @@ registry.register("ones", "npu", ones_create)
 registry.register("empty", "npu", empty_create)
 registry.register("randn", "npu", randn_create)
 registry.register("rand", "npu", rand_create)
+registry.register("arange", "npu", arange_create)
+registry.register("linspace", "npu", linspace_create)
+registry.register("full", "npu", full_create)
+registry.register("logspace", "npu", logspace_create)
+registry.register("eye", "npu", eye_create)
+registry.register("range", "npu", range_create)
 registry.register("getitem", "npu", getitem)
 registry.register("setitem", "npu", setitem)
 
