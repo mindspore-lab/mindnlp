@@ -2,8 +2,9 @@ __version__ = "0.1.0"
 
 from ._dtype import (
     DType,
+    float8_e4m3fn, float8_e5m2, float8_e8m0fnu,
     float16, float32, float64, bfloat16,
-    int8, int16, int32, int64, uint8,
+    int8, int16, int32, int64, uint8, uint16, uint32, uint64,
     bool,
     complex64, complex128,
     # aliases
@@ -11,8 +12,26 @@ from ._dtype import (
 )
 from ._dtype import float as float  # noqa: F811
 from ._dtype import int as int  # noqa: F811
+from ._dtype import DType as dtype  # torch.dtype compatibility
+from ._dtype import DType as Dtype  # schema/type alias compatibility
 from ._device import device as Device, _default_device, get_default_device, set_default_device
+from ._device import device
 from ._tensor import Tensor
+
+# Tensor type aliases for torch API compatibility
+FloatTensor = Tensor
+DoubleTensor = Tensor
+HalfTensor = Tensor
+BFloat16Tensor = Tensor
+ByteTensor = Tensor
+CharTensor = Tensor
+ShortTensor = Tensor
+IntTensor = Tensor
+LongTensor = Tensor
+BoolTensor = Tensor
+ComplexFloatTensor = Tensor
+ComplexDoubleTensor = Tensor
+Size = tuple
 from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand
 from ._functional import zeros_like
 from ._storage import UntypedStorage, TypedStorage
@@ -29,13 +48,19 @@ from ._functional import logaddexp, logaddexp2, hypot, remainder, fmod
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context, functionalize_context
 from ._backends import cpu
-from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad
+from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad, inference_mode
 from . import _autograd as autograd
 from . import npu
 from . import _C
 from . import distributed
+from . import onnx
 from . import futures
 from . import amp
+from . import compiler
+from .ops import ops
+from . import library
+from . import optim
+from . import jit
 from ._random import (
     manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
     Generator, default_generator,
@@ -51,13 +76,29 @@ def functionalize():
     return functionalize_context()
 
 
+def compile(model=None, *args, **kwargs):
+    if callable(model):
+        return model
+    def decorator(fn):
+        return fn
+    return decorator
+
+
 __all__ = [
     "Device",
+    "device",
     "Tensor",
+    "Size",
+    "FloatTensor", "DoubleTensor", "HalfTensor", "BFloat16Tensor",
+    "ByteTensor", "CharTensor", "ShortTensor", "IntTensor", "LongTensor",
+    "BoolTensor", "ComplexFloatTensor", "ComplexDoubleTensor",
     "DType",
+    "dtype",
+    "Dtype",
     # dtypes
+    "float8_e4m3fn", "float8_e5m2", "float8_e8m0fnu",
     "float16", "float32", "float64", "bfloat16",
-    "int8", "int16", "int32", "int64", "uint8",
+    "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64",
     "bool",
     "complex64", "complex128",
     # dtype aliases
@@ -206,8 +247,20 @@ __all__ = [
     "npu",
     # autograd
     "autograd",
+    "is_grad_enabled",
+    "set_grad_enabled",
+    "no_grad",
+    "enable_grad",
+    "inference_mode",
     # distributed
     "distributed",
+    "onnx",
     # amp
     "amp",
+    "ops",
+    "library",
+    "compiler",
+    "optim",
+    "jit",
+    "compile",
 ]

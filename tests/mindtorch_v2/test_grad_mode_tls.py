@@ -43,3 +43,17 @@ def test_set_grad_enabled_is_thread_local():
         assert torch.is_grad_enabled() is False
 
     assert observed == [True, False, True]
+
+
+def test_no_grad_decorator_forms():
+    @torch.no_grad()
+    def fn_a():
+        return torch.is_grad_enabled()
+
+    @torch.no_grad
+    def fn_b():
+        return torch.is_grad_enabled()
+
+    assert fn_a() is False
+    assert fn_b() is False
+    assert torch.is_grad_enabled() is True
