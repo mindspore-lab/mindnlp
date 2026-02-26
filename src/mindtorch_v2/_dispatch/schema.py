@@ -8,6 +8,11 @@ class SchemaParam:
         self.alias_set = alias_set
 
 
+class SchemaReturn:
+    def __init__(self, alias_set=None):
+        self.alias_set = alias_set
+
+
 def _torch_param_name(name):
     if name == "self":
         return "input"
@@ -17,7 +22,7 @@ def _torch_param_name(name):
 class OpSchema:
     def __init__(self, schema):
         self.schema = schema
-        self.name, self.params = _parse_schema(schema)
+        self.name, self.params, self.returns = _parse_schema(schema)
 
     def bind(self, args, kwargs, *, op_name=None, error_overrides=None):
         name = op_name or self.name
@@ -88,13 +93,15 @@ class OpSchema:
 
 
 def _parse_schema(schema):
-    sig = schema.split("->", 1)[0].strip()
+    parts = schema.split("->", 1)
+    sig = parts[0].strip()
+    return_sig = parts[1].strip() if len(parts) > 1 else ""
     if "(" not in sig:
-        return schema, []
+        return schema, [], _parse_returns(return_sig)
     name, params = sig.split("(", 1)
     params = params.rsplit(")", 1)[0].strip()
     if not params:
-        return name.strip(), []
+        return name.strip(), [], _parse_returns(return_sig)
     tokens = [t.strip() for t in params.split(",")]
     kw_only = False
     parsed = []
@@ -132,4 +139,26 @@ def _parse_schema(schema):
                 alias_set=alias_set,
             )
         )
-    return name.strip(), parsed
+    return name.strip(), parsed, _parse_returns(return_sig)
+
+
+def _parse_returns(return_sig):
+    if not return_sig:
+        return []
+    text = return_sig.strip()
+    if text.startswith("(") and text.endswith(")"):
+        text = text[1:-1].strip()
+    if not text:
+        return []
+    tokens = [t.strip() for t in text.split(",")]
+    returns = []
+    for token in tokens:
+        alias_set = None
+        start = token.find("(")
+        end = token.find(")", start + 1) if start != -1 else -1
+        if start != -1 and end != -1:
+            alias_part = token[start + 1:end].replace("!", "").strip()
+            if alias_part:
+                alias_set = alias_part
+        returns.append(SchemaReturn(alias_set=alias_set))
+    return returns
