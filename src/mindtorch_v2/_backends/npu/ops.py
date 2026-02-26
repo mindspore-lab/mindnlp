@@ -4,7 +4,6 @@ from ..._dtype import int32 as int32_dtype
 from ..._dtype import int64 as int64_dtype
 from ..._dtype import float32 as float_dtype
 from ..._storage import npu_typed_storage_from_ptr
-from ..common import convert as convert_backend
 from ..common import view as view_backend
 reshape = view_backend.reshape
 from . import aclnn
@@ -1315,50 +1314,405 @@ def where(cond, x, y):
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
-def _check_index_range_cpu(indices, dim_size, name):
-    idx = indices.to("cpu").numpy()
-    if idx.size == 0:
-        return
-    if idx.min() < 0 or idx.max() >= dim_size:
-        raise IndexError(f"{name} indices out of range")
+def _normalize_dims_tuple(dims, ndim, name):
+    if isinstance(dims, int):
+        raise TypeError(f"{name} dims must be tuple/list of ints")
+    if not isinstance(dims, (tuple, list)):
+        raise TypeError(f"{name} dims must be tuple/list of ints")
+    norm = []
+    seen = set()
+    for d in dims:
+        if not isinstance(d, int):
+            raise TypeError(f"{name} dims must contain ints")
+        d = _normalize_dim(d, ndim)
+        if d in seen:
+            raise RuntimeError(f"dim {d} appears multiple times in the list of dims")
+        seen.add(d)
+        norm.append(d)
+    return tuple(norm)
 
 
-def _normalize_indices_cpu(index, dim_size, name):
-    idx = index.to("cpu").numpy().astype(int)
-    if idx.size == 0:
-        return index
-    idx = idx.copy()
-    idx[idx < 0] += dim_size
-    if idx.min() < 0 or idx.max() >= dim_size:
-        raise IndexError(f"{name} indices out of range")
-    from ..._dtype import int64 as cpu_int64
-    from .creation import tensor_create
-    from ..._device import device as Device
-    cpu_tensor = tensor_create(idx.tolist(), dtype=cpu_int64, device=Device("cpu"))
-    return cpu_tensor.to(index.device)
-
-
-def nonzero(a):
-    """Find indices of non-zero elements on NPU.
-
-    Falls back to CPU since there's no aclnn nonzero kernel bound.
-    """
-    from ..._device import device as Device
-
-    cpu_tensor = to_device(a, Device("cpu"))
-    from ..._dtype import int64 as int64_dtype
-
-    arr = cpu_tensor._numpy_view()
-    indices = arr.nonzero()
-    if indices.size == 0:
-        indices = indices.reshape(0, len(a.shape))
+def _normalize_roll_args(shifts, dims, ndim):
+    if isinstance(shifts, int):
+        shifts_tuple = (int(shifts),)
+    elif isinstance(shifts, (tuple, list)):
+        shifts_tuple = tuple(int(s) for s in shifts)
     else:
-        indices = indices.T
+        raise TypeError("roll shifts must be int/tuple/list")
+    if len(shifts_tuple) == 0:
+        raise RuntimeError("`shifts` required")
 
-    from .creation import tensor_create
-    result_cpu = tensor_create(indices.tolist(), dtype=int64_dtype, device=Device("cpu"))
-    result = to_device(result_cpu, a.device)
-    return result
+    if isinstance(dims, int):
+        dims_tuple = (int(dims),)
+    elif isinstance(dims, (tuple, list)):
+        dims_tuple = tuple(int(d) for d in dims)
+    else:
+        raise TypeError("roll dims must be int/tuple/list/None")
+
+    if len(shifts_tuple) != len(dims_tuple):
+        raise RuntimeError(f"shifts and dimensions must align. shifts: {len(shifts_tuple)}, dims:{len(dims_tuple)}")
+    return shifts_tuple, tuple(_normalize_dim(d, ndim) for d in dims_tuple)
+
+
+def _cumulative_out_dtype(dtype):
+    # torch promotes bool/int cumulative ops to int64 by default.
+    if dtype.is_floating_point or dtype.is_complex:
+        return dtype
+    return int64_dtype
+
+
+def flip(a, dims):
+    if a.device.type != "npu":
+        raise ValueError("NPU flip expects NPU tensors")
+    dims = _normalize_dims_tuple(dims, a.dim(), "flip")
+    if len(dims) == 0:
+        return a
+    if not aclnn.flip_symbols_ok():
+        raise RuntimeError("aclnnFlip symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.flip(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dims,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def roll(a, shifts, dims=None):
+    if a.device.type != "npu":
+        raise ValueError("NPU roll expects NPU tensors")
+    if dims is None:
+        flat = view_backend.reshape(a, (a.numel(),))
+        rolled = roll(flat, shifts, dims=0)
+        return view_backend.reshape(rolled, a.shape)
+    shifts_tuple, dims_tuple = _normalize_roll_args(shifts, dims, a.dim())
+    if not aclnn.roll_symbols_ok():
+        raise RuntimeError("aclnnRoll symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.roll(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        shifts_tuple,
+        dims_tuple,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def cumsum(a, dim=0):
+    if a.device.type != "npu":
+        raise ValueError("NPU cumsum expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+    if not aclnn.cumsum_symbols_ok():
+        raise RuntimeError("aclnnCumsum symbols not available")
+    out_dtype = _cumulative_out_dtype(a.dtype)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = max(_numel(out_shape), 1) * _dtype_itemsize(out_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.cumsum(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dim,
+        out_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), out_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def cumprod(a, dim=0):
+    if a.device.type != "npu":
+        raise ValueError("NPU cumprod expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+    if not aclnn.cumprod_symbols_ok():
+        raise RuntimeError("aclnnCumprod symbols not available")
+    out_dtype = _cumulative_out_dtype(a.dtype)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = max(_numel(out_shape), 1) * _dtype_itemsize(out_dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.cumprod(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dim,
+        out_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), out_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def cummax(a, dim=0):
+    if a.device.type != "npu":
+        raise ValueError("NPU cummax expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+    if not aclnn.cummax_symbols_ok():
+        raise RuntimeError("aclnnCummax symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    numel = max(_numel(out_shape), 1)
+    values_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+    indices_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+    aclnn.cummax(
+        _unwrap_storage(a).data_ptr(),
+        values_ptr,
+        indices_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dim,
+        runtime,
+        stream=stream.stream,
+    )
+    values_storage = npu_typed_storage_from_ptr(values_ptr, numel, a.dtype, device=a.device)
+    indices_storage = npu_typed_storage_from_ptr(indices_ptr, numel, int64_dtype, device=a.device)
+    return _wrap_tensor(values_storage, out_shape, out_stride), _wrap_tensor(indices_storage, out_shape, out_stride)
+
+
+def argsort(a, dim=-1, descending=False, stable=False):
+    if a.device.type != "npu":
+        raise ValueError("NPU argsort expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+
+    # aclnnArgsort/aclnnSort can poison subsequent topk in current runtime.
+    # Use topk(k=full_dim) for stable=False to keep behavior and runtime stability.
+    if not stable:
+        _, indices = topk(a, k=a.shape[dim], dim=dim, largest=bool(descending), sorted=True)
+        return indices
+
+    if not aclnn.argsort_symbols_ok():
+        raise RuntimeError("aclnnArgsort symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    numel = max(_numel(out_shape), 1)
+    out_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+    aclnn.argsort(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        dim,
+        bool(descending),
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, numel, int64_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def sort(a, dim=-1, descending=False, stable=False):
+    if a.device.type != "npu":
+        raise ValueError("NPU sort expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+
+    # Keep runtime stable for default unstable sort path.
+    if not stable:
+        return topk(a, k=a.shape[dim], dim=dim, largest=bool(descending), sorted=True)
+
+    if not aclnn.sort_symbols_ok():
+        raise RuntimeError("aclnnSort symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    numel = max(_numel(out_shape), 1)
+    values_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+    indices_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+    aclnn.sort(
+        _unwrap_storage(a).data_ptr(),
+        values_ptr,
+        indices_ptr,
+        a.shape,
+        a.stride,
+        dim,
+        bool(descending),
+        bool(stable),
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    values_storage = npu_typed_storage_from_ptr(values_ptr, numel, a.dtype, device=a.device)
+    indices_storage = npu_typed_storage_from_ptr(indices_ptr, numel, int64_dtype, device=a.device)
+    return _wrap_tensor(values_storage, out_shape, out_stride), _wrap_tensor(indices_storage, out_shape, out_stride)
+
+
+def topk(a, k, dim=-1, largest=True, sorted=True):
+    if a.device.type != "npu":
+        raise ValueError("NPU topk expects NPU tensors")
+    k = int(k)
+    dim = _normalize_dim(dim, a.dim())
+    dim_size = a.shape[dim]
+    if k < 0 or k > dim_size:
+        raise RuntimeError("selected index k out of range")
+    if not aclnn.topk_symbols_ok():
+        raise RuntimeError("aclnnTopk symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = list(a.shape)
+    out_shape[dim] = int(k)
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    numel = max(_numel(out_shape), 1)
+    values_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+    indices_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+    aclnn.topk(
+        _unwrap_storage(a).data_ptr(),
+        values_ptr,
+        indices_ptr,
+        a.shape,
+        a.stride,
+        int(k),
+        dim,
+        bool(largest),
+        bool(sorted),
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    values_storage = npu_typed_storage_from_ptr(values_ptr, numel, a.dtype, device=a.device)
+    indices_storage = npu_typed_storage_from_ptr(indices_ptr, numel, int64_dtype, device=a.device)
+    return _wrap_tensor(values_storage, out_shape, out_stride), _wrap_tensor(indices_storage, out_shape, out_stride)
+
+
+def tril(a, diagonal=0):
+    if a.device.type != "npu":
+        raise ValueError("NPU tril expects NPU tensors")
+    if not aclnn.tril_symbols_ok():
+        raise RuntimeError("aclnnTril symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.tril(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        int(diagonal),
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def triu(a, diagonal=0):
+    if a.device.type != "npu":
+        raise ValueError("NPU triu expects NPU tensors")
+    if not aclnn.triu_symbols_ok():
+        raise RuntimeError("aclnnTriu symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.triu(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        int(diagonal),
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def nonzero(a, as_tuple=False):
+    if a.device.type != "npu":
+        raise ValueError("NPU nonzero expects NPU tensors")
+    if not aclnn.nonzero_symbols_ok():
+        raise RuntimeError("aclnnNonzero symbols not available")
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    out_shape = (max(a.numel(), 1), a.dim())
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(max(_numel(out_shape), 1) * _dtype_itemsize(int64_dtype), runtime=runtime)
+
+    aclnn.nonzero(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        out_shape,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+
+    full_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), int64_dtype, device=a.device)
+    full = _wrap_tensor(full_storage, out_shape, out_stride)
+
+    nonzero_count = count_nonzero(a, dim=None, keepdim=False)
+    rows = _read_int64_scalar(nonzero_count)
+
+    if rows < out_shape[0]:
+        full = _slice_along_dim(full, 0, rows, 0)
+
+    if not as_tuple:
+        return full
+
+    from .creation import zeros_create
+    from ..common import view as view_backend
+
+    if a.dim() == 0:
+        if rows == 0:
+            return (zeros_create((0,), dtype=int64_dtype, device=a.device),)
+        return (zeros_create((1,), dtype=int64_dtype, device=a.device),)
+
+    outputs = []
+    for dim_idx in range(a.dim()):
+        col = _slice_along_dim(full, dim_idx, dim_idx + 1, 1)
+        outputs.append(view_backend.reshape(col, (rows,)))
+    return tuple(outputs)
 
 
 def lerp(a, b, weight):

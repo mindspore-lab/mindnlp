@@ -71,6 +71,17 @@ from .ops import (
     all_,
     any_,
     count_nonzero,
+    flip,
+    roll,
+    nonzero,
+    cumsum,
+    cumprod,
+    cummax,
+    argsort,
+    sort,
+    topk,
+    tril,
+    triu,
     stack,
     cat,
     concatenate,
@@ -125,6 +136,10 @@ from .ops import (
     batch_norm,
     group_norm,
     gather,
+    index_select,
+    take,
+    take_along_dim,
+    masked_select,
     dropout,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
@@ -140,6 +155,17 @@ registry.register("sum", "npu", sum_, meta=meta_infer.infer_sum)
 registry.register("all", "npu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("any", "npu", any_, meta=meta_infer.infer_reduce_bool)
 registry.register("count_nonzero", "npu", count_nonzero, meta=meta_infer.infer_argmax)
+registry.register("flip", "npu", flip, meta=meta_infer.infer_flip)
+registry.register("roll", "npu", roll, meta=meta_infer.infer_roll)
+registry.register("nonzero", "npu", nonzero, meta=meta_infer.infer_nonzero)
+registry.register("cumsum", "npu", cumsum, meta=meta_infer.infer_unary)
+registry.register("cumprod", "npu", cumprod, meta=meta_infer.infer_unary)
+registry.register("cummax", "npu", cummax, meta=meta_infer.infer_cummax)
+registry.register("argsort", "npu", argsort, meta=meta_infer.infer_argsort)
+registry.register("sort", "npu", sort, meta=meta_infer.infer_sort)
+registry.register("topk", "npu", topk, meta=meta_infer.infer_topk)
+registry.register("tril", "npu", tril, meta=meta_infer.infer_unary)
+registry.register("triu", "npu", triu, meta=meta_infer.infer_unary)
 registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
 registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)
@@ -248,6 +274,11 @@ registry.register("row_stack", "npu", row_stack, meta=meta_infer.infer_vstack)
 registry.register("dstack", "npu", dstack, meta=meta_infer.infer_dstack)
 registry.register("column_stack", "npu", column_stack, meta=meta_infer.infer_column_stack)
 registry.register("where", "npu", where, meta=meta_infer.infer_binary)
+registry.register("gather", "npu", gather, meta=meta_infer.infer_gather)
+registry.register("index_select", "npu", index_select, meta=meta_infer.infer_index_select)
+registry.register("take", "npu", take, meta=meta_infer.infer_take)
+registry.register("take_along_dim", "npu", take_along_dim, meta=meta_infer.infer_take_along_dim)
+registry.register("masked_select", "npu", masked_select, meta=meta_infer.infer_masked_select)
 
 # Critical tier operations
 registry.register("mean", "npu", mean, meta=meta_infer.infer_sum)
@@ -269,15 +300,8 @@ registry.register("batch_norm", "npu", batch_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "npu", group_norm, meta=meta_infer.infer_unary)
 
 # Tensor operations
-registry.register("gather", "npu", gather, meta=meta_infer.infer_gather)
-
 # Random operations
 registry.register("dropout", "npu", dropout, meta=meta_infer.infer_unary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 
-registry.register("gather", "npu", ops.gather, meta=meta_infer.infer_gather)
-registry.register("index_select", "npu", ops.index_select, meta=meta_infer.infer_index_select)
-registry.register("take", "npu", ops.take, meta=meta_infer.infer_take)
-registry.register("take_along_dim", "npu", ops.take_along_dim, meta=meta_infer.infer_take_along_dim)
-registry.register("masked_select", "npu", ops.masked_select, meta=meta_infer.infer_masked_select)
