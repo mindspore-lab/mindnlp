@@ -41,3 +41,28 @@ def test_dispatch_inplace_checks_view_of_leaf():
         match=r"a view of a leaf Variable that requires grad is being used in an in-place operation.",
     ):
         dispatch("add_", v.device.type, v, v)
+
+
+def test_schema_parses_alias_set_for_mutation():
+    from mindtorch_v2._dispatch.schema import OpSchema
+
+    schema = OpSchema("add_(Tensor(a!) self, Tensor other) -> Tensor")
+    assert schema.params[0].mutates is True
+    assert schema.params[0].alias_set == "a"
+
+
+def test_schema_parses_alias_set_for_non_mutation():
+    from mindtorch_v2._dispatch.schema import OpSchema
+
+    schema = OpSchema("foo(Tensor(a) x) -> Tensor")
+    assert schema.params[0].mutates is False
+    assert schema.params[0].alias_set == "a"
+
+
+def test_dispatch_mutating_args_require_alias_set():
+    from mindtorch_v2._dispatch.dispatcher import _mutating_args
+    from mindtorch_v2._dispatch.schema import OpSchema
+
+    schema = OpSchema("foo(Tensor(a!) x, Tensor(!) y, Tensor z) -> Tensor")
+    mutated = _mutating_args(schema, (1, 2, 3), {})
+    assert mutated == [1]

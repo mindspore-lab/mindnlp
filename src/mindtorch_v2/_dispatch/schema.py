@@ -1,10 +1,11 @@
 class SchemaParam:
-    def __init__(self, name, *, kw_only=False, default=None, has_default=False, mutates=False):
+    def __init__(self, name, *, kw_only=False, default=None, has_default=False, mutates=False, alias_set=None):
         self.name = name
         self.kw_only = kw_only
         self.default = default
         self.has_default = has_default
         self.mutates = mutates
+        self.alias_set = alias_set
 
 
 def _torch_param_name(name):
@@ -114,7 +115,21 @@ def _parse_schema(schema):
         name = parts[-1]
         type_part = " ".join(parts[:-1])
         mutates = "!" in type_part
+        alias_set = None
+        start = type_part.find("(")
+        end = type_part.find(")", start + 1) if start != -1 else -1
+        if start != -1 and end != -1:
+            alias_part = type_part[start + 1:end].replace("!", "").strip()
+            if alias_part:
+                alias_set = alias_part
         parsed.append(
-            SchemaParam(name, kw_only=kw_only, default=default, has_default=has_default, mutates=mutates)
+            SchemaParam(
+                name,
+                kw_only=kw_only,
+                default=default,
+                has_default=has_default,
+                mutates=mutates,
+                alias_set=alias_set,
+            )
         )
     return name.strip(), parsed

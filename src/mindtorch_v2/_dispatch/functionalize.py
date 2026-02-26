@@ -56,6 +56,8 @@ def _mutating_args(schema_obj, args, kwargs):
     for param in params:
         if not param.mutates:
             continue
+        if getattr(param, "alias_set", None) in (None, ""):
+            continue
         if param.name in bound:
             mutated.append(bound[param.name])
     return mutated
@@ -133,8 +135,6 @@ def _writeback(target, result, op_name=None):
             target.offset = result.offset
             target._base = result._base
             target._view_meta = result._view_meta
-        bump_target = target._base if target._base is not None else target
-        bump_target._version_counter.bump()
         return target
     if target.device.type != "cpu":
         raise RuntimeError(f"aten::{op_name} is not implemented for NPU")
@@ -151,9 +151,21 @@ def _writeback(target, result, op_name=None):
         target.offset = result.offset
         target._base = result._base
         target._view_meta = result._view_meta
-    bump_target = target._base if target._base is not None else target
-    bump_target._version_counter.bump()
     return target
+
+
+def _bump_writeback_versions(mutated):
+    seen = set()
+    for target in mutated:
+        bump_target = target._base if target._base is not None else target
+        counter = getattr(bump_target, "_version_counter", None)
+        if counter is None:
+            continue
+        key = id(counter)
+        if key in seen:
+            continue
+        counter.bump()
+        seen.add(key)
 
 
 def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, pipeline=None, dispatch_device=None):
@@ -187,11 +199,14 @@ def functionalize_op(name, alias_name, entry, keyset, args, kwargs, redispatch, 
     if not mutated:
         return out
     if len(mutated) == 1:
-        return _writeback(mutated[0], out, op_name=alias_name)
+        target = _writeback(mutated[0], out, op_name=alias_name)
+        _bump_writeback_versions((mutated[0],))
+        return target
     if not isinstance(out, (tuple, list)):
         raise RuntimeError(f"functionalize: expected tuple output for op {alias_name}()")
     if len(out) != len(mutated):
         raise RuntimeError(f"functionalize: output count mismatch for op {alias_name}()")
     for target, result in zip(mutated, out):
         _writeback(target, result, op_name=alias_name)
+    _bump_writeback_versions(mutated)
     return mutated[0]
