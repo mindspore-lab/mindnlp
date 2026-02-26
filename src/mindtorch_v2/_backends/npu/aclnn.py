@@ -1626,14 +1626,17 @@ class AclnnBindings:
             "aclnnGroupNormGetWorkspaceSize",
             ctypes.c_int32,
             [
-                ctypes.c_void_p,  # input
-                ctypes.c_void_p,  # weight (optional)
-                ctypes.c_void_p,  # bias (optional)
-                ctypes.c_int64,   # num_groups
+                ctypes.c_void_p,  # self (input)
+                ctypes.c_void_p,  # gamma (weight, optional)
+                ctypes.c_void_p,  # beta (bias, optional)
+                ctypes.c_int64,   # N (batch size)
+                ctypes.c_int64,   # C (channels)
+                ctypes.c_int64,   # HxW (spatial dimensions)
+                ctypes.c_int64,   # group (num_groups)
                 ctypes.c_double,  # eps
                 ctypes.c_void_p,  # out
-                ctypes.c_void_p,  # mean (optional)
-                ctypes.c_void_p,  # rstd (optional)
+                ctypes.c_void_p,  # meanOut (optional)
+                ctypes.c_void_p,  # rstdOut (optional)
                 ctypes.POINTER(ctypes.c_uint64),
                 ctypes.POINTER(ctypes.c_void_p),
             ],
@@ -1850,6 +1853,7 @@ _ACL_DTYPE = {
 }
 
 _ACL_FORMAT_ND = 2
+_ACL_FORMAT_NCHW = 0
 
 
 def _normalize_dtype(dtype):
@@ -1956,7 +1960,7 @@ def _make_int64_array(values):
     return data
 
 
-def _create_tensor(bindings, shape, stride, dtype, data_ptr):
+def _create_tensor(bindings, shape, stride, dtype, data_ptr, fmt=_ACL_FORMAT_ND):
     view_dims = _make_int64_array(shape)
     stride_dims = _make_int64_array(stride)
     storage_dims = _make_int64_array(shape)
@@ -1968,7 +1972,7 @@ def _create_tensor(bindings, shape, stride, dtype, data_ptr):
         ctypes.c_int32(_dtype_to_acl(dtype)),
         stride_dims,
         ctypes.c_int64(0),
-        ctypes.c_int32(_ACL_FORMAT_ND),
+        ctypes.c_int32(fmt),
         storage_dims,
         storage_num,
         ctypes.c_void_p(int(data_ptr)),
@@ -5851,14 +5855,42 @@ def batch_norm(input_ptr, weight_ptr, bias_ptr, running_mean_ptr, running_var_pt
     if bindings.aclnn_batch_norm_get_workspace is None or bindings.aclnn_batch_norm is None:
         raise RuntimeError("aclnnBatchNorm symbols not available")
 
-    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr, _ACL_FORMAT_NCHW)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
 
     # Optional tensors
     weight_tensor = _create_tensor(bindings, weight_shape, weight_stride, dtype, weight_ptr)[0] if weight_ptr else None
     bias_tensor = _create_tensor(bindings, bias_shape, bias_stride, dtype, bias_ptr)[0] if bias_ptr else None
     running_mean_tensor = _create_tensor(bindings, running_mean_shape, running_mean_stride, dtype, running_mean_ptr)[0] if running_mean_ptr else None
     running_var_tensor = _create_tensor(bindings, running_var_shape, running_var_stride, dtype, running_var_ptr)[0] if running_var_ptr else None
+
+    # Allocate auxiliary output tensors (saveMean, saveInvstd) required by ACLNN.
+    # ACLNN does not accept NULL for these even if we don't need the values.
+    # Shape is (C,) where C is the number of channels; dtype is always float32.
+    C = input_shape[1] if len(input_shape) >= 2 else 1
+    aux_shape = (C,)
+    aux_stride = (1,)
+    aux_dtype = "float32"
+    aux_itemsize = 4  # float32
+
+    save_mean_ptr = None
+    save_invstd_ptr = None
+    save_mean_tensor = None
+    save_invstd_tensor = None
+    save_mean_keep = None
+    save_invstd_keep = None
+
+    # Allocate saveMean and saveInvstd device buffers (always, training or not)
+    save_mean_ptr, ret = acl.rt.malloc(C * aux_itemsize, 0)
+    if ret != 0:
+        raise RuntimeError(f"acl.rt.malloc for saveMean failed: {ret}")
+    save_invstd_ptr, ret = acl.rt.malloc(C * aux_itemsize, 0)
+    if ret != 0:
+        runtime.defer_free(save_mean_ptr)
+        raise RuntimeError(f"acl.rt.malloc for saveInvstd failed: {ret}")
+
+    save_mean_tensor, save_mean_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, save_mean_ptr)
+    save_invstd_tensor, save_invstd_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, save_invstd_ptr)
 
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
@@ -5875,8 +5907,8 @@ def batch_norm(input_ptr, weight_ptr, bias_ptr, running_mean_ptr, running_var_pt
             ctypes.c_double(momentum),
             ctypes.c_double(eps),
             out_tensor,
-            None,  # save_mean
-            None,  # save_invstd
+            save_mean_tensor,
+            save_invstd_tensor,
             ctypes.byref(workspace_size),
             ctypes.byref(executor),
         )
@@ -5910,6 +5942,14 @@ def batch_norm(input_ptr, weight_ptr, bias_ptr, running_mean_ptr, running_var_pt
             bindings.acl_destroy_tensor(running_mean_tensor)
         if running_var_tensor:
             bindings.acl_destroy_tensor(running_var_tensor)
+        if save_mean_tensor:
+            bindings.acl_destroy_tensor(save_mean_tensor)
+        if save_invstd_tensor:
+            bindings.acl_destroy_tensor(save_invstd_tensor)
+        if save_mean_ptr is not None:
+            runtime.defer_free(save_mean_ptr)
+        if save_invstd_ptr is not None:
+            runtime.defer_free(save_invstd_ptr)
         if workspace is not None:
             runtime.defer_free(workspace)
 
@@ -5936,16 +5976,46 @@ def group_norm(input_ptr, weight_ptr, bias_ptr, out_ptr,
     workspace_size = ctypes.c_uint64(0)
     workspace = None
 
+    # Extract N, C, HxW from input shape
+    N = input_shape[0]
+    C = input_shape[1]
+    HxW = 1
+    for dim in input_shape[2:]:
+        HxW *= dim
+
+    # Allocate auxiliary output tensors (meanOut, rstdOut) required by ACLNN.
+    # ACLNN does not accept NULL for these even if we don't need the values.
+    # Shape is (N, num_groups); dtype is always float32.
+    aux_shape = (N, num_groups)
+    aux_stride = (num_groups, 1)
+    aux_dtype = "float32"
+    aux_itemsize = 4  # float32
+    aux_numel = N * num_groups
+
+    mean_out_ptr, ret = acl.rt.malloc(aux_numel * aux_itemsize, 0)
+    if ret != 0:
+        raise RuntimeError(f"acl.rt.malloc for meanOut failed: {ret}")
+    rstd_out_ptr, ret = acl.rt.malloc(aux_numel * aux_itemsize, 0)
+    if ret != 0:
+        runtime.defer_free(mean_out_ptr)
+        raise RuntimeError(f"acl.rt.malloc for rstdOut failed: {ret}")
+
+    mean_out_tensor, mean_out_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, mean_out_ptr)
+    rstd_out_tensor, rstd_out_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, rstd_out_ptr)
+
     try:
         ret = bindings.aclnn_group_norm_get_workspace(
             input_tensor,
             weight_tensor,
             bias_tensor,
+            ctypes.c_int64(N),
+            ctypes.c_int64(C),
+            ctypes.c_int64(HxW),
             ctypes.c_int64(num_groups),
             ctypes.c_double(eps),
             out_tensor,
-            None,  # mean
-            None,  # rstd
+            mean_out_tensor,
+            rstd_out_tensor,
             ctypes.byref(workspace_size),
             ctypes.byref(executor),
         )
@@ -5975,6 +6045,10 @@ def group_norm(input_ptr, weight_ptr, bias_ptr, out_ptr,
             bindings.acl_destroy_tensor(weight_tensor)
         if bias_tensor:
             bindings.acl_destroy_tensor(bias_tensor)
+        bindings.acl_destroy_tensor(mean_out_tensor)
+        bindings.acl_destroy_tensor(rstd_out_tensor)
+        runtime.defer_free(mean_out_ptr)
+        runtime.defer_free(rstd_out_ptr)
         if workspace is not None:
             runtime.defer_free(workspace)
 
