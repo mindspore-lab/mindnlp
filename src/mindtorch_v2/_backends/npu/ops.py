@@ -67,6 +67,16 @@ def _broadcast_shape(a_shape, b_shape):
     return tuple(reversed(result))
 
 
+def _npu_broadcast_to(tensor, shape):
+    from .creation import zeros_create
+
+    shape = tuple(shape)
+    if tensor.shape == shape:
+        return tensor
+    zeros = zeros_create(shape, dtype=tensor.dtype, device=tensor.device)
+    return _binary_op(tensor, zeros, aclnn.add, "add")
+
+
 def _npu_arange_1d(size, device):
     runtime = npu_runtime.get_runtime((device.index or 0))
     stream = npu_state.current_stream((device.index or 0))
@@ -2659,36 +2669,6 @@ def pad(input, pad, mode='constant', value=0):
     raise NotImplementedError("NPU pad not yet implemented - use CPU fallback")
 
 
-def gather(a, dim, index):
-    """Gather values along an axis specified by dim using aclnnGather."""
-    runtime = npu_runtime.get_runtime((a.device.index or 0))
-    stream = npu_state.current_stream((a.device.index or 0))
-
-    if not aclnn.gather_symbols_ok():
-        raise RuntimeError("aclnnGather not available")
-
-    # Output shape is same as index shape
-    out_shape = index.shape
-    out_stride = npu_runtime._contiguous_stride(out_shape)
-    out_numel = _numel(out_shape)
-    itemsize = _dtype_itemsize(a.dtype)
-    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
-
-    aclnn.gather(
-        _unwrap_storage(a).data_ptr(),
-        _unwrap_storage(index).data_ptr(),
-        out_ptr,
-        a.shape, a.stride,
-        index.shape, index.stride,
-        out_shape, out_stride,
-        dim,
-        a.dtype,
-        index.dtype,
-        runtime, stream=stream.stream
-    )
-
-    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 
