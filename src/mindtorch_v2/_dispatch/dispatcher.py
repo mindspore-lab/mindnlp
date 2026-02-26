@@ -213,12 +213,12 @@ def _kernel_for_entry(entry, key_order):
     for key in key_order:
         if key in entry.fallthrough:
             continue
-        global_fallthrough = getattr(registry, "_global_fallthrough", set())
-        if key in global_fallthrough:
-            continue
         kernel = entry.kernels.get(key)
         if kernel is not None:
             return kernel, key
+        global_fallthrough = getattr(registry, "_global_fallthrough", set())
+        if key in global_fallthrough:
+            continue
     return None, None
 
 
