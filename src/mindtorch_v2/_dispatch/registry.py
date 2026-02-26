@@ -1,3 +1,4 @@
+import copy
 from .keys import DispatchKey
 from .schema import OpSchema
 
@@ -85,6 +86,18 @@ class OpRegistry:
 
     def get(self, name):
         return self._ops[self._canonical_name(name)]
+
+    def snapshot(self):
+        return {
+            "ops": copy.deepcopy(self._ops),
+            "aliases": copy.deepcopy(self._aliases),
+            "global_fallthrough": copy.deepcopy(getattr(self, "_global_fallthrough", set())),
+        }
+
+    def restore(self, state):
+        self._ops = copy.deepcopy(state["ops"])
+        self._aliases = copy.deepcopy(state["aliases"])
+        self._global_fallthrough = copy.deepcopy(state.get("global_fallthrough", set()))
 
 
 registry = OpRegistry()
