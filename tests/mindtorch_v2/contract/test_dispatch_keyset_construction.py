@@ -39,3 +39,9 @@ def test_keyset_includes_autograd_npu_when_grad_enabled():
     keyset = DispatchKeySet.from_tensors((t,), grad_enabled=True)
     assert DispatchKey.Autograd in keyset
     assert DispatchKey.AutogradNPU in keyset
+
+
+def test_keyset_includes_adinplaceorview_when_grad_enabled():
+    t = torch.ones((2,)).requires_grad_()
+    keyset = DispatchKeySet.from_tensors((t,), grad_enabled=True)
+    assert DispatchKey.ADInplaceOrView in keyset

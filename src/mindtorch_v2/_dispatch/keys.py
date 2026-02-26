@@ -208,6 +208,7 @@ class DispatchKeySet:
         else:
             mask |= int(DispatchKey.CPU)
         if grad_enabled and requires_grad:
+            mask |= int(DispatchKey.ADInplaceOrView)
             mask |= int(DispatchKey.Autograd)
             if has_meta:
                 mask |= int(DispatchKey.AutogradMeta)

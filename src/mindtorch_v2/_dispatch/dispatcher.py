@@ -280,7 +280,8 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
 
     if entry.schema_obj is not None:
         entry.schema_obj.bind(args, kwargs, op_name=alias_name, error_overrides=entry.error_overrides)
-        _check_inplace_targets(entry.schema_obj, args, kwargs)
+        if keyset.has(DispatchKey.ADInplaceOrView):
+            _check_inplace_targets(entry.schema_obj, args, kwargs)
 
     if keyset.has(DispatchKey.Functionalize) and should_functionalize(entry):
         if pipe is not None and keyset.has(DispatchKey.Pipeline):
