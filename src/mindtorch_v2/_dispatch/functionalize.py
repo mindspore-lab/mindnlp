@@ -1,25 +1,33 @@
 import contextlib
+import threading
 import numpy as np
 
 from .registry import registry
 
 
-_ENABLED = False
+_TLS = threading.local()
+
+
+def _get_enabled():
+    return getattr(_TLS, "enabled", False)
+
+
+def _set_enabled(val):
+    _TLS.enabled = bool(val)
 
 
 @contextlib.contextmanager
 def functionalize_context():
-    global _ENABLED
-    prev = _ENABLED
-    _ENABLED = True
+    prev = _get_enabled()
+    _set_enabled(True)
     try:
         yield
     finally:
-        _ENABLED = prev
+        _set_enabled(prev)
 
 
 def is_functionalize_enabled():
-    return _ENABLED
+    return _get_enabled()
 
 
 def _has_mutation(schema_obj):
