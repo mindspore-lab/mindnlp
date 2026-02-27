@@ -151,6 +151,8 @@ from .ops import (
     take_along_dim,
     masked_select,
     dropout,
+    pad,
+    pad_sequence,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -299,6 +301,8 @@ registry.register("index_select", "npu", index_select, meta=meta_infer.infer_ind
 registry.register("take", "npu", take, meta=meta_infer.infer_take)
 registry.register("take_along_dim", "npu", take_along_dim, meta=meta_infer.infer_take_along_dim)
 registry.register("masked_select", "npu", masked_select, meta=meta_infer.infer_masked_select)
+registry.register("pad", "npu", pad, meta=meta_infer.infer_unary)
+registry.register("pad_sequence", "npu", pad_sequence, meta=meta_infer.infer_pad_sequence)
 
 # Critical tier operations
 registry.register("mean", "npu", mean, meta=meta_infer.infer_sum)

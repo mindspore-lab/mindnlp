@@ -6700,6 +6700,71 @@ def masked_select(self_ptr, mask_ptr, out_ptr,
             runtime.defer_raw_free(workspace)
 
 
+def constant_pad_nd(self_ptr, out_ptr,
+                    self_shape, self_stride, self_dtype,
+                    pad_widths, value,
+                    out_shape, out_stride, out_dtype,
+                    runtime, stream=None):
+    """Pad tensor with constant value using aclnnConstantPadNd."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_constant_pad_nd_get_workspace is None or bindings.aclnn_constant_pad_nd is None:
+        raise RuntimeError("aclnnConstantPadNd symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+
+    pad_arr = _make_int64_array(tuple(int(x) for x in pad_widths))
+    pad_handle = bindings.acl_create_int_array(pad_arr, ctypes.c_uint64(len(pad_widths)))
+    if not pad_handle:
+        raise RuntimeError("aclCreateIntArray returned null")
+
+    value_scalar, value_keep = _create_scalar(bindings, value, self_dtype)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_constant_pad_nd_get_workspace(
+            self_tensor,
+            pad_handle,
+            value_scalar,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnConstantPadNdGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_constant_pad_nd(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnConstantPadNd failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_int_array(pad_handle)
+        bindings.acl_destroy_scalar(value_scalar)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, pad_arr, value_keep)
+
+
 def gather_symbols_ok():
     try:
         bindings = get_bindings()

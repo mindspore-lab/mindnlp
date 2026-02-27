@@ -2,6 +2,7 @@ import math
 import numpy as np
 import pytest
 import mindtorch_v2 as torch
+from mindtorch_v2.nn import functional as F
 
 
 def test_npu_add():
@@ -747,6 +748,35 @@ def test_npu_block_diag():
     expected = np.array([[1.0, 2.0, 0.0], [0.0, 0.0, 3.0], [0.0, 0.0, 4.0]], dtype=np.float32)
     np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
 
+
+
+def test_npu_pad_constant():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="npu")
+    out = F.pad(x, (1, 2, 0, 1), mode="constant", value=0.5)
+    expected = np.pad(x.to("cpu").numpy(), ((0, 1), (1, 2)), mode="constant", constant_values=0.5)
+    np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
+
+
+def test_npu_pad_sequence_right():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([1.0, 2.0], device="npu")
+    b = torch.tensor([3.0], device="npu")
+    out = torch.pad_sequence([a, b], batch_first=True, padding_value=0.0, padding_side="right")
+    expected = np.array([[1.0, 2.0], [3.0, 0.0]], dtype=np.float32)
+    np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
+
+
+def test_npu_pad_sequence_left():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([1.0, 2.0], device="npu")
+    b = torch.tensor([3.0], device="npu")
+    out = torch.pad_sequence([a, b], batch_first=True, padding_value=-1.0, padding_side="left")
+    expected = np.array([[1.0, 2.0], [-1.0, 3.0]], dtype=np.float32)
+    np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
 
 def test_npu_to_cpu_synchronizes(monkeypatch):
     if not torch.npu.is_available():
