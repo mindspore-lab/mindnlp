@@ -667,6 +667,87 @@ def test_npu_tril_triu():
     np.testing.assert_allclose(triu_out.to("cpu").numpy(), np.triu(x.to("cpu").numpy()), atol=1e-6, rtol=1e-6)
 
 
+def test_npu_rot90():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    out = torch.rot90(x, k=1, dims=(0, 1))
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.rot90(x.to("cpu").numpy(), k=1, axes=(0, 1)))
+
+
+def test_npu_repeat():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    out = torch.repeat(x, (2, 1))
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.tile(x.to("cpu").numpy(), (2, 1)))
+
+
+def test_npu_repeat_interleave():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    out = torch.repeat_interleave(x, repeats=2, dim=1)
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.repeat(x.to("cpu").numpy(), 2, axis=1))
+
+
+def test_npu_tile():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1, 2], [3, 4]], device="npu")
+    out = torch.tile(x, (1, 2))
+    np.testing.assert_array_equal(out.to("cpu").numpy(), np.tile(x.to("cpu").numpy(), (1, 2)))
+
+
+def test_npu_scatter():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], device="npu")
+    index = torch.tensor([[0, 2, 1], [1, 0, 2]], device="npu", dtype=torch.int64)
+    src = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="npu")
+    out = torch.scatter(a, 1, index, src)
+    expected = np.zeros((2, 3), dtype=np.float32)
+    np.put_along_axis(expected, index.to("cpu").numpy(), src.to("cpu").numpy(), axis=1)
+    np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
+
+
+def test_npu_tril_indices_triu_indices():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    tril_out = torch.tril_indices(3, 4, offset=0, device="npu")
+    triu_out = torch.triu_indices(3, 4, offset=0, device="npu")
+    np.testing.assert_array_equal(tril_out.to("cpu").numpy(), np.array(np.tril_indices(3, k=0, m=4), dtype=np.int64))
+    np.testing.assert_array_equal(triu_out.to("cpu").numpy(), np.array(np.triu_indices(3, k=0, m=4), dtype=np.int64))
+
+
+def test_npu_diag():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([1.0, 2.0, 3.0], device="npu")
+    out = torch.diag(x)
+    np.testing.assert_allclose(out.to("cpu").numpy(), np.diag(x.to("cpu").numpy()), atol=1e-6, rtol=1e-6)
+
+
+def test_npu_cartesian_prod():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([1, 2], device="npu")
+    b = torch.tensor([3, 4], device="npu")
+    out = torch.cartesian_prod(a, b)
+    expected = np.array([[1, 3], [1, 4], [2, 3], [2, 4]], dtype=np.int64)
+    np.testing.assert_array_equal(out.to("cpu").numpy(), expected)
+
+
+def test_npu_block_diag():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([[1.0, 2.0]], device="npu")
+    b = torch.tensor([[3.0], [4.0]], device="npu")
+    out = torch.block_diag(a, b)
+    expected = np.array([[1.0, 2.0, 0.0], [0.0, 0.0, 3.0], [0.0, 0.0, 4.0]], dtype=np.float32)
+    np.testing.assert_allclose(out.to("cpu").numpy(), expected, atol=1e-6, rtol=1e-6)
+
+
 def test_npu_to_cpu_synchronizes(monkeypatch):
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
