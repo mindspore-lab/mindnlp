@@ -82,6 +82,16 @@ from .ops import (
     topk,
     tril,
     triu,
+    rot90,
+    repeat,
+    repeat_interleave,
+    tile,
+    scatter,
+    tril_indices,
+    triu_indices,
+    diag,
+    cartesian_prod,
+    block_diag,
     stack,
     cat,
     concatenate,
@@ -166,6 +176,16 @@ registry.register("sort", "npu", sort, meta=meta_infer.infer_sort)
 registry.register("topk", "npu", topk, meta=meta_infer.infer_topk)
 registry.register("tril", "npu", tril, meta=meta_infer.infer_unary)
 registry.register("triu", "npu", triu, meta=meta_infer.infer_unary)
+registry.register("rot90", "npu", rot90, meta=meta_infer.infer_rot90)
+registry.register("repeat", "npu", repeat, meta=meta_infer.infer_repeat)
+registry.register("repeat_interleave", "npu", repeat_interleave, meta=meta_infer.infer_repeat_interleave)
+registry.register("tile", "npu", tile, meta=meta_infer.infer_tile)
+registry.register("scatter", "npu", scatter, meta=meta_infer.infer_scatter)
+registry.register("tril_indices", "npu", tril_indices, meta=meta_infer.infer_tril_indices)
+registry.register("triu_indices", "npu", triu_indices, meta=meta_infer.infer_triu_indices)
+registry.register("diag", "npu", diag, meta=meta_infer.infer_diag)
+registry.register("cartesian_prod", "npu", cartesian_prod, meta=meta_infer.infer_cartesian_prod)
+registry.register("block_diag", "npu", block_diag, meta=meta_infer.infer_block_diag)
 registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
 registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)

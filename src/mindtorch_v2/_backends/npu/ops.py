@@ -1361,6 +1361,74 @@ def _cumulative_out_dtype(dtype):
     return int64_dtype
 
 
+def _normalize_repeats_tuple(repeats, ndim, name):
+    if isinstance(repeats, int):
+        repeats = (int(repeats),)
+    elif isinstance(repeats, (tuple, list)):
+        repeats = tuple(int(r) for r in repeats)
+    else:
+        raise TypeError(f"{name} repeats must be int/tuple/list")
+    if len(repeats) < ndim:
+        repeats = (1,) * (ndim - len(repeats)) + repeats
+    if len(repeats) < ndim:
+        raise RuntimeError("Number of dimensions of repeat dims can not be smaller than number of dimensions of tensor")
+    return repeats
+
+
+def _build_repeat_interleave_indices(dim_size, repeats, device):
+    from .creation import zeros_create
+
+    if isinstance(repeats, int):
+        if repeats < 0:
+            raise ValueError("repeats must be non-negative")
+        output_size = int(dim_size) * int(repeats)
+        if output_size == 0:
+            return zeros_create((0,), dtype=int64_dtype, device=device), output_size
+        base = _npu_arange_1d(int(dim_size), device)
+        idx = repeat(base, (int(repeats),))
+        return idx, output_size
+
+    if not hasattr(repeats, "shape"):
+        raise TypeError("repeats must be int or Tensor")
+    if repeats.device.type != "npu":
+        raise ValueError("repeats tensor must be on NPU")
+    if repeats.dtype != int64_dtype:
+        raise TypeError("repeats tensor must be int64")
+    if repeats.dim() != 1:
+        raise RuntimeError("repeats must be 0-dim or 1-dim tensor")
+    if repeats.shape[0] not in (1, int(dim_size)):
+        raise RuntimeError(
+            f"repeats must have the same size as input along dim, but got repeats.size(0) = {repeats.shape[0]} and input.size(0) = {dim_size}"
+        )
+
+    rep_list = repeats.to("cpu").tolist()
+    if any(int(v) < 0 for v in rep_list):
+        raise ValueError("repeats must be non-negative")
+
+    if repeats.shape[0] == 1:
+        rep = int(rep_list[0])
+        return _build_repeat_interleave_indices(dim_size, rep, device)
+
+    output_size = int(sum(int(v) for v in rep_list))
+    if output_size == 0:
+        return zeros_create((0,), dtype=int64_dtype, device=device), output_size
+
+    idx_chunks = []
+    for i, rep in enumerate(rep_list):
+        rep = int(rep)
+        if rep == 0:
+            continue
+        scalar = _npu_arange_1d(int(rep), device)
+        scalar = add(scalar, _scalar_to_npu_tensor(int(i), scalar))
+        idx_chunks.append(scalar)
+
+    if not idx_chunks:
+        return zeros_create((0,), dtype=int64_dtype, device=device), 0
+    if len(idx_chunks) == 1:
+        return idx_chunks[0], output_size
+    return cat(idx_chunks, dim=0), output_size
+
+
 def flip(a, dims):
     if a.device.type != "npu":
         raise ValueError("NPU flip expects NPU tensors")
@@ -1661,6 +1729,333 @@ def triu(a, diagonal=0):
     )
     out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def rot90(a, k=1, dims=(0, 1)):
+    if a.device.type != "npu":
+        raise ValueError("NPU rot90 expects NPU tensors")
+    if a.dim() < 2:
+        raise RuntimeError(f"expected total dims >= 2, but got total dims = {a.dim()}")
+    if not isinstance(dims, (tuple, list)) or len(dims) != 2:
+        raise RuntimeError("rot90 expects dims to be a tuple of length 2")
+
+    dim0 = _normalize_dim(int(dims[0]), a.dim())
+    dim1 = _normalize_dim(int(dims[1]), a.dim())
+    if dim0 == dim1:
+        raise RuntimeError(f"expected rotation dims to be different, but got dim0 = {dim0} and dim1 = {dim1}")
+
+    k = int(k) % 4
+    if k == 0:
+        return a
+    if k == 1:
+        return view_backend.transpose(flip(a, dims=(dim1,)), dim0, dim1)
+    if k == 2:
+        return flip(flip(a, dims=(dim0,)), dims=(dim1,))
+    return view_backend.transpose(flip(a, dims=(dim0,)), dim0, dim1)
+
+
+def repeat(a, repeats):
+    if a.device.type != "npu":
+        raise ValueError("NPU repeat expects NPU tensors")
+    repeats = _normalize_repeats_tuple(repeats, a.dim(), "repeat")
+    if any(int(r) < 0 for r in repeats):
+        raise RuntimeError(f"Trying to create tensor with negative dimension {tuple(int(s) * int(r) for s, r in zip(a.shape, repeats))}")
+    if not aclnn.repeat_symbols_ok():
+        raise RuntimeError("aclnnRepeat symbols not available")
+
+    out_shape = tuple(int(s) * int(r) for s, r in zip(a.shape, repeats))
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = max(_numel(out_shape), 1)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_ptr = npu_runtime._alloc_device(out_numel * _dtype_itemsize(a.dtype), runtime=runtime)
+
+    aclnn.repeat(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        repeats,
+        out_shape,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def tile(a, dims):
+    if isinstance(dims, int):
+        raise TypeError("tile(): argument 'dims' (position 2) must be tuple of ints, not int")
+    return repeat(a, dims)
+
+
+def repeat_interleave(a, repeats, dim=None):
+    if a.device.type != "npu":
+        raise ValueError("NPU repeat_interleave expects NPU tensors")
+
+    from .creation import zeros_create
+
+    if isinstance(repeats, int) and aclnn.repeat_interleave_int_symbols_ok():
+        rep = int(repeats)
+        if rep < 0:
+            raise ValueError("repeats must be non-negative")
+        runtime = npu_runtime.get_runtime((a.device.index or 0))
+        stream = npu_state.current_stream((a.device.index or 0))
+        if dim is None:
+            in_tensor = view_backend.reshape(a, (a.numel(),))
+            output_size = in_tensor.numel() * rep
+            out_shape = (output_size,)
+        else:
+            dim = _normalize_dim(dim, a.dim())
+            in_tensor = a
+            output_size = in_tensor.shape[dim] * rep
+            out_shape = list(in_tensor.shape)
+            out_shape[dim] = output_size
+            out_shape = tuple(out_shape)
+
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_ptr = npu_runtime._alloc_device(max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype), runtime=runtime)
+        aclnn.repeat_interleave_int(
+            _unwrap_storage(in_tensor).data_ptr(),
+            out_ptr,
+            in_tensor.shape,
+            in_tensor.stride,
+            in_tensor.dtype,
+            rep,
+            None if dim is None else int(dim),
+            int(output_size),
+            out_shape,
+            out_stride,
+            runtime,
+            stream=stream.stream,
+        )
+        out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+        return _wrap_tensor(out_storage, out_shape, out_stride)
+
+    if dim is None:
+        flat = view_backend.reshape(a, (a.numel(),))
+        idx, out_size = _build_repeat_interleave_indices(flat.shape[0], repeats, a.device)
+        if out_size == 0:
+            return zeros_create((0,), dtype=a.dtype, device=a.device)
+        return index_select(flat, 0, idx)
+
+    dim = _normalize_dim(dim, a.dim())
+    idx, out_size = _build_repeat_interleave_indices(a.shape[dim], repeats, a.device)
+    out_shape = list(a.shape)
+    out_shape[dim] = out_size
+    out_shape = tuple(out_shape)
+    if out_size == 0:
+        return zeros_create(out_shape, dtype=a.dtype, device=a.device)
+    return index_select(a, dim, idx)
+
+
+def scatter(a, dim, index, src):
+    if a.device.type != "npu":
+        raise ValueError("NPU scatter expects NPU tensors")
+    dim = _normalize_dim(dim, a.dim())
+    _require_int64_indices(index, "scatter")
+    if index.dim() != a.dim():
+        raise ValueError("index shape mismatch")
+    for i, size in enumerate(index.shape):
+        if i != dim and size != a.shape[i]:
+            raise ValueError("index shape mismatch")
+    _validate_index_bounds(index, a.shape[dim], allow_negative=False, name="scatter")
+
+    if hasattr(src, "shape"):
+        if src.device.type != "npu":
+            raise ValueError("scatter src tensor must be on NPU")
+        src_tensor = src
+    else:
+        src_tensor = _scalar_to_npu_tensor(src, a)
+
+    if src_tensor.shape != index.shape:
+        src_tensor = _npu_broadcast_to(src_tensor, index.shape)
+
+    if not aclnn.scatter_symbols_ok():
+        raise RuntimeError("aclnnScatter symbols not available")
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = tuple(a.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype), runtime=runtime)
+
+    aclnn.scatter(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(index).data_ptr(),
+        _unwrap_storage(src_tensor).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        index.shape,
+        index.stride,
+        index.dtype,
+        src_tensor.shape,
+        src_tensor.stride,
+        src_tensor.dtype,
+        dim,
+        0,
+        runtime,
+        stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def tril_indices(row, col, offset=0, dtype=None, device=None, layout=None):
+    if layout is not None and layout != "strided":
+        raise ValueError("layout must be strided")
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+
+    from .creation import tensor_create
+    from ..._device import device as Device
+
+    dev = Device("cpu") if device is None else (Device(device) if isinstance(device, str) else device)
+    row = int(row)
+    col = int(col)
+    offset = int(offset)
+
+    rows = []
+    cols = []
+    for r in range(row):
+        upper = min(col - 1, r + offset)
+        if upper < 0:
+            continue
+        for c in range(upper + 1):
+            rows.append(r)
+            cols.append(c)
+
+    return tensor_create([rows, cols], dtype=dtype, device=dev)
+
+
+def triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
+    if layout is not None and layout != "strided":
+        raise ValueError("layout must be strided")
+    if row < 0 or col < 0:
+        raise ValueError("row and col must be non-negative")
+    if dtype is None:
+        dtype = int64_dtype
+
+    from .creation import tensor_create
+    from ..._device import device as Device
+
+    dev = Device("cpu") if device is None else (Device(device) if isinstance(device, str) else device)
+    row = int(row)
+    col = int(col)
+    offset = int(offset)
+
+    rows = []
+    cols = []
+    for r in range(row):
+        start = max(0, r + offset)
+        if start >= col:
+            continue
+        for c in range(start, col):
+            rows.append(r)
+            cols.append(c)
+
+    return tensor_create([rows, cols], dtype=dtype, device=dev)
+
+
+def diag(a, diagonal=0):
+    if a.device.type != "npu":
+        raise ValueError("NPU diag expects NPU tensors")
+    if a.dim() not in (1, 2):
+        raise ValueError("diag expects 1D or 2D tensor")
+    if not aclnn.diag_symbols_ok():
+        raise RuntimeError("aclnnDiag symbols not available")
+
+    from ..meta import infer as meta_infer
+    spec = meta_infer.infer_diag(a, diagonal=diagonal)
+    out_shape = spec.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_ptr = npu_runtime._alloc_device(max(_numel(out_shape), 1) * _dtype_itemsize(a.dtype), runtime=runtime)
+
+    aclnn.diag(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        int(diagonal),
+        out_shape,
+        out_stride,
+        runtime,
+        stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def cartesian_prod(*tensors):
+    if len(tensors) == 0:
+        raise RuntimeError("cartesian_prod expects at least one tensor")
+    first = tensors[0]
+    for t in tensors:
+        if t.device.type != "npu":
+            raise ValueError("NPU cartesian_prod expects NPU tensors")
+        if t.dim() != 1:
+            raise ValueError("cartesian_prod expects 1D tensors")
+        if t.dtype != first.dtype:
+            raise RuntimeError("meshgrid expects all tensors to have the same dtype")
+
+    from .creation import tensor_create
+
+    cols = [t.to("cpu").tolist() for t in tensors]
+    if any(len(c) == 0 for c in cols):
+        return tensor_create([], dtype=first.dtype, device=first.device).reshape((0, len(tensors)))
+
+    rows = [[]]
+    for c in cols:
+        rows = [prefix + [v] for prefix in rows for v in c]
+    return tensor_create(rows, dtype=first.dtype, device=first.device)
+
+
+def block_diag(*tensors):
+    from .creation import tensor_create
+
+    if len(tensors) == 0:
+        return tensor_create([[]], dtype=float_dtype, device="cpu")
+
+    first = tensors[0]
+    for t in tensors:
+        if t.device.type != "npu":
+            raise ValueError("NPU block_diag expects NPU tensors")
+        if t.dim() != 2:
+            raise ValueError("block_diag expects 2D tensors")
+        if t.dtype != first.dtype:
+            raise ValueError("block_diag expects tensors with the same dtype")
+
+    rows = sum(int(t.shape[0]) for t in tensors)
+    cols = sum(int(t.shape[1]) for t in tensors)
+    out = [[0 for _ in range(cols)] for _ in range(rows)]
+
+    r0 = 0
+    c0 = 0
+    for t in tensors:
+        data = t.to("cpu").tolist()
+        h = int(t.shape[0])
+        w = int(t.shape[1])
+        for i in range(h):
+            row_vals = data[i]
+            for j in range(w):
+                out[r0 + i][c0 + j] = row_vals[j]
+        r0 += h
+        c0 += w
+
+    return tensor_create(out, dtype=first.dtype, device=first.device)
 
 
 def nonzero(a, as_tuple=False):
