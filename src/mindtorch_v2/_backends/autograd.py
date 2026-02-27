@@ -5,9 +5,12 @@ from .._autograd.grad_mode import GradMode, no_grad
 from .._autograd.node import Node
 from .._autograd.utils import reduce_grad
 import numpy as np
+from contextlib import nullcontext
 
 
 def _strip_autograd_keys(keyset):
+    if keyset is None:
+        return None
     return keyset.without({
         DispatchKey.Autograd,
         DispatchKey.AutogradOther,
@@ -18,10 +21,27 @@ def _strip_autograd_keys(keyset):
     })
 
 
+def _grad_context(_keyset=None):
+    from .._autograd.engine import is_create_graph_enabled
+
+    if is_create_graph_enabled():
+        return nullcontext()
+    return no_grad()
+
+
+def _backward_dispatch_keyset(raw_keyset, autograd_keyset):
+    from .._autograd.engine import is_create_graph_enabled
+
+    if is_create_graph_enabled() and autograd_keyset is not None:
+        return autograd_keyset
+    return raw_keyset
+
+
 def _autograd_binary(name, backward_impl, *, save_inputs=True):
     def wrapper(a, b):
-        keyset = _strip_autograd_keys(current_dispatch_keyset())
-        out = redispatch(name, keyset, a, b)
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, b)
         if GradMode.enabled and (a.requires_grad or b.requires_grad):
             node_holder = {}
 
@@ -30,7 +50,8 @@ def _autograd_binary(name, backward_impl, *, save_inputs=True):
                     saved_a, saved_b = node_holder["node"].saved_tensors()
                 else:
                     saved_a, saved_b = a, b
-                return backward_impl(grad, a, b, saved_a, saved_b, keyset)
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, a, b, saved_a, saved_b, backward_keyset)
 
             node = Node(_backward, (a, b))
             node_holder["node"] = node
@@ -48,8 +69,9 @@ def _autograd_binary(name, backward_impl, *, save_inputs=True):
 
 def _autograd_unary_args(name, backward_impl, *, cpu_only=False, save_input=True):
     def wrapper(a, *args, **kwargs):
-        keyset = _strip_autograd_keys(current_dispatch_keyset())
-        out = redispatch(name, keyset, a, *args, **kwargs)
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, *args, **kwargs)
         if cpu_only and a.device.type != "cpu":
             return out
         if GradMode.enabled and a.requires_grad:
@@ -60,7 +82,8 @@ def _autograd_unary_args(name, backward_impl, *, cpu_only=False, save_input=True
                     saved_a = node_holder["node"].saved_tensors()[0]
                 else:
                     saved_a = a
-                return backward_impl(grad, a, saved_a, keyset, args, kwargs)
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, a, saved_a, backward_keyset, args, kwargs)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -73,8 +96,9 @@ def _autograd_unary_args(name, backward_impl, *, cpu_only=False, save_input=True
     return wrapper
 def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
     def wrapper(a, **kwargs):
-        keyset = _strip_autograd_keys(current_dispatch_keyset())
-        out = redispatch(name, keyset, a, **kwargs)
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, **kwargs)
         if cpu_only and a.device.type != "cpu":
             return out
         if GradMode.enabled and a.requires_grad:
@@ -85,7 +109,8 @@ def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
                     saved_a = node_holder["node"].saved_tensors()[0]
                 else:
                     saved_a = a
-                return backward_impl(grad, a, saved_a, keyset)
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, a, saved_a, backward_keyset)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -100,14 +125,16 @@ def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
 
 def _autograd_view(name, backward_impl):
     def wrapper(a, *args):
-        keyset = _strip_autograd_keys(current_dispatch_keyset())
-        out = redispatch(name, keyset, a, *args)
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, *args)
         if GradMode.enabled and a.requires_grad:
             node_holder = {}
 
             def _backward(grad):
                 saved_a = node_holder["node"].saved_tensors()[0]
-                return backward_impl(grad, a, saved_a, args, keyset)
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, a, saved_a, args, backward_keyset)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -121,8 +148,9 @@ def _autograd_view(name, backward_impl):
 
 def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
     def wrapper(a, *args):
-        keyset = _strip_autograd_keys(current_dispatch_keyset())
-        out = redispatch(name, keyset, a, *args)
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, *args)
         if cpu_only and a.device.type != "cpu":
             return out
         if GradMode.enabled and a.requires_grad:
@@ -133,7 +161,8 @@ def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
                     saved = node_holder["node"].saved_tensors()[0]
                 else:
                     saved = a
-                return backward_impl(grad, a, saved, args, keyset)
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, a, saved, args, backward_keyset)
 
             node = Node(_backward, (a,))
             node_holder["node"] = node
@@ -153,7 +182,7 @@ def _add_backward(grad, a, b, _saved_a, _saved_b, _keyset):
 
 
 def _mul_backward(grad, a, b, saved_a, saved_b, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         grad_a = redispatch("mul", keyset, grad, saved_b) if a.requires_grad else None
         grad_b = redispatch("mul", keyset, grad, saved_a) if b.requires_grad else None
     grad_a = reduce_grad(grad_a, a.shape) if grad_a is not None else None
@@ -162,20 +191,20 @@ def _mul_backward(grad, a, b, saved_a, saved_b, keyset):
 
 
 def _matmul_backward(grad, a, b, saved_a, saved_b, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         grad_a = redispatch("matmul", keyset, grad, saved_b.transpose(0, 1)) if a.requires_grad else None
         grad_b = redispatch("matmul", keyset, saved_a.transpose(0, 1), grad) if b.requires_grad else None
     return grad_a, grad_b
 
 
 def _sum_backward(grad, _a, saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         ones = saved_a._ones_like()
         return (redispatch("mul", keyset, grad, ones),)
 
 
 def _mean_backward(grad, _a, saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         # For mean, gradient is 1/N where N is the number of elements
         numel = saved_a.numel()
         ones = saved_a._ones_like()
@@ -187,7 +216,7 @@ def _mean_backward(grad, _a, saved_a, keyset):
 
 
 def _relu_backward(grad, _a, saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         mask = saved_a._ones_like()
         mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
         return (redispatch("mul", keyset, grad, mask),)
@@ -210,7 +239,7 @@ def _inplace_binary_backward(grad, a, _saved_a, args, _keyset):
 
 
 def _inplace_relu_backward(grad, _a, saved_a, _args, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         mask = saved_a._ones_like()
         mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
         return (redispatch("mul", keyset, grad, mask),)
@@ -277,14 +306,14 @@ def _contiguous_backward(grad, _a, _saved_a, _keyset):
 
 
 def _to_backward(grad, a, _saved_a, keyset, args, _kwargs):
-    with no_grad():
+    with _grad_context(keyset):
         return (redispatch("to", keyset, grad, a.device, non_blocking=False),)
 
 
 # --- Activation backward implementations ---
 
 def _silu_backward(grad, _a, saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         # d/dx(x * sigmoid(x)) = sigmoid(x) * (1 + x * (1 - sigmoid(x)))
         arr = saved_a.storage().data
         sig = 1.0 / (1.0 + np.exp(-arr))
@@ -296,7 +325,7 @@ def _silu_backward(grad, _a, saved_a, keyset):
 
 def _leaky_relu_backward(grad, _a, saved_a, keyset, args, kwargs):
     negative_slope = args[0] if args else kwargs.get("negative_slope", 0.01)
-    with no_grad():
+    with _grad_context(keyset):
         mask = saved_a._ones_like()
         mask.storage()._data = np.where(
             saved_a.storage().data > 0, 1.0, negative_slope
@@ -306,7 +335,7 @@ def _leaky_relu_backward(grad, _a, saved_a, keyset, args, kwargs):
 
 def _elu_backward(grad, _a, saved_a, keyset, args, kwargs):
     alpha = args[0] if args else kwargs.get("alpha", 1.0)
-    with no_grad():
+    with _grad_context(keyset):
         mask = saved_a._ones_like()
         arr = saved_a.storage().data
         # d/dx ELU = 1 if x > 0, else alpha * exp(x)
@@ -317,7 +346,7 @@ def _elu_backward(grad, _a, saved_a, keyset, args, kwargs):
 
 
 def _mish_backward(grad, _a, saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         # d/dx mish(x) = d/dx [x * tanh(softplus(x))]
         # = tanh(sp) + x * sech^2(sp) * sigmoid(x)
         # where sp = softplus(x) = log(1 + exp(x))
@@ -333,7 +362,7 @@ def _mish_backward(grad, _a, saved_a, keyset):
 
 
 def _prelu_backward(grad, a, b, saved_a, saved_b, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         arr = saved_a.storage().data
         w_arr = saved_b.storage().data
         # d/dx prelu = 1 if x > 0, else weight
@@ -352,7 +381,7 @@ def _prelu_backward(grad, a, b, saved_a, saved_b, keyset):
 
 
 def _abs_backward(grad, _a, saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         # d/dx abs(x) = sign(x) = 1 if x > 0, -1 if x < 0, 0 if x == 0
         arr = saved_a.storage().data
         sign_arr = np.sign(arr).astype(arr.dtype)
@@ -362,7 +391,7 @@ def _abs_backward(grad, _a, saved_a, keyset):
 
 
 def _neg_backward(grad, _a, _saved_a, keyset):
-    with no_grad():
+    with _grad_context(keyset):
         # d/dx (-x) = -1
         return (redispatch("neg", keyset, grad),)
 
