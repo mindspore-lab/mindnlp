@@ -42,3 +42,28 @@ def test_dispatch_relu_too_many_args_matches_torch():
         pt.relu(pt.tensor([1.0]), pt.tensor([2.0]))
 
     assert_torch_error(mt, th)
+
+
+def test_dispatch_add_rejects_unexpected_device_kw_matches_torch():
+    a = torch.tensor([1.0])
+    b = torch.tensor([2.0])
+
+    def mt():
+        dispatch("add", a.device.type, a, b, device="cpu")
+
+    def th():
+        pt.add(pt.tensor([1.0]), pt.tensor([2.0]), device="cpu")
+
+    assert_torch_error(mt, th)
+
+
+def test_dispatch_sum_rejects_invalid_keepdim_type_matches_torch():
+    a = torch.tensor([1.0])
+
+    def mt():
+        dispatch("sum", a.device.type, a, keepdim="x")
+
+    def th():
+        pt.sum(pt.tensor([1.0]), keepdim="x")
+
+    assert_torch_error(mt, th)
