@@ -849,6 +849,46 @@ def test_npu_empty_mul_relu_sign_sum():
     np.testing.assert_allclose(total.to("cpu").numpy(), 3.0)
     np.testing.assert_allclose(kept.to("cpu").numpy(), np.array([[3.0]], dtype=np.float32))
 
+
+def test_npu_concat_concatenate():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    a = torch.tensor([[1.0, 2.0]], device="npu")
+    b = torch.tensor([[3.0, 4.0]], device="npu")
+    expected_concat = np.concatenate([a.to("cpu").numpy(), b.to("cpu").numpy()], axis=1)
+    expected_concatenate = np.concatenate([a.to("cpu").numpy(), b.to("cpu").numpy()], axis=0)
+    np.testing.assert_allclose(torch.concat([a, b], dim=1).to("cpu").numpy(), expected_concat)
+    np.testing.assert_allclose(torch.concatenate([a, b], dim=0).to("cpu").numpy(), expected_concatenate)
+
+
+def test_npu_split_int_sections():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="npu")
+
+    out_int = torch.split(x, 2)
+    assert len(out_int) == 3
+    np.testing.assert_allclose(out_int[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out_int[1].to("cpu").numpy(), np.array([3.0, 4.0]))
+    np.testing.assert_allclose(out_int[2].to("cpu").numpy(), np.array([5.0]))
+
+    out_sections = torch.split(x, [2, 1, 2])
+    assert len(out_sections) == 3
+    np.testing.assert_allclose(out_sections[0].to("cpu").numpy(), np.array([1.0, 2.0]))
+    np.testing.assert_allclose(out_sections[1].to("cpu").numpy(), np.array([3.0]))
+    np.testing.assert_allclose(out_sections[2].to("cpu").numpy(), np.array([4.0, 5.0]))
+
+
+def test_npu_unbind():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="npu")
+    out = torch.unbind(x, dim=1)
+    assert len(out) == 3
+    np.testing.assert_allclose(out[0].to("cpu").numpy(), np.array([1.0, 4.0]))
+    np.testing.assert_allclose(out[1].to("cpu").numpy(), np.array([2.0, 5.0]))
+    np.testing.assert_allclose(out[2].to("cpu").numpy(), np.array([3.0, 6.0]))
+
 def test_npu_pad_constant():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
