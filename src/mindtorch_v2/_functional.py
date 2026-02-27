@@ -601,6 +601,38 @@ def equal(a, b):
     return dispatch("equal", a.device.type, a, b)
 
 
+def _compare_dispatch(op_name, a, b):
+    if not hasattr(a, "device"):
+        raise TypeError(f"'{op_name}' not supported between instances of '{type(a).__name__}' and '{type(b).__name__}'")
+    if not hasattr(b, "device") and not isinstance(b, (int, float, bool)):
+        raise TypeError(f"'{op_name}' not supported between instances of 'Tensor' and '{type(b).__name__}'")
+    return dispatch(op_name, a.device.type, a, b)
+
+
+def eq(a, b):
+    return _compare_dispatch("eq", a, b)
+
+
+def ne(a, b):
+    return _compare_dispatch("ne", a, b)
+
+
+def lt(a, b):
+    return _compare_dispatch("lt", a, b)
+
+
+def le(a, b):
+    return _compare_dispatch("le", a, b)
+
+
+def gt(a, b):
+    return _compare_dispatch("gt", a, b)
+
+
+def ge(a, b):
+    return _compare_dispatch("ge", a, b)
+
+
 def logspace(start, end, steps, dtype=None, device=None):
     dev = _as_device(device)
     return dispatch("logspace", dev, start, end, steps, dtype=dtype)

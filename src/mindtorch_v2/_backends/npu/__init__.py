@@ -119,6 +119,12 @@ from .ops import (
     atan2,
     atanh,
     equal,
+    eq,
+    ne,
+    lt,
+    le,
+    gt,
+    ge,
     fmax,
     fmin,
     fmod,
@@ -260,6 +266,12 @@ registry.register("fmod", "npu", fmod, meta=meta_infer.infer_binary)
 registry.register("allclose", "npu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "npu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "npu", equal, meta=meta_infer.infer_reduce_bool)
+registry.register("eq", "npu", eq, meta=meta_infer.infer_binary_bool)
+registry.register("ne", "npu", ne, meta=meta_infer.infer_binary_bool)
+registry.register("lt", "npu", lt, meta=meta_infer.infer_binary_bool)
+registry.register("le", "npu", le, meta=meta_infer.infer_binary_bool)
+registry.register("gt", "npu", gt, meta=meta_infer.infer_binary_bool)
+registry.register("ge", "npu", ge, meta=meta_infer.infer_binary_bool)
 registry.register("reshape", "npu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "npu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "npu", view_backend.transpose, meta=meta_infer.infer_transpose)

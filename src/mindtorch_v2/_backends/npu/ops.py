@@ -299,6 +299,8 @@ def div(a, b):
 
 
 def eq(a, b):
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if not aclnn.eq_tensor_symbols_ok():
@@ -325,6 +327,8 @@ def eq(a, b):
 
 
 def ne(a, b):
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if not aclnn.ne_tensor_symbols_ok():
