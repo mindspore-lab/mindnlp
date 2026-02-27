@@ -48,6 +48,10 @@ class OpRegistry:
 
     def register_kernel(self, name, key, fn):
         entry = self._entry(name)
+        if entry.schema_obj is None:
+            raise RuntimeError(
+                f"schema must be registered before kernel registration for op {entry.name}"
+            )
         entry.kernels[key] = fn
         return entry
 
