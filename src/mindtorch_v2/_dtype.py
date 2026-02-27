@@ -36,6 +36,9 @@ class DType:
 
 
 # Floating point types
+float8_e4m3fn = DType("float8_e4m3fn", np.uint8, 1, is_floating_point=True)
+float8_e5m2 = DType("float8_e5m2", np.uint8, 1, is_floating_point=True)
+float8_e8m0fnu = DType("float8_e8m0fnu", np.uint8, 1, is_floating_point=True)
 float16 = DType("float16", np.float16, 2, is_floating_point=True)
 float32 = DType("float32", np.float32, 4, is_floating_point=True)
 float64 = DType("float64", np.float64, 8, is_floating_point=True)
@@ -48,6 +51,9 @@ int16 = DType("int16", np.int16, 2)
 int32 = DType("int32", np.int32, 4)
 int64 = DType("int64", np.int64, 8)
 uint8 = DType("uint8", np.uint8, 1, is_signed=False)
+uint16 = DType("uint16", np.uint16, 2, is_signed=False)
+uint32 = DType("uint32", np.uint32, 4, is_signed=False)
+uint64 = DType("uint64", np.uint64, 8, is_signed=False)
 
 # Boolean
 bool = DType("bool", np.bool_, 1, is_signed=False)
@@ -69,6 +75,9 @@ cdouble = complex128
 
 
 _NUMPY_DTYPE_MAP = {
+    float8_e4m3fn: np.uint8,
+    float8_e5m2: np.uint8,
+    float8_e8m0fnu: np.uint8,
     float16: np.float16,
     float32: np.float32,
     float64: np.float64,
@@ -78,6 +87,9 @@ _NUMPY_DTYPE_MAP = {
     int32: np.int32,
     int64: np.int64,
     uint8: np.uint8,
+    uint16: np.uint16,
+    uint32: np.uint32,
+    uint64: np.uint64,
     bool: np.bool_,
     complex64: np.complex64,
     complex128: np.complex128,
@@ -93,6 +105,9 @@ _FROM_NUMPY_MAP = {
     np.dtype(np.int32): int32,
     np.dtype(np.int64): int64,
     np.dtype(np.uint8): uint8,
+    np.dtype(np.uint16): uint16,
+    np.dtype(np.uint32): uint32,
+    np.dtype(np.uint64): uint64,
     np.dtype(np.bool_): bool,
     np.dtype(np.complex64): complex64,
     np.dtype(np.complex128): complex128,
@@ -101,6 +116,9 @@ _FROM_NUMPY_MAP = {
 # Name -> DType lookup
 _NAME_MAP = {
     "float16": float16, "half": float16,
+    "float8_e4m3fn": float8_e4m3fn,
+    "float8_e5m2": float8_e5m2,
+    "float8_e8m0fnu": float8_e8m0fnu,
     "float32": float32, "float": float32,
     "float64": float64, "double": float64,
     "bfloat16": bfloat16,
@@ -109,6 +127,9 @@ _NAME_MAP = {
     "int32": int32, "int": int32,
     "int64": int64, "long": int64,
     "uint8": uint8, "byte": uint8,
+    "uint16": uint16,
+    "uint32": uint32,
+    "uint64": uint64,
     "bool": bool,
     "complex64": complex64, "cfloat": complex64,
     "complex128": complex128, "cdouble": complex128,
