@@ -3425,16 +3425,125 @@ def dropout(a, p=0.5, training=True):
 
 
 def pad(input, pad, mode='constant', value=0):
-    """Pad tensor.
+    if input.device.type != "npu":
+        raise ValueError("NPU pad expects NPU tensors")
+    if mode != "constant":
+        raise NotImplementedError("NPU pad currently supports constant mode only")
+    if not isinstance(pad, (tuple, list)):
+        raise TypeError("pad must be a tuple/list of ints")
+    if len(pad) % 2 != 0:
+        raise ValueError("pad length must be even")
+    if len(pad) > 2 * input.dim():
+        raise ValueError("padding length too large")
+    pad_vals = tuple(int(v) for v in pad)
 
-    Note: This is a placeholder implementation.
-    Full pad support requires ACLNN kernel or complex slicing/concatenation.
-    """
-    # TODO: Implement using slicing and concatenation
-    raise NotImplementedError("NPU pad not yet implemented - use CPU fallback")
+    out_shape = list(input.shape)
+    n_pairs = len(pad_vals) // 2
+    for i in range(n_pairs):
+        dim = input.dim() - 1 - i
+        left = pad_vals[2 * i]
+        right = pad_vals[2 * i + 1]
+        out_shape[dim] = out_shape[dim] + left + right
+        if out_shape[dim] < 0:
+            raise RuntimeError("negative output size is not supported")
+    out_shape = tuple(out_shape)
+
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+    out_ptr = npu_runtime._alloc_device(max(_numel(out_shape), 1) * _dtype_itemsize(input.dtype), runtime=runtime)
+
+    if not aclnn.constant_pad_nd_symbols_ok():
+        raise RuntimeError("aclnnConstantPadNd symbols not available")
+
+    aclnn.constant_pad_nd(
+        _unwrap_storage(input).data_ptr(),
+        out_ptr,
+        input.shape,
+        input.stride,
+        input.dtype,
+        pad_vals,
+        value,
+        out_shape,
+        out_stride,
+        input.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(_numel(out_shape), 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
+def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
+    if not seqs:
+        raise ValueError("pad_sequence expects a non-empty list of tensors")
 
+    first = seqs[0]
+    if first.device.type != "npu":
+        raise ValueError("NPU pad_sequence expects NPU tensors")
+    if padding_side not in ("left", "right"):
+        raise ValueError("padding_side must be 'left' or 'right'")
+
+    from .creation import full_create
+
+    max_len = max(int(t.shape[0]) for t in seqs)
+    batch = len(seqs)
+    trailing = tuple(first.shape[1:])
+    trailing_numel = 1
+    for d in trailing:
+        trailing_numel *= int(d)
+
+    if batch_first:
+        out_shape = (batch, max_len) + trailing
+    else:
+        out_shape = (max_len, batch) + trailing
+    out = full_create(out_shape, padding_value, dtype=first.dtype, device=first.device)
+
+    itemsize = _dtype_itemsize(first.dtype)
+    dst_base = int(_unwrap_storage(out).data_ptr())
+    out_stride = out.stride
+
+    for i, t in enumerate(seqs):
+        if t.device.type != "npu":
+            raise ValueError("all tensors must be NPU tensors")
+        if t.dtype != first.dtype:
+            raise ValueError("all tensors must have the same dtype")
+        if tuple(t.shape[1:]) != trailing:
+            raise ValueError("all tensors must have the same trailing dimensions")
+
+        src = t if t.is_contiguous() else contiguous(t)
+        length = int(src.shape[0])
+        start_idx = max_len - length if padding_side == "left" else 0
+
+        src_base = int(_unwrap_storage(src).data_ptr())
+        if batch_first:
+            dst_elem_offset = int(i) * int(out_stride[0]) + int(start_idx) * int(out_stride[1])
+            copy_bytes = int(length * trailing_numel * itemsize)
+            ret = npu_runtime.acl.rt.memcpy(
+                dst_base + dst_elem_offset * itemsize,
+                copy_bytes,
+                src_base,
+                copy_bytes,
+                3,
+            )
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
+        else:
+            block_bytes = int(trailing_numel * itemsize)
+            for step in range(length):
+                dst_elem_offset = (int(start_idx + step) * int(out_stride[0])) + (int(i) * int(out_stride[1]))
+                src_elem_offset = int(step) * int(src.stride[0])
+                ret = npu_runtime.acl.rt.memcpy(
+                    dst_base + dst_elem_offset * itemsize,
+                    block_bytes,
+                    src_base + src_elem_offset * itemsize,
+                    block_bytes,
+                    3,
+                )
+                if ret != npu_runtime.ACL_ERROR_CODE:
+                    raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
+    return out
 
 
 def _normalize_dim(dim, ndim):
