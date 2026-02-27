@@ -4462,8 +4462,9 @@ def index_put_impl(self_ptr, self_shape, self_stride, self_dtype,
         _defer_executor(executor)
         if tensor_list is not None and bindings.acl_destroy_tensor_list:
             bindings.acl_destroy_tensor_list(tensor_list)
-        for tensor, _ in tensor_keeps:
-            bindings.acl_destroy_tensor(tensor)
+        else:
+            for tensor, _ in tensor_keeps:
+                bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(values_tensor)
         if workspace is not None:
@@ -6086,10 +6087,11 @@ def cat(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_strid
         _maybe_sync(runtime)
     finally:
         _defer_executor(executor)
-        if bindings.acl_destroy_tensor_list:
+        if tensor_list is not None and bindings.acl_destroy_tensor_list:
             bindings.acl_destroy_tensor_list(tensor_list)
-        for tensor, _ in tensor_keeps:
-            bindings.acl_destroy_tensor(tensor)
+        else:
+            for tensor, _ in tensor_keeps:
+                bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
@@ -6138,10 +6140,11 @@ def stack(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_str
         _maybe_sync(runtime)
     finally:
         _defer_executor(executor)
-        if bindings.acl_destroy_tensor_list:
+        if tensor_list is not None and bindings.acl_destroy_tensor_list:
             bindings.acl_destroy_tensor_list(tensor_list)
-        for tensor, _ in tensor_keeps:
-            bindings.acl_destroy_tensor(tensor)
+        else:
+            for tensor, _ in tensor_keeps:
+                bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
