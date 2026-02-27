@@ -2357,7 +2357,17 @@ def _init_aclnn(bindings):
     global _ACLNN_INITIALIZED
     if _ACLNN_INITIALIZED:
         return
-    ret = bindings.aclnn_init(None)
+    # Write a minimal config JSON for aclnnInit.
+    # Without this config, some ACLNN ops (e.g. aclnnGroupNorm) can corrupt
+    # internal state and cause subsequent ops to fail with error 561103.
+    # This matches the pattern used by torch_npu and MindSpore.
+    import json, tempfile, os
+    config = {"dump": {"dump_scene": "lite_exception"}}
+    config_path = os.path.join(tempfile.gettempdir(), "mindtorch_aclnn_config.json")
+    if not os.path.exists(config_path):
+        with open(config_path, "w") as f:
+            json.dump(config, f)
+    ret = bindings.aclnn_init(config_path.encode("utf-8"))
     if ret != 0:
         raise RuntimeError(f"aclnnInit failed: {ret}")
     _ACLNN_INITIALIZED = True
@@ -2484,7 +2494,7 @@ def add(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep, alpha_arr)
 
 
@@ -2530,7 +2540,7 @@ def mul(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -2584,7 +2594,7 @@ def sub(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep, alpha_arr)
 
 
@@ -2632,7 +2642,7 @@ def div(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -2682,7 +2692,7 @@ def add_scalar(self_ptr, scalar_value, out_ptr, shape, stride, dtype, runtime, s
         bindings.acl_destroy_scalar(scalar)
         bindings.acl_destroy_scalar(alpha)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, scalar_keep)
 
 
@@ -2729,7 +2739,7 @@ def sub_scalar(self_ptr, scalar_value, out_ptr, shape, stride, dtype, runtime, s
         bindings.acl_destroy_tensor(out_tensor)
         bindings.acl_destroy_scalar(scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, scalar_keep)
 
 
@@ -2777,7 +2787,7 @@ def maximum(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, 
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -2825,7 +2835,7 @@ def minimum(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, 
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -2884,7 +2894,7 @@ def atan2(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, ot
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -2981,7 +2991,7 @@ def relu(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep)
 
 
@@ -3024,7 +3034,7 @@ def inplace_one(out_ptr, shape, stride, dtype, runtime, stream=None):
         _defer_executor(executor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = out_keep
 
 
@@ -3065,7 +3075,7 @@ def inplace_zero(out_ptr, shape, stride, dtype, runtime, stream=None):
         _defer_executor(executor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = out_keep
 
 
@@ -3121,7 +3131,7 @@ def reduce_sum(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, runtime, 
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, dim_array)
 
 
@@ -3170,7 +3180,7 @@ def argmax(self_ptr, out_ptr, shape, stride, dtype, dim, keepdim, out_shape, out
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep)
 
 
@@ -3216,7 +3226,7 @@ def argmin(self_ptr, out_ptr, shape, stride, dtype, dim, keepdim, out_shape, out
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep)
 
 
@@ -3266,7 +3276,7 @@ def max_dim(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim,
         bindings.acl_destroy_tensor(out_tensor)
         bindings.acl_destroy_tensor(index_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, index_keep)
 
 
@@ -3316,7 +3326,7 @@ def min_dim(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim,
         bindings.acl_destroy_tensor(out_tensor)
         bindings.acl_destroy_tensor(index_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, index_keep)
 
 
@@ -3362,7 +3372,7 @@ def cast(self_ptr, out_ptr, shape, stride, src_dtype, dst_dtype, runtime, stream
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep)
 
 
@@ -3421,7 +3431,7 @@ def arange(start, end, step, out_ptr, out_shape, out_stride, dtype, runtime, str
         if step_scalar is not None:
             bindings.acl_destroy_scalar(step_scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (out_keep, start_keep, end_keep, step_keep)
 
 
@@ -3475,7 +3485,7 @@ def linspace(start, end, steps, out_ptr, out_shape, out_stride, dtype, runtime, 
         if end_scalar is not None:
             bindings.acl_destroy_scalar(end_scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (out_keep, start_keep, end_keep)
 
 
@@ -3518,7 +3528,7 @@ def eye(n, m, out_ptr, out_shape, out_stride, dtype, runtime, stream=None):
         _defer_executor(executor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (out_keep,)
 
 
@@ -3577,7 +3587,7 @@ def range_(start, end, step, out_ptr, out_shape, out_stride, dtype, runtime, str
         if step_scalar is not None:
             bindings.acl_destroy_scalar(step_scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (out_keep, start_keep, end_keep, step_keep)
 
 
@@ -3636,7 +3646,7 @@ def flip(self_ptr, out_ptr, shape, stride, dtype, dims, runtime, stream=None):
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, dims_arr)
 
 
@@ -3694,7 +3704,7 @@ def roll(self_ptr, out_ptr, shape, stride, dtype, shifts, dims, runtime, stream=
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, shifts_arr, dims_arr)
 
 
@@ -4579,7 +4589,7 @@ def logical_xor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 def logical_or(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
@@ -4626,7 +4636,7 @@ def logical_or(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shap
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 def logical_and(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
@@ -4673,7 +4683,7 @@ def logical_and(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -4725,7 +4735,7 @@ def swhere(cond_ptr, self_ptr, other_ptr, out_ptr, cond_shape, cond_stride, self
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (cond_keep, self_keep, other_keep, out_keep)
 
 
@@ -4864,7 +4874,7 @@ def softplus(self_ptr, out_ptr, shape, stride, dtype, beta, threshold, runtime, 
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, beta_keep, threshold_keep)
 
 
@@ -4914,7 +4924,7 @@ def hardtanh(self_ptr, out_ptr, shape, stride, dtype, min_val, max_val, runtime,
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, min_keep, max_keep)
 
 
@@ -4972,7 +4982,7 @@ def clamp_scalar(self_ptr, out_ptr, shape, stride, dtype, min_val, max_val, runt
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, min_keep, max_keep)
 
 
@@ -5019,7 +5029,7 @@ def clamp_min_scalar(self_ptr, out_ptr, shape, stride, dtype, min_val, runtime, 
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, min_keep)
 
 
@@ -5066,7 +5076,7 @@ def clamp_max_scalar(self_ptr, out_ptr, shape, stride, dtype, max_val, runtime, 
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, max_keep)
 
 
@@ -5117,7 +5127,7 @@ def clamp_tensor(self_ptr, min_ptr, max_ptr, out_ptr, self_shape, self_stride, m
         bindings.acl_destroy_tensor(max_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, min_keep, max_keep, out_keep)
 
 
@@ -5165,7 +5175,7 @@ def clamp_min_tensor(self_ptr, min_ptr, out_ptr, self_shape, self_stride, min_sh
         bindings.acl_destroy_tensor(min_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, min_keep, out_keep)
 
 
@@ -5213,7 +5223,7 @@ def clamp_max_tensor(self_ptr, max_ptr, out_ptr, self_shape, self_stride, max_sh
         bindings.acl_destroy_tensor(max_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, max_keep, out_keep)
 
 
@@ -5262,7 +5272,7 @@ def eq_scalar(self_ptr, scalar_value, out_ptr, shape, stride, dtype, runtime, st
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, scalar_keep)
 
 
@@ -5311,7 +5321,7 @@ def eq_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 def ne_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
@@ -5358,7 +5368,7 @@ def ne_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -5559,7 +5569,7 @@ def pow_tensor_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, oth
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, other_keep, out_keep)
 
 
@@ -5607,7 +5617,7 @@ def pow_tensor_scalar(self_ptr, scalar_value, out_ptr, shape, stride, dtype, run
         if scalar:
             bindings.acl_destroy_scalar(scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep, scalar_keep)
 
 
@@ -5681,7 +5691,7 @@ def matmul(a_ptr, b_ptr, out_ptr, a_shape, a_stride, b_shape, b_stride, out_shap
         bindings.acl_destroy_tensor(b_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (a_keep, b_keep, out_keep)
 
 
@@ -6082,7 +6092,7 @@ def cat(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_strid
             bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def stack(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_stride, out_dtype, runtime, stream=None):
@@ -6134,7 +6144,7 @@ def stack(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_str
             bindings.acl_destroy_tensor(tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def s_where(condition_ptr, self_ptr, other_ptr, out_ptr,
@@ -6193,7 +6203,7 @@ def s_where(condition_ptr, self_ptr, other_ptr, out_ptr,
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
         _ = (condition_keep, self_keep, other_keep, out_keep)
 
 
@@ -6289,7 +6299,7 @@ def mean(self_ptr, out_ptr, shape, stride, dtype, dims, keepdim, out_shape, out_
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def softmax(self_ptr, out_ptr, shape, stride, dtype, dim, runtime, stream=None):
@@ -6338,7 +6348,7 @@ def softmax(self_ptr, out_ptr, shape, stride, dtype, dim, runtime, stream=None):
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def log_softmax(self_ptr, out_ptr, shape, stride, dtype, dim, runtime, stream=None):
@@ -6387,7 +6397,7 @@ def log_softmax(self_ptr, out_ptr, shape, stride, dtype, dim, runtime, stream=No
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def gelu(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
@@ -6435,7 +6445,7 @@ def gelu(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def layer_norm(input_ptr, weight_ptr, bias_ptr, out_ptr, mean_ptr, rstd_ptr,
@@ -6521,7 +6531,7 @@ def layer_norm(input_ptr, weight_ptr, bias_ptr, out_ptr, mean_ptr, rstd_ptr,
         if bias_tensor is not None:
             bindings.acl_destroy_tensor(bias_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def embedding(weight_ptr, indices_ptr, out_ptr, weight_shape, weight_stride,
@@ -6574,7 +6584,7 @@ def embedding(weight_ptr, indices_ptr, out_ptr, weight_shape, weight_stride,
         bindings.acl_destroy_tensor(indices_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 
@@ -6632,7 +6642,7 @@ def gather(self_ptr, index_ptr, out_ptr,
         bindings.acl_destroy_tensor(index_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def masked_select(self_ptr, mask_ptr, out_ptr,
@@ -6687,7 +6697,7 @@ def masked_select(self_ptr, mask_ptr, out_ptr,
         bindings.acl_destroy_tensor(mask_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def gather_symbols_ok():
@@ -6870,7 +6880,7 @@ def silu(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def leaky_relu(self_ptr, out_ptr, shape, stride, dtype, negative_slope, runtime, stream=None):
@@ -6925,7 +6935,7 @@ def leaky_relu(self_ptr, out_ptr, shape, stride, dtype, negative_slope, runtime,
         bindings.acl_destroy_tensor(out_tensor)
         bindings.acl_destroy_scalar(slope_scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def elu(self_ptr, out_ptr, shape, stride, dtype, alpha, runtime, stream=None):
@@ -6988,7 +6998,7 @@ def elu(self_ptr, out_ptr, shape, stride, dtype, alpha, runtime, stream=None):
         bindings.acl_destroy_scalar(scale_scalar)
         bindings.acl_destroy_scalar(input_scale_scalar)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def mish(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
@@ -7036,7 +7046,7 @@ def mish(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def prelu(self_ptr, weight_ptr, out_ptr, shape, stride, weight_shape, weight_stride, dtype, runtime, stream=None):
@@ -7087,7 +7097,7 @@ def prelu(self_ptr, weight_ptr, out_ptr, shape, stride, weight_shape, weight_str
         bindings.acl_destroy_tensor(weight_tensor)
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def batch_norm(input_ptr, weight_ptr, bias_ptr, running_mean_ptr, running_var_ptr, out_ptr,
@@ -7114,27 +7124,17 @@ def batch_norm(input_ptr, weight_ptr, bias_ptr, running_mean_ptr, running_var_pt
     # Allocate auxiliary output tensors (saveMean, saveInvstd) required by ACLNN.
     # ACLNN does not accept NULL for these even if we don't need the values.
     # Shape is (C,) where C is the number of channels; dtype is always float32.
+    # IMPORTANT: Must use allocator (not acl.rt.malloc) to avoid memory corruption.
     C = input_shape[1] if len(input_shape) >= 2 else 1
     aux_shape = (C,)
     aux_stride = (1,)
     aux_dtype = "float32"
     aux_itemsize = 4  # float32
 
-    save_mean_ptr = None
-    save_invstd_ptr = None
-    save_mean_tensor = None
-    save_invstd_tensor = None
-    save_mean_keep = None
-    save_invstd_keep = None
-
-    # Allocate saveMean and saveInvstd device buffers (always, training or not)
-    save_mean_ptr, ret = acl.rt.malloc(C * aux_itemsize, 0)
-    if ret != 0:
-        raise RuntimeError(f"acl.rt.malloc for saveMean failed: {ret}")
-    save_invstd_ptr, ret = acl.rt.malloc(C * aux_itemsize, 0)
-    if ret != 0:
-        runtime.defer_free(save_mean_ptr)
-        raise RuntimeError(f"acl.rt.malloc for saveInvstd failed: {ret}")
+    # Import here to avoid circular dependency
+    from . import runtime as npu_runtime_module
+    save_mean_ptr = npu_runtime_module._alloc_device(C * aux_itemsize, runtime=runtime)
+    save_invstd_ptr = npu_runtime_module._alloc_device(C * aux_itemsize, runtime=runtime)
 
     save_mean_tensor, save_mean_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, save_mean_ptr)
     save_invstd_tensor, save_invstd_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, save_invstd_ptr)
@@ -7198,7 +7198,7 @@ def batch_norm(input_ptr, weight_ptr, bias_ptr, running_mean_ptr, running_var_pt
         if save_invstd_ptr is not None:
             runtime.defer_free(save_invstd_ptr)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def group_norm(input_ptr, weight_ptr, bias_ptr, out_ptr,
@@ -7212,8 +7212,17 @@ def group_norm(input_ptr, weight_ptr, bias_ptr, out_ptr,
     if bindings.aclnn_group_norm_get_workspace is None or bindings.aclnn_group_norm is None:
         raise RuntimeError("aclnnGroupNorm symbols not available")
 
-    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    # Extract N, C, HxW from input shape
+    N = input_shape[0]
+    C = input_shape[1]
+    HxW = 1
+    for dim in input_shape[2:]:
+        HxW *= dim
+
+    # Use NCHW format for input/output tensors (required on Ascend 910B for norm ops)
+    input_fmt = _ACL_FORMAT_NCHW if len(input_shape) >= 4 else _ACL_FORMAT_ND
+    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr, input_fmt)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, input_fmt)
 
     # Optional tensors
     weight_tensor = _create_tensor(bindings, weight_shape, weight_stride, dtype, weight_ptr)[0] if weight_ptr else None
@@ -7223,29 +7232,19 @@ def group_norm(input_ptr, weight_ptr, bias_ptr, out_ptr,
     workspace_size = ctypes.c_uint64(0)
     workspace = None
 
-    # Extract N, C, HxW from input shape
-    N = input_shape[0]
-    C = input_shape[1]
-    HxW = 1
-    for dim in input_shape[2:]:
-        HxW *= dim
-
     # Allocate auxiliary output tensors (meanOut, rstdOut) required by ACLNN.
     # ACLNN does not accept NULL for these even if we don't need the values.
     # Shape is (N, num_groups); dtype is always float32.
+    # IMPORTANT: Must use allocator (not acl.rt.malloc) to avoid memory corruption.
     aux_shape = (N, num_groups)
     aux_stride = (num_groups, 1)
     aux_dtype = "float32"
     aux_itemsize = 4  # float32
     aux_numel = N * num_groups
 
-    mean_out_ptr, ret = acl.rt.malloc(aux_numel * aux_itemsize, 0)
-    if ret != 0:
-        raise RuntimeError(f"acl.rt.malloc for meanOut failed: {ret}")
-    rstd_out_ptr, ret = acl.rt.malloc(aux_numel * aux_itemsize, 0)
-    if ret != 0:
-        runtime.defer_free(mean_out_ptr)
-        raise RuntimeError(f"acl.rt.malloc for rstdOut failed: {ret}")
+    from . import runtime as npu_runtime_module
+    mean_out_ptr = npu_runtime_module._alloc_device(aux_numel * aux_itemsize, runtime=runtime)
+    rstd_out_ptr = npu_runtime_module._alloc_device(aux_numel * aux_itemsize, runtime=runtime)
 
     mean_out_tensor, mean_out_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, mean_out_ptr)
     rstd_out_tensor, rstd_out_keep = _create_tensor(bindings, aux_shape, aux_stride, aux_dtype, rstd_out_ptr)
@@ -7297,8 +7296,7 @@ def group_norm(input_ptr, weight_ptr, bias_ptr, out_ptr,
         runtime.defer_free(mean_out_ptr)
         runtime.defer_free(rstd_out_ptr)
         if workspace is not None:
-            runtime.defer_free(workspace)
-
+            runtime.defer_raw_free(workspace)
 
 
 def dropout_symbols_ok():
@@ -7385,7 +7383,7 @@ def dropout_gen_mask(shape, p, seed, offset, mask_ptr, mask_numel, runtime, stre
         if shape_arr:
             bindings.acl_destroy_int_array(shape_arr)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def dropout_do_mask(input_ptr, mask_ptr, out_ptr, shape, stride, dtype, mask_numel, p, runtime, stream=None):
@@ -7442,7 +7440,7 @@ def dropout_do_mask(input_ptr, mask_ptr, out_ptr, shape, stride, dtype, mask_num
         bindings.acl_destroy_tensor(out_tensor)
         bindings.acl_destroy_tensor(mask_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def inplace_normal(self_ptr, shape, stride, dtype, mean, std, seed, offset, runtime, stream=None):
@@ -7491,7 +7489,7 @@ def inplace_normal(self_ptr, shape, stride, dtype, mean, std, seed, offset, runt
         _defer_executor(executor)
         bindings.acl_destroy_tensor(self_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)
 
 
 def inplace_uniform(self_ptr, shape, stride, dtype, low, high, seed, offset, runtime, stream=None):
@@ -7540,4 +7538,4 @@ def inplace_uniform(self_ptr, shape, stride, dtype, low, high, seed, offset, run
         _defer_executor(executor)
         bindings.acl_destroy_tensor(self_tensor)
         if workspace is not None:
-            runtime.defer_free(workspace)
+            runtime.defer_raw_free(workspace)

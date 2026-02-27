@@ -3322,40 +3322,56 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None,
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    """Compute group normalization using aclnnGroupNorm."""
-    runtime = npu_runtime.get_runtime((input.device.index or 0))
-    stream = npu_state.current_stream((input.device.index or 0))
+    """Compute group normalization using aclnnLayerNorm (composite implementation).
 
-    if not aclnn.group_norm_symbols_ok():
-        raise RuntimeError("aclnnGroupNorm not available")
+    This avoids the aclnnGroupNorm state contamination bug in CANN 8.3.RC2.
+    Algorithm:
+    1. Reshape input from (N, C, H, W) to (N*num_groups, C//num_groups * H * W)
+    2. Apply layer_norm over the last dimension (normalizes each group independently)
+    3. Reshape back to (N, C, H, W)
+    4. Apply affine transform: result * weight + bias
+    """
+    if not aclnn.layer_norm_symbols_ok():
+        raise RuntimeError("aclnnLayerNorm not available (required for group_norm)")
 
-    out_shape = input.shape
-    out_stride = npu_runtime._contiguous_stride(out_shape)
-    out_numel = _numel(out_shape)
-    itemsize = _dtype_itemsize(input.dtype)
-    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+    # Extract dimensions
+    N = input.shape[0]
+    C = input.shape[1]
+    spatial_dims = input.shape[2:]
+    spatial_size = 1
+    for dim in spatial_dims:
+        spatial_size *= dim
 
-    weight_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
-    bias_ptr = _unwrap_storage(bias).data_ptr() if bias is not None else None
+    if C % num_groups != 0:
+        raise ValueError(f"num_channels ({C}) must be divisible by num_groups ({num_groups})")
 
-    aclnn.group_norm(
-        _unwrap_storage(input).data_ptr(),
-        weight_ptr,
-        bias_ptr,
-        out_ptr,
-        input.shape, input.stride,
-        weight.shape if weight is not None else (),
-        weight.stride if weight is not None else (),
-        bias.shape if bias is not None else (),
-        bias.stride if bias is not None else (),
-        out_shape, out_stride,
-        num_groups, eps,
-        input.dtype,
-        runtime, stream=stream.stream
-    )
+    channels_per_group = C // num_groups
 
-    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
+    # Step 1: Reshape to (N*num_groups, channels_per_group * spatial_size)
+    reshaped_shape = (N * num_groups, channels_per_group * spatial_size)
+    reshaped = reshape(input, reshaped_shape)
+
+    # Step 2: Apply layer_norm over the last dimension (no weight/bias yet)
+    normalized_shape = (channels_per_group * spatial_size,)
+    normalized = layer_norm(reshaped, normalized_shape, weight=None, bias=None, eps=eps)
+
+    # Step 3: Reshape back to original shape
+    result = reshape(normalized, input.shape)
+
+    # Step 4: Apply affine transform if weight/bias provided
+    if weight is not None:
+        # Reshape weight from (C,) to (1, C, 1, 1, ...) for broadcasting
+        weight_shape = (1, C) + (1,) * len(spatial_dims)
+        weight_reshaped = reshape(weight, weight_shape)
+        result = mul(result, weight_reshaped)
+
+    if bias is not None:
+        # Reshape bias from (C,) to (1, C, 1, 1, ...) for broadcasting
+        bias_shape = (1, C) + (1,) * len(spatial_dims)
+        bias_reshaped = reshape(bias, bias_shape)
+        result = add(result, bias_reshaped)
+
+    return result
 
 
 def dropout(a, p=0.5, training=True):

@@ -59,6 +59,7 @@ class _Runtime:
         self.stream = None
         self._deferred_frees = []
         self._deferred_host_frees = []
+        self._deferred_raw_frees = []
 
     def init(self, device_id=0):
         if self.initialized:
@@ -195,6 +196,12 @@ class _Runtime:
             return
         self._deferred_frees.append(ptr)
 
+    def defer_raw_free(self, ptr):
+        """Defer freeing a raw acl.rt.malloc pointer (not managed by the allocator)."""
+        if ptr is None:
+            return
+        self._deferred_raw_frees.append(ptr)
+
     def synchronize(self):
         if not self.initialized:
             return
@@ -206,6 +213,12 @@ class _Runtime:
         self._deferred_frees = []
         for ptr in frees:
             npu_allocator.get_allocator(self.device_id).free(ptr)
+        raw_frees = self._deferred_raw_frees
+        self._deferred_raw_frees = []
+        for ptr in raw_frees:
+            ret = acl.rt.free(ptr)
+            if ret != ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.free failed: {ret}")
         host_frees = self._deferred_host_frees
         self._deferred_host_frees = []
         for ptr in host_frees:
