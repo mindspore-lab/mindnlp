@@ -40,6 +40,7 @@ from ._functional import hypot as hypot_dispatch, remainder as remainder_dispatc
 from ._functional import all as all_dispatch, any as any_dispatch, argmax as argmax_dispatch
 from ._functional import argmin as argmin_dispatch, count_nonzero as count_nonzero_dispatch
 from ._functional import allclose as allclose_dispatch, isclose as isclose_dispatch, equal as equal_dispatch
+from ._functional import eq as eq_dispatch, ne as ne_dispatch, lt as lt_dispatch, le as le_dispatch, gt as gt_dispatch, ge as ge_dispatch
 from ._functional import cumsum as cumsum_dispatch, cumprod as cumprod_dispatch, cummax as cummax_dispatch
 from ._functional import argsort as argsort_dispatch, sort as sort_dispatch, topk as topk_dispatch
 from ._functional import tril as tril_dispatch, triu as triu_dispatch, diag as diag_dispatch
@@ -255,6 +256,10 @@ class Tensor:
         return float(self.item())
 
     def __bool__(self):
+        if self.numel() == 0:
+            raise RuntimeError("Boolean value of Tensor with no values is ambiguous")
+        if self.numel() > 1:
+            raise RuntimeError("Boolean value of Tensor with more than one value is ambiguous")
         return bool(self.item())
 
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
@@ -788,41 +793,39 @@ class Tensor:
         for i in range(len(self)):
             yield self[i]
 
+    @staticmethod
+    def _is_scalar_comparable(other):
+        return isinstance(other, (int, float, bool))
+
     def __gt__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() > other.item()
-        return self.item() > other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return gt_dispatch(self, other)
+        return NotImplemented
 
     def __lt__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() < other.item()
-        return self.item() < other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return lt_dispatch(self, other)
+        return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() >= other.item()
-        return self.item() >= other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return ge_dispatch(self, other)
+        return NotImplemented
 
     def __le__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() <= other.item()
-        return self.item() <= other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return le_dispatch(self, other)
+        return NotImplemented
 
     def __eq__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() == other.item()
-        return self.item() == other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return eq_dispatch(self, other)
+        return False
+
+    def __ne__(self, other):
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return ne_dispatch(self, other)
+        return True
 
     def __hash__(self):
         return id(self)
-
-    def __ne__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() != other.item()
-        return self.item() != other

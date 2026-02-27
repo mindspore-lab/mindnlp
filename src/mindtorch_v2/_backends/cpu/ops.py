@@ -585,6 +585,36 @@ def equal(a, b):
     return np.array_equal(_to_numpy(a), _to_numpy(b))
 
 
+def eq(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def ne(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.not_equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def lt(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.less(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def le(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.less_equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def gt(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.greater(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def ge(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.greater_equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
 def add_(a, b):
     arr = _to_numpy(a)
     arr += _to_numpy(b)

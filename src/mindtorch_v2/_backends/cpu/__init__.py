@@ -57,6 +57,12 @@ from .ops import (
     allclose,
     isclose,
     equal,
+    eq,
+    ne,
+    lt,
+    le,
+    gt,
+    ge,
     add_,
     mul_,
     relu_,
@@ -276,6 +282,12 @@ registry.register("unbind", "cpu", unbind, meta=meta_infer.infer_unbind)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)
+registry.register("eq", "cpu", eq, meta=meta_infer.infer_binary_bool)
+registry.register("ne", "cpu", ne, meta=meta_infer.infer_binary_bool)
+registry.register("lt", "cpu", lt, meta=meta_infer.infer_binary_bool)
+registry.register("le", "cpu", le, meta=meta_infer.infer_binary_bool)
+registry.register("gt", "cpu", gt, meta=meta_infer.infer_binary_bool)
+registry.register("ge", "cpu", ge, meta=meta_infer.infer_binary_bool)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "cpu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "cpu", relu_, meta=meta_infer.infer_unary)
