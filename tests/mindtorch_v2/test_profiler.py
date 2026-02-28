@@ -487,3 +487,44 @@ def test_key_averages_row_getitem_and_attr_consistency():
     assert first.self_cpu_time_total == first["self_cpu_time_total"]
     assert first.cpu_time_total == first["cpu_time_total"]
     assert first.count == first["count"]
+
+
+def test_key_averages_exposes_self_cpu_time_total_aggregate():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+        _ = x * x
+
+    rows = prof.key_averages()
+    per_row_sum = sum(row.self_cpu_time_total for row in rows)
+
+    assert rows.self_cpu_time_total == pytest.approx(per_row_sum)
+
+
+def test_key_averages_total_average_returns_total_row():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    total = rows.total_average()
+
+    assert total.key == "Total"
+    assert total.count == sum(row.count for row in rows)
+    assert total.self_cpu_time_total == pytest.approx(rows.self_cpu_time_total)
+
+
+def test_key_averages_empty_events_total_average_is_zero():
+    with torch.profiler.profile() as prof:
+        pass
+
+    rows = prof.key_averages()
+    total = rows.total_average()
+
+    assert len(rows) == 0
+    assert rows.self_cpu_time_total == 0
+    assert total.key == "Total"
+    assert total.count == 0
+    assert total.self_cpu_time_total == 0
+    assert total.cpu_time_total == 0
+    assert total.cpu_time == 0.0

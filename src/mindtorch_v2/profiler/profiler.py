@@ -539,6 +539,36 @@ class _KeyAverages:
     def __getitem__(self, idx):
         return self._row_objects()[idx]
 
+    def _aggregate_totals(self):
+        rows = self._build_rows()
+        if not rows:
+            return {"count": 0, "self_time_ns": 0, "total_time_ns": 0}
+
+        return {
+            "count": sum(int(row.get("count", 0)) for row in rows),
+            "self_time_ns": sum(int(row.get("self_time_ns", 0)) for row in rows),
+            "total_time_ns": sum(int(row.get("total_time_ns", 0)) for row in rows),
+        }
+
+    @property
+    def self_cpu_time_total(self):
+        totals = self._aggregate_totals()
+        return float(totals["self_time_ns"]) / 1000.0
+
+    def total_average(self):
+        totals = self._aggregate_totals()
+        count = totals["count"]
+        total_time_ns = totals["total_time_ns"]
+        avg_time_ns = total_time_ns / count if count > 0 else 0
+        row = {
+            "name": "Total",
+            "device_type": "CPU",
+            "count": count,
+            "self_time_ns": totals["self_time_ns"],
+            "total_time_ns": total_time_ns,
+            "avg_time_ns": avg_time_ns,
+        }
+        return _FunctionEventAvgRow(row)
 
     def table(self, sort_by="self_cpu_time_total", row_limit=100):
         if sort_by not in self._SORT_MAP:
