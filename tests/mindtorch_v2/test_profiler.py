@@ -384,3 +384,30 @@ def test_key_averages_self_time_not_greater_than_total():
     assert rows
     for row in rows:
         assert row["self_time_ns"] <= row["total_time_ns"]
+
+
+def test_profiler_events_include_correlation_id_for_ops():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert all("correlation_id" in event for event in op_events)
+    assert len({event["correlation_id"] for event in op_events}) == len(op_events)
+
+
+def test_export_chrome_trace_includes_runtime_correlation_fields(tmp_path):
+    out = tmp_path / "trace_runtime_correlation.json"
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    op_events = [event for event in payload["traceEvents"] if event.get("cat") == "op"]
+    assert op_events
+    args = op_events[0].get("args", {})
+    assert "correlation_id" in args
+    assert "runtime_name" in args
+    assert "runtime_tid" in args
