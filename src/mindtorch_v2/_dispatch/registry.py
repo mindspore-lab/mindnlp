@@ -146,3 +146,37 @@ def resolve_dispatch_key(device):
     if device == "cpu":
         return DispatchKey.CPU
     return DispatchKey.CPU
+
+
+_DISPATCH_KEY_STRING_MAP = {
+    "CPU": DispatchKey.CPU,
+    "NPU": DispatchKey.NPU,
+    "PrivateUse1": DispatchKey.NPU,
+    "Meta": DispatchKey.Meta,
+    "Autograd": DispatchKey.Autograd,
+    "AutogradCPU": DispatchKey.AutogradCPU,
+    "AutogradNPU": DispatchKey.AutogradNPU,
+    "AutogradPrivateUse1": DispatchKey.AutogradNPU,
+    "AutogradMeta": DispatchKey.AutogradMeta,
+    "AutogradOther": DispatchKey.AutogradOther,
+    "AutogradXPU": DispatchKey.AutogradXPU,
+    "CompositeImplicitAutograd": DispatchKey.CompositeImplicitAutograd,
+    "CompositeExplicitAutograd": DispatchKey.CompositeExplicitAutograd,
+    "BackendSelect": DispatchKey.BackendSelect,
+    "Functionalize": DispatchKey.Functionalize,
+    "ADInplaceOrView": DispatchKey.ADInplaceOrView,
+}
+
+
+def dispatch_key_from_string(name):
+    """Map a dispatch key string to a DispatchKey enum value.
+
+    Raises ValueError if the string is not recognized.
+    """
+    key = _DISPATCH_KEY_STRING_MAP.get(name)
+    if key is None:
+        raise ValueError(
+            f"Unknown dispatch key string: {name!r}. "
+            f"Valid keys: {', '.join(sorted(_DISPATCH_KEY_STRING_MAP))}"
+        )
+    return key
