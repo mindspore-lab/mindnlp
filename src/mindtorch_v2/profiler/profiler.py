@@ -12,6 +12,8 @@ from .common import ProfilerActivity, ProfilerAction
 _ACTIVE_SESSION = None
 _ACTIVE_LOCK = threading.Lock()
 _SCOPE_STATE = threading.local()
+_CORRELATION_LOCK = threading.Lock()
+_CORRELATION_ID = 0
 
 
 @dataclass
@@ -253,6 +255,13 @@ def _memory_allocated_snapshot(device_type):
     return None
 
 
+
+def _next_correlation_id():
+    global _CORRELATION_ID
+    with _CORRELATION_LOCK:
+        _CORRELATION_ID += 1
+        return _CORRELATION_ID
+
 def _active_session():
     return _ACTIVE_SESSION
 
@@ -291,6 +300,12 @@ def dispatch_op_enter(name, dispatch_device, args, kwargs):
                     metadata[f"{prefix}_before"] = before
         if not metadata:
             metadata = None
+
+    if metadata is None:
+        metadata = {}
+    metadata["correlation_id"] = _next_correlation_id()
+    metadata["runtime_name"] = "dispatch_kernel"
+    metadata["runtime_tid"] = threading.get_ident()
 
     return session.make_op_token(name, device_type, metadata)
 
