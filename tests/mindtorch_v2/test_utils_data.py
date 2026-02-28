@@ -366,3 +366,28 @@ def test_dataloader_multiprocess_worker_error_raises_runtimeerror():
     loader = DataLoader(CrashDataset(), batch_size=1, num_workers=1)
     with pytest.raises(RuntimeError, match='DataLoader worker'):
         list(loader)
+
+
+
+def test_dataloader_multiprocessing_context_invalid_type_error():
+    ds = RangeDataset(2)
+    with pytest.raises(TypeError, match='multiprocessing_context option should be a valid context object'):
+        DataLoader(ds, num_workers=1, multiprocessing_context=123)
+
+
+def test_dataloader_multiprocessing_context_invalid_string_error():
+    ds = RangeDataset(2)
+    with pytest.raises(ValueError, match='multiprocessing_context option should specify a valid start method'):
+        DataLoader(ds, num_workers=1, multiprocessing_context='bad')
+
+
+def test_dataloader_spawn_context_string_and_object():
+    import multiprocessing as mp
+
+    ds = RangeDataset(4)
+    loader_by_string = DataLoader(ds, batch_size=2, num_workers=1, multiprocessing_context='spawn')
+    assert list(loader_by_string) == [[0, 1], [2, 3]]
+
+    ctx = mp.get_context('spawn')
+    loader_by_object = DataLoader(ds, batch_size=2, num_workers=1, multiprocessing_context=ctx)
+    assert list(loader_by_object) == [[0, 1], [2, 3]]

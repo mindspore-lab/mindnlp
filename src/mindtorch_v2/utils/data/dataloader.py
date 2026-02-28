@@ -292,8 +292,29 @@ class DataLoader:
     def _resolve_multiprocessing_context(multiprocessing_context):
         if multiprocessing_context is None:
             return mp.get_context()
+
         if isinstance(multiprocessing_context, str):
-            return mp.get_context(multiprocessing_context)
+            try:
+                return mp.get_context(multiprocessing_context)
+            except ValueError as exc:
+                methods = mp.get_all_start_methods()
+                raise ValueError(
+                    "multiprocessing_context option should specify a valid start method "
+                    f"in {methods}, but got multiprocessing_context={multiprocessing_context!r}"
+                ) from exc
+
+        try:
+            from multiprocessing.context import BaseContext
+        except Exception:
+            BaseContext = object
+
+        if not isinstance(multiprocessing_context, BaseContext):
+            raise TypeError(
+                "multiprocessing_context option should be a valid context object or "
+                "a string specifying the start method, "
+                f"but got multiprocessing_context={multiprocessing_context!r}"
+            )
+
         return multiprocessing_context
 
     def _queue_depth(self):
