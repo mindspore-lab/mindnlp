@@ -1,4 +1,4 @@
-from .common import ProfilerActivity
-from .profiler import profile, record_function
+from .common import ProfilerActivity, ProfilerAction
+from .profiler import profile, record_function, schedule
 
-__all__ = ["profile", "record_function", "ProfilerActivity"]
+__all__ = ["profile", "record_function", "schedule", "ProfilerActivity", "ProfilerAction"]

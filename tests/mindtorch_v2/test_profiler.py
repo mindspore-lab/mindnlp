@@ -154,3 +154,45 @@ def test_profiler_step_requires_active_session():
     prof = torch.profiler.profile()
     with pytest.raises(RuntimeError):
         prof.step()
+
+
+def test_profile_rejects_non_callable_schedule():
+    with pytest.raises(TypeError):
+        torch.profiler.profile(schedule=123)
+
+
+def test_profiler_schedule_filters_recorded_steps():
+    sched = torch.profiler.schedule(wait=1, warmup=1, active=1, repeat=1, skip_first=0)
+
+    with torch.profiler.profile(schedule=sched) as prof:
+        _ = torch.ones((1,)) + 1
+        prof.step()
+        _ = torch.ones((1,)) + 2
+        prof.step()
+        _ = torch.ones((1,)) + 3
+
+    steps = {event["step"] for event in prof.events() if event["kind"] == "op"}
+    assert steps == {2}
+
+
+def test_profiler_schedule_triggers_trace_ready_on_save_action():
+    calls = []
+
+    def on_trace_ready(prof):
+        calls.append(len(prof.events()))
+
+    sched = torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=0)
+
+    with torch.profiler.profile(schedule=sched, on_trace_ready=on_trace_ready) as prof:
+        _ = torch.ones((1,)) + 1
+        prof.step()
+        _ = torch.ones((1,)) + 2
+
+    assert len(calls) >= 1
+
+
+def test_profiler_schedule_invalid_config_raises():
+    with pytest.raises(ValueError):
+        torch.profiler.schedule(wait=-1, warmup=0, active=1)
+    with pytest.raises(ValueError):
+        torch.profiler.schedule(wait=0, warmup=0, active=0)

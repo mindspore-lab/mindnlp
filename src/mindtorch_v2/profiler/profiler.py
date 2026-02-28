@@ -4,7 +4,7 @@ import threading
 import time
 from dataclasses import dataclass
 
-from .common import ProfilerActivity
+from .common import ProfilerActivity, ProfilerAction
 
 
 _ACTIVE_SESSION = None
@@ -42,6 +42,7 @@ class _ProfilerSession:
         self.current_step = 0
         self._events = []
         self._lock = threading.Lock()
+        self.is_recording = True
 
     def make_op_token(self, name, device_type):
         return (
@@ -83,6 +84,48 @@ def _resolve_activities(activities):
     return {_activity_name(item) for item in activities}
 
 
+def _validate_schedule_value(name, value):
+    if not isinstance(value, int):
+        raise ValueError(f"{name} must be an int")
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0")
+
+
+def schedule(wait=0, warmup=0, active=0, repeat=0, skip_first=0):
+    _validate_schedule_value("wait", wait)
+    _validate_schedule_value("warmup", warmup)
+    _validate_schedule_value("active", active)
+    _validate_schedule_value("repeat", repeat)
+    _validate_schedule_value("skip_first", skip_first)
+
+    if active <= 0:
+        raise ValueError("active must be > 0")
+
+    cycle = wait + warmup + active
+
+    def _schedule(step):
+        if step < skip_first:
+            return ProfilerAction.NONE
+
+        local = step - skip_first
+        cycle_idx = local // cycle
+        if repeat > 0 and cycle_idx >= repeat:
+            return ProfilerAction.NONE
+
+        pos = local % cycle
+        if pos < wait:
+            return ProfilerAction.NONE
+        if pos < wait + warmup:
+            return ProfilerAction.WARMUP
+
+        active_pos = pos - (wait + warmup)
+        if active_pos == active - 1:
+            return ProfilerAction.RECORD_AND_SAVE
+        return ProfilerAction.RECORD
+
+    return _schedule
+
+
 def _normalize_device_type(device):
     if hasattr(device, "type"):
         dev = str(device.type)
@@ -108,8 +151,11 @@ def dispatch_op_enter(name, dispatch_device):
     session = _active_session()
     if session is None:
         return None
+
     device_type = _normalize_device_type(dispatch_device)
     if device_type not in session.activities:
+        return None
+    if not session.is_recording:
         return None
     return session.make_op_token(name, device_type)
 
@@ -117,6 +163,7 @@ def dispatch_op_enter(name, dispatch_device):
 def dispatch_op_exit(token):
     if token is None:
         return
+
     session, name, device_type, start_ns, step, thread_id = token
     end_ns = time.perf_counter_ns()
     session.append_event(
@@ -148,8 +195,9 @@ class _RecordFunction:
 
     def __enter__(self):
         session = _active_session()
-        if session is None:
+        if session is None or not session.is_recording:
             return self
+
         self._token = (
             session,
             self.name,
@@ -163,6 +211,7 @@ class _RecordFunction:
     def __exit__(self, exc_type, exc, tb):
         if self._token is None:
             return False
+
         session, name, start_ns, step, thread_id = self._token
         end_ns = time.perf_counter_ns()
         stack = _scope_stack()
@@ -170,6 +219,7 @@ class _RecordFunction:
             stack.pop()
         elif self._token in stack:
             stack.remove(self._token)
+
         session.append_event(
             _Event(
                 name=name,
@@ -197,6 +247,7 @@ class _KeyAverages:
     def _build_rows(self):
         if self._rows is not None:
             return self._rows
+
         grouped = {}
         for event in self._events:
             key = (event.name, event.device_type)
@@ -213,8 +264,10 @@ class _KeyAverages:
             row["count"] += 1
             row["total_time_ns"] += event.duration_ns
             row["self_time_ns"] += event.duration_ns
+
         for row in grouped.values():
             row["avg_time_ns"] = row["total_time_ns"] // max(1, row["count"])
+
         self._rows = list(grouped.values())
         return self._rows
 
@@ -252,13 +305,19 @@ class profile:
         experimental_config=None,
         use_cuda=None,
     ):
-        del schedule, record_shapes, profile_memory, with_stack
+        del record_shapes, profile_memory, with_stack
         del with_flops, with_modules, experimental_config, use_cuda
+
         self.activities = _resolve_activities(activities)
         self._session = _ProfilerSession(self.activities)
         self._started = False
         self._stopped = False
         self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
+
+        if schedule is not None and not callable(schedule):
+            raise TypeError("schedule must be callable")
+        self._schedule = schedule
+        self._current_action = ProfilerAction.RECORD if schedule is None else ProfilerAction.NONE
 
     def __enter__(self):
         self.start()
@@ -271,39 +330,63 @@ class profile:
     def _maybe_sync_npu(self):
         if "NPU" not in self.activities:
             return
+
         from .. import npu
 
         if npu.is_available():
             npu.synchronize()
 
+    def _action_for_step(self, step):
+        if self._schedule is None:
+            return ProfilerAction.RECORD
+        return self._schedule(step)
+
+    def _set_action_for_step(self, step):
+        self._current_action = self._action_for_step(step)
+        self._session.is_recording = self._current_action in (
+            ProfilerAction.RECORD,
+            ProfilerAction.RECORD_AND_SAVE,
+        )
+
     def start(self):
         global _ACTIVE_SESSION
         if self._started and not self._stopped:
             return
+
         with _ACTIVE_LOCK:
             if _ACTIVE_SESSION is not None and _ACTIVE_SESSION is not self._session:
                 raise RuntimeError("another profiler session is already active")
             _ACTIVE_SESSION = self._session
+
         self._started = True
         self._stopped = False
+        self._set_action_for_step(self._session.current_step)
 
     def stop(self):
         global _ACTIVE_SESSION
         if not self._started or self._stopped:
             return
+
         self._maybe_sync_npu()
         with _ACTIVE_LOCK:
             if _ACTIVE_SESSION is self._session:
                 _ACTIVE_SESSION = None
+
         self._stopped = True
-        if callable(self._trace_ready):
+        if callable(self._trace_ready) and self._schedule is None:
             self._trace_ready(self)
 
     def step(self):
         if _active_session() is not self._session:
             raise RuntimeError("profiler session is not active")
+
+        action = self._current_action
         self._maybe_sync_npu()
+        if action == ProfilerAction.RECORD_AND_SAVE and callable(self._trace_ready):
+            self._trace_ready(self)
+
         self._session.current_step += 1
+        self._set_action_for_step(self._session.current_step)
 
     def events(self):
         events = self._session.snapshot()
@@ -332,5 +415,6 @@ class profile:
                     },
                 }
             )
+
         with open(path, "w", encoding="utf-8") as handle:
             json.dump({"traceEvents": trace_events, "displayTimeUnit": "ms"}, handle)
