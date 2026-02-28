@@ -4,6 +4,7 @@ Provides:
 - KernelLauncher — loads compiled AscendC .so and launches kernels
 - tensor_ptr() — extracts device memory pointer from a Tensor
 - alloc_like() — allocates an output tensor with the same shape/dtype/device
+- copy_h2d() — copies host bytes to a new device buffer, returns device pointer
 - @ascendc_op — decorator that combines @custom_op with NPU-specific defaults
 """
 
@@ -24,7 +25,16 @@ class KernelLauncher:
     """
 
     def __init__(self, library_path):
-        self._lib = ctypes.CDLL(library_path)
+        # Ensure the ACL runtime is loaded first so symbols like
+        # aclrtCtxGetCurrentDefaultStream / RegisterAscendBinary are
+        # available.  RTLD_LAZY defers resolution; RTLD_GLOBAL exposes
+        # runtime symbols to our kernel library.
+        from . import runtime as _npu_runtime
+        _npu_runtime.get_runtime(0)  # triggers ACL init
+
+        import os
+        _RTLD_LAZY = 0x00001  # POSIX RTLD_LAZY
+        self._lib = ctypes.CDLL(library_path, mode=_RTLD_LAZY | os.RTLD_GLOBAL)
         self._cache = {}
 
     def _get_launch_fn(self, kernel_name):
@@ -114,6 +124,29 @@ def alloc_like(t):
     storage = npu_typed_storage_from_ptr(ptr, t.numel(), t.dtype, device=t.device)
     stride = _contiguous_stride(t.shape)
     return Tensor(storage, t.shape, stride)
+
+
+def copy_h2d(data, device_id=0):
+    """Copy host bytes to a newly allocated device buffer.
+
+    Useful for uploading small host-side data (e.g. tiling parameters)
+    to the NPU before a kernel launch.
+
+    Args:
+        data: A bytes-like object to copy to device memory.
+        device_id: NPU device index (default 0).
+
+    Returns:
+        Integer device pointer to the newly allocated buffer.
+    """
+    import numpy as np
+    from . import runtime as npu_runtime
+
+    buf = bytes(data)
+    arr = np.frombuffer(buf, dtype=np.uint8)
+    runtime = npu_runtime.get_runtime(device_id)
+    dev_ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
+    return dev_ptr
 
 
 def _contiguous_stride(shape):
