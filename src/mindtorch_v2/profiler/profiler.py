@@ -665,20 +665,26 @@ class profile:
 
     def export_chrome_trace(self, path):
         self._maybe_sync_npu()
+        pid = os.getpid()
         trace_events = []
+        runtime_events = []
+        thread_ids = set()
+
         for event in self._session.snapshot():
+            thread_ids.add(event.thread_id)
             args = {
                 "device_type": event.device_type,
                 "step": event.step,
             }
-            if event.metadata:
-                args.update(event.metadata)
+            metadata = event.metadata or {}
+            if metadata:
+                args.update(metadata)
             trace_events.append(
                 {
                     "name": event.name,
                     "cat": event.kind,
                     "ph": "X",
-                    "pid": os.getpid(),
+                    "pid": pid,
                     "tid": event.thread_id,
                     "ts": event.start_ns / 1000.0,
                     "dur": event.duration_ns / 1000.0,
@@ -686,5 +692,46 @@ class profile:
                 }
             )
 
+            correlation_id = metadata.get("correlation_id")
+            if event.kind == "op" and correlation_id is not None:
+                runtime_events.append(
+                    {
+                        "name": metadata.get("runtime_name", "dispatch_kernel"),
+                        "cat": "runtime",
+                        "ph": "X",
+                        "pid": pid,
+                        "tid": metadata.get("runtime_tid", event.thread_id),
+                        "ts": event.start_ns / 1000.0,
+                        "dur": event.duration_ns / 1000.0,
+                        "args": {
+                            "correlation_id": correlation_id,
+                            "op_name": event.name,
+                        },
+                    }
+                )
+
+        metadata_events = [
+            {
+                "name": "process_name",
+                "cat": "metadata",
+                "ph": "M",
+                "pid": pid,
+                "tid": 0,
+                "args": {"name": "mindtorch_v2_profiler"},
+            }
+        ]
+        for tid in sorted(thread_ids):
+            metadata_events.append(
+                {
+                    "name": "thread_name",
+                    "cat": "metadata",
+                    "ph": "M",
+                    "pid": pid,
+                    "tid": tid,
+                    "args": {"name": f"thread_{tid}"},
+                }
+            )
+
+        all_events = trace_events + runtime_events + metadata_events
         with open(path, "w", encoding="utf-8") as handle:
-            json.dump({"traceEvents": trace_events, "displayTimeUnit": "ms"}, handle)
+            json.dump({"traceEvents": all_events, "displayTimeUnit": "ms"}, handle)

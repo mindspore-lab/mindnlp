@@ -432,3 +432,30 @@ def test_key_averages_table_accepts_cpu_time_avg_sort_alias():
 
     table = prof.key_averages().table(sort_by="cpu_time_avg")
     assert "CPU time avg" in table
+
+
+def test_export_chrome_trace_includes_metadata_events(tmp_path):
+    out = tmp_path / "trace_metadata_events.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    meta_events = [event for event in payload["traceEvents"] if event.get("ph") == "M"]
+    assert meta_events
+
+
+def test_export_chrome_trace_includes_runtime_correlated_events(tmp_path):
+    out = tmp_path / "trace_runtime_events.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    runtime_events = [event for event in payload["traceEvents"] if event.get("cat") == "runtime"]
+    assert runtime_events
+    assert all("correlation_id" in event.get("args", {}) for event in runtime_events)
