@@ -142,3 +142,15 @@ def test_export_chrome_trace_required_fields_and_pid(tmp_path):
     for key in ("name", "ph", "ts", "dur", "pid", "tid"):
         assert key in event
     assert event["pid"] == os.getpid()
+
+
+def test_record_function_is_noop_when_profiler_inactive():
+    with torch.profiler.record_function("noop"):
+        x = torch.ones((1,))
+    assert x is not None
+
+
+def test_profiler_step_requires_active_session():
+    prof = torch.profiler.profile()
+    with pytest.raises(RuntimeError):
+        prof.step()
