@@ -1,4 +1,31 @@
+import threading
+from dataclasses import dataclass
+
 from ..._functional import stack as _stack
+
+
+@dataclass
+class WorkerInfo:
+    id: int
+    num_workers: int
+    seed: int
+    dataset: object
+
+
+_worker_local = threading.local()
+
+
+def _set_worker_info(info):
+    _worker_local.info = info
+
+
+def _clear_worker_info():
+    if hasattr(_worker_local, "info"):
+        delattr(_worker_local, "info")
+
+
+def get_worker_info():
+    return getattr(_worker_local, "info", None)
 
 
 def default_convert(data):

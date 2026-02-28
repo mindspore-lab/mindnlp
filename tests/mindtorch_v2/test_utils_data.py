@@ -143,3 +143,115 @@ def test_dataloader_batch_size_none_drop_last_conflict():
     ds = StreamDataset()
     with pytest.raises(ValueError, match="batch_size=None option disables auto-batching"):
         DataLoader(ds, batch_size=None, drop_last=True, num_workers=0)
+
+
+
+def test_dataloader_num_workers_map_style_ordered_batches():
+    ds = RangeDataset(5)
+    loader = DataLoader(ds, batch_size=2, shuffle=False, num_workers=2)
+    batches = list(loader)
+    assert batches == [[0, 1], [2, 3], [4]]
+
+
+def test_dataloader_num_workers_worker_info_and_init_fn():
+    import multiprocessing as mp
+
+    class WorkerInfoDataset(Dataset):
+        def __len__(self):
+            return 4
+
+        def __getitem__(self, idx):
+            from mindtorch_v2.utils.data import get_worker_info
+
+            wi = get_worker_info()
+            if wi is None:
+                return (idx, -1, -1)
+            return (idx, wi.id, wi.num_workers)
+
+    manager = mp.Manager()
+    called = manager.list()
+
+    def init_fn(worker_id):
+        called.append(worker_id)
+
+    loader = DataLoader(
+        WorkerInfoDataset(),
+        batch_size=2,
+        shuffle=False,
+        num_workers=2,
+        worker_init_fn=init_fn,
+    )
+
+    batches = list(loader)
+    flat = [x for batch in batches for x in zip(*batch)]
+    worker_ids = [item[1] for item in flat]
+    worker_counts = [item[2] for item in flat]
+
+    assert set(called) == {0, 1}
+    assert set(worker_ids).issubset({0, 1})
+    assert set(worker_counts) == {2}
+
+
+def test_dataloader_multiprocessing_option_validation():
+    ds = RangeDataset(4)
+
+    with pytest.raises(ValueError, match='num_workers option should be non-negative'):
+        DataLoader(ds, num_workers=-1)
+
+    with pytest.raises(ValueError, match='timeout option should be non-negative'):
+        DataLoader(ds, timeout=-1)
+
+    with pytest.raises(
+        ValueError,
+        match='prefetch_factor option could only be specified in multiprocessing',
+    ):
+        DataLoader(ds, num_workers=0, prefetch_factor=2)
+
+    with pytest.raises(ValueError, match='persistent_workers option needs num_workers > 0'):
+        DataLoader(ds, num_workers=0, persistent_workers=True)
+
+
+
+def test_dataloader_iterable_dataset_num_workers_sharded_batches():
+    class ShardedStream(IterableDataset):
+        def __iter__(self):
+            from mindtorch_v2.utils.data import get_worker_info
+
+            wi = get_worker_info()
+            if wi is None:
+                wid = 0
+                nworkers = 1
+            else:
+                wid = wi.id
+                nworkers = wi.num_workers
+
+            for i in range(8):
+                if i % nworkers == wid:
+                    yield i
+
+    loader = DataLoader(ShardedStream(), batch_size=2, num_workers=2)
+    batches = list(loader)
+    flat = [x for batch in batches for x in batch]
+    assert sorted(flat) == list(range(8))
+
+
+def test_dataloader_iterable_dataset_num_workers_batch_size_none_sharded():
+    class ShardedStream(IterableDataset):
+        def __iter__(self):
+            from mindtorch_v2.utils.data import get_worker_info
+
+            wi = get_worker_info()
+            if wi is None:
+                wid = 0
+                nworkers = 1
+            else:
+                wid = wi.id
+                nworkers = wi.num_workers
+
+            for i in range(6):
+                if i % nworkers == wid:
+                    yield i
+
+    loader = DataLoader(ShardedStream(), batch_size=None, num_workers=2)
+    values = list(loader)
+    assert sorted(values) == list(range(6))
