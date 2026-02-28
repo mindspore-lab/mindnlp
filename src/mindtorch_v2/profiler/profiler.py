@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import traceback
+import tracemalloc
 from dataclasses import dataclass
 
 from .common import ProfilerActivity, ProfilerAction
@@ -216,15 +217,41 @@ def _capture_stack(limit=48):
     return entries[-32:] if entries else None
 
 
-
 def _npu_memory_allocated_snapshot(device_type):
     if device_type != "NPU":
         return None
+
     from .. import npu
 
     if not npu.is_available():
         return None
     return int(npu.memory_allocated())
+
+
+def _cpu_memory_allocated_snapshot(device_type):
+    if device_type != "CPU":
+        return None
+    if not tracemalloc.is_tracing():
+        return None
+    current, _peak = tracemalloc.get_traced_memory()
+    return int(current)
+
+
+def _memory_prefix_for_device(device_type):
+    if device_type == "NPU":
+        return "npu_memory_allocated"
+    if device_type == "CPU":
+        return "cpu_memory_allocated"
+    return None
+
+
+def _memory_allocated_snapshot(device_type):
+    if device_type == "NPU":
+        return _npu_memory_allocated_snapshot(device_type)
+    if device_type == "CPU":
+        return _cpu_memory_allocated_snapshot(device_type)
+    return None
+
 
 def _active_session():
     return _ACTIVE_SESSION
@@ -257,9 +284,11 @@ def dispatch_op_enter(name, dispatch_device, args, kwargs):
             if stack:
                 metadata["stack"] = stack
         if session.profile_memory:
-            before = _npu_memory_allocated_snapshot(device_type)
-            if before is not None:
-                metadata["npu_memory_allocated_before"] = before
+            prefix = _memory_prefix_for_device(device_type)
+            if prefix is not None:
+                before = _memory_allocated_snapshot(device_type)
+                if before is not None:
+                    metadata[f"{prefix}_before"] = before
         if not metadata:
             metadata = None
 
@@ -273,12 +302,17 @@ def dispatch_op_exit(token):
     session, name, device_type, start_ns, step, thread_id, metadata = token
     end_ns = time.perf_counter_ns()
 
-    if metadata is not None and "npu_memory_allocated_before" in metadata:
-        after = _npu_memory_allocated_snapshot(device_type)
-        if after is not None:
-            before = metadata["npu_memory_allocated_before"]
-            metadata["npu_memory_allocated_after"] = after
-            metadata["npu_memory_allocated_delta"] = int(after - before)
+    if metadata is not None:
+        for prefix in ("npu_memory_allocated", "cpu_memory_allocated"):
+            before_key = f"{prefix}_before"
+            if before_key not in metadata:
+                continue
+            after = _memory_allocated_snapshot(device_type)
+            if after is None:
+                continue
+            before = metadata[before_key]
+            metadata[f"{prefix}_after"] = after
+            metadata[f"{prefix}_delta"] = int(after - before)
 
     session.append_event(
         _Event(
@@ -474,6 +508,7 @@ class profile:
         self._started = False
         self._stopped = False
         self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
+        self._owns_tracemalloc = False
 
         if schedule is not None and not callable(schedule):
             raise TypeError("schedule must be callable")
@@ -496,6 +531,24 @@ class profile:
 
         if npu.is_available():
             npu.synchronize()
+
+    def _maybe_start_cpu_memory_tracer(self):
+        if not self._session.profile_memory:
+            return
+        if "CPU" not in self.activities:
+            return
+        if tracemalloc.is_tracing():
+            self._owns_tracemalloc = False
+            return
+        tracemalloc.start()
+        self._owns_tracemalloc = True
+
+    def _maybe_stop_cpu_memory_tracer(self):
+        if not self._owns_tracemalloc:
+            return
+        if tracemalloc.is_tracing():
+            tracemalloc.stop()
+        self._owns_tracemalloc = False
 
     def _action_for_step(self, step):
         if self._schedule is None:
@@ -521,6 +574,7 @@ class profile:
 
         self._started = True
         self._stopped = False
+        self._maybe_start_cpu_memory_tracer()
         self._set_action_for_step(self._session.current_step)
 
     def stop(self):
@@ -533,6 +587,7 @@ class profile:
             if _ACTIVE_SESSION is self._session:
                 _ACTIVE_SESSION = None
 
+        self._maybe_stop_cpu_memory_tracer()
         self._stopped = True
         if callable(self._trace_ready) and self._schedule is None:
             self._trace_ready(self)
