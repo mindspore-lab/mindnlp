@@ -283,3 +283,48 @@ def test_key_averages_table_unknown_sort_key_raises():
 
     with pytest.raises(AttributeError):
         prof.key_averages().table(sort_by="foo")
+
+
+def test_profiler_profile_memory_disabled_has_no_npu_memory_fields():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert all("npu_memory_allocated_before" not in event for event in op_events)
+    assert all("npu_memory_allocated_after" not in event for event in op_events)
+    assert all("npu_memory_allocated_delta" not in event for event in op_events)
+
+
+@pytest.mark.skipif(not torch.npu.is_available(), reason="NPU not available")
+def test_profiler_profile_memory_adds_npu_memory_fields():
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((16, 16), device="npu")
+        y = x + x
+        _ = y + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op" and event["device_type"] == "NPU"]
+    assert op_events
+    for event in op_events:
+        assert "npu_memory_allocated_before" in event
+        assert "npu_memory_allocated_after" in event
+        assert "npu_memory_allocated_delta" in event
+        assert event["npu_memory_allocated_delta"] == event["npu_memory_allocated_after"] - event["npu_memory_allocated_before"]
+
+
+@pytest.mark.skipif(not torch.npu.is_available(), reason="NPU not available")
+def test_export_chrome_trace_includes_npu_memory_fields_when_enabled(tmp_path):
+    out = tmp_path / "trace_npu_mem.json"
+
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((8, 8), device="npu")
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    npu_events = [e for e in payload["traceEvents"] if e.get("args", {}).get("device_type") == "NPU"]
+    assert npu_events
+    assert any("npu_memory_allocated_before" in e.get("args", {}) for e in npu_events)
+    assert any("npu_memory_allocated_after" in e.get("args", {}) for e in npu_events)
+    assert any("npu_memory_allocated_delta" in e.get("args", {}) for e in npu_events)
