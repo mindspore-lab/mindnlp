@@ -242,3 +242,44 @@ def test_export_chrome_trace_includes_shape_and_stack_args_when_enabled(tmp_path
     assert events
     assert any("input_shapes" in event.get("args", {}) for event in events)
     assert any("stack" in event.get("args", {}) for event in events)
+
+
+def test_key_averages_supports_group_by_input_shape():
+    with torch.profiler.profile(record_shapes=True) as prof:
+        x2 = torch.ones((2, 2))
+        x4 = torch.ones((4, 4))
+        _ = x2 + x2
+        _ = x4 + x4
+
+    default_rows = prof.key_averages()
+    grouped_rows = prof.key_averages(group_by_input_shape=True)
+
+    assert len(grouped_rows) >= len(default_rows)
+
+
+def test_key_averages_supports_group_by_stack_n():
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+
+        def call_site_one():
+            return x + x
+
+        def call_site_two():
+            return x + x
+
+        _ = call_site_one()
+        _ = call_site_two()
+
+    default_rows = prof.key_averages()
+    grouped_rows = prof.key_averages(group_by_stack_n=1)
+
+    assert len(grouped_rows) >= len(default_rows)
+
+
+def test_key_averages_table_unknown_sort_key_raises():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    with pytest.raises(AttributeError):
+        prof.key_averages().table(sort_by="foo")
