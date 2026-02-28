@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -65,15 +66,15 @@ class _ProfilerSession:
 
 def _activity_name(activity):
     if isinstance(activity, ProfilerActivity):
-        return activity.value
-    name = str(activity).split(".")[-1].upper()
+        name = activity.value
+    else:
+        name = str(activity).split(".")[-1].upper()
+
     if name in ("CUDA", "GPU"):
         return "NPU"
-    if name == "CPU":
-        return "CPU"
-    if name == "NPU":
-        return "NPU"
-    return name
+    if name in ("CPU", "NPU"):
+        return name
+    raise ValueError(f"unsupported profiler activity: {activity}")
 
 
 def _resolve_activities(activities):
@@ -296,10 +297,7 @@ class profile:
                 _ACTIVE_SESSION = None
         self._stopped = True
         if callable(self._trace_ready):
-            try:
-                self._trace_ready(self)
-            except TypeError:
-                self._trace_ready()
+            self._trace_ready(self)
 
     def step(self):
         if _active_session() is not self._session:
@@ -324,7 +322,7 @@ class profile:
                     "name": event.name,
                     "cat": event.kind,
                     "ph": "X",
-                    "pid": 0,
+                    "pid": os.getpid(),
                     "tid": event.thread_id,
                     "ts": event.start_ns / 1000.0,
                     "dur": event.duration_ns / 1000.0,
