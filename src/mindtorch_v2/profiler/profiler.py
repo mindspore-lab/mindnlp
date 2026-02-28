@@ -437,7 +437,10 @@ def _event_self_time_map(events):
 class _KeyAverages:
     _SORT_MAP = {
         "self_cpu_time_total": "self_time_ns",
+        "self_cpu_time": "self_time_ns",
         "cpu_time_total": "total_time_ns",
+        "cpu_time": "total_time_ns",
+        "cpu_time_avg": "avg_time_ns",
         "count": "count",
     }
 
@@ -506,14 +509,18 @@ class _KeyAverages:
         if row_limit is not None:
             rows = rows[: int(row_limit)]
 
-        header = f"{'Name':<32} {'Device':<8} {'Count':>6} {'Total(us)':>12} {'Self(us)':>12} {'Avg(us)':>12}"
+        header = (
+            f"{'Name':<32} {'Device':<8} {'Self CPU':>12} "
+            f"{'CPU total':>12} {'Total(us)':>12} {'CPU time avg':>14} {'Count':>8} {'# of Calls':>10}"
+        )
         lines = [header]
         for row in rows:
-            total_us = row["total_time_ns"] / 1000.0
             self_us = row["self_time_ns"] / 1000.0
+            total_us = row["total_time_ns"] / 1000.0
             avg_us = row["avg_time_ns"] / 1000.0
             lines.append(
-                f"{row['name']:<32} {row['device_type']:<8} {row['count']:>6} {total_us:>12.3f} {self_us:>12.3f} {avg_us:>12.3f}"
+                f"{row['name']:<32} {row['device_type']:<8} "
+                f"{self_us:>12.3f} {total_us:>12.3f} {total_us:>12.3f} {avg_us:>14.3f} {row['count']:>8} {row['count']:>10}"
             )
         return "\n".join(lines)
 

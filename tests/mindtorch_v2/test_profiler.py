@@ -411,3 +411,24 @@ def test_export_chrome_trace_includes_runtime_correlation_fields(tmp_path):
     assert "correlation_id" in args
     assert "runtime_name" in args
     assert "runtime_tid" in args
+
+
+def test_key_averages_table_includes_torch_like_cpu_columns():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    table = prof.key_averages().table(sort_by="self_cpu_time_total")
+    assert "Self CPU" in table
+    assert "CPU total" in table
+    assert "CPU time avg" in table
+    assert "# of Calls" in table
+
+
+def test_key_averages_table_accepts_cpu_time_avg_sort_alias():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    table = prof.key_averages().table(sort_by="cpu_time_avg")
+    assert "CPU time avg" in table
