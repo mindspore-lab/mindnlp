@@ -592,9 +592,6 @@ class DataLoader:
                 index_queue.put((send_idx, index))
                 send_count += 1
 
-            if not persistent:
-                _signal_map_shutdown(index_queue, len(workers))
-
             next_idx = 0
             reorder = {}
             while next_idx < send_count:

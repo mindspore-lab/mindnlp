@@ -1,5 +1,6 @@
 from multiprocessing import reduction
 
+from .. import multiprocessing as _mt_mp
 from .._storage import _CPUUntypedStorage, TypedStorage
 from .._tensor import Tensor
 
@@ -12,14 +13,32 @@ _NON_LEAF_ERR_MSG = (
 )
 
 
-def _rebuild_cpu_storage_from_shm(filename, nbytes):
-    return _CPUUntypedStorage.from_shared_memory(filename, nbytes)
+def _rebuild_cpu_storage_from_meta(meta):
+    mechanism = meta["mechanism"]
+    if mechanism == "file_system":
+        return _CPUUntypedStorage.from_shared_memory(meta["filename"], meta["nbytes"])
+    if mechanism == "file_descriptor":
+        fd = meta.get("fd")
+        if fd is None:
+            dup_fd = meta.get("dup_fd")
+            if dup_fd is None:
+                raise RuntimeError("file_descriptor storage metadata missing fd/dup_fd")
+            fd = dup_fd.detach()
+        return _CPUUntypedStorage.from_shared_fd(fd, meta["nbytes"], filename=meta.get("filename"))
+    raise RuntimeError(f"Unsupported CPU shared storage mechanism: {mechanism}")
 
 
 def _reduce_cpu_storage(storage):
-    storage = storage.share_memory_()
+    strategy = _mt_mp.get_sharing_strategy()
+    storage = storage.share_memory_(strategy=strategy)
     meta = storage.shared_memory_meta()
-    return (_rebuild_cpu_storage_from_shm, (meta["filename"], meta["nbytes"]))
+    if meta["mechanism"] == "file_descriptor":
+        from multiprocessing.reduction import DupFd
+
+        meta = dict(meta)
+        meta["dup_fd"] = DupFd(meta["fd"])
+        del meta["fd"]
+    return (_rebuild_cpu_storage_from_meta, (meta,))
 
 
 def _rebuild_typed_storage(untyped, dtype, size):

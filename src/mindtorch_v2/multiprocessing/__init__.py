@@ -4,9 +4,16 @@ import multiprocessing
 import sys
 
 from .reductions import init_reductions
+from .._storage import cleanup_shared_files as _cleanup_shared_files, shared_files_count as _shared_files_count
 
 
-__all__ = ["set_sharing_strategy", "get_sharing_strategy", "get_all_sharing_strategies"]
+__all__ = [
+    "set_sharing_strategy",
+    "get_sharing_strategy",
+    "get_all_sharing_strategies",
+    "cleanup_shared_files",
+    "shared_files_count",
+]
 
 from multiprocessing import *  # noqa: F403
 
@@ -34,6 +41,14 @@ def get_sharing_strategy():
 
 def get_all_sharing_strategies():
     return set(_all_sharing_strategies)
+
+
+def cleanup_shared_files():
+    _cleanup_shared_files()
+
+
+def shared_files_count():
+    return _shared_files_count()
 
 
 init_reductions()
