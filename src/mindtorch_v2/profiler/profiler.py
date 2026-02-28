@@ -296,10 +296,7 @@ class profile:
                 _ACTIVE_SESSION = None
         self._stopped = True
         if callable(self._trace_ready):
-            try:
-                self._trace_ready(self)
-            except TypeError:
-                self._trace_ready()
+            self._trace_ready(self)
 
     def step(self):
         if _active_session() is not self._session:

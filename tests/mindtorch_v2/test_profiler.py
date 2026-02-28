@@ -105,3 +105,24 @@ def test_profiler_npu_event_device_type():
 def test_profiler_rejects_unknown_activity():
     with pytest.raises(ValueError):
         torch.profiler.profile(activities=["TPU"])
+
+
+def test_on_trace_ready_receives_profiler_instance():
+    seen = []
+
+    def callback(prof):
+        seen.append(prof)
+
+    with torch.profiler.profile(on_trace_ready=callback) as prof:
+        _ = torch.ones((2, 2)) + 1
+
+    assert seen == [prof]
+
+
+def test_on_trace_ready_type_error_from_callback_is_not_swallowed():
+    def callback(prof):
+        raise TypeError("callback boom")
+
+    with pytest.raises(TypeError, match="callback boom"):
+        with torch.profiler.profile(on_trace_ready=callback):
+            _ = torch.ones((2, 2)) + 1
