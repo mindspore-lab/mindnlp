@@ -65,15 +65,15 @@ class _ProfilerSession:
 
 def _activity_name(activity):
     if isinstance(activity, ProfilerActivity):
-        return activity.value
-    name = str(activity).split(".")[-1].upper()
+        name = activity.value
+    else:
+        name = str(activity).split(".")[-1].upper()
+
     if name in ("CUDA", "GPU"):
         return "NPU"
-    if name == "CPU":
-        return "CPU"
-    if name == "NPU":
-        return "NPU"
-    return name
+    if name in ("CPU", "NPU"):
+        return name
+    raise ValueError(f"unsupported profiler activity: {activity}")
 
 
 def _resolve_activities(activities):

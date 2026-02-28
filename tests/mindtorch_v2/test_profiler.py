@@ -100,3 +100,8 @@ def test_profiler_npu_event_device_type():
         _ = x + x
 
     assert any(event["device_type"] == "NPU" for event in prof.events())
+
+
+def test_profiler_rejects_unknown_activity():
+    with pytest.raises(ValueError):
+        torch.profiler.profile(activities=["TPU"])
