@@ -255,3 +255,114 @@ def test_dataloader_iterable_dataset_num_workers_batch_size_none_sharded():
     loader = DataLoader(ShardedStream(), batch_size=None, num_workers=2)
     values = list(loader)
     assert sorted(values) == list(range(6))
+
+
+
+def test_dataloader_persistent_workers_map_reuse_processes_and_init_once():
+    import multiprocessing as mp
+    import os
+
+    class PidDataset(Dataset):
+        def __len__(self):
+            return 8
+
+        def __getitem__(self, idx):
+            from mindtorch_v2.utils.data import get_worker_info
+
+            wi = get_worker_info()
+            wid = -1 if wi is None else wi.id
+            return (idx, wid, os.getpid())
+
+    manager = mp.Manager()
+    called = manager.list()
+
+    def init_fn(worker_id):
+        called.append(worker_id)
+
+    loader = DataLoader(
+        PidDataset(),
+        batch_size=2,
+        shuffle=False,
+        num_workers=2,
+        worker_init_fn=init_fn,
+        persistent_workers=True,
+    )
+
+    first = list(loader)
+    second = list(loader)
+
+    pids_first = {pid for batch in first for pid in batch[2]}
+    pids_second = {pid for batch in second for pid in batch[2]}
+
+    assert set(called) == {0, 1}
+    assert len(called) == 2
+    assert pids_first == pids_second
+
+
+def test_dataloader_persistent_workers_iterable_reuse_processes_and_init_once():
+    import multiprocessing as mp
+    import os
+
+    class PidStream(IterableDataset):
+        def __iter__(self):
+            from mindtorch_v2.utils.data import get_worker_info
+
+            wi = get_worker_info()
+            wid = -1 if wi is None else wi.id
+            for i in range(2):
+                yield (wid, i, os.getpid())
+
+    manager = mp.Manager()
+    called = manager.list()
+
+    def init_fn(worker_id):
+        called.append(worker_id)
+
+    loader = DataLoader(
+        PidStream(),
+        batch_size=2,
+        num_workers=2,
+        worker_init_fn=init_fn,
+        persistent_workers=True,
+    )
+
+    first = list(loader)
+    second = list(loader)
+
+    pids_first = {pid for batch in first for pid in batch[2]}
+    pids_second = {pid for batch in second for pid in batch[2]}
+
+    assert set(called) == {0, 1}
+    assert len(called) == 2
+    assert pids_first == pids_second
+
+
+def test_dataloader_multiprocess_timeout_raises_runtimeerror():
+    import time
+
+    class SlowDataset(Dataset):
+        def __len__(self):
+            return 2
+
+        def __getitem__(self, idx):
+            time.sleep(0.2)
+            return idx
+
+    loader = DataLoader(SlowDataset(), batch_size=1, num_workers=1, timeout=0.05)
+    with pytest.raises(RuntimeError, match='DataLoader timed out after'):
+        list(loader)
+
+
+def test_dataloader_multiprocess_worker_error_raises_runtimeerror():
+    class CrashDataset(Dataset):
+        def __len__(self):
+            return 3
+
+        def __getitem__(self, idx):
+            if idx == 1:
+                raise ValueError('boom')
+            return idx
+
+    loader = DataLoader(CrashDataset(), batch_size=1, num_workers=1)
+    with pytest.raises(RuntimeError, match='DataLoader worker'):
+        list(loader)
