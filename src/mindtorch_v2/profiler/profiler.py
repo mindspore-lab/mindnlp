@@ -396,6 +396,29 @@ def record_function(name):
     return _RecordFunction(name)
 
 
+def _event_self_time_map(events):
+    indexed = list(enumerate(events))
+    indexed.sort(key=lambda item: (item[1].thread_id, item[1].start_ns, -item[1].end_ns))
+
+    self_time = {idx: max(0, ev.duration_ns) for idx, ev in indexed}
+    stack = []
+
+    for idx, event in indexed:
+        # Pop intervals that no longer contain current event.
+        while stack and event.start_ns >= stack[-1][1].end_ns:
+            stack.pop()
+
+        if stack:
+            parent_idx, parent_event = stack[-1]
+            # Child entirely inside parent on same thread contributes to parent's child coverage.
+            if event.end_ns <= parent_event.end_ns:
+                self_time[parent_idx] = max(0, self_time[parent_idx] - max(0, event.duration_ns))
+
+        stack.append((idx, event))
+
+    return self_time
+
+
 class _KeyAverages:
     _SORT_MAP = {
         "self_cpu_time_total": "self_time_ns",
@@ -426,8 +449,10 @@ class _KeyAverages:
         if self._rows is not None:
             return self._rows
 
+        per_event_self_time = _event_self_time_map(self._events)
+
         grouped = {}
-        for event in self._events:
+        for idx, event in enumerate(self._events):
             group_key = self._group_key(event)
             row = grouped.setdefault(
                 group_key,
@@ -448,7 +473,7 @@ class _KeyAverages:
 
             row["count"] += 1
             row["total_time_ns"] += event.duration_ns
-            row["self_time_ns"] += event.duration_ns
+            row["self_time_ns"] += per_event_self_time.get(idx, max(0, event.duration_ns))
 
         for row in grouped.values():
             row["avg_time_ns"] = row["total_time_ns"] // max(1, row["count"])
