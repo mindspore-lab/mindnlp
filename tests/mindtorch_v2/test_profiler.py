@@ -328,3 +328,34 @@ def test_export_chrome_trace_includes_npu_memory_fields_when_enabled(tmp_path):
     assert any("npu_memory_allocated_before" in e.get("args", {}) for e in npu_events)
     assert any("npu_memory_allocated_after" in e.get("args", {}) for e in npu_events)
     assert any("npu_memory_allocated_delta" in e.get("args", {}) for e in npu_events)
+
+
+def test_profiler_profile_memory_adds_cpu_memory_fields():
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((64, 64))
+        y = x + x
+        _ = y + x
+
+    cpu_events = [event for event in prof.events() if event["kind"] == "op" and event["device_type"] == "CPU"]
+    assert cpu_events
+    for event in cpu_events:
+        assert "cpu_memory_allocated_before" in event
+        assert "cpu_memory_allocated_after" in event
+        assert "cpu_memory_allocated_delta" in event
+        assert event["cpu_memory_allocated_delta"] == event["cpu_memory_allocated_after"] - event["cpu_memory_allocated_before"]
+
+
+def test_export_chrome_trace_includes_cpu_memory_fields_when_enabled(tmp_path):
+    out = tmp_path / "trace_cpu_mem.json"
+
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((32, 32))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    cpu_events = [e for e in payload["traceEvents"] if e.get("args", {}).get("device_type") == "CPU"]
+    assert cpu_events
+    assert any("cpu_memory_allocated_before" in e.get("args", {}) for e in cpu_events)
+    assert any("cpu_memory_allocated_after" in e.get("args", {}) for e in cpu_events)
+    assert any("cpu_memory_allocated_delta" in e.get("args", {}) for e in cpu_events)
