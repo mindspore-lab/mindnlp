@@ -1,4 +1,3 @@
-import multiprocessing as mp
 import queue
 import random
 from collections import deque
@@ -38,6 +37,27 @@ class _IterablePool:
     pending_events: list
 
 
+
+def _ensure_transferable(obj):
+    if hasattr(obj, "requires_grad") and hasattr(obj, "grad_fn"):
+        if bool(getattr(obj, "requires_grad")) and getattr(obj, "grad_fn") is not None:
+            from ...multiprocessing.reductions import non_leaf_requires_grad_error_message
+
+            raise RuntimeError(non_leaf_requires_grad_error_message())
+        return
+    if isinstance(obj, tuple):
+        for x in obj:
+            _ensure_transferable(x)
+        return
+    if isinstance(obj, list):
+        for x in obj:
+            _ensure_transferable(x)
+        return
+    if isinstance(obj, dict):
+        for x in obj.values():
+            _ensure_transferable(x)
+
+
 def _worker_seed(base_seed, worker_id):
     # Keep seed in uint64 range similar to torch semantics.
     return (int(base_seed) + int(worker_id)) & ((1 << 64) - 1)
@@ -51,6 +71,7 @@ def _worker_loop_map(
     num_workers,
     seed,
     worker_init_fn,
+    collate_fn,
 ):
     _set_worker_info(WorkerInfo(worker_id, num_workers, seed, dataset))
     try:
@@ -69,6 +90,8 @@ def _worker_loop_map(
                     data = [dataset[i] for i in index]
                 else:
                     data = dataset[index]
+                data = collate_fn(data)
+                _ensure_transferable(data)
                 result_queue.put(("data", send_idx, data))
             except Exception as exc:
                 result_queue.put(("error", send_idx, _WorkerException(worker_id, repr(exc))))
@@ -80,7 +103,18 @@ def _worker_loop_map(
         result_queue.put(("worker_exit", worker_id, None))
 
 
-def _worker_loop_iterable_once(dataset, result_queue, worker_id, num_workers, seed, worker_init_fn):
+def _worker_loop_iterable_once(
+    dataset,
+    result_queue,
+    worker_id,
+    num_workers,
+    seed,
+    worker_init_fn,
+    auto_collation,
+    batch_size,
+    drop_last,
+    collate_fn,
+):
     _set_worker_info(WorkerInfo(worker_id, num_workers, seed, dataset))
     try:
         random.seed(seed)
@@ -88,8 +122,25 @@ def _worker_loop_iterable_once(dataset, result_queue, worker_id, num_workers, se
             worker_init_fn(worker_id)
         result_queue.put(("worker_ready", worker_id, None))
 
-        for item in dataset:
-            result_queue.put(("data", worker_id, item))
+        iterator = iter(dataset)
+        if not auto_collation:
+            for item in iterator:
+                item = collate_fn(item)
+                _ensure_transferable(item)
+                result_queue.put(("data", worker_id, item))
+        else:
+            batch = []
+            for item in iterator:
+                batch.append(item)
+                if len(batch) == batch_size:
+                    out = collate_fn(batch)
+                    _ensure_transferable(out)
+                    result_queue.put(("data", worker_id, out))
+                    batch = []
+            if batch and not drop_last:
+                out = collate_fn(batch)
+                _ensure_transferable(out)
+                result_queue.put(("data", worker_id, out))
     except Exception as exc:
         result_queue.put(("error", -1, _WorkerException(worker_id, repr(exc))))
     finally:
@@ -106,6 +157,10 @@ def _worker_loop_iterable_persistent(
     num_workers,
     seed,
     worker_init_fn,
+    auto_collation,
+    batch_size,
+    drop_last,
+    collate_fn,
 ):
     _set_worker_info(WorkerInfo(worker_id, num_workers, seed, dataset))
     try:
@@ -122,8 +177,25 @@ def _worker_loop_iterable_persistent(
                 continue
 
             try:
-                for item in dataset:
-                    result_queue.put(("data", epoch, item))
+                iterator = iter(dataset)
+                if not auto_collation:
+                    for item in iterator:
+                        out = collate_fn(item)
+                        _ensure_transferable(out)
+                        result_queue.put(("data", epoch, out))
+                else:
+                    batch = []
+                    for item in iterator:
+                        batch.append(item)
+                        if len(batch) == batch_size:
+                            out = collate_fn(batch)
+                            _ensure_transferable(out)
+                            result_queue.put(("data", epoch, out))
+                            batch = []
+                    if batch and not drop_last:
+                        out = collate_fn(batch)
+                        _ensure_transferable(out)
+                        result_queue.put(("data", epoch, out))
                 result_queue.put(("iter_done", epoch, worker_id))
             except Exception as exc:
                 result_queue.put(("error", epoch, _WorkerException(worker_id, repr(exc))))
@@ -291,13 +363,19 @@ class DataLoader:
     @staticmethod
     def _resolve_multiprocessing_context(multiprocessing_context):
         if multiprocessing_context is None:
-            return mp.get_context()
+            from ... import multiprocessing as mt_mp
+
+            return mt_mp.get_context()
 
         if isinstance(multiprocessing_context, str):
             try:
-                return mp.get_context(multiprocessing_context)
+                from ... import multiprocessing as mt_mp
+
+                return mt_mp.get_context(multiprocessing_context)
             except ValueError as exc:
-                methods = mp.get_all_start_methods()
+                from ... import multiprocessing as mt_mp
+
+                methods = mt_mp.get_all_start_methods()
                 raise ValueError(
                     "multiprocessing_context option should specify a valid start method "
                     f"in {methods}, but got multiprocessing_context={multiprocessing_context!r}"
@@ -344,6 +422,7 @@ class DataLoader:
                     self.num_workers,
                     seed,
                     self.worker_init_fn,
+                    self.collate_fn,
                 ),
             )
             proc.daemon = True
@@ -377,6 +456,10 @@ class DataLoader:
                     self.num_workers,
                     seed,
                     self.worker_init_fn,
+                    self._auto_collation,
+                    self.batch_size,
+                    self.drop_last,
+                    self.collate_fn,
                 )
             else:
                 target = _worker_loop_iterable_once
@@ -387,6 +470,10 @@ class DataLoader:
                     self.num_workers,
                     seed,
                     self.worker_init_fn,
+                    self._auto_collation,
+                    self.batch_size,
+                    self.drop_last,
+                    self.collate_fn,
                 )
 
             proc = self._mp_context.Process(target=target, args=args)
@@ -533,7 +620,7 @@ class DataLoader:
                 reorder[key] = payload
                 while next_idx in reorder:
                     data = reorder.pop(next_idx)
-                    yield self._maybe_pin(self.collate_fn(data))
+                    yield self._maybe_pin(data)
                     next_idx += 1
         finally:
             if not persistent:
@@ -586,18 +673,8 @@ class DataLoader:
                 if persistent and key != epoch:
                     continue
 
-                item = payload
-                if not self._auto_collation:
-                    yield self._maybe_pin(self.collate_fn(item))
-                    continue
-
-                batch.append(item)
-                if len(batch) == self.batch_size:
-                    yield self._maybe_pin(self.collate_fn(batch))
-                    batch = []
-
-            if self._auto_collation and batch and not self.drop_last:
-                yield self._maybe_pin(self.collate_fn(batch))
+                out = payload
+                yield self._maybe_pin(out)
         finally:
             if not persistent:
                 _shutdown_workers(workers)

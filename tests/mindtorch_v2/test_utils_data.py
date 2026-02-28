@@ -391,3 +391,19 @@ def test_dataloader_spawn_context_string_and_object():
     ctx = mp.get_context('spawn')
     loader_by_object = DataLoader(ds, batch_size=2, num_workers=1, multiprocessing_context=ctx)
     assert list(loader_by_object) == [[0, 1], [2, 3]]
+
+
+
+def test_dataloader_multiprocess_tensor_batch_is_shared_cpu_contract():
+    class TensorDataset(Dataset):
+        def __len__(self):
+            return 8
+
+        def __getitem__(self, idx):
+            return torch.tensor([float(idx), float(idx + 1)], dtype=torch.float32)
+
+    loader = DataLoader(TensorDataset(), batch_size=2, num_workers=2)
+    batch = next(iter(loader))
+    assert batch.device.type == 'cpu'
+    assert batch.storage().is_shared() is True
+
