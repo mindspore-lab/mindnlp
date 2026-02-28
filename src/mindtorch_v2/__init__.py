@@ -61,6 +61,7 @@ from .ops import ops
 from . import library
 from . import optim
 from . import jit
+from . import profiler
 from ._random import (
     manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
     Generator, default_generator,
@@ -262,5 +263,6 @@ __all__ = [
     "compiler",
     "optim",
     "jit",
+    "profiler",
     "compile",
 ]
