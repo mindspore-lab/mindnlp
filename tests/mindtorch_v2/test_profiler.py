@@ -476,7 +476,7 @@ def test_key_averages_iter_returns_row_objects_with_torch_like_attrs():
     assert hasattr(first, "cpu_time")
 
 
-def test_key_averages_row_getitem_and_attr_consistency():
+def test_key_averages_row_is_not_subscriptable_like_torch():
     with torch.profiler.profile() as prof:
         x = torch.ones((4, 4))
         _ = x + x
@@ -484,9 +484,40 @@ def test_key_averages_row_getitem_and_attr_consistency():
     rows = prof.key_averages()
     first = rows[0]
 
-    assert first.self_cpu_time_total == first["self_cpu_time_total"]
-    assert first.cpu_time_total == first["cpu_time_total"]
-    assert first.count == first["count"]
+    with pytest.raises(TypeError):
+        _ = first["key"]
+
+
+def test_key_averages_row_exposes_torch_like_default_attributes():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages()))
+
+    assert row.device_type == "CPU"
+    assert row.input_shapes == ""
+    assert row.stack == []
+    assert row.cpu_memory_usage == 0
+    assert row.self_cpu_memory_usage == 0
+    assert row.device_memory_usage == 0
+    assert row.self_device_memory_usage == 0
+    assert row.flops == 0
+    assert row.is_async is False
+    assert row.scope == 0
+    assert row.use_device is None
+    assert row.is_user_annotation is False
+
+
+def test_key_averages_row_populates_memory_and_input_shape_fields():
+    with torch.profiler.profile(record_shapes=True, profile_memory=True) as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages(group_by_input_shape=True)))
+
+    assert isinstance(row.input_shapes, list)
+    assert row.cpu_memory_usage >= row.self_cpu_memory_usage
 
 
 def test_key_averages_exposes_self_cpu_time_total_aggregate():
