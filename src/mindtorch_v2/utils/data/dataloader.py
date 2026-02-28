@@ -22,6 +22,11 @@ class DataLoader:
         if num_workers != 0:
             raise NotImplementedError("num_workers > 0 is planned for phase 2")
 
+        if batch_size is None and drop_last:
+            raise ValueError(
+                "batch_size=None option disables auto-batching and is mutually exclusive with drop_last"
+            )
+
         if batch_sampler is not None:
             if batch_size != 1:
                 raise ValueError("batch_sampler option is mutually exclusive with batch_size")
@@ -46,6 +51,23 @@ class DataLoader:
 
         self._is_iterable = isinstance(dataset, IterableDataset)
 
+        if self._is_iterable:
+            if shuffle is not False:
+                raise ValueError(
+                    "DataLoader with IterableDataset: expected unspecified shuffle option, "
+                    f"but got shuffle={shuffle}"
+                )
+            if sampler is not None:
+                raise ValueError(
+                    "DataLoader with IterableDataset: expected unspecified sampler option, "
+                    f"but got sampler={sampler}"
+                )
+            if batch_sampler is not None:
+                raise ValueError(
+                    "DataLoader with IterableDataset: expected unspecified batch_sampler option, "
+                    f"but got batch_sampler={batch_sampler}"
+                )
+
         if self.batch_sampler is None and not self._is_iterable:
             if self.sampler is None:
                 if self.shuffle:
@@ -57,6 +79,14 @@ class DataLoader:
     def __iter__(self):
         if self._is_iterable:
             iterator = iter(self.dataset)
+            if self.batch_size is None:
+                for item in iterator:
+                    out = self.collate_fn(item)
+                    if self.pin_memory:
+                        out = _pin_memory_batch(out)
+                    yield out
+                return
+
             batch = []
             for item in iterator:
                 batch.append(item)
