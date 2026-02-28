@@ -42,7 +42,7 @@ class _Event:
 
 
 class _ProfilerSession:
-    def __init__(self, activities, record_shapes=False, with_stack=False):
+    def __init__(self, activities, record_shapes=False, with_stack=False, profile_memory=False):
         self.activities = set(activities)
         self.current_step = 0
         self._events = []
@@ -50,6 +50,7 @@ class _ProfilerSession:
         self.is_recording = True
         self.record_shapes = bool(record_shapes)
         self.with_stack = bool(with_stack)
+        self.profile_memory = bool(profile_memory)
 
     def make_op_token(self, name, device_type, metadata=None):
         return (
@@ -215,6 +216,16 @@ def _capture_stack(limit=48):
     return entries[-32:] if entries else None
 
 
+
+def _npu_memory_allocated_snapshot(device_type):
+    if device_type != "NPU":
+        return None
+    from .. import npu
+
+    if not npu.is_available():
+        return None
+    return int(npu.memory_allocated())
+
 def _active_session():
     return _ACTIVE_SESSION
 
@@ -235,7 +246,7 @@ def dispatch_op_enter(name, dispatch_device, args, kwargs):
         return None
 
     metadata = None
-    if session.record_shapes or session.with_stack:
+    if session.record_shapes or session.with_stack or session.profile_memory:
         metadata = {}
         if session.record_shapes:
             shapes = _capture_input_shapes(args, kwargs)
@@ -245,6 +256,10 @@ def dispatch_op_enter(name, dispatch_device, args, kwargs):
             stack = _capture_stack()
             if stack:
                 metadata["stack"] = stack
+        if session.profile_memory:
+            before = _npu_memory_allocated_snapshot(device_type)
+            if before is not None:
+                metadata["npu_memory_allocated_before"] = before
         if not metadata:
             metadata = None
 
@@ -257,6 +272,14 @@ def dispatch_op_exit(token):
 
     session, name, device_type, start_ns, step, thread_id, metadata = token
     end_ns = time.perf_counter_ns()
+
+    if metadata is not None and "npu_memory_allocated_before" in metadata:
+        after = _npu_memory_allocated_snapshot(device_type)
+        if after is not None:
+            before = metadata["npu_memory_allocated_before"]
+            metadata["npu_memory_allocated_after"] = after
+            metadata["npu_memory_allocated_delta"] = int(after - before)
+
     session.append_event(
         _Event(
             name=name,
@@ -439,10 +462,15 @@ class profile:
         experimental_config=None,
         use_cuda=None,
     ):
-        del profile_memory, with_flops, with_modules, experimental_config, use_cuda
+        del with_flops, with_modules, experimental_config, use_cuda
 
         self.activities = _resolve_activities(activities)
-        self._session = _ProfilerSession(self.activities, record_shapes=record_shapes, with_stack=with_stack)
+        self._session = _ProfilerSession(
+            self.activities,
+            record_shapes=record_shapes,
+            with_stack=with_stack,
+            profile_memory=profile_memory,
+        )
         self._started = False
         self._stopped = False
         self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
