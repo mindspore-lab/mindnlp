@@ -20,9 +20,12 @@ from .ops import (
     add,
     matmul,
     mul,
+    div,
+    true_divide,
     relu,
     sum_,
     mean_,
+    std_,
     all_,
     any_,
     argmax,
@@ -157,6 +160,8 @@ from .ops import (
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
 registry.register("mul", "cpu", mul, meta=meta_infer.infer_binary)
+registry.register("div", "cpu", div, meta=meta_infer.infer_binary)
+registry.register("true_divide", "cpu", true_divide, meta=meta_infer.infer_binary)
 registry.register("matmul", "cpu", matmul, meta=meta_infer.infer_matmul)
 registry.register("relu", "cpu", relu, meta=meta_infer.infer_unary)
 registry.register("abs", "cpu", abs, meta=meta_infer.infer_unary)
@@ -241,6 +246,7 @@ registry.register("setitem", "cpu", setitem)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("mean", "cpu", mean_, meta=meta_infer.infer_sum)
+registry.register("std", "cpu", std_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)

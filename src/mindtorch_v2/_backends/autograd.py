@@ -37,12 +37,35 @@ def _backward_dispatch_keyset(raw_keyset, autograd_keyset):
     return raw_keyset
 
 
+def _autograd_unary_passthrough(name):
+    def wrapper(a, *args, **kwargs):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, *args, **kwargs)
+        if GradMode.enabled and getattr(a, "requires_grad", False):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return (redispatch("to", backward_keyset, grad, a.device, non_blocking=False),)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
 def _autograd_binary(name, backward_impl, *, save_inputs=True):
     def wrapper(a, b):
         active_keyset = current_dispatch_keyset()
         raw_keyset = _strip_autograd_keys(active_keyset)
         out = redispatch(name, raw_keyset, a, b)
-        if GradMode.enabled and (a.requires_grad or b.requires_grad):
+        a_requires_grad = getattr(a, "requires_grad", False)
+        b_requires_grad = getattr(b, "requires_grad", False)
+        if GradMode.enabled and (a_requires_grad or b_requires_grad):
             node_holder = {}
 
             def _backward(grad):
@@ -176,15 +199,15 @@ def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
 
 
 def _add_backward(grad, a, b, _saved_a, _saved_b, _keyset):
-    grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
-    grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
+    grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
+    grad_b = reduce_grad(grad, b.shape) if getattr(b, "requires_grad", False) else None
     return grad_a, grad_b
 
 
 def _mul_backward(grad, a, b, saved_a, saved_b, keyset):
     with _grad_context(keyset):
-        grad_a = redispatch("mul", keyset, grad, saved_b) if a.requires_grad else None
-        grad_b = redispatch("mul", keyset, grad, saved_a) if b.requires_grad else None
+        grad_a = redispatch("mul", keyset, grad, saved_b) if getattr(a, "requires_grad", False) else None
+        grad_b = redispatch("mul", keyset, grad, saved_a) if getattr(b, "requires_grad", False) else None
     grad_a = reduce_grad(grad_a, a.shape) if grad_a is not None else None
     grad_b = reduce_grad(grad_b, b.shape) if grad_b is not None else None
     return grad_a, grad_b
@@ -192,8 +215,17 @@ def _mul_backward(grad, a, b, saved_a, saved_b, keyset):
 
 def _matmul_backward(grad, a, b, saved_a, saved_b, keyset):
     with _grad_context(keyset):
-        grad_a = redispatch("matmul", keyset, grad, saved_b.transpose(0, 1)) if a.requires_grad else None
-        grad_b = redispatch("matmul", keyset, saved_a.transpose(0, 1), grad) if b.requires_grad else None
+        grad_a = None
+        grad_b = None
+
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("matmul", keyset, grad, saved_b.transpose(-1, -2))
+            grad_a = reduce_grad(grad_a, a.shape)
+
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("matmul", keyset, saved_a.transpose(-1, -2), grad)
+            grad_b = reduce_grad(grad_b, b.shape)
+
     return grad_a, grad_b
 
 
@@ -231,10 +263,18 @@ def _transpose_backward(grad, _a, _saved_a, args, keyset):
     return (redispatch("transpose", keyset, grad, dim0, dim1),)
 
 
+def _getitem_backward(grad, a, _saved_a, keyset, args, _kwargs):
+    key = args[0]
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        redispatch("setitem", keyset, grad_input, key, grad)
+    return (grad_input,)
+
+
 def _inplace_binary_backward(grad, a, _saved_a, args, _keyset):
     b = args[0]
-    grad_a = reduce_grad(grad, a.shape) if a.requires_grad else None
-    grad_b = reduce_grad(grad, b.shape) if b.requires_grad else None
+    grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
+    grad_b = reduce_grad(grad, b.shape) if getattr(b, "requires_grad", False) else None
     return grad_a, grad_b
 
 
@@ -261,6 +301,14 @@ registry.register_kernel("matmul", DispatchKey.Autograd, _autograd_binary("matmu
 registry.register_kernel("matmul", DispatchKey.AutogradCPU, _autograd_binary("matmul", _matmul_backward))
 registry.register_kernel("matmul", DispatchKey.AutogradNPU, _autograd_binary("matmul", _matmul_backward))
 registry.register_kernel("matmul", DispatchKey.AutogradMeta, _autograd_binary("matmul", _matmul_backward))
+registry.register_kernel("div", DispatchKey.Autograd, _autograd_binary("div", _div_backward))
+registry.register_kernel("div", DispatchKey.AutogradCPU, _autograd_binary("div", _div_backward))
+registry.register_kernel("div", DispatchKey.AutogradNPU, _autograd_binary("div", _div_backward))
+registry.register_kernel("div", DispatchKey.AutogradMeta, _autograd_binary("div", _div_backward))
+registry.register_kernel("true_divide", DispatchKey.Autograd, _autograd_binary("true_divide", _div_backward))
+registry.register_kernel("true_divide", DispatchKey.AutogradCPU, _autograd_binary("true_divide", _div_backward))
+registry.register_kernel("true_divide", DispatchKey.AutogradNPU, _autograd_binary("true_divide", _div_backward))
+registry.register_kernel("true_divide", DispatchKey.AutogradMeta, _autograd_binary("true_divide", _div_backward))
 registry.register_kernel("sum", DispatchKey.Autograd, _autograd_unary("sum", _sum_backward, save_input=False))
 registry.register_kernel("sum", DispatchKey.AutogradCPU, _autograd_unary("sum", _sum_backward, save_input=False))
 registry.register_kernel("sum", DispatchKey.AutogradNPU, _autograd_unary("sum", _sum_backward, save_input=False))
@@ -285,6 +333,9 @@ registry.register_kernel("view", DispatchKey.Autograd, _autograd_view("view", _r
 registry.register_kernel("view", DispatchKey.AutogradCPU, _autograd_view("view", _reshape_backward))
 registry.register_kernel("view", DispatchKey.AutogradNPU, _autograd_view("view", _reshape_backward))
 registry.register_kernel("view", DispatchKey.AutogradMeta, _autograd_view("view", _reshape_backward))
+registry.register_kernel("getitem", DispatchKey.Autograd, _autograd_unary_args("getitem", _getitem_backward, save_input=False))
+registry.register_kernel("getitem", DispatchKey.AutogradCPU, _autograd_unary_args("getitem", _getitem_backward, save_input=False))
+registry.register_kernel("getitem", DispatchKey.AutogradNPU, _autograd_unary_args("getitem", _getitem_backward, save_input=False))
 registry.register_kernel("add_", DispatchKey.Autograd, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("add_", DispatchKey.AutogradCPU, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("add_", DispatchKey.AutogradNPU, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
@@ -436,3 +487,19 @@ registry.register_kernel("neg", DispatchKey.Autograd, _autograd_unary("neg", _ne
 registry.register_kernel("neg", DispatchKey.AutogradCPU, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
 registry.register_kernel("neg", DispatchKey.AutogradNPU, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
 registry.register_kernel("neg", DispatchKey.AutogradMeta, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
+registry.register_kernel("softmax", DispatchKey.Autograd, _autograd_unary_passthrough("softmax"))
+registry.register_kernel("softmax", DispatchKey.AutogradCPU, _autograd_unary_passthrough("softmax"))
+registry.register_kernel("softmax", DispatchKey.AutogradNPU, _autograd_unary_passthrough("softmax"))
+registry.register_kernel("softmax", DispatchKey.AutogradMeta, _autograd_unary_passthrough("softmax"))
+registry.register_kernel("dropout", DispatchKey.Autograd, _autograd_unary_passthrough("dropout"))
+registry.register_kernel("dropout", DispatchKey.AutogradCPU, _autograd_unary_passthrough("dropout"))
+registry.register_kernel("dropout", DispatchKey.AutogradNPU, _autograd_unary_passthrough("dropout"))
+registry.register_kernel("dropout", DispatchKey.AutogradMeta, _autograd_unary_passthrough("dropout"))
+registry.register_kernel("gelu", DispatchKey.Autograd, _autograd_unary_passthrough("gelu"))
+registry.register_kernel("gelu", DispatchKey.AutogradCPU, _autograd_unary_passthrough("gelu"))
+registry.register_kernel("gelu", DispatchKey.AutogradNPU, _autograd_unary_passthrough("gelu"))
+registry.register_kernel("gelu", DispatchKey.AutogradMeta, _autograd_unary_passthrough("gelu"))
+registry.register_kernel("layer_norm", DispatchKey.Autograd, _autograd_unary_passthrough("layer_norm"))
+registry.register_kernel("layer_norm", DispatchKey.AutogradCPU, _autograd_unary_passthrough("layer_norm"))
+registry.register_kernel("layer_norm", DispatchKey.AutogradNPU, _autograd_unary_passthrough("layer_norm"))
+registry.register_kernel("layer_norm", DispatchKey.AutogradMeta, _autograd_unary_passthrough("layer_norm"))

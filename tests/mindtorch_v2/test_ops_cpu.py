@@ -193,6 +193,13 @@ def test_isfinite_cpu():
     np.testing.assert_array_equal(x.isfinite().numpy(), expected)
 
 
+def test_bitwise_xor_bool_cpu():
+    x = torch.tensor([True, False, True], dtype=torch.bool)
+    y = torch.tensor([True, True, False], dtype=torch.bool)
+    expected = np.logical_xor(x.numpy(), y.numpy())
+    np.testing.assert_array_equal((x ^ y).numpy(), expected)
+
+
 def test_sinh_cpu():
     x = torch.tensor([0.0, 0.5, 1.0])
     expected = np.sinh(x.numpy())
@@ -356,6 +363,13 @@ def test_equal_cpu():
     z = torch.tensor([1.0, 3.0])
     assert torch.equal(x, y)
     assert not torch.equal(x, z)
+
+
+def test_tensor_ne_method_cpu():
+    x = torch.tensor([1.0, 2.0, 3.0])
+    y = torch.tensor([1.0, 0.0, 3.0])
+    expected = np.not_equal(x.numpy(), y.numpy())
+    np.testing.assert_array_equal(x.ne(y).numpy(), expected)
 
 
 def test_argmin_cpu():
@@ -577,6 +591,18 @@ def test_pad_sequence_cpu_left():
     )
     expected = np.array([[1.0, 2.0], [-1.0, 3.0]])
     np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_pad_negative_crop_cpu():
+    import mindtorch_v2.nn.functional as F
+
+    x = torch.arange(5)
+    np.testing.assert_array_equal(F.pad(x, (0, -2)).numpy(), np.array([0, 1, 2]))
+    np.testing.assert_array_equal(F.pad(x, (-2, 0)).numpy(), np.array([2, 3, 4]))
+    np.testing.assert_array_equal(F.pad(x, (-2, -1)).numpy(), np.array([2, 3]))
+
+    with pytest.raises(RuntimeError, match=r"narrow\(\): length must be non-negative"):
+        F.pad(x, (-6, 0))
 
 
 def test_block_diag_cpu():
@@ -879,6 +905,13 @@ def test_repeat_cpu():
     np.testing.assert_array_equal(out.numpy(), expected)
 
 
+def test_tensor_repeat_method_cpu():
+    x = torch.tensor([[1, 2], [3, 4]])
+    out = x.repeat(2, 3)
+    expected = np.tile(x.numpy(), (2, 3))
+    np.testing.assert_array_equal(out.numpy(), expected)
+
+
 def test_repeat_interleave_cpu():
     x = torch.tensor([1, 2, 3])
     out = torch.repeat_interleave(x, repeats=2)
@@ -1025,3 +1058,45 @@ def test_acos_cpu():
     expected = np.arccos(x.numpy())
     np.testing.assert_allclose(torch.acos(x).numpy(), expected)
     np.testing.assert_allclose(x.acos().numpy(), expected)
+
+
+def test_mean_axis_keyword_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    out = torch.mean(x, axis=0)
+    expected = np.mean(x.numpy(), axis=0)
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_matmul_operator_cpu():
+    a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    b = torch.tensor([[2.0, 0.5], [1.0, -1.0]])
+    out = a @ b
+    expected = np.matmul(a.numpy(), b.numpy())
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_scalar_rmul_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    out = 0.5 * x
+    expected = 0.5 * x.numpy()
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_std_axis_keyword_cpu():
+    x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    out = torch.std(x, axis=0)
+    expected = np.std(x.numpy(), axis=0, ddof=1)
+    np.testing.assert_allclose(out.numpy(), expected)
+
+
+def test_std_int_dtype_raises_cpu():
+    x = torch.tensor([1, 2, 3], dtype=torch.int64)
+    with pytest.raises(RuntimeError):
+        torch.std(x)
+
+
+def test_clamp_inplace_max_cpu():
+    x = torch.tensor([0, 3, 10], dtype=torch.int64)
+    y = x.clamp_(max=5)
+    assert y is x
+    np.testing.assert_array_equal(x.numpy(), np.array([0, 3, 5], dtype=np.int64))

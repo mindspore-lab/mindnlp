@@ -272,6 +272,12 @@ def mean(a, dim=None, keepdim=False, *, dtype=None):
     return dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
 
 
+def std(a, dim=None, keepdim=False, unbiased=True, *, axis=None):
+    if axis is not None:
+        dim = axis
+    return dispatch("std", a.device.type, a, dim=dim, keepdim=keepdim, unbiased=unbiased)
+
+
 def sinh(a):
     return dispatch("sinh", a.device.type, a)
 
