@@ -2,6 +2,7 @@ import json
 import os
 import threading
 import time
+import traceback
 from dataclasses import dataclass
 
 from .common import ProfilerActivity, ProfilerAction
@@ -22,9 +23,10 @@ class _Event:
     duration_ns: int
     step: int
     thread_id: int
+    metadata: dict = None
 
     def to_dict(self):
-        return {
+        payload = {
             "name": self.name,
             "kind": self.kind,
             "device_type": self.device_type,
@@ -34,17 +36,22 @@ class _Event:
             "step": self.step,
             "thread_id": self.thread_id,
         }
+        if self.metadata:
+            payload.update(self.metadata)
+        return payload
 
 
 class _ProfilerSession:
-    def __init__(self, activities):
+    def __init__(self, activities, record_shapes=False, with_stack=False):
         self.activities = set(activities)
         self.current_step = 0
         self._events = []
         self._lock = threading.Lock()
         self.is_recording = True
+        self.record_shapes = bool(record_shapes)
+        self.with_stack = bool(with_stack)
 
-    def make_op_token(self, name, device_type):
+    def make_op_token(self, name, device_type, metadata=None):
         return (
             self,
             name,
@@ -52,6 +59,7 @@ class _ProfilerSession:
             time.perf_counter_ns(),
             self.current_step,
             threading.get_ident(),
+            metadata,
         )
 
     def append_event(self, event):
@@ -139,6 +147,74 @@ def _normalize_device_type(device):
     return dev.upper()
 
 
+def _is_tensor_like(value):
+    return hasattr(value, "shape") and hasattr(value, "device")
+
+
+def _shape_payload(value, depth=0):
+    if depth > 3:
+        return None
+    if _is_tensor_like(value):
+        return list(value.shape)
+    if isinstance(value, (list, tuple)):
+        items = []
+        for item in value:
+            item_shape = _shape_payload(item, depth + 1)
+            if item_shape is not None:
+                items.append(item_shape)
+        return items or None
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            item_shape = _shape_payload(item, depth + 1)
+            if item_shape is not None:
+                out[str(key)] = item_shape
+        return out or None
+    return None
+
+
+def _capture_input_shapes(args, kwargs):
+    arg_shapes = []
+    for value in args:
+        shape = _shape_payload(value)
+        if shape is not None:
+            arg_shapes.append(shape)
+
+    kw_shapes = {}
+    for key, value in kwargs.items():
+        shape = _shape_payload(value)
+        if shape is not None:
+            kw_shapes[key] = shape
+
+    if not arg_shapes and not kw_shapes:
+        return None
+
+    payload = {}
+    if arg_shapes:
+        payload["args"] = arg_shapes
+    if kw_shapes:
+        payload["kwargs"] = kw_shapes
+    return payload
+
+
+def _is_internal_stack_frame(filename):
+    normalized = filename.replace("\\", "/")
+    return (
+        "/mindtorch_v2/profiler/profiler.py" in normalized
+        or "/mindtorch_v2/_dispatch/dispatcher.py" in normalized
+    )
+
+
+def _capture_stack(limit=48):
+    frames = traceback.extract_stack(limit=limit)
+    entries = []
+    for frame in frames:
+        if _is_internal_stack_frame(frame.filename):
+            continue
+        entries.append(f"{frame.filename}:{frame.lineno}:{frame.name}")
+    return entries[-32:] if entries else None
+
+
 def _active_session():
     return _ACTIVE_SESSION
 
@@ -147,7 +223,7 @@ def is_profiler_enabled():
     return _ACTIVE_SESSION is not None
 
 
-def dispatch_op_enter(name, dispatch_device):
+def dispatch_op_enter(name, dispatch_device, args, kwargs):
     session = _active_session()
     if session is None:
         return None
@@ -157,14 +233,29 @@ def dispatch_op_enter(name, dispatch_device):
         return None
     if not session.is_recording:
         return None
-    return session.make_op_token(name, device_type)
+
+    metadata = None
+    if session.record_shapes or session.with_stack:
+        metadata = {}
+        if session.record_shapes:
+            shapes = _capture_input_shapes(args, kwargs)
+            if shapes is not None:
+                metadata["input_shapes"] = shapes
+        if session.with_stack:
+            stack = _capture_stack()
+            if stack:
+                metadata["stack"] = stack
+        if not metadata:
+            metadata = None
+
+    return session.make_op_token(name, device_type, metadata)
 
 
 def dispatch_op_exit(token):
     if token is None:
         return
 
-    session, name, device_type, start_ns, step, thread_id = token
+    session, name, device_type, start_ns, step, thread_id, metadata = token
     end_ns = time.perf_counter_ns()
     session.append_event(
         _Event(
@@ -176,6 +267,7 @@ def dispatch_op_exit(token):
             duration_ns=end_ns - start_ns,
             step=step,
             thread_id=thread_id,
+            metadata=metadata,
         )
     )
 
@@ -198,12 +290,19 @@ class _RecordFunction:
         if session is None or not session.is_recording:
             return self
 
+        metadata = None
+        if session.with_stack:
+            stack = _capture_stack()
+            if stack:
+                metadata = {"stack": stack}
+
         self._token = (
             session,
             self.name,
             time.perf_counter_ns(),
             session.current_step,
             threading.get_ident(),
+            metadata,
         )
         _scope_stack().append(self._token)
         return self
@@ -212,7 +311,7 @@ class _RecordFunction:
         if self._token is None:
             return False
 
-        session, name, start_ns, step, thread_id = self._token
+        session, name, start_ns, step, thread_id, metadata = self._token
         end_ns = time.perf_counter_ns()
         stack = _scope_stack()
         if stack and stack[-1] is self._token:
@@ -230,6 +329,7 @@ class _RecordFunction:
                 duration_ns=end_ns - start_ns,
                 step=step,
                 thread_id=thread_id,
+                metadata=metadata,
             )
         )
         return False
@@ -305,11 +405,10 @@ class profile:
         experimental_config=None,
         use_cuda=None,
     ):
-        del record_shapes, profile_memory, with_stack
-        del with_flops, with_modules, experimental_config, use_cuda
+        del profile_memory, with_flops, with_modules, experimental_config, use_cuda
 
         self.activities = _resolve_activities(activities)
-        self._session = _ProfilerSession(self.activities)
+        self._session = _ProfilerSession(self.activities, record_shapes=record_shapes, with_stack=with_stack)
         self._started = False
         self._stopped = False
         self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
@@ -400,6 +499,12 @@ class profile:
         self._maybe_sync_npu()
         trace_events = []
         for event in self._session.snapshot():
+            args = {
+                "device_type": event.device_type,
+                "step": event.step,
+            }
+            if event.metadata:
+                args.update(event.metadata)
             trace_events.append(
                 {
                     "name": event.name,
@@ -409,10 +514,7 @@ class profile:
                     "tid": event.thread_id,
                     "ts": event.start_ns / 1000.0,
                     "dur": event.duration_ns / 1000.0,
-                    "args": {
-                        "device_type": event.device_type,
-                        "step": event.step,
-                    },
+                    "args": args,
                 }
             )
 
