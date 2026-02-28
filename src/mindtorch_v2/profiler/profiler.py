@@ -340,9 +340,30 @@ def record_function(name):
 
 
 class _KeyAverages:
-    def __init__(self, events):
+    _SORT_MAP = {
+        "self_cpu_time_total": "self_time_ns",
+        "cpu_time_total": "total_time_ns",
+        "count": "count",
+    }
+
+    def __init__(self, events, *, group_by_input_shape=False, group_by_stack_n=0):
         self._events = list(events)
         self._rows = None
+        self._group_by_input_shape = bool(group_by_input_shape)
+        self._group_by_stack_n = int(group_by_stack_n)
+
+    def _group_key(self, event):
+        key = [event.name, event.device_type]
+        metadata = event.metadata or {}
+
+        if self._group_by_input_shape:
+            key.append(json.dumps(metadata.get("input_shapes", None), sort_keys=True))
+
+        if self._group_by_stack_n > 0:
+            stack = metadata.get("stack") or []
+            key.append(tuple(stack[-self._group_by_stack_n :]))
+
+        return tuple(key)
 
     def _build_rows(self):
         if self._rows is not None:
@@ -350,9 +371,9 @@ class _KeyAverages:
 
         grouped = {}
         for event in self._events:
-            key = (event.name, event.device_type)
+            group_key = self._group_key(event)
             row = grouped.setdefault(
-                key,
+                group_key,
                 {
                     "name": event.name,
                     "device_type": event.device_type,
@@ -361,6 +382,13 @@ class _KeyAverages:
                     "self_time_ns": 0,
                 },
             )
+            metadata = event.metadata or {}
+            if self._group_by_input_shape:
+                row["input_shapes"] = metadata.get("input_shapes")
+            if self._group_by_stack_n > 0:
+                stack = metadata.get("stack") or []
+                row["stack"] = stack[-self._group_by_stack_n :] if stack else []
+
             row["count"] += 1
             row["total_time_ns"] += event.duration_ns
             row["self_time_ns"] += event.duration_ns
@@ -372,8 +400,11 @@ class _KeyAverages:
         return self._rows
 
     def table(self, sort_by="self_cpu_time_total", row_limit=100):
+        if sort_by not in self._SORT_MAP:
+            raise AttributeError(f"'FunctionEventAvg' object has no attribute '{sort_by}'")
+
         rows = list(self._build_rows())
-        sort_key = "self_time_ns" if "self" in str(sort_by) else "total_time_ns"
+        sort_key = self._SORT_MAP[sort_by]
         rows.sort(key=lambda item: (item[sort_key], item["name"]), reverse=True)
         if row_limit is not None:
             rows = rows[: int(row_limit)]
@@ -388,6 +419,9 @@ class _KeyAverages:
                 f"{row['name']:<32} {row['device_type']:<8} {row['count']:>6} {total_us:>12.3f} {self_us:>12.3f} {avg_us:>12.3f}"
             )
         return "\n".join(lines)
+
+    def __len__(self):
+        return len(self._build_rows())
 
 
 class profile:
@@ -492,8 +526,12 @@ class profile:
         events.sort(key=lambda item: (item.start_ns, item.end_ns, item.name))
         return [event.to_dict() for event in events]
 
-    def key_averages(self):
-        return _KeyAverages(self._session.snapshot())
+    def key_averages(self, group_by_input_shape=False, group_by_stack_n=0):
+        return _KeyAverages(
+            self._session.snapshot(),
+            group_by_input_shape=group_by_input_shape,
+            group_by_stack_n=group_by_stack_n,
+        )
 
     def export_chrome_trace(self, path):
         self._maybe_sync_npu()
