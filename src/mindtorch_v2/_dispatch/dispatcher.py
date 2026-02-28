@@ -309,7 +309,7 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
         token = None
         if is_profiler_enabled():
-            token = dispatch_op_enter(alias_name, dispatch_device)
+            token = dispatch_op_enter(alias_name, dispatch_device, args, impl_kwargs)
         _push_dispatch_context(keyset, key)
         try:
             result = kernel(*args, **impl_kwargs)

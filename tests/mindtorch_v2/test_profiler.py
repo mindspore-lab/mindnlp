@@ -196,3 +196,49 @@ def test_profiler_schedule_invalid_config_raises():
         torch.profiler.schedule(wait=-1, warmup=0, active=1)
     with pytest.raises(ValueError):
         torch.profiler.schedule(wait=0, warmup=0, active=0)
+
+
+def test_profiler_record_shapes_captures_tensor_shapes():
+    with torch.profiler.profile(record_shapes=True) as prof:
+        x = torch.ones((2, 3))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert any("input_shapes" in event for event in op_events)
+
+
+def test_profiler_with_stack_captures_frame_metadata():
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert any("stack" in event and len(event["stack"]) > 0 for event in op_events)
+
+
+def test_profiler_default_flags_do_not_emit_shape_or_stack():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert all("input_shapes" not in event for event in op_events)
+    assert all("stack" not in event for event in op_events)
+
+
+def test_export_chrome_trace_includes_shape_and_stack_args_when_enabled(tmp_path):
+    out = tmp_path / "trace_shapes_stack.json"
+
+    with torch.profiler.profile(record_shapes=True, with_stack=True) as prof:
+        x = torch.ones((2, 4))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    events = payload["traceEvents"]
+    assert events
+    assert any("input_shapes" in event.get("args", {}) for event in events)
+    assert any("stack" in event.get("args", {}) for event in events)
