@@ -419,19 +419,18 @@ class _FunctionEventAvgRow:
         self.self_cpu_time_total = float(row.get("self_time_ns", 0)) / 1000.0
         self.cpu_time_total = float(row.get("total_time_ns", 0)) / 1000.0
         self.cpu_time = float(row.get("avg_time_ns", 0)) / 1000.0
-
-    def __getitem__(self, key):
-        if key == "key":
-            return self.key
-        if key == "count":
-            return self.count
-        if key == "self_cpu_time_total":
-            return self.self_cpu_time_total
-        if key == "cpu_time_total":
-            return self.cpu_time_total
-        if key == "cpu_time":
-            return self.cpu_time
-        return self._row[key]
+        self.device_type = row.get("device_type", "CPU")
+        self.input_shapes = row.get("input_shapes", "")
+        self.stack = row.get("stack", [])
+        self.cpu_memory_usage = int(row.get("cpu_memory_usage", 0))
+        self.self_cpu_memory_usage = int(row.get("self_cpu_memory_usage", 0))
+        self.device_memory_usage = int(row.get("device_memory_usage", 0))
+        self.self_device_memory_usage = int(row.get("self_device_memory_usage", 0))
+        self.flops = int(row.get("flops", 0))
+        self.is_async = bool(row.get("is_async", False))
+        self.scope = int(row.get("scope", 0))
+        self.use_device = row.get("use_device", None)
+        self.is_user_annotation = bool(row.get("is_user_annotation", False))
 
     def __repr__(self):
         return (
@@ -511,11 +510,23 @@ class _KeyAverages:
                     "count": 0,
                     "total_time_ns": 0,
                     "self_time_ns": 0,
+                    "input_shapes": "",
+                    "stack": [],
+                    "cpu_memory_usage": 0,
+                    "self_cpu_memory_usage": 0,
+                    "device_memory_usage": 0,
+                    "self_device_memory_usage": 0,
+                    "flops": 0,
+                    "is_async": False,
+                    "scope": 0,
+                    "use_device": None,
+                    "is_user_annotation": False,
                 },
             )
             metadata = event.metadata or {}
             if self._group_by_input_shape:
-                row["input_shapes"] = metadata.get("input_shapes")
+                input_shapes = metadata.get("input_shapes")
+                row["input_shapes"] = input_shapes if input_shapes is not None else []
             if self._group_by_stack_n > 0:
                 stack = metadata.get("stack") or []
                 row["stack"] = stack[-self._group_by_stack_n :] if stack else []
@@ -523,6 +534,16 @@ class _KeyAverages:
             row["count"] += 1
             row["total_time_ns"] += event.duration_ns
             row["self_time_ns"] += per_event_self_time.get(idx, max(0, event.duration_ns))
+
+            row["cpu_memory_usage"] += int(metadata.get("cpu_memory_allocated_delta", 0))
+            row["self_cpu_memory_usage"] += int(metadata.get("cpu_memory_allocated_delta", 0))
+            row["device_memory_usage"] += int(metadata.get("npu_memory_allocated_delta", 0))
+            row["self_device_memory_usage"] += int(metadata.get("npu_memory_allocated_delta", 0))
+            row["flops"] += int(metadata.get("flops", 0))
+            row["is_async"] = bool(metadata.get("is_async", False))
+            row["scope"] = int(metadata.get("scope", 0))
+            row["use_device"] = metadata.get("use_device", None)
+            row["is_user_annotation"] = bool(metadata.get("is_user_annotation", False))
 
         for row in grouped.values():
             row["avg_time_ns"] = row["total_time_ns"] // max(1, row["count"])
@@ -567,6 +588,17 @@ class _KeyAverages:
             "self_time_ns": totals["self_time_ns"],
             "total_time_ns": total_time_ns,
             "avg_time_ns": avg_time_ns,
+            "input_shapes": "",
+            "stack": [],
+            "cpu_memory_usage": 0,
+            "self_cpu_memory_usage": 0,
+            "device_memory_usage": 0,
+            "self_device_memory_usage": 0,
+            "flops": 0,
+            "is_async": False,
+            "scope": 0,
+            "use_device": None,
+            "is_user_annotation": False,
         }
         return _FunctionEventAvgRow(row)
 
