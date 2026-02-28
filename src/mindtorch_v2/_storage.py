@@ -114,11 +114,49 @@ class _CPUUntypedStorage(UntypedStorage):
         return self
 
     def share_memory_(self):
+        if self._filename is not None:
+            self._shared = True
+            return self
+
+        nbytes = int(self._array.nbytes)
+        if nbytes == 0:
+            self._shared = True
+            return self
+
+        import tempfile
+
+        fd, filename = tempfile.mkstemp(prefix="mindtorch_v2_shm_", suffix=".bin")
+        try:
+            with open(fd, "wb", closefd=False) as f:
+                f.truncate(nbytes)
+        finally:
+            import os
+
+            os.close(fd)
+
+        mmap_arr = np.memmap(filename, mode="r+", dtype=np.uint8, shape=(nbytes,))
+        mmap_arr[:] = self._array.view(np.uint8).reshape(-1)
+
+        self._array = mmap_arr
+        self._filename = filename
         self._shared = True
         return self
 
     def is_shared(self):
         return self._shared
+
+    def shared_memory_meta(self):
+        if self._filename is None:
+            return None
+        return {"filename": self._filename, "nbytes": int(self._array.nbytes)}
+
+    def typed_view(self, dtype, size):
+        return np.frombuffer(self._array, dtype=to_numpy_dtype(dtype), count=int(size))
+
+    @classmethod
+    def from_shared_memory(cls, filename, nbytes):
+        data = np.memmap(filename, mode="r+", dtype=np.uint8, shape=(int(nbytes),))
+        return cls(data, filename=filename, shared=True)
 
     @classmethod
     def from_file(cls, filename, shared=False):
