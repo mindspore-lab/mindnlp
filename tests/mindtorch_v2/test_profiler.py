@@ -359,3 +359,28 @@ def test_export_chrome_trace_includes_cpu_memory_fields_when_enabled(tmp_path):
     assert any("cpu_memory_allocated_before" in e.get("args", {}) for e in cpu_events)
     assert any("cpu_memory_allocated_after" in e.get("args", {}) for e in cpu_events)
     assert any("cpu_memory_allocated_delta" in e.get("args", {}) for e in cpu_events)
+
+
+def test_key_averages_self_time_subtracts_nested_scope_time():
+    with torch.profiler.profile() as prof:
+        with torch.profiler.record_function("outer_scope"):
+            with torch.profiler.record_function("inner_scope"):
+                _ = torch.ones((8, 8)) + 1
+
+    rows = prof.key_averages()._build_rows()
+    row_by_name = {row["name"]: row for row in rows}
+
+    assert "outer_scope" in row_by_name
+    assert "inner_scope" in row_by_name
+    assert row_by_name["outer_scope"]["self_time_ns"] < row_by_name["outer_scope"]["total_time_ns"]
+
+
+def test_key_averages_self_time_not_greater_than_total():
+    with torch.profiler.profile() as prof:
+        with torch.profiler.record_function("scope_a"):
+            _ = torch.ones((4, 4)) + 1
+
+    rows = prof.key_averages()._build_rows()
+    assert rows
+    for row in rows:
+        assert row["self_time_ns"] <= row["total_time_ns"]
