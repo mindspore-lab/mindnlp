@@ -1,6 +1,7 @@
 import multiprocessing as mp
 import queue
 import random
+from collections import deque
 from dataclasses import dataclass
 
 from .dataset import IterableDataset
@@ -19,6 +20,22 @@ from ._utils import (
 class _WorkerException:
     worker_id: int
     message: str
+
+
+@dataclass
+class _MapPool:
+    index_queue: object
+    result_queue: object
+    workers: list
+    pending_events: list
+
+
+@dataclass
+class _IterablePool:
+    control_queue: object
+    result_queue: object
+    workers: list
+    pending_events: list
 
 
 def _worker_seed(base_seed, worker_id):
@@ -40,6 +57,7 @@ def _worker_loop_map(
         random.seed(seed)
         if worker_init_fn is not None:
             worker_init_fn(worker_id)
+        result_queue.put(("worker_ready", worker_id, None))
 
         while True:
             task = index_queue.get()
@@ -59,15 +77,16 @@ def _worker_loop_map(
         result_queue.put(("error", -1, _WorkerException(worker_id, repr(exc))))
     finally:
         _clear_worker_info()
-        result_queue.put(("worker_done", worker_id, None))
+        result_queue.put(("worker_exit", worker_id, None))
 
 
-def _worker_loop_iterable(dataset, result_queue, worker_id, num_workers, seed, worker_init_fn):
+def _worker_loop_iterable_once(dataset, result_queue, worker_id, num_workers, seed, worker_init_fn):
     _set_worker_info(WorkerInfo(worker_id, num_workers, seed, dataset))
     try:
         random.seed(seed)
         if worker_init_fn is not None:
             worker_init_fn(worker_id)
+        result_queue.put(("worker_ready", worker_id, None))
 
         for item in dataset:
             result_queue.put(("data", worker_id, item))
@@ -75,13 +94,67 @@ def _worker_loop_iterable(dataset, result_queue, worker_id, num_workers, seed, w
         result_queue.put(("error", -1, _WorkerException(worker_id, repr(exc))))
     finally:
         _clear_worker_info()
-        result_queue.put(("worker_done", worker_id, None))
+        result_queue.put(("iter_done", -1, worker_id))
+        result_queue.put(("worker_exit", worker_id, None))
+
+
+def _worker_loop_iterable_persistent(
+    dataset,
+    control_queue,
+    result_queue,
+    worker_id,
+    num_workers,
+    seed,
+    worker_init_fn,
+):
+    _set_worker_info(WorkerInfo(worker_id, num_workers, seed, dataset))
+    try:
+        random.seed(seed)
+        if worker_init_fn is not None:
+            worker_init_fn(worker_id)
+        result_queue.put(("worker_ready", worker_id, None))
+
+        while True:
+            cmd, epoch = control_queue.get()
+            if cmd == "shutdown":
+                break
+            if cmd != "iterate":
+                continue
+
+            try:
+                for item in dataset:
+                    result_queue.put(("data", epoch, item))
+                result_queue.put(("iter_done", epoch, worker_id))
+            except Exception as exc:
+                result_queue.put(("error", epoch, _WorkerException(worker_id, repr(exc))))
+                break
+    except Exception as exc:
+        result_queue.put(("error", -1, _WorkerException(worker_id, repr(exc))))
+    finally:
+        _clear_worker_info()
+        result_queue.put(("worker_exit", worker_id, None))
 
 
 def _queue_get(q, timeout):
     if timeout and timeout > 0:
         return q.get(timeout=timeout)
     return q.get()
+
+
+def _signal_map_shutdown(index_queue, num_workers):
+    for _ in range(num_workers):
+        try:
+            index_queue.put_nowait(None)
+        except Exception:
+            break
+
+
+def _signal_iterable_shutdown(control_queue, num_workers):
+    for _ in range(num_workers):
+        try:
+            control_queue.put_nowait(("shutdown", -1))
+        except Exception:
+            break
 
 
 def _shutdown_workers(workers):
@@ -205,6 +278,16 @@ class DataLoader:
             if self._auto_collation:
                 self.batch_sampler = BatchSampler(self.sampler, self.batch_size, self.drop_last)
 
+        self._persistent_map_pool = None
+        self._persistent_iter_pool = None
+        self._persistent_iter_epoch = 0
+
+    def __del__(self):
+        try:
+            self._shutdown_persistent_workers()
+        except Exception:
+            pass
+
     @staticmethod
     def _resolve_multiprocessing_context(multiprocessing_context):
         if multiprocessing_context is None:
@@ -213,10 +296,151 @@ class DataLoader:
             return mp.get_context(multiprocessing_context)
         return multiprocessing_context
 
+    def _queue_depth(self):
+        return max(1, int(self.prefetch_factor or 1) * self.num_workers)
+
     def _maybe_pin(self, out):
         if self.pin_memory:
             return _pin_memory_batch(out)
         return out
+
+    def _create_map_pool(self):
+        queue_depth = self._queue_depth()
+        index_queue = self._mp_context.Queue(maxsize=queue_depth)
+        result_queue = self._mp_context.Queue(maxsize=queue_depth)
+        workers = []
+        base_seed = random.getrandbits(64)
+
+        for worker_id in range(self.num_workers):
+            seed = _worker_seed(base_seed, worker_id)
+            proc = self._mp_context.Process(
+                target=_worker_loop_map,
+                args=(
+                    self.dataset,
+                    index_queue,
+                    result_queue,
+                    worker_id,
+                    self.num_workers,
+                    seed,
+                    self.worker_init_fn,
+                ),
+            )
+            proc.daemon = True
+            proc.start()
+            workers.append(proc)
+
+        pending_events = self._await_worker_ready(result_queue, workers)
+        return _MapPool(
+            index_queue=index_queue,
+            result_queue=result_queue,
+            workers=workers,
+            pending_events=pending_events,
+        )
+
+    def _create_iterable_pool(self, persistent):
+        queue_depth = self._queue_depth()
+        control_queue = self._mp_context.Queue(maxsize=queue_depth) if persistent else None
+        result_queue = self._mp_context.Queue(maxsize=queue_depth)
+        workers = []
+        base_seed = random.getrandbits(64)
+
+        for worker_id in range(self.num_workers):
+            seed = _worker_seed(base_seed, worker_id)
+            if persistent:
+                target = _worker_loop_iterable_persistent
+                args = (
+                    self.dataset,
+                    control_queue,
+                    result_queue,
+                    worker_id,
+                    self.num_workers,
+                    seed,
+                    self.worker_init_fn,
+                )
+            else:
+                target = _worker_loop_iterable_once
+                args = (
+                    self.dataset,
+                    result_queue,
+                    worker_id,
+                    self.num_workers,
+                    seed,
+                    self.worker_init_fn,
+                )
+
+            proc = self._mp_context.Process(target=target, args=args)
+            proc.daemon = True
+            proc.start()
+            workers.append(proc)
+
+        pending_events = []
+        if persistent:
+            pending_events = self._await_worker_ready(result_queue, workers)
+        return _IterablePool(
+            control_queue=control_queue,
+            result_queue=result_queue,
+            workers=workers,
+            pending_events=pending_events,
+        )
+
+    def _await_worker_ready(self, result_queue, workers):
+        ready_count = 0
+        pending = []
+        while ready_count < len(workers):
+            try:
+                kind, key, payload = _queue_get(result_queue, self.timeout)
+            except queue.Empty as exc:
+                _shutdown_workers(workers)
+                raise RuntimeError(f"DataLoader timed out after {self.timeout} seconds") from exc
+
+            if kind == "worker_ready":
+                ready_count += 1
+                continue
+            if kind == "error":
+                _shutdown_workers(workers)
+                raise RuntimeError(f"DataLoader worker {payload.worker_id} failed: {payload.message}")
+            if kind == "worker_exit":
+                _shutdown_workers(workers)
+                raise RuntimeError(f"DataLoader worker {key} exited unexpectedly")
+
+            pending.append((kind, key, payload))
+
+        return pending
+
+    def _all_workers_alive(self, workers):
+        return all(proc.is_alive() for proc in workers)
+
+    def _ensure_persistent_map_pool(self):
+        pool = self._persistent_map_pool
+        if pool is None or not self._all_workers_alive(pool.workers):
+            if pool is not None:
+                _signal_map_shutdown(pool.index_queue, len(pool.workers))
+                _shutdown_workers(pool.workers)
+            pool = self._create_map_pool()
+            self._persistent_map_pool = pool
+        return pool
+
+    def _ensure_persistent_iterable_pool(self):
+        pool = self._persistent_iter_pool
+        if pool is None or not self._all_workers_alive(pool.workers):
+            if pool is not None:
+                _signal_iterable_shutdown(pool.control_queue, len(pool.workers))
+                _shutdown_workers(pool.workers)
+            pool = self._create_iterable_pool(persistent=True)
+            self._persistent_iter_pool = pool
+        return pool
+
+    def _shutdown_persistent_workers(self):
+        if self._persistent_map_pool is not None:
+            pool = self._persistent_map_pool
+            _signal_map_shutdown(pool.index_queue, len(pool.workers))
+            _shutdown_workers(pool.workers)
+            self._persistent_map_pool = None
+        if self._persistent_iter_pool is not None:
+            pool = self._persistent_iter_pool
+            _signal_iterable_shutdown(pool.control_queue, len(pool.workers))
+            _shutdown_workers(pool.workers)
+            self._persistent_iter_pool = None
 
     def _iter_single_process_iterable(self):
         iterator = iter(self.dataset)
@@ -245,29 +469,13 @@ class DataLoader:
             yield self._maybe_pin(self.collate_fn(self.dataset[index]))
 
     def _iter_multiprocess_map(self):
-        queue_depth = max(1, int(self.prefetch_factor or 1) * self.num_workers)
-        index_queue = self._mp_context.Queue(maxsize=queue_depth)
-        result_queue = self._mp_context.Queue(maxsize=queue_depth)
-
-        workers = []
-        base_seed = random.getrandbits(64)
-        for worker_id in range(self.num_workers):
-            seed = _worker_seed(base_seed, worker_id)
-            proc = self._mp_context.Process(
-                target=_worker_loop_map,
-                args=(
-                    self.dataset,
-                    index_queue,
-                    result_queue,
-                    worker_id,
-                    self.num_workers,
-                    seed,
-                    self.worker_init_fn,
-                ),
-            )
-            proc.daemon = True
-            proc.start()
-            workers.append(proc)
+        persistent = self.persistent_workers
+        pool = self._ensure_persistent_map_pool() if persistent else self._create_map_pool()
+        index_queue = pool.index_queue
+        result_queue = pool.result_queue
+        workers = pool.workers
+        pending_events = deque(pool.pending_events)
+        pool.pending_events = []
 
         try:
             send_count = 0
@@ -276,18 +484,25 @@ class DataLoader:
                 index_queue.put((send_idx, index))
                 send_count += 1
 
-            for _ in workers:
-                index_queue.put(None)
+            if not persistent:
+                _signal_map_shutdown(index_queue, len(workers))
 
             next_idx = 0
             reorder = {}
             while next_idx < send_count:
                 try:
-                    kind, key, payload = _queue_get(result_queue, self.timeout)
+                    if pending_events:
+                        kind, key, payload = pending_events.popleft()
+                    else:
+                        kind, key, payload = _queue_get(result_queue, self.timeout)
                 except queue.Empty as exc:
+                    if persistent:
+                        self._shutdown_persistent_workers()
                     raise RuntimeError(f"DataLoader timed out after {self.timeout} seconds") from exc
 
                 if kind == "error":
+                    if persistent:
+                        self._shutdown_persistent_workers()
                     raise RuntimeError(
                         f"DataLoader worker {payload.worker_id} failed: {payload.message}"
                     )
@@ -300,55 +515,62 @@ class DataLoader:
                     yield self._maybe_pin(self.collate_fn(data))
                     next_idx += 1
         finally:
-            _shutdown_workers(workers)
+            if not persistent:
+                _shutdown_workers(workers)
 
     def _iter_multiprocess_iterable(self):
-        queue_depth = max(1, int(self.prefetch_factor or 1) * self.num_workers)
-        result_queue = self._mp_context.Queue(maxsize=queue_depth)
+        persistent = self.persistent_workers
+        pool = self._ensure_persistent_iterable_pool() if persistent else self._create_iterable_pool(False)
+        result_queue = pool.result_queue
+        workers = pool.workers
+        pending_events = deque(pool.pending_events)
+        pool.pending_events = []
 
-        workers = []
-        base_seed = random.getrandbits(64)
-        for worker_id in range(self.num_workers):
-            seed = _worker_seed(base_seed, worker_id)
-            proc = self._mp_context.Process(
-                target=_worker_loop_iterable,
-                args=(
-                    self.dataset,
-                    result_queue,
-                    worker_id,
-                    self.num_workers,
-                    seed,
-                    self.worker_init_fn,
-                ),
-            )
-            proc.daemon = True
-            proc.start()
-            workers.append(proc)
+        epoch = self._persistent_iter_epoch
+        if persistent:
+            self._persistent_iter_epoch += 1
+            for _ in workers:
+                pool.control_queue.put(("iterate", epoch))
 
         try:
             worker_done = 0
             batch = []
-            while worker_done < self.num_workers:
+            while worker_done < len(workers):
                 try:
-                    kind, _key, payload = _queue_get(result_queue, self.timeout)
+                    if pending_events:
+                        kind, key, payload = pending_events.popleft()
+                    else:
+                        kind, key, payload = _queue_get(result_queue, self.timeout)
                 except queue.Empty as exc:
+                    if persistent:
+                        self._shutdown_persistent_workers()
                     raise RuntimeError(f"DataLoader timed out after {self.timeout} seconds") from exc
 
-                if kind == "worker_done":
-                    worker_done += 1
+                if kind == "iter_done":
+                    if not persistent or key == epoch:
+                        worker_done += 1
                     continue
+
                 if kind == "error":
-                    raise RuntimeError(
-                        f"DataLoader worker {payload.worker_id} failed: {payload.message}"
-                    )
+                    if not persistent or key == epoch:
+                        if persistent:
+                            self._shutdown_persistent_workers()
+                        raise RuntimeError(
+                            f"DataLoader worker {payload.worker_id} failed: {payload.message}"
+                        )
+                    continue
+
                 if kind != "data":
                     continue
-
-                if not self._auto_collation:
-                    yield self._maybe_pin(self.collate_fn(payload))
+                if persistent and key != epoch:
                     continue
 
-                batch.append(payload)
+                item = payload
+                if not self._auto_collation:
+                    yield self._maybe_pin(self.collate_fn(item))
+                    continue
+
+                batch.append(item)
                 if len(batch) == self.batch_size:
                     yield self._maybe_pin(self.collate_fn(batch))
                     batch = []
@@ -356,7 +578,8 @@ class DataLoader:
             if self._auto_collation and batch and not self.drop_last:
                 yield self._maybe_pin(self.collate_fn(batch))
         finally:
-            _shutdown_workers(workers)
+            if not persistent:
+                _shutdown_workers(workers)
 
     def __iter__(self):
         if self.num_workers == 0:
