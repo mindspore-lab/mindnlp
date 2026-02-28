@@ -7,6 +7,7 @@ from .functionalize import functionalize_op, is_functionalize_enabled, should_fu
 import threading
 
 from .._autograd.grad_mode import is_grad_enabled
+from ..profiler.profiler import is_profiler_enabled, dispatch_op_enter, dispatch_op_exit
 
 
 _DISPATCH_STATE = threading.local()
@@ -306,11 +307,16 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
                 f"could not find kernel for op {name} with keys {[k.name for k in _key_order(keyset)]}"
             )
         impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
+        token = None
+        if is_profiler_enabled():
+            token = dispatch_op_enter(alias_name, dispatch_device)
         _push_dispatch_context(keyset, key)
         try:
             result = kernel(*args, **impl_kwargs)
         finally:
             _pop_dispatch_context()
+            if token is not None:
+                dispatch_op_exit(token)
         _bump_versions(entry.schema_obj, args, impl_kwargs)
         return result
     if pipe is not None and keyset.has(DispatchKey.Pipeline):
