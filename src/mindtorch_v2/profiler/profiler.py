@@ -411,6 +411,37 @@ def record_function(name):
     return _RecordFunction(name)
 
 
+class _FunctionEventAvgRow:
+    def __init__(self, row):
+        self._row = row
+        self.key = row.get("name")
+        self.count = int(row.get("count", 0))
+        self.self_cpu_time_total = float(row.get("self_time_ns", 0)) / 1000.0
+        self.cpu_time_total = float(row.get("total_time_ns", 0)) / 1000.0
+        self.cpu_time = float(row.get("avg_time_ns", 0)) / 1000.0
+
+    def __getitem__(self, key):
+        if key == "key":
+            return self.key
+        if key == "count":
+            return self.count
+        if key == "self_cpu_time_total":
+            return self.self_cpu_time_total
+        if key == "cpu_time_total":
+            return self.cpu_time_total
+        if key == "cpu_time":
+            return self.cpu_time
+        return self._row[key]
+
+    def __repr__(self):
+        return (
+            "FunctionEventAvg("
+            f"key={self.key!r}, count={self.count}, "
+            f"self_cpu_time_total={self.self_cpu_time_total:.3f}, "
+            f"cpu_time_total={self.cpu_time_total:.3f})"
+        )
+
+
 def _event_self_time_map(events):
     indexed = list(enumerate(events))
     indexed.sort(key=lambda item: (item[1].thread_id, item[1].start_ns, -item[1].end_ns))
@@ -498,6 +529,16 @@ class _KeyAverages:
 
         self._rows = list(grouped.values())
         return self._rows
+
+    def _row_objects(self):
+        return [_FunctionEventAvgRow(row) for row in self._build_rows()]
+
+    def __iter__(self):
+        return iter(self._row_objects())
+
+    def __getitem__(self, idx):
+        return self._row_objects()[idx]
+
 
     def table(self, sort_by="self_cpu_time_total", row_limit=100):
         if sort_by not in self._SORT_MAP:

@@ -459,3 +459,31 @@ def test_export_chrome_trace_includes_runtime_correlated_events(tmp_path):
     runtime_events = [event for event in payload["traceEvents"] if event.get("cat") == "runtime"]
     assert runtime_events
     assert all("correlation_id" in event.get("args", {}) for event in runtime_events)
+
+
+def test_key_averages_iter_returns_row_objects_with_torch_like_attrs():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = next(iter(rows))
+
+    assert hasattr(first, "key")
+    assert hasattr(first, "count")
+    assert hasattr(first, "self_cpu_time_total")
+    assert hasattr(first, "cpu_time_total")
+    assert hasattr(first, "cpu_time")
+
+
+def test_key_averages_row_getitem_and_attr_consistency():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = rows[0]
+
+    assert first.self_cpu_time_total == first["self_cpu_time_total"]
+    assert first.cpu_time_total == first["cpu_time_total"]
+    assert first.count == first["count"]
