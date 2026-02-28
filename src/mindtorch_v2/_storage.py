@@ -378,7 +378,7 @@ def pinned_cpu_typed_storage_from_numpy(arr, dtype, device=None):
     size = int(arr.nbytes)
     host_ptr = npu_runtime.alloc_host(size)
     buf = np.ctypeslib.as_array((ctypes.c_uint8 * size).from_address(int(host_ptr)))
-    buf[:] = arr.view(np.uint8)
+    buf[:] = arr.view(np.uint8).reshape(-1)
     raw = np.frombuffer(buf, dtype=np.uint8)
     untyped = _PinnedCPUUntypedStorage(raw, host_ptr, device=device)
     data = np.frombuffer(raw, dtype=to_numpy_dtype(dtype), count=arr.size)
