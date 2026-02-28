@@ -124,3 +124,22 @@ def test_dataloader_pin_memory_calls_tensor_pin_memory():
     batches = list(loader)
     assert len(batches) == 1
     assert batches[0].is_pinned() is True
+
+
+def test_dataloader_iterable_dataset_strict_options():
+    ds = StreamDataset()
+
+    with pytest.raises(ValueError, match="expected unspecified shuffle option"):
+        DataLoader(ds, shuffle=True, num_workers=0)
+
+    with pytest.raises(ValueError, match="expected unspecified sampler option"):
+        DataLoader(ds, sampler=[0, 1], num_workers=0)
+
+    with pytest.raises(ValueError, match="expected unspecified batch_sampler option"):
+        DataLoader(ds, batch_sampler=[0, 1], num_workers=0)
+
+
+def test_dataloader_batch_size_none_drop_last_conflict():
+    ds = StreamDataset()
+    with pytest.raises(ValueError, match="batch_size=None option disables auto-batching"):
+        DataLoader(ds, batch_size=None, drop_last=True, num_workers=0)
