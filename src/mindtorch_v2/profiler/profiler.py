@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -321,7 +322,7 @@ class profile:
                     "name": event.name,
                     "cat": event.kind,
                     "ph": "X",
-                    "pid": 0,
+                    "pid": os.getpid(),
                     "tid": event.thread_id,
                     "ts": event.start_ns / 1000.0,
                     "dur": event.duration_ns / 1000.0,

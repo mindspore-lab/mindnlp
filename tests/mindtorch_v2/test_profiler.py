@@ -1,4 +1,5 @@
 import inspect
+import os
 import json
 
 import pytest
@@ -126,3 +127,18 @@ def test_on_trace_ready_type_error_from_callback_is_not_swallowed():
     with pytest.raises(TypeError, match="callback boom"):
         with torch.profiler.profile(on_trace_ready=callback):
             _ = torch.ones((2, 2)) + 1
+
+
+def test_export_chrome_trace_required_fields_and_pid(tmp_path):
+    out = tmp_path / "trace_with_pid.json"
+
+    with torch.profiler.profile() as prof:
+        _ = torch.ones((2, 2)) + 1
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    event = payload["traceEvents"][0]
+
+    for key in ("name", "ph", "ts", "dur", "pid", "tid"):
+        assert key in event
+    assert event["pid"] == os.getpid()
