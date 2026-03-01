@@ -274,11 +274,17 @@ def _get_device_name(device=None):
     return f"Ascend {soc}"
 
 
+def _is_910b(soc_lower):
+    """Ascend910B1/B2/B3/B4 are 910b; Ascend910/910A/910B (no digit) are 910a."""
+    import re
+    return bool(re.search(r"910b\d", soc_lower))
+
+
 def _get_device_capability(device=None):
     soc = _get_soc_name().lower()
-    if "910b" in soc:
+    if _is_910b(soc):
         return (9, 1)
-    if "910a" in soc:
+    if "910a" in soc or "910b" in soc or soc.endswith("910"):
         return (9, 0)
     if "910" in soc:
         return (9, 0)

@@ -22,7 +22,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ASCEND_HOME="${ASCEND_HOME:-/usr/local/Ascend/ascend-toolkit/latest}"
 
-# Detect SOC version from npu-smi
+# SOC version: Ascend910B1/B2/B3/B4 are 910b; Ascend910/910A/910B are 910a.
+# Override via: SOC_VERSION=Ascend910B4 bash build.sh
 SOC_VERSION="${SOC_VERSION:-Ascend910B}"
 
 # Ensure ASCEND environment is sourced

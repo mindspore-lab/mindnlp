@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(add_custom_kernel)
 
 set(RUN_MODE "npu" CACHE STRING "run mode: npu/sim/cpu")
-set(SOC_VERSION "Ascend910B1" CACHE STRING "Ascend SoC version")
+set(SOC_VERSION "Ascend910B" CACHE STRING "Ascend SoC version")
 set(ASCEND_CANN_PACKAGE_PATH "/usr/local/Ascend/ascend-toolkit/latest" CACHE STRING "CANN package path")
 set(ASCEND_KERNEL_LAUNCH_ONLY ON CACHE BOOL "Kernel launch only (no op_host)")
 
