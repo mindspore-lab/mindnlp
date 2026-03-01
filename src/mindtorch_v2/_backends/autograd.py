@@ -6,6 +6,7 @@ from .._autograd.utils import reduce_grad
 from .._dispatch.dispatcher import current_dispatch_keyset, redispatch
 from .._dispatch.keys import DispatchKey
 from .._dispatch.registry import registry
+from .._dispatch.registration import register_autograd_kernels
 
 
 def _strip_autograd_keys(keyset):
@@ -313,65 +314,6 @@ def _inplace_zero_backward(_grad, _a, _saved_a, _args, _keyset):
     return (None,)
 
 
-registry.register_kernel("add", DispatchKey.Autograd, _autograd_binary("add", _add_backward, save_inputs=False))
-registry.register_kernel("add", DispatchKey.AutogradCPU, _autograd_binary("add", _add_backward, save_inputs=False))
-registry.register_kernel("add", DispatchKey.AutogradNPU, _autograd_binary("add", _add_backward, save_inputs=False))
-registry.register_kernel("add", DispatchKey.AutogradMeta, _autograd_binary("add", _add_backward, save_inputs=False))
-registry.register_kernel("mul", DispatchKey.Autograd, _autograd_binary("mul", _mul_backward))
-registry.register_kernel("mul", DispatchKey.AutogradCPU, _autograd_binary("mul", _mul_backward))
-registry.register_kernel("mul", DispatchKey.AutogradNPU, _autograd_binary("mul", _mul_backward))
-registry.register_kernel("mul", DispatchKey.AutogradMeta, _autograd_binary("mul", _mul_backward))
-registry.register_kernel("matmul", DispatchKey.Autograd, _autograd_binary("matmul", _matmul_backward))
-registry.register_kernel("matmul", DispatchKey.AutogradCPU, _autograd_binary("matmul", _matmul_backward))
-registry.register_kernel("matmul", DispatchKey.AutogradNPU, _autograd_binary("matmul", _matmul_backward))
-registry.register_kernel("matmul", DispatchKey.AutogradMeta, _autograd_binary("matmul", _matmul_backward))
-registry.register_kernel("div", DispatchKey.Autograd, _autograd_binary("div", _div_backward))
-registry.register_kernel("div", DispatchKey.AutogradCPU, _autograd_binary("div", _div_backward))
-registry.register_kernel("div", DispatchKey.AutogradNPU, _autograd_binary("div", _div_backward))
-registry.register_kernel("div", DispatchKey.AutogradMeta, _autograd_binary("div", _div_backward))
-registry.register_kernel("true_divide", DispatchKey.Autograd, _autograd_binary("true_divide", _div_backward))
-registry.register_kernel("true_divide", DispatchKey.AutogradCPU, _autograd_binary("true_divide", _div_backward))
-registry.register_kernel("true_divide", DispatchKey.AutogradNPU, _autograd_binary("true_divide", _div_backward))
-registry.register_kernel("true_divide", DispatchKey.AutogradMeta, _autograd_binary("true_divide", _div_backward))
-registry.register_kernel("sum", DispatchKey.Autograd, _autograd_unary("sum", _sum_backward, save_input=False))
-registry.register_kernel("sum", DispatchKey.AutogradCPU, _autograd_unary("sum", _sum_backward, save_input=False))
-registry.register_kernel("sum", DispatchKey.AutogradNPU, _autograd_unary("sum", _sum_backward, save_input=False))
-registry.register_kernel("sum", DispatchKey.AutogradMeta, _autograd_unary("sum", _sum_backward, save_input=False))
-registry.register_kernel("mean", DispatchKey.Autograd, _autograd_unary("mean", _mean_backward, save_input=False))
-registry.register_kernel("mean", DispatchKey.AutogradCPU, _autograd_unary("mean", _mean_backward, save_input=False))
-registry.register_kernel("mean", DispatchKey.AutogradNPU, _autograd_unary("mean", _mean_backward, save_input=False))
-registry.register_kernel("mean", DispatchKey.AutogradMeta, _autograd_unary("mean", _mean_backward, save_input=False))
-registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradCPU, _autograd_unary("relu", _relu_backward, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradNPU, _autograd_unary("relu", _relu_backward, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradMeta, _autograd_unary("relu", _relu_backward, save_input=True))
-registry.register_kernel("reshape", DispatchKey.Autograd, _autograd_view("reshape", _reshape_backward))
-registry.register_kernel("reshape", DispatchKey.AutogradCPU, _autograd_view("reshape", _reshape_backward))
-registry.register_kernel("reshape", DispatchKey.AutogradNPU, _autograd_view("reshape", _reshape_backward))
-registry.register_kernel("reshape", DispatchKey.AutogradMeta, _autograd_view("reshape", _reshape_backward))
-registry.register_kernel("transpose", DispatchKey.Autograd, _autograd_view("transpose", _transpose_backward))
-registry.register_kernel("transpose", DispatchKey.AutogradCPU, _autograd_view("transpose", _transpose_backward))
-registry.register_kernel("transpose", DispatchKey.AutogradNPU, _autograd_view("transpose", _transpose_backward))
-registry.register_kernel("transpose", DispatchKey.AutogradMeta, _autograd_view("transpose", _transpose_backward))
-registry.register_kernel("view", DispatchKey.Autograd, _autograd_view("view", _reshape_backward))
-registry.register_kernel("view", DispatchKey.AutogradCPU, _autograd_view("view", _reshape_backward))
-registry.register_kernel("view", DispatchKey.AutogradNPU, _autograd_view("view", _reshape_backward))
-registry.register_kernel("view", DispatchKey.AutogradMeta, _autograd_view("view", _reshape_backward))
-registry.register_kernel("getitem", DispatchKey.Autograd, _autograd_unary_args("getitem", _getitem_backward, save_input=False))
-registry.register_kernel("getitem", DispatchKey.AutogradCPU, _autograd_unary_args("getitem", _getitem_backward, save_input=False))
-registry.register_kernel("getitem", DispatchKey.AutogradNPU, _autograd_unary_args("getitem", _getitem_backward, save_input=False))
-registry.register_kernel("add_", DispatchKey.Autograd, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("add_", DispatchKey.AutogradCPU, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("add_", DispatchKey.AutogradNPU, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("add_", DispatchKey.AutogradMeta, _autograd_inplace("add_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("mul_", DispatchKey.Autograd, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("mul_", DispatchKey.AutogradCPU, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("mul_", DispatchKey.AutogradNPU, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("mul_", DispatchKey.AutogradMeta, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradCPU, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradNPU, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradMeta, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
 
 
 def _contiguous_backward(grad, _a, _saved_a, _keyset):
@@ -475,60 +417,52 @@ def _neg_backward(grad, _a, _saved_a, keyset):
     with _grad_context(keyset):
         return (redispatch("neg", keyset, grad),)
 
+def _register_autograd_op(name, factory, *, include_meta=True):
+    kwargs = {
+        "default": factory(),
+        "cpu": factory(),
+        "npu": factory(),
+    }
+    if include_meta:
+        kwargs["meta"] = factory()
+    register_autograd_kernels(name, **kwargs)
 
-registry.register_kernel("zero_", DispatchKey.Autograd, _autograd_inplace("zero_", _inplace_zero_backward, save_input=False))
-registry.register_kernel("zero_", DispatchKey.AutogradCPU, _autograd_inplace("zero_", _inplace_zero_backward, save_input=False))
-registry.register_kernel("zero_", DispatchKey.AutogradNPU, _autograd_inplace("zero_", _inplace_zero_backward, save_input=False))
-registry.register_kernel("zero_", DispatchKey.AutogradMeta, _autograd_inplace("zero_", _inplace_zero_backward, save_input=False))
-registry.register_kernel("contiguous", DispatchKey.Autograd, _autograd_unary("contiguous", _contiguous_backward, save_input=False))
-registry.register_kernel("contiguous", DispatchKey.AutogradCPU, _autograd_unary("contiguous", _contiguous_backward, save_input=False))
-registry.register_kernel("contiguous", DispatchKey.AutogradNPU, _autograd_unary("contiguous", _contiguous_backward, save_input=False))
-registry.register_kernel("contiguous", DispatchKey.AutogradMeta, _autograd_unary("contiguous", _contiguous_backward, save_input=False))
-registry.register_kernel("to", DispatchKey.Autograd, _autograd_unary_args("to", _to_backward, save_input=True))
-registry.register_kernel("to", DispatchKey.AutogradCPU, _autograd_unary_args("to", _to_backward, save_input=True))
-registry.register_kernel("to", DispatchKey.AutogradNPU, _autograd_unary_args("to", _to_backward, save_input=True))
-registry.register_kernel("to", DispatchKey.AutogradMeta, _autograd_unary_args("to", _to_backward, save_input=True))
-registry.register_kernel("silu", DispatchKey.Autograd, _autograd_unary("silu", _silu_backward))
-registry.register_kernel("silu", DispatchKey.AutogradCPU, _autograd_unary("silu", _silu_backward))
-registry.register_kernel("silu", DispatchKey.AutogradNPU, _autograd_unary("silu", _silu_backward))
-registry.register_kernel("silu", DispatchKey.AutogradMeta, _autograd_unary("silu", _silu_backward))
-registry.register_kernel("leaky_relu", DispatchKey.Autograd, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
-registry.register_kernel("leaky_relu", DispatchKey.AutogradCPU, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
-registry.register_kernel("leaky_relu", DispatchKey.AutogradNPU, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
-registry.register_kernel("leaky_relu", DispatchKey.AutogradMeta, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
-registry.register_kernel("elu", DispatchKey.Autograd, _autograd_unary_args("elu", _elu_backward))
-registry.register_kernel("elu", DispatchKey.AutogradCPU, _autograd_unary_args("elu", _elu_backward))
-registry.register_kernel("elu", DispatchKey.AutogradNPU, _autograd_unary_args("elu", _elu_backward))
-registry.register_kernel("elu", DispatchKey.AutogradMeta, _autograd_unary_args("elu", _elu_backward))
-registry.register_kernel("mish", DispatchKey.Autograd, _autograd_unary("mish", _mish_backward))
-registry.register_kernel("mish", DispatchKey.AutogradCPU, _autograd_unary("mish", _mish_backward))
-registry.register_kernel("mish", DispatchKey.AutogradNPU, _autograd_unary("mish", _mish_backward))
-registry.register_kernel("mish", DispatchKey.AutogradMeta, _autograd_unary("mish", _mish_backward))
-registry.register_kernel("prelu", DispatchKey.Autograd, _autograd_binary("prelu", _prelu_backward))
-registry.register_kernel("prelu", DispatchKey.AutogradCPU, _autograd_binary("prelu", _prelu_backward))
-registry.register_kernel("prelu", DispatchKey.AutogradNPU, _autograd_binary("prelu", _prelu_backward))
-registry.register_kernel("prelu", DispatchKey.AutogradMeta, _autograd_binary("prelu", _prelu_backward))
-registry.register_kernel("abs", DispatchKey.Autograd, _autograd_unary("abs", _abs_backward))
-registry.register_kernel("abs", DispatchKey.AutogradCPU, _autograd_unary("abs", _abs_backward))
-registry.register_kernel("abs", DispatchKey.AutogradNPU, _autograd_unary("abs", _abs_backward))
-registry.register_kernel("abs", DispatchKey.AutogradMeta, _autograd_unary("abs", _abs_backward))
-registry.register_kernel("neg", DispatchKey.Autograd, _autograd_unary("neg", _neg_backward, save_input=False))
-registry.register_kernel("neg", DispatchKey.AutogradCPU, _autograd_unary("neg", _neg_backward, save_input=False))
-registry.register_kernel("neg", DispatchKey.AutogradNPU, _autograd_unary("neg", _neg_backward, save_input=False))
-registry.register_kernel("neg", DispatchKey.AutogradMeta, _autograd_unary("neg", _neg_backward, save_input=False))
-registry.register_kernel("softmax", DispatchKey.Autograd, _autograd_unary_passthrough("softmax"))
-registry.register_kernel("softmax", DispatchKey.AutogradCPU, _autograd_unary_passthrough("softmax"))
-registry.register_kernel("softmax", DispatchKey.AutogradNPU, _autograd_unary_passthrough("softmax"))
-registry.register_kernel("softmax", DispatchKey.AutogradMeta, _autograd_unary_passthrough("softmax"))
-registry.register_kernel("dropout", DispatchKey.Autograd, _autograd_unary_passthrough("dropout"))
-registry.register_kernel("dropout", DispatchKey.AutogradCPU, _autograd_unary_passthrough("dropout"))
-registry.register_kernel("dropout", DispatchKey.AutogradNPU, _autograd_unary_passthrough("dropout"))
-registry.register_kernel("dropout", DispatchKey.AutogradMeta, _autograd_unary_passthrough("dropout"))
-registry.register_kernel("gelu", DispatchKey.Autograd, _autograd_unary_passthrough("gelu"))
-registry.register_kernel("gelu", DispatchKey.AutogradCPU, _autograd_unary_passthrough("gelu"))
-registry.register_kernel("gelu", DispatchKey.AutogradNPU, _autograd_unary_passthrough("gelu"))
-registry.register_kernel("gelu", DispatchKey.AutogradMeta, _autograd_unary_passthrough("gelu"))
-registry.register_kernel("layer_norm", DispatchKey.Autograd, _autograd_unary_passthrough("layer_norm"))
-registry.register_kernel("layer_norm", DispatchKey.AutogradCPU, _autograd_unary_passthrough("layer_norm"))
-registry.register_kernel("layer_norm", DispatchKey.AutogradNPU, _autograd_unary_passthrough("layer_norm"))
-registry.register_kernel("layer_norm", DispatchKey.AutogradMeta, _autograd_unary_passthrough("layer_norm"))
+
+for _entry in (
+    ("add", lambda: _autograd_binary("add", _add_backward, save_inputs=False)),
+    ("mul", lambda: _autograd_binary("mul", _mul_backward)),
+    ("matmul", lambda: _autograd_binary("matmul", _matmul_backward)),
+    ("div", lambda: _autograd_binary("div", _div_backward)),
+    ("true_divide", lambda: _autograd_binary("true_divide", _div_backward)),
+    ("sum", lambda: _autograd_unary("sum", _sum_backward, save_input=False)),
+    ("mean", lambda: _autograd_unary("mean", _mean_backward, save_input=False)),
+    ("relu", lambda: _autograd_unary("relu", _relu_backward, save_input=True)),
+    ("reshape", lambda: _autograd_view("reshape", _reshape_backward)),
+    ("transpose", lambda: _autograd_view("transpose", _transpose_backward)),
+    ("view", lambda: _autograd_view("view", _reshape_backward)),
+    ("getitem", lambda: _autograd_unary_args("getitem", _getitem_backward, save_input=False), False),
+    ("add_", lambda: _autograd_inplace("add_", _inplace_binary_backward, save_input=True)),
+    ("mul_", lambda: _autograd_inplace("mul_", _inplace_binary_backward, save_input=True)),
+    ("relu_", lambda: _autograd_inplace("relu_", _inplace_relu_backward, save_input=True)),
+    ("zero_", lambda: _autograd_inplace("zero_", _inplace_zero_backward, save_input=False)),
+    ("contiguous", lambda: _autograd_unary("contiguous", _contiguous_backward, save_input=False)),
+    ("to", lambda: _autograd_unary_args("to", _to_backward, save_input=True)),
+    ("silu", lambda: _autograd_unary("silu", _silu_backward)),
+    ("leaky_relu", lambda: _autograd_unary_args("leaky_relu", _leaky_relu_backward)),
+    ("elu", lambda: _autograd_unary_args("elu", _elu_backward)),
+    ("mish", lambda: _autograd_unary("mish", _mish_backward)),
+    ("prelu", lambda: _autograd_binary("prelu", _prelu_backward)),
+    ("abs", lambda: _autograd_unary("abs", _abs_backward)),
+    ("neg", lambda: _autograd_unary("neg", _neg_backward, save_input=False)),
+    ("softmax", lambda: _autograd_unary_passthrough("softmax")),
+    ("dropout", lambda: _autograd_unary_passthrough("dropout")),
+    ("gelu", lambda: _autograd_unary_passthrough("gelu")),
+    ("layer_norm", lambda: _autograd_unary_passthrough("layer_norm")),
+):
+    if len(_entry) == 2:
+        _name, _factory = _entry
+        _register_autograd_op(_name, _factory)
+    else:
+        _name, _factory, _include_meta = _entry
+        _register_autograd_op(_name, _factory, include_meta=_include_meta)
+

@@ -175,6 +175,7 @@ class DispatchKeySet:
     def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, functionalize_enabled=False, device=None):
         has_meta = False
         has_npu = False
+        has_cuda = False
         has_cpu = False
         requires_grad = False
         saw_device = False
@@ -188,6 +189,8 @@ class DispatchKeySet:
                 has_meta = True
             elif dev_type == "npu":
                 has_npu = True
+            elif dev_type == "cuda":
+                has_cuda = True
             else:
                 has_cpu = True
             if getattr(tensor, "requires_grad", False):
@@ -198,6 +201,8 @@ class DispatchKeySet:
                 has_meta = True
             elif dev_type == "npu":
                 has_npu = True
+            elif dev_type == "cuda":
+                has_cuda = True
             else:
                 has_cpu = True
         mask = 0
@@ -205,6 +210,8 @@ class DispatchKeySet:
             mask |= int(DispatchKey.Meta)
         elif has_npu:
             mask |= int(DispatchKey.NPU)
+        elif has_cuda:
+            mask |= int(DispatchKey.PrivateUse1)
         else:
             mask |= int(DispatchKey.CPU)
         if grad_enabled and requires_grad:
@@ -214,11 +221,13 @@ class DispatchKeySet:
                 mask |= int(DispatchKey.AutogradMeta)
             elif has_npu:
                 mask |= int(DispatchKey.AutogradNPU)
+            elif has_cuda:
+                mask |= int(DispatchKey.AutogradXPU)
             else:
                 mask |= int(DispatchKey.AutogradCPU)
         if functionalize_enabled:
             mask |= int(DispatchKey.Functionalize)
-        if pipeline_enabled and not has_meta:
+        if pipeline_enabled and not has_meta and not has_cuda:
             mask |= int(DispatchKey.Pipeline)
         return cls(mask)
 
