@@ -1,0 +1,12 @@
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/mindspore")
+    if(EXISTS  "${CMAKE_CURRENT_SOURCE_DIR}/caffe_plugin")
+        add_subdirectory(caffe_plugin)
+    endif()
+    if(EXISTS  "${CMAKE_CURRENT_SOURCE_DIR}/tf_plugin")
+        add_subdirectory(tf_plugin)
+    endif()
+    if(EXISTS  "${CMAKE_CURRENT_SOURCE_DIR}/onnx_plugin")
+        add_subdirectory(onnx_plugin)
+    endif()
+endif()
+
