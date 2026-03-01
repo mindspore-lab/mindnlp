@@ -506,3 +506,39 @@ def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
         tensor.clamp_(a, b)
 
     return tensor
+
+
+# ---------------------------------------------------------------------------
+# Deprecated aliases (without trailing underscore)
+# ---------------------------------------------------------------------------
+
+def _make_deprecate(meth):
+    """Wrap an init function to emit a deprecation warning."""
+    import functools
+
+    @functools.wraps(meth)
+    def wrapper(*args, **kwargs):
+        warnings.warn(
+            f"nn.init.{meth.__name__[:-1]} is deprecated, "
+            f"use nn.init.{meth.__name__} instead.",
+            FutureWarning,
+        )
+        return meth(*args, **kwargs)
+
+    # Strip trailing underscore from the wrapper name
+    wrapper.__name__ = meth.__name__[:-1]
+    wrapper.__qualname__ = meth.__qualname__[:-1]
+    return wrapper
+
+
+uniform = _make_deprecate(uniform_)
+normal = _make_deprecate(normal_)
+constant = _make_deprecate(constant_)
+eye = _make_deprecate(eye_)
+dirac = _make_deprecate(dirac_)
+xavier_uniform = _make_deprecate(xavier_uniform_)
+xavier_normal = _make_deprecate(xavier_normal_)
+kaiming_uniform = _make_deprecate(kaiming_uniform_)
+kaiming_normal = _make_deprecate(kaiming_normal_)
+orthogonal = _make_deprecate(orthogonal_)
+sparse = _make_deprecate(sparse_)
