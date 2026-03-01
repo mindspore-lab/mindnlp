@@ -138,7 +138,11 @@ def resolve_dispatch_key(device):
             return DispatchKey.Meta
         if device.type == "npu":
             return DispatchKey.NPU
+        if device.type == "cuda":
+            return DispatchKey.PrivateUse1
         return DispatchKey.CPU
+    if device == "cuda":
+        return DispatchKey.PrivateUse1
     if device == "meta":
         return DispatchKey.Meta
     if device == "npu":
@@ -151,12 +155,14 @@ def resolve_dispatch_key(device):
 _DISPATCH_KEY_STRING_MAP = {
     "CPU": DispatchKey.CPU,
     "NPU": DispatchKey.NPU,
-    "PrivateUse1": DispatchKey.NPU,
+    "CUDA": DispatchKey.PrivateUse1,
+    "PrivateUse1": DispatchKey.PrivateUse1,
     "Meta": DispatchKey.Meta,
     "Autograd": DispatchKey.Autograd,
     "AutogradCPU": DispatchKey.AutogradCPU,
     "AutogradNPU": DispatchKey.AutogradNPU,
-    "AutogradPrivateUse1": DispatchKey.AutogradNPU,
+    "AutogradCUDA": DispatchKey.AutogradXPU,
+    "AutogradPrivateUse1": DispatchKey.AutogradXPU,
     "AutogradMeta": DispatchKey.AutogradMeta,
     "AutogradOther": DispatchKey.AutogradOther,
     "AutogradXPU": DispatchKey.AutogradXPU,
