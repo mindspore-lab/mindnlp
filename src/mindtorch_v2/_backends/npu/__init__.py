@@ -65,6 +65,13 @@ from .ops import (
     mul_,
     relu_,
     zero_,
+    uniform_,
+    normal_,
+    fill_,
+    clamp_,
+    copy_,
+    erfinv_,
+    sub_,
     contiguous,
     getitem,
     setitem,
@@ -240,6 +247,13 @@ registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "npu", zero_, meta=meta_infer.infer_unary)
+registry.register("uniform_", "npu", uniform_, meta=meta_infer.infer_unary)
+registry.register("normal_", "npu", normal_, meta=meta_infer.infer_unary)
+registry.register("fill_", "npu", fill_, meta=meta_infer.infer_unary)
+registry.register("clamp_", "npu", clamp_, meta=meta_infer.infer_unary)
+registry.register("copy_", "npu", copy_, meta=meta_infer.infer_unary)
+registry.register("erfinv_", "npu", erfinv_, meta=meta_infer.infer_unary)
+registry.register("sub_", "npu", sub_, meta=meta_infer.infer_binary)
 registry.register("sub", "npu", sub, meta=meta_infer.infer_binary)
 registry.register("div", "npu", div, meta=meta_infer.infer_binary)
 registry.register("true_divide", "npu", div, meta=meta_infer.infer_binary)
