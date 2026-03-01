@@ -721,6 +721,30 @@ class _KeyAverages:
                         stack_entries = [entry.translate(translate_table) for entry in reversed(stack)]
                         handle.write(";".join(stack_entries) + " " + str(int(metric_value)) + "\n")
 
+    def export_chrome_trace(self, path):
+        pid = os.getpid()
+        trace_events = []
+        for idx, row in enumerate(self._row_objects()):
+            trace_events.append(
+                {
+                    "name": row.key,
+                    "cat": "op",
+                    "ph": "X",
+                    "pid": pid,
+                    "tid": idx,
+                    "ts": 0.0,
+                    "dur": float(row.cpu_time_total),
+                    "args": {
+                        "count": int(row.count),
+                        "self_cpu_time_total": float(row.self_cpu_time_total),
+                        "cpu_time_total": float(row.cpu_time_total),
+                    },
+                }
+            )
+
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"traceEvents": trace_events}, handle)
+
     def total_average(self):
         totals = self._aggregate_totals()
         count = totals["count"]

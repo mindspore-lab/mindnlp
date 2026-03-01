@@ -775,3 +775,38 @@ def test_key_averages_row_add_merges_counts_and_times():
     assert row.count == base_count + clone.count
     assert row.cpu_time_total >= base_total
 
+def test_key_averages_export_chrome_trace_writes_valid_json(tmp_path):
+    out = tmp_path / "key_averages_trace.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    rows.export_chrome_trace(str(out))
+
+    payload = json.loads(out.read_text())
+    assert "traceEvents" in payload
+    assert isinstance(payload["traceEvents"], list)
+
+
+def test_key_averages_export_chrome_trace_contains_row_entries(tmp_path):
+    out = tmp_path / "key_averages_trace_rows.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+        _ = x * x
+
+    rows = prof.key_averages()
+    rows.export_chrome_trace(str(out))
+
+    payload = json.loads(out.read_text())
+    events = payload["traceEvents"]
+
+    assert events
+    required = {"name", "ph", "ts", "dur", "pid", "tid", "cat", "args"}
+    assert all(required.issubset(event.keys()) for event in events)
+    assert all("count" in event.get("args", {}) for event in events)
+    assert all("self_cpu_time_total" in event.get("args", {}) for event in events)
+
