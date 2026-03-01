@@ -213,6 +213,24 @@ def _mul_backward(grad, a, b, saved_a, saved_b, keyset):
     return grad_a, grad_b
 
 
+def _div_backward(grad, a, b, saved_a, saved_b, keyset):
+    grad_a = None
+    grad_b = None
+    with _grad_context(keyset):
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("div", keyset, grad, saved_b)
+        if getattr(b, "requires_grad", False):
+            denom = redispatch("mul", keyset, saved_b, saved_b)
+            num = redispatch("mul", keyset, grad, saved_a)
+            grad_b = redispatch("div", keyset, num, denom)
+            grad_b = redispatch("neg", keyset, grad_b)
+    if grad_a is not None:
+        grad_a = reduce_grad(grad_a, a.shape)
+    if grad_b is not None:
+        grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
 def _matmul_backward(grad, a, b, saved_a, saved_b, keyset):
     with _grad_context(keyset):
         grad_a = None

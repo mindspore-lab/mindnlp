@@ -104,6 +104,7 @@ from .ops import (
     erf,
     erfc,
     softplus,
+    gelu,
     silu,
     leaky_relu,
     elu,
@@ -152,6 +153,7 @@ from .ops import (
     setitem,
     batch_norm,
     group_norm,
+    layer_norm,
     dropout,
     pad,
     softmax,
@@ -250,7 +252,9 @@ registry.register("std", "cpu", std_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)
+registry.register("layer_norm", "cpu", layer_norm, meta=meta_infer.infer_unary)
 registry.register("dropout", "cpu", dropout, meta=meta_infer.infer_unary)
+registry.register("gelu", "cpu", gelu, meta=meta_infer.infer_unary)
 registry.register("pad", "cpu", pad, meta=meta_infer.infer_unary)
 registry.register("softmax", "cpu", softmax, meta=meta_infer.infer_unary)
 registry.register("log_softmax", "cpu", log_softmax, meta=meta_infer.infer_unary)
