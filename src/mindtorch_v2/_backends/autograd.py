@@ -1,24 +1,26 @@
-from .._dispatch.keys import DispatchKey
-from .._dispatch.registry import registry
-from .._dispatch.dispatcher import current_dispatch_keyset, redispatch
+from contextlib import nullcontext
+
 from .._autograd.grad_mode import GradMode, no_grad
 from .._autograd.node import Node
 from .._autograd.utils import reduce_grad
-import numpy as np
-from contextlib import nullcontext
+from .._dispatch.dispatcher import current_dispatch_keyset, redispatch
+from .._dispatch.keys import DispatchKey
+from .._dispatch.registry import registry
 
 
 def _strip_autograd_keys(keyset):
     if keyset is None:
         return None
-    return keyset.without({
-        DispatchKey.Autograd,
-        DispatchKey.AutogradOther,
-        DispatchKey.AutogradCPU,
-        DispatchKey.AutogradNPU,
-        DispatchKey.AutogradXPU,
-        DispatchKey.AutogradMeta,
-    })
+    return keyset.without(
+        {
+            DispatchKey.Autograd,
+            DispatchKey.AutogradOther,
+            DispatchKey.AutogradCPU,
+            DispatchKey.AutogradNPU,
+            DispatchKey.AutogradXPU,
+            DispatchKey.AutogradMeta,
+        }
+    )
 
 
 def _grad_context(_keyset=None):
@@ -87,9 +89,6 @@ def _autograd_binary(name, backward_impl, *, save_inputs=True):
     return wrapper
 
 
-
-
-
 def _autograd_unary_args(name, backward_impl, *, cpu_only=False, save_input=True):
     def wrapper(a, *args, **kwargs):
         active_keyset = current_dispatch_keyset()
@@ -117,6 +116,8 @@ def _autograd_unary_args(name, backward_impl, *, cpu_only=False, save_input=True
         return out
 
     return wrapper
+
+
 def _autograd_unary(name, backward_impl, *, cpu_only=False, save_input=True):
     def wrapper(a, **kwargs):
         active_keyset = current_dispatch_keyset()
@@ -198,6 +199,12 @@ def _autograd_inplace(name, backward_impl, *, cpu_only=False, save_input=True):
     return wrapper
 
 
+def _scalar_tensor_like(ref, value):
+    from .._creation import tensor
+
+    return tensor(value, dtype=ref.dtype, device=ref.device)
+
+
 def _add_backward(grad, a, b, _saved_a, _saved_b, _keyset):
     grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
     grad_b = reduce_grad(grad, b.shape) if getattr(b, "requires_grad", False) else None
@@ -255,11 +262,10 @@ def _sum_backward(grad, _a, saved_a, keyset):
 
 def _mean_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
-        # For mean, gradient is 1/N where N is the number of elements
         numel = saved_a.numel()
         ones = saved_a._ones_like()
-        # Scale gradient by 1/numel
         from .._creation import tensor
+
         scale = tensor(1.0 / numel, device=grad.device)
         scaled_grad = redispatch("mul", keyset, grad, scale)
         return (redispatch("mul", keyset, scaled_grad, ones),)
@@ -267,9 +273,9 @@ def _mean_backward(grad, _a, saved_a, keyset):
 
 def _relu_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
-        mask = saved_a._ones_like()
-        mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
-        return (redispatch("mul", keyset, grad, mask),)
+        mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
+        grad_input = redispatch("mul", keyset, grad, mask)
+        return (grad_input,)
 
 
 def _reshape_backward(grad, a, _saved_a, _args, keyset):
@@ -298,9 +304,9 @@ def _inplace_binary_backward(grad, a, _saved_a, args, _keyset):
 
 def _inplace_relu_backward(grad, _a, saved_a, _args, keyset):
     with _grad_context(keyset):
-        mask = saved_a._ones_like()
-        mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
-        return (redispatch("mul", keyset, grad, mask),)
+        mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
+        grad_input = redispatch("mul", keyset, grad, mask)
+        return (grad_input,)
 
 
 def _inplace_zero_backward(_grad, _a, _saved_a, _args, _keyset):
@@ -335,10 +341,10 @@ registry.register_kernel("mean", DispatchKey.Autograd, _autograd_unary("mean", _
 registry.register_kernel("mean", DispatchKey.AutogradCPU, _autograd_unary("mean", _mean_backward, save_input=False))
 registry.register_kernel("mean", DispatchKey.AutogradNPU, _autograd_unary("mean", _mean_backward, save_input=False))
 registry.register_kernel("mean", DispatchKey.AutogradMeta, _autograd_unary("mean", _mean_backward, save_input=False))
-registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradCPU, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradNPU, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradMeta, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
+registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, save_input=True))
+registry.register_kernel("relu", DispatchKey.AutogradCPU, _autograd_unary("relu", _relu_backward, save_input=True))
+registry.register_kernel("relu", DispatchKey.AutogradNPU, _autograd_unary("relu", _relu_backward, save_input=True))
+registry.register_kernel("relu", DispatchKey.AutogradMeta, _autograd_unary("relu", _relu_backward, save_input=True))
 registry.register_kernel("reshape", DispatchKey.Autograd, _autograd_view("reshape", _reshape_backward))
 registry.register_kernel("reshape", DispatchKey.AutogradCPU, _autograd_view("reshape", _reshape_backward))
 registry.register_kernel("reshape", DispatchKey.AutogradNPU, _autograd_view("reshape", _reshape_backward))
@@ -362,16 +368,14 @@ registry.register_kernel("mul_", DispatchKey.Autograd, _autograd_inplace("mul_",
 registry.register_kernel("mul_", DispatchKey.AutogradCPU, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("mul_", DispatchKey.AutogradNPU, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("mul_", DispatchKey.AutogradMeta, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradCPU, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradNPU, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradMeta, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-
+registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.AutogradCPU, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.AutogradNPU, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.AutogradMeta, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
 
 
 def _contiguous_backward(grad, _a, _saved_a, _keyset):
     return (grad,)
-
 
 
 def _to_backward(grad, a, _saved_a, keyset, args, _kwargs):
@@ -379,89 +383,96 @@ def _to_backward(grad, a, _saved_a, keyset, args, _kwargs):
         return (redispatch("to", keyset, grad, a.device, non_blocking=False),)
 
 
-# --- Activation backward implementations ---
-
 def _silu_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
-        # d/dx(x * sigmoid(x)) = sigmoid(x) * (1 + x * (1 - sigmoid(x)))
-        arr = saved_a.storage().data
-        sig = 1.0 / (1.0 + np.exp(-arr))
-        grad_arr = sig * (1.0 + arr * (1.0 - sig))
-        mask = saved_a._ones_like()
-        mask.storage()._data = grad_arr.astype(mask.storage().data.dtype)
-        return (redispatch("mul", keyset, grad, mask),)
+        sig = redispatch("sigmoid", keyset, saved_a)
+        ones = saved_a._ones_like()
+        one_minus_sig = redispatch("add", keyset, ones, redispatch("neg", keyset, sig))
+        x_mul = redispatch("mul", keyset, saved_a, one_minus_sig)
+        factor = redispatch("mul", keyset, sig, redispatch("add", keyset, ones, x_mul))
+        return (redispatch("mul", keyset, grad, factor),)
 
 
 def _leaky_relu_backward(grad, _a, saved_a, keyset, args, kwargs):
     negative_slope = args[0] if args else kwargs.get("negative_slope", 0.01)
     with _grad_context(keyset):
-        mask = saved_a._ones_like()
-        mask.storage()._data = np.where(
-            saved_a.storage().data > 0, 1.0, negative_slope
-        ).astype(mask.storage().data.dtype)
-        return (redispatch("mul", keyset, grad, mask),)
+        pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
+        ones = saved_a._ones_like()
+        nonpos_mask = redispatch("add", keyset, ones, redispatch("neg", keyset, pos_mask))
+        slope = _scalar_tensor_like(saved_a, negative_slope)
+        factor = redispatch(
+            "add",
+            keyset,
+            pos_mask,
+            redispatch("mul", keyset, nonpos_mask, slope),
+        )
+        return (redispatch("mul", keyset, grad, factor),)
 
 
 def _elu_backward(grad, _a, saved_a, keyset, args, kwargs):
     alpha = args[0] if args else kwargs.get("alpha", 1.0)
     with _grad_context(keyset):
-        mask = saved_a._ones_like()
-        arr = saved_a.storage().data
-        # d/dx ELU = 1 if x > 0, else alpha * exp(x)
-        mask.storage()._data = np.where(
-            arr > 0, 1.0, alpha * np.exp(arr)
-        ).astype(mask.storage().data.dtype)
-        return (redispatch("mul", keyset, grad, mask),)
+        pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
+        ones = saved_a._ones_like()
+        nonpos_mask = redispatch("add", keyset, ones, redispatch("neg", keyset, pos_mask))
+        alpha_tensor = _scalar_tensor_like(saved_a, alpha)
+        exp_x = redispatch("exp", keyset, saved_a)
+        neg_branch = redispatch("mul", keyset, alpha_tensor, exp_x)
+        factor = redispatch(
+            "add",
+            keyset,
+            pos_mask,
+            redispatch("mul", keyset, nonpos_mask, neg_branch),
+        )
+        return (redispatch("mul", keyset, grad, factor),)
 
 
 def _mish_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
-        # d/dx mish(x) = d/dx [x * tanh(softplus(x))]
-        # = tanh(sp) + x * sech^2(sp) * sigmoid(x)
-        # where sp = softplus(x) = log(1 + exp(x))
-        arr = saved_a.storage().data
-        sp = np.log1p(np.exp(arr))
-        tanh_sp = np.tanh(sp)
-        sig = 1.0 / (1.0 + np.exp(-arr))
-        sech2 = 1.0 - tanh_sp ** 2
-        grad_arr = tanh_sp + arr * sech2 * sig
-        mask = saved_a._ones_like()
-        mask.storage()._data = grad_arr.astype(mask.storage().data.dtype)
-        return (redispatch("mul", keyset, grad, mask),)
+        ones = saved_a._ones_like()
+        sp = redispatch("softplus", keyset, saved_a)
+        tanh_sp = redispatch("tanh", keyset, sp)
+        tanh_sp_sq = redispatch("mul", keyset, tanh_sp, tanh_sp)
+        sech2 = redispatch("add", keyset, ones, redispatch("neg", keyset, tanh_sp_sq))
+        sig = redispatch("sigmoid", keyset, saved_a)
+        tail = redispatch("mul", keyset, saved_a, redispatch("mul", keyset, sech2, sig))
+        factor = redispatch("add", keyset, tanh_sp, tail)
+        return (redispatch("mul", keyset, grad, factor),)
 
 
 def _prelu_backward(grad, a, b, saved_a, saved_b, keyset):
     with _grad_context(keyset):
-        arr = saved_a.storage().data
-        w_arr = saved_b.storage().data
-        # d/dx prelu = 1 if x > 0, else weight
-        grad_x_arr = np.where(arr > 0, 1.0, w_arr).astype(arr.dtype)
-        mask = saved_a._ones_like()
-        mask.storage()._data = grad_x_arr
-        grad_a = redispatch("mul", keyset, grad, mask) if a.requires_grad else None
-        # d/dw prelu = x if x <= 0, else 0
-        grad_w_arr = np.where(arr > 0, 0.0, arr).astype(arr.dtype)
-        w_mask = saved_a._ones_like()
-        w_mask.storage()._data = grad_w_arr
-        grad_b = redispatch("mul", keyset, grad, w_mask) if b.requires_grad else None
-        if grad_b is not None:
+        pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
+        ones = saved_a._ones_like()
+        nonpos_mask = redispatch("add", keyset, ones, redispatch("neg", keyset, pos_mask))
+
+        grad_a = None
+        if getattr(a, "requires_grad", False):
+            factor_x = redispatch(
+                "add",
+                keyset,
+                pos_mask,
+                redispatch("mul", keyset, nonpos_mask, saved_b),
+            )
+            grad_a = redispatch("mul", keyset, grad, factor_x)
+
+        grad_b = None
+        if getattr(b, "requires_grad", False):
+            w_input = redispatch("mul", keyset, nonpos_mask, saved_a)
+            grad_b = redispatch("mul", keyset, grad, w_input)
             grad_b = reduce_grad(grad_b, b.shape)
+
         return grad_a, grad_b
 
 
 def _abs_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
-        # d/dx abs(x) = sign(x) = 1 if x > 0, -1 if x < 0, 0 if x == 0
-        arr = saved_a.storage().data
-        sign_arr = np.sign(arr).astype(arr.dtype)
-        mask = saved_a._ones_like()
-        mask.storage()._data = sign_arr
-        return (redispatch("mul", keyset, grad, mask),)
+        sign = redispatch("sign", keyset, saved_a)
+        return (redispatch("mul", keyset, grad, sign),)
 
 
 def _neg_backward(grad, _a, _saved_a, keyset):
     with _grad_context(keyset):
-        # d/dx (-x) = -1
         return (redispatch("neg", keyset, grad),)
 
 
@@ -477,34 +488,34 @@ registry.register_kernel("to", DispatchKey.Autograd, _autograd_unary_args("to", 
 registry.register_kernel("to", DispatchKey.AutogradCPU, _autograd_unary_args("to", _to_backward, save_input=True))
 registry.register_kernel("to", DispatchKey.AutogradNPU, _autograd_unary_args("to", _to_backward, save_input=True))
 registry.register_kernel("to", DispatchKey.AutogradMeta, _autograd_unary_args("to", _to_backward, save_input=True))
-registry.register_kernel("silu", DispatchKey.Autograd, _autograd_unary("silu", _silu_backward, cpu_only=True))
-registry.register_kernel("silu", DispatchKey.AutogradCPU, _autograd_unary("silu", _silu_backward, cpu_only=True))
-registry.register_kernel("silu", DispatchKey.AutogradNPU, _autograd_unary("silu", _silu_backward, cpu_only=True))
-registry.register_kernel("silu", DispatchKey.AutogradMeta, _autograd_unary("silu", _silu_backward, cpu_only=True))
-registry.register_kernel("leaky_relu", DispatchKey.Autograd, _autograd_unary_args("leaky_relu", _leaky_relu_backward, cpu_only=True))
-registry.register_kernel("leaky_relu", DispatchKey.AutogradCPU, _autograd_unary_args("leaky_relu", _leaky_relu_backward, cpu_only=True))
-registry.register_kernel("leaky_relu", DispatchKey.AutogradNPU, _autograd_unary_args("leaky_relu", _leaky_relu_backward, cpu_only=True))
-registry.register_kernel("leaky_relu", DispatchKey.AutogradMeta, _autograd_unary_args("leaky_relu", _leaky_relu_backward, cpu_only=True))
-registry.register_kernel("elu", DispatchKey.Autograd, _autograd_unary_args("elu", _elu_backward, cpu_only=True))
-registry.register_kernel("elu", DispatchKey.AutogradCPU, _autograd_unary_args("elu", _elu_backward, cpu_only=True))
-registry.register_kernel("elu", DispatchKey.AutogradNPU, _autograd_unary_args("elu", _elu_backward, cpu_only=True))
-registry.register_kernel("elu", DispatchKey.AutogradMeta, _autograd_unary_args("elu", _elu_backward, cpu_only=True))
-registry.register_kernel("mish", DispatchKey.Autograd, _autograd_unary("mish", _mish_backward, cpu_only=True))
-registry.register_kernel("mish", DispatchKey.AutogradCPU, _autograd_unary("mish", _mish_backward, cpu_only=True))
-registry.register_kernel("mish", DispatchKey.AutogradNPU, _autograd_unary("mish", _mish_backward, cpu_only=True))
-registry.register_kernel("mish", DispatchKey.AutogradMeta, _autograd_unary("mish", _mish_backward, cpu_only=True))
+registry.register_kernel("silu", DispatchKey.Autograd, _autograd_unary("silu", _silu_backward))
+registry.register_kernel("silu", DispatchKey.AutogradCPU, _autograd_unary("silu", _silu_backward))
+registry.register_kernel("silu", DispatchKey.AutogradNPU, _autograd_unary("silu", _silu_backward))
+registry.register_kernel("silu", DispatchKey.AutogradMeta, _autograd_unary("silu", _silu_backward))
+registry.register_kernel("leaky_relu", DispatchKey.Autograd, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
+registry.register_kernel("leaky_relu", DispatchKey.AutogradCPU, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
+registry.register_kernel("leaky_relu", DispatchKey.AutogradNPU, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
+registry.register_kernel("leaky_relu", DispatchKey.AutogradMeta, _autograd_unary_args("leaky_relu", _leaky_relu_backward))
+registry.register_kernel("elu", DispatchKey.Autograd, _autograd_unary_args("elu", _elu_backward))
+registry.register_kernel("elu", DispatchKey.AutogradCPU, _autograd_unary_args("elu", _elu_backward))
+registry.register_kernel("elu", DispatchKey.AutogradNPU, _autograd_unary_args("elu", _elu_backward))
+registry.register_kernel("elu", DispatchKey.AutogradMeta, _autograd_unary_args("elu", _elu_backward))
+registry.register_kernel("mish", DispatchKey.Autograd, _autograd_unary("mish", _mish_backward))
+registry.register_kernel("mish", DispatchKey.AutogradCPU, _autograd_unary("mish", _mish_backward))
+registry.register_kernel("mish", DispatchKey.AutogradNPU, _autograd_unary("mish", _mish_backward))
+registry.register_kernel("mish", DispatchKey.AutogradMeta, _autograd_unary("mish", _mish_backward))
 registry.register_kernel("prelu", DispatchKey.Autograd, _autograd_binary("prelu", _prelu_backward))
 registry.register_kernel("prelu", DispatchKey.AutogradCPU, _autograd_binary("prelu", _prelu_backward))
 registry.register_kernel("prelu", DispatchKey.AutogradNPU, _autograd_binary("prelu", _prelu_backward))
 registry.register_kernel("prelu", DispatchKey.AutogradMeta, _autograd_binary("prelu", _prelu_backward))
-registry.register_kernel("abs", DispatchKey.Autograd, _autograd_unary("abs", _abs_backward, cpu_only=True))
-registry.register_kernel("abs", DispatchKey.AutogradCPU, _autograd_unary("abs", _abs_backward, cpu_only=True))
-registry.register_kernel("abs", DispatchKey.AutogradNPU, _autograd_unary("abs", _abs_backward, cpu_only=True))
-registry.register_kernel("abs", DispatchKey.AutogradMeta, _autograd_unary("abs", _abs_backward, cpu_only=True))
-registry.register_kernel("neg", DispatchKey.Autograd, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
-registry.register_kernel("neg", DispatchKey.AutogradCPU, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
-registry.register_kernel("neg", DispatchKey.AutogradNPU, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
-registry.register_kernel("neg", DispatchKey.AutogradMeta, _autograd_unary("neg", _neg_backward, save_input=False, cpu_only=True))
+registry.register_kernel("abs", DispatchKey.Autograd, _autograd_unary("abs", _abs_backward))
+registry.register_kernel("abs", DispatchKey.AutogradCPU, _autograd_unary("abs", _abs_backward))
+registry.register_kernel("abs", DispatchKey.AutogradNPU, _autograd_unary("abs", _abs_backward))
+registry.register_kernel("abs", DispatchKey.AutogradMeta, _autograd_unary("abs", _abs_backward))
+registry.register_kernel("neg", DispatchKey.Autograd, _autograd_unary("neg", _neg_backward, save_input=False))
+registry.register_kernel("neg", DispatchKey.AutogradCPU, _autograd_unary("neg", _neg_backward, save_input=False))
+registry.register_kernel("neg", DispatchKey.AutogradNPU, _autograd_unary("neg", _neg_backward, save_input=False))
+registry.register_kernel("neg", DispatchKey.AutogradMeta, _autograd_unary("neg", _neg_backward, save_input=False))
 registry.register_kernel("softmax", DispatchKey.Autograd, _autograd_unary_passthrough("softmax"))
 registry.register_kernel("softmax", DispatchKey.AutogradCPU, _autograd_unary_passthrough("softmax"))
 registry.register_kernel("softmax", DispatchKey.AutogradNPU, _autograd_unary_passthrough("softmax"))
