@@ -516,7 +516,7 @@ def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right
 
 
 def block_diag(*tensors):
-    return dispatch("block_diag", tensors[0].device.type, *tensors)
+    return dispatch("block_diag", tensors[0].device.type, tensors)
 
 
 def tril(a, diagonal=0):
@@ -532,7 +532,7 @@ def diag(a, diagonal=0):
 
 
 def cartesian_prod(*tensors):
-    return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
+    return dispatch("cartesian_prod", tensors[0].device.type, tensors)
 
 
 def chunk(a, chunks, dim=0):

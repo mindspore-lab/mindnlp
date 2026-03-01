@@ -195,6 +195,12 @@ def _matmul_out_shape(a_shape, b_shape):
     return batch + (a_shape[-2], b_shape[-1])
 
 
+def _normalize_tensor_sequence_args(tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        return tuple(tensors[0])
+    return tuple(tensors)
+
+
 def _iter_indices(shape):
     if not shape:
         yield ()
@@ -2004,6 +2010,7 @@ def diag(a, diagonal=0):
 
 
 def cartesian_prod(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     if len(tensors) == 0:
         raise RuntimeError("cartesian_prod expects at least one tensor")
     first = tensors[0]
@@ -2028,6 +2035,7 @@ def cartesian_prod(*tensors):
 
 
 def block_diag(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     from .creation import tensor_create
 
     if len(tensors) == 0:

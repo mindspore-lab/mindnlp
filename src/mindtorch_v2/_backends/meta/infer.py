@@ -200,6 +200,12 @@ def infer_tril_indices(row, col, offset=0, dtype=None, device=None, layout=None)
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=dtype)
 
 
+def _normalize_tensor_sequence_args(tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        return tuple(tensors[0])
+    return tuple(tensors)
+
+
 def infer_triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
     if row < 0 or col < 0:
         raise ValueError("row and col must be non-negative")
@@ -220,6 +226,7 @@ def infer_pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side=
 
 
 def infer_block_diag(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     rows = sum(t.shape[0] for t in tensors)
     cols = sum(t.shape[1] for t in tensors)
     shape = (rows, cols)
@@ -244,6 +251,7 @@ def infer_diag(a, diagonal=0):
 
 
 def infer_cartesian_prod(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     rows = 1
     for t in tensors:
         rows *= t.shape[0]
