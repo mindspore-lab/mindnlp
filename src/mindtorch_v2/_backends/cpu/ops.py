@@ -1383,3 +1383,11 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
         out = out + _to_numpy(bias).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
 
     return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def linalg_qr(a, mode='reduced'):
+    """QR decomposition on CPU via numpy."""
+    arr = _to_numpy(a)
+    np_mode = mode
+    q, r = np.linalg.qr(arr, mode=np_mode)
+    return _from_numpy(q, a.dtype, a.device), _from_numpy(r, a.dtype, a.device)

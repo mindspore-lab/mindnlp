@@ -733,6 +733,10 @@ def to(a, device=None, dtype=None, non_blocking=False, copy=False, memory_format
 
 
 
+def linalg_qr(a, mode='reduced'):
+    return dispatch("linalg_qr", a.device.type, a, mode)
+
+
 def _as_device(dev):
     if dev is None:
         return get_default_device()

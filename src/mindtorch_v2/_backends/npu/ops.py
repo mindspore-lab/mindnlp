@@ -4100,3 +4100,59 @@ def masked_select(a, mask):
     if out_numel == out_shape[0]:
         return full
     return _slice_along_dim(full, 0, out_numel, 0)
+
+
+def linalg_qr(a, mode='reduced'):
+    """QR decomposition on NPU via aclnnLinalgQr."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    a_storage = _unwrap_storage(a)
+    m, n = a.shape[-2], a.shape[-1]
+    k = min(m, n)
+
+    # mode: 0 = reduced, 1 = complete
+    mode_int = 1 if mode == 'complete' else 0
+
+    if mode_int == 0:
+        q_shape = a.shape[:-2] + (m, k)
+        r_shape = a.shape[:-2] + (k, n)
+    else:
+        q_shape = a.shape[:-2] + (m, m)
+        r_shape = a.shape[:-2] + (m, n)
+
+    q_stride = npu_runtime._contiguous_stride(q_shape)
+    r_stride = npu_runtime._contiguous_stride(r_shape)
+
+    q_size = 1
+    for s in q_shape:
+        q_size *= s
+    r_size = 1
+    for s in r_shape:
+        r_size *= s
+
+    itemsize = _dtype_itemsize(a.dtype)
+    q_ptr = npu_runtime._alloc_device(max(q_size, 1) * itemsize, runtime=runtime)
+    r_ptr = npu_runtime._alloc_device(max(r_size, 1) * itemsize, runtime=runtime)
+
+    aclnn.linalg_qr(
+        a_storage.data_ptr(),
+        q_ptr,
+        r_ptr,
+        a.shape,
+        a.stride,
+        q_shape,
+        q_stride,
+        r_shape,
+        r_stride,
+        a.dtype,
+        mode_int,
+        runtime,
+        stream=stream.stream,
+    )
+
+    q_storage = npu_typed_storage_from_ptr(q_ptr, max(q_size, 1), a.dtype, device=a.device)
+    r_storage = npu_typed_storage_from_ptr(r_ptr, max(r_size, 1), a.dtype, device=a.device)
+    Q = _wrap_tensor(q_storage, q_shape, q_stride)
+    R = _wrap_tensor(r_storage, r_shape, r_stride)
+    return Q, R

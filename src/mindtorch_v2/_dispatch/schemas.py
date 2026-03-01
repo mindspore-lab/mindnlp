@@ -293,3 +293,4 @@ def register_schemas():
     registry.register_schema("prelu", "prelu(Tensor input, Tensor weight) -> Tensor")
     registry.register_schema("max_", "max_(Tensor input, Tensor other) -> Tensor")
     registry.register_schema("min_", "min_(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("linalg_qr", "linalg_qr(Tensor input, str mode=reduced) -> (Tensor, Tensor)")

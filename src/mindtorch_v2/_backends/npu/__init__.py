@@ -166,6 +166,7 @@ from .ops import (
     dropout,
     pad,
     pad_sequence,
+    linalg_qr,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -352,6 +353,9 @@ registry.register("group_norm", "npu", group_norm, meta=meta_infer.infer_unary)
 # Tensor operations
 # Random operations
 registry.register("dropout", "npu", dropout, meta=meta_infer.infer_unary)
+
+# Linalg operations
+registry.register("linalg_qr", "npu", linalg_qr)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 
