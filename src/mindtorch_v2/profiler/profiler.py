@@ -1,7 +1,9 @@
 import json
+import gzip
 import os
 import threading
 import time
+import tempfile
 import traceback
 import tracemalloc
 from dataclasses import dataclass
@@ -686,6 +688,7 @@ class profile:
         with_flops=False,
         with_modules=False,
         experimental_config=None,
+        acc_events=False,
         use_cuda=None,
     ):
         del with_flops, with_modules, experimental_config, use_cuda
@@ -701,6 +704,9 @@ class profile:
         self._stopped = False
         self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
         self._owns_tracemalloc = False
+        self.acc_events = bool(acc_events)
+        self._preset_metadata = {}
+        self._metadata = {}
 
         if schedule is not None and not callable(schedule):
             raise TypeError("schedule must be callable")
@@ -796,6 +802,65 @@ class profile:
         self._session.current_step += 1
         self._set_action_for_step(self._session.current_step)
 
+    def add_metadata(self, key, value):
+        wrapped_value = '"' + value.replace('"', '\\"') + '"'
+        self._metadata[str(key)] = wrapped_value
+
+    def add_metadata_json(self, key, value):
+        self._metadata[str(key)] = value
+
+    def preset_metadata_json(self, key, value):
+        self._preset_metadata[str(key)] = value
+
+    def toggle_collection_dynamic(self, enable, activities):
+        if activities is None:
+            return
+
+        targets = {_activity_name(item) for item in activities}
+        if not targets:
+            return
+
+        if enable:
+            self._session.activities.update(targets)
+        else:
+            self._session.activities.difference_update(targets)
+
+    def export_memory_timeline(self, path, device=None):
+        del device
+        if not (self._session.record_shapes and self._session.profile_memory and self._session.with_stack):
+            raise ValueError("record_shapes=True, profile_memory=True, with_stack=True required for memory profiling.")
+
+        events = [event for event in self._session.snapshot() if event.kind == "op"]
+        payload = {
+            "times": [event.start_ns / 1000.0 for event in events],
+            "sizes": [int((event.metadata or {}).get("cpu_memory_allocated_after", 0)) for event in events],
+        }
+
+        if path.endswith(".html"):
+            body = (
+                "<html><body><pre>"
+                + json.dumps(payload)
+                + "</pre></body></html>"
+            )
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(body)
+            return
+
+        if path.endswith(".gz"):
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tmp:
+                json.dump(payload, tmp)
+                tmp_path = tmp.name
+            try:
+                with open(tmp_path, "r", encoding="utf-8") as fin, gzip.open(path, "wt", encoding="utf-8") as fout:
+                    fout.writelines(fin)
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            return
+
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle)
+
     def events(self):
         events = self._session.snapshot()
         events.sort(key=lambda item: (item.start_ns, item.end_ns, item.name))
@@ -865,6 +930,20 @@ class profile:
                 "args": {"name": "mindtorch_v2_profiler"},
             }
         ]
+
+        all_metadata = dict(self._preset_metadata)
+        all_metadata.update(self._metadata)
+        for key, value in all_metadata.items():
+            metadata_events.append(
+                {
+                    "name": str(key),
+                    "cat": "metadata",
+                    "ph": "M",
+                    "pid": pid,
+                    "tid": 0,
+                    "args": {"value": value},
+                }
+            )
         for tid in sorted(thread_ids):
             metadata_events.append(
                 {
