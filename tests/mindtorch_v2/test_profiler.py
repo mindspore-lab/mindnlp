@@ -602,3 +602,56 @@ def test_key_averages_export_stacks_writes_stack_lines(tmp_path):
     assert all(" " in line for line in lines)
     assert all(";" in line for line in lines)
 
+def test_profile_exposes_acc_events_flag_and_defaults_false():
+    prof = torch.profiler.profile()
+    assert hasattr(prof, "acc_events")
+    assert prof.acc_events is False
+
+
+def test_profile_accepts_acc_events_init_kwarg():
+    prof = torch.profiler.profile(acc_events=True)
+    assert prof.acc_events is True
+
+
+def test_profile_add_metadata_requires_string_value():
+    with torch.profiler.profile() as prof:
+        assert hasattr(prof, "add_metadata")
+        prof.add_metadata("k", "v")
+        with pytest.raises(AttributeError):
+            prof.add_metadata("k", 1)
+
+
+def test_profile_add_metadata_json_accepts_raw_string():
+    with torch.profiler.profile() as prof:
+        prof.add_metadata_json("k", "notjson")
+
+
+def test_profile_preset_metadata_json_available_before_start():
+    prof = torch.profiler.profile()
+    prof.preset_metadata_json("foo", "{\"a\": 1}")
+
+
+def test_profile_toggle_collection_dynamic_blocks_and_restores_cpu_collection():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+        prof.toggle_collection_dynamic(False, [torch.profiler.ProfilerActivity.CPU])
+        _ = x * x
+        prof.toggle_collection_dynamic(True, [torch.profiler.ProfilerActivity.CPU])
+        _ = x + x
+
+    names = [event["name"] for event in prof.events() if event["kind"] == "op"]
+    add_count = sum(1 for name in names if "add" in name)
+    assert add_count >= 2
+    assert all("mul" not in name for name in names)
+
+
+def test_profile_export_memory_timeline_requires_memory_related_flags(tmp_path):
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    out = tmp_path / "memory.json"
+    with pytest.raises(ValueError, match="record_shapes=True, profile_memory=True, with_stack=True required"):
+        prof.export_memory_timeline(str(out))
+
