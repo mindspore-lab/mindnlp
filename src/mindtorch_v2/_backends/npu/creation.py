@@ -135,6 +135,29 @@ def _device_index(device):
     return (device.index if hasattr(device, "index") else None) or 0
 
 
+def _is_310b_profile():
+    return npu_runtime.soc_profile() == "310b"
+
+
+def _linspace_fallback_npu(start, end, steps, dtype, device):
+    from . import ops as npu_ops
+
+    steps = int(steps)
+    shape = (steps,)
+    if steps == 0:
+        return empty_create(shape, dtype=dtype, device=device, requires_grad=False)
+    if steps == 1:
+        return full_create(shape, start, dtype=dtype, device=device)
+
+    # Build on NPU without calling aclnn.arange (keeps linspace single-op test semantics).
+    one = ones_create(shape, dtype=dtype, device=device)
+    idx = npu_ops.cumsum(one, dim=0)
+    idx = npu_ops.sub(idx, 1)
+    step = (float(end) - float(start)) / float(steps - 1)
+    idx = npu_ops.mul(idx, step)
+    return npu_ops.add(idx, float(start))
+
+
 def arange_create(start, end, step=1, dtype=None, device=None):
     dtype = _resolve_dtype(dtype)
     if step == 0:
@@ -170,6 +193,10 @@ def linspace_create(start, end, steps, dtype=None, device=None):
     if steps < 0:
         raise ValueError("number of steps must be non-negative")
     dtype = _resolve_dtype(dtype)
+
+    if _is_310b_profile():
+        return _linspace_fallback_npu(start, end, steps, dtype=dtype, device=device)
+
     if not aclnn.linspace_symbols_ok():
         raise RuntimeError("aclnnLinspace not available")
 
