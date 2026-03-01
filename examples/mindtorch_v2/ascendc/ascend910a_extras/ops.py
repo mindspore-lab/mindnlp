@@ -226,7 +226,7 @@ def grouped_matmul(
     # w needs transposed descriptor: logical [num_experts, inner_dim, dim]
     from mindtorch_v2._backends.npu.aclnn import get_bindings, _create_tensor
     bindings = get_bindings()
-    w_strides = w.stride()
+    w_strides = w.stride if isinstance(w.stride, tuple) else w.stride()
     w_transposed_shape = (w.shape[0], w.shape[2], w.shape[1])
     w_transposed_strides = (w_strides[0], w_strides[2], w_strides[1])
     acl_w, kw = _create_tensor(

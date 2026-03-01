@@ -25,6 +25,7 @@ _src_path = os.path.join(_project_root, "src")
 if _src_path not in sys.path:
     sys.path.insert(0, _src_path)
 
+import numpy as np
 import mindtorch_v2 as torch
 from mindtorch_v2._backends.npu import runtime as npu_runtime
 
@@ -52,11 +53,11 @@ def test_rope():
     num_kv_heads = 4
     max_seq = 128
 
-    q = torch.randn(bs, num_heads, head_dim, dtype=torch.float16, device="npu")
-    k = torch.randn(bs, num_kv_heads, head_dim, dtype=torch.float16, device="npu")
-    position_ids = torch.zeros(bs, dtype=torch.int32, device="npu")
-    cos_cache = torch.randn(max_seq, head_dim, dtype=torch.float16, device="npu")
-    sin_cache = torch.randn(max_seq, head_dim, dtype=torch.float16, device="npu")
+    q = torch.randn((bs, num_heads, head_dim), dtype=torch.float16, device="npu")
+    k = torch.randn((bs, num_kv_heads, head_dim), dtype=torch.float16, device="npu")
+    position_ids = torch.zeros((bs,), dtype=torch.int32, device="npu")
+    cos_cache = torch.randn((max_seq, head_dim), dtype=torch.float16, device="npu")
+    sin_cache = torch.randn((max_seq, head_dim), dtype=torch.float16, device="npu")
 
     out_q, out_k = ops.rope(q, k, position_ids, cos_cache, sin_cache)
     _sync()
@@ -73,7 +74,7 @@ def test_swiglu():
     print("\n=== Test: swiglu ===")
     num_tokens, dim = 8, 128  # dim must be multiple of 64
 
-    x = torch.randn(num_tokens, dim * 2, dtype=torch.float16, device="npu")
+    x = torch.randn((num_tokens, dim * 2), dtype=torch.float16, device="npu")
     y = ops.swiglu(x)
     _sync()
 
@@ -90,17 +91,16 @@ def test_grouped_matmul():
     num_experts = 2
     inner_dim = 64  # must be multiple of 64
 
-    x = torch.randn(num_tokens, dim, dtype=torch.float16, device="npu")
+    x = torch.randn((num_tokens, dim), dtype=torch.float16, device="npu")
     # w must be K-major: shape [num_experts, dim, inner_dim] with stride [dim*inner_dim, 1, dim]
     # We create with correct strides by transposing the inner dims
-    import numpy as np
     w_np = np.random.randn(num_experts, inner_dim, dim).astype(np.float16)
     w_host = torch.tensor(w_np, dtype=torch.float16)
     w = w_host.to("npu")
     # w is [num_experts, inner_dim, dim], contiguous
     # We need logical shape [num_experts, dim, inner_dim] with strides [inner_dim*dim, 1, dim]
     # i.e., transposing dims 1 and 2
-    w = w.permute(0, 2, 1)  # Now logical [num_experts, dim, inner_dim] with K-major strides
+    w = w.transpose(1, 2)  # Now logical [num_experts, dim, inner_dim] with K-major strides
 
     # group_list: cumulative token counts
     group_list_np = np.array([4, 8], dtype=np.int64)  # expert 0 gets tokens 0-3, expert 1 gets 4-7
@@ -120,9 +120,9 @@ def test_add_rms_norm():
     num_tokens = 8
     dim = 128  # must be multiple of 64
 
-    x = torch.randn(num_tokens, dim, dtype=torch.float16, device="npu")
-    residual = torch.randn(num_tokens, dim, dtype=torch.float16, device="npu")
-    weight = torch.ones(dim, dtype=torch.float16, device="npu")
+    x = torch.randn((num_tokens, dim), dtype=torch.float16, device="npu")
+    residual = torch.randn((num_tokens, dim), dtype=torch.float16, device="npu")
+    weight = torch.ones((dim,), dtype=torch.float16, device="npu")
     epsilon = torch.tensor([1e-5], dtype=torch.float32, device="npu")
 
     y, residual_out = ops.add_rms_norm(x, residual, weight, epsilon)
@@ -146,12 +146,11 @@ def test_reshape_and_cache():
     nh16 = num_kv_heads * head_size // 16
     h16 = 16
 
-    key = torch.randn(num_tokens, num_kv_heads, head_size, dtype=torch.float16, device="npu")
-    value = torch.randn(num_tokens, num_kv_heads, head_size, dtype=torch.float16, device="npu")
-    key_cache = torch.zeros(num_blocks, block_size, nh16, h16, dtype=torch.float16, device="npu")
-    value_cache = torch.zeros(num_blocks, block_size, nh16, h16, dtype=torch.float16, device="npu")
+    key = torch.randn((num_tokens, num_kv_heads, head_size), dtype=torch.float16, device="npu")
+    value = torch.randn((num_tokens, num_kv_heads, head_size), dtype=torch.float16, device="npu")
+    key_cache = torch.zeros((num_blocks, block_size, nh16, h16), dtype=torch.float16, device="npu")
+    value_cache = torch.zeros((num_blocks, block_size, nh16, h16), dtype=torch.float16, device="npu")
     # slot_indices: which slot each token maps to (must be < num_blocks * block_size)
-    import numpy as np
     slot_np = np.array([0, 1, 2, 3], dtype=np.int32)
     slot_indices = torch.tensor(slot_np, dtype=torch.int32).to("npu")
 
@@ -176,12 +175,11 @@ def test_paged_attention():
     max_page_num_per_seq = 4
     ctx_len = 16  # must be <= max_page_num_per_seq * page_size
 
-    q = torch.randn(bs, num_heads, head_dim, dtype=torch.float16, device="npu")
+    q = torch.randn((bs, num_heads, head_dim), dtype=torch.float16, device="npu")
     # kv cache: [num_pages, num_kv_heads * head_dim // 16, page_size, 16]
     kv_dim2 = num_kv_heads * head_dim // 16
-    key_cache = torch.randn(num_pages, kv_dim2, page_size, 16, dtype=torch.float16, device="npu")
-    value_cache = torch.randn(num_pages, kv_dim2, page_size, 16, dtype=torch.float16, device="npu")
-    import numpy as np
+    key_cache = torch.randn((num_pages, kv_dim2, page_size, 16), dtype=torch.float16, device="npu")
+    value_cache = torch.randn((num_pages, kv_dim2, page_size, 16), dtype=torch.float16, device="npu")
     # block_tables: [bs, max_page_num_per_seq], page indices
     bt_np = np.zeros((bs, max_page_num_per_seq), dtype=np.int32)
     bt_np[0] = [0, 1, 2, 3]
