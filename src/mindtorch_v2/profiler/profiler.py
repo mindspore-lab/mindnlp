@@ -419,6 +419,9 @@ class _FunctionEventAvgRow:
         self.self_cpu_time_total = float(row.get("self_time_ns", 0)) / 1000.0
         self.cpu_time_total = float(row.get("total_time_ns", 0)) / 1000.0
         self.cpu_time = float(row.get("avg_time_ns", 0)) / 1000.0
+        self.self_device_time_total = float(row.get("self_device_time_ns", 0)) / 1000.0
+        self.device_time_total = float(row.get("device_time_ns", 0)) / 1000.0
+        self.device_time = float(row.get("avg_device_time_ns", 0)) / 1000.0
         self.device_type = row.get("device_type", "CPU")
         self.input_shapes = row.get("input_shapes", "")
         self.stack = row.get("stack", [])
@@ -510,6 +513,8 @@ class _KeyAverages:
                     "count": 0,
                     "total_time_ns": 0,
                     "self_time_ns": 0,
+                    "device_time_ns": 0,
+                    "self_device_time_ns": 0,
                     "input_shapes": "",
                     "stack": [],
                     "cpu_memory_usage": 0,
@@ -531,9 +536,13 @@ class _KeyAverages:
                 stack = metadata.get("stack") or []
                 row["stack"] = stack[-self._group_by_stack_n :] if stack else []
 
+            event_self_time_ns = per_event_self_time.get(idx, max(0, event.duration_ns))
             row["count"] += 1
             row["total_time_ns"] += event.duration_ns
-            row["self_time_ns"] += per_event_self_time.get(idx, max(0, event.duration_ns))
+            row["self_time_ns"] += event_self_time_ns
+            if event.device_type == "NPU":
+                row["device_time_ns"] += event.duration_ns
+                row["self_device_time_ns"] += event_self_time_ns
 
             row["cpu_memory_usage"] += int(metadata.get("cpu_memory_allocated_delta", 0))
             row["self_cpu_memory_usage"] += int(metadata.get("cpu_memory_allocated_delta", 0))
@@ -547,6 +556,7 @@ class _KeyAverages:
 
         for row in grouped.values():
             row["avg_time_ns"] = row["total_time_ns"] // max(1, row["count"])
+            row["avg_device_time_ns"] = row["device_time_ns"] // max(1, row["count"])
 
         self._rows = list(grouped.values())
         return self._rows
@@ -576,6 +586,35 @@ class _KeyAverages:
         totals = self._aggregate_totals()
         return float(totals["self_time_ns"]) / 1000.0
 
+    def supported_export_stacks_metrics(self):
+        return [
+            "self_cpu_time_total",
+            "self_cuda_time_total",
+            "self_xpu_time_total",
+            "self_privateuse1_time_total",
+        ]
+
+    def export_stacks(self, path, metric):
+        supported = self.supported_export_stacks_metrics()
+        if metric not in supported:
+            raise ValueError("metric should be one of: " + str(supported))
+
+        translate_table = str.maketrans(" ;\t\n", "____")
+        mapped_metric = (
+            metric.replace("cuda", "device")
+            .replace("xpu", "device")
+            .replace("privateuse1", "device")
+        )
+
+        with open(path, "w", encoding="utf-8") as handle:
+            for evt in self:
+                stack = getattr(evt, "stack", None)
+                if stack and len(stack) > 0:
+                    metric_value = getattr(evt, mapped_metric)
+                    if int(metric_value) > 0:
+                        stack_entries = [entry.translate(translate_table) for entry in reversed(stack)]
+                        handle.write(";".join(stack_entries) + " " + str(int(metric_value)) + "\n")
+
     def total_average(self):
         totals = self._aggregate_totals()
         count = totals["count"]
@@ -588,6 +627,9 @@ class _KeyAverages:
             "self_time_ns": totals["self_time_ns"],
             "total_time_ns": total_time_ns,
             "avg_time_ns": avg_time_ns,
+            "device_time_ns": 0,
+            "self_device_time_ns": 0,
+            "avg_device_time_ns": 0,
             "input_shapes": "",
             "stack": [],
             "cpu_memory_usage": 0,

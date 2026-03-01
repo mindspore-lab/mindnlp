@@ -559,3 +559,46 @@ def test_key_averages_empty_events_total_average_is_zero():
     assert total.self_cpu_time_total == 0
     assert total.cpu_time_total == 0
     assert total.cpu_time == 0.0
+
+def test_key_averages_supported_export_stacks_metrics_matches_torch_shape():
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    metrics = prof.key_averages(group_by_stack_n=2).supported_export_stacks_metrics()
+
+    assert metrics == [
+        "self_cpu_time_total",
+        "self_cuda_time_total",
+        "self_xpu_time_total",
+        "self_privateuse1_time_total",
+    ]
+
+
+def test_key_averages_export_stacks_rejects_unsupported_metric(tmp_path):
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    out = tmp_path / "stacks_invalid.txt"
+    rows = prof.key_averages(group_by_stack_n=2)
+
+    with pytest.raises(ValueError, match="metric should be one of"):
+        rows.export_stacks(str(out), "cpu_time_total")
+
+
+def test_key_averages_export_stacks_writes_stack_lines(tmp_path):
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    out = tmp_path / "stacks.txt"
+    rows = prof.key_averages(group_by_stack_n=2)
+    rows.export_stacks(str(out), "self_cpu_time_total")
+
+    payload = out.read_text(encoding="utf-8")
+    lines = [line for line in payload.splitlines() if line.strip()]
+    assert lines
+    assert all(" " in line for line in lines)
+    assert all(";" in line for line in lines)
+
