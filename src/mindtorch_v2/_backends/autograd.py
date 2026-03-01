@@ -217,6 +217,14 @@ def _mean_backward(grad, _a, saved_a, keyset):
 
 def _relu_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
+        if getattr(saved_a, "device", None) is not None and saved_a.device.type == "npu":
+            zeros = saved_a._ones_like()
+            zeros = redispatch("mul", keyset, zeros, 0)
+            mask = redispatch("gt", keyset, saved_a, zeros)
+            ones = saved_a._ones_like()
+            zeros_like = redispatch("mul", keyset, ones, 0)
+            scale = redispatch("where", keyset, mask, ones, zeros_like)
+            return (redispatch("mul", keyset, grad, scale),)
         mask = saved_a._ones_like()
         mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
         return (redispatch("mul", keyset, grad, mask),)
@@ -240,6 +248,14 @@ def _inplace_binary_backward(grad, a, _saved_a, args, _keyset):
 
 def _inplace_relu_backward(grad, _a, saved_a, _args, keyset):
     with _grad_context(keyset):
+        if getattr(saved_a, "device", None) is not None and saved_a.device.type == "npu":
+            zeros = saved_a._ones_like()
+            zeros = redispatch("mul", keyset, zeros, 0)
+            mask = redispatch("gt", keyset, saved_a, zeros)
+            ones = saved_a._ones_like()
+            zeros_like = redispatch("mul", keyset, ones, 0)
+            scale = redispatch("where", keyset, mask, ones, zeros_like)
+            return (redispatch("mul", keyset, grad, scale),)
         mask = saved_a._ones_like()
         mask.storage()._data = (saved_a.storage().data > 0).astype(mask.storage().data.dtype)
         return (redispatch("mul", keyset, grad, mask),)
@@ -269,10 +285,10 @@ registry.register_kernel("mean", DispatchKey.Autograd, _autograd_unary("mean", _
 registry.register_kernel("mean", DispatchKey.AutogradCPU, _autograd_unary("mean", _mean_backward, save_input=False))
 registry.register_kernel("mean", DispatchKey.AutogradNPU, _autograd_unary("mean", _mean_backward, save_input=False))
 registry.register_kernel("mean", DispatchKey.AutogradMeta, _autograd_unary("mean", _mean_backward, save_input=False))
-registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradCPU, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradNPU, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu", DispatchKey.AutogradMeta, _autograd_unary("relu", _relu_backward, cpu_only=True, save_input=True))
+registry.register_kernel("relu", DispatchKey.Autograd, _autograd_unary("relu", _relu_backward, save_input=True))
+registry.register_kernel("relu", DispatchKey.AutogradCPU, _autograd_unary("relu", _relu_backward, save_input=True))
+registry.register_kernel("relu", DispatchKey.AutogradNPU, _autograd_unary("relu", _relu_backward, save_input=True))
+registry.register_kernel("relu", DispatchKey.AutogradMeta, _autograd_unary("relu", _relu_backward, save_input=True))
 registry.register_kernel("reshape", DispatchKey.Autograd, _autograd_view("reshape", _reshape_backward))
 registry.register_kernel("reshape", DispatchKey.AutogradCPU, _autograd_view("reshape", _reshape_backward))
 registry.register_kernel("reshape", DispatchKey.AutogradNPU, _autograd_view("reshape", _reshape_backward))
@@ -293,10 +309,10 @@ registry.register_kernel("mul_", DispatchKey.Autograd, _autograd_inplace("mul_",
 registry.register_kernel("mul_", DispatchKey.AutogradCPU, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("mul_", DispatchKey.AutogradNPU, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
 registry.register_kernel("mul_", DispatchKey.AutogradMeta, _autograd_inplace("mul_", _inplace_binary_backward, save_input=True))
-registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradCPU, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradNPU, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
-registry.register_kernel("relu_", DispatchKey.AutogradMeta, _autograd_inplace("relu_", _inplace_relu_backward, cpu_only=True, save_input=True))
+registry.register_kernel("relu_", DispatchKey.Autograd, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.AutogradCPU, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.AutogradNPU, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
+registry.register_kernel("relu_", DispatchKey.AutogradMeta, _autograd_inplace("relu_", _inplace_relu_backward, save_input=True))
 
 
 
