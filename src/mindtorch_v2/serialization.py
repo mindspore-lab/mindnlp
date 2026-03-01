@@ -336,11 +336,50 @@ class _TorchCompatUnpickler(pickle.Unpickler):
         return super().find_class(mod_name, name)
 
 
+
+
+def _apply_map_location(storage, location, map_location):
+    if map_location is None or map_location == "cpu":
+        return storage
+
+    if isinstance(map_location, dict):
+        mapped = map_location.get(location, location)
+        if mapped not in ("cpu", None):
+            raise NotImplementedError(
+                f"unsupported remapped location: {mapped}; only cpu is supported"
+            )
+        return storage
+
+    if callable(map_location):
+        remapped = map_location(storage, location)
+        if remapped is None:
+            return storage
+        return remapped
+
+    raise NotImplementedError(
+        "mindtorch_v2.load supports map_location=None, 'cpu', dict, or callable for torch zip checkpoints"
+    )
+
+
+def _validate_map_location(map_location):
+    if map_location in (None, "cpu"):
+        return
+    if isinstance(map_location, dict):
+        for _, mapped in map_location.items():
+            if mapped not in ("cpu", None):
+                raise NotImplementedError(
+                    f"unsupported remapped location: {mapped}; only cpu is supported"
+                )
+        return
+    if callable(map_location):
+        return
+    raise NotImplementedError(
+        "mindtorch_v2.load supports map_location=None, 'cpu', dict, or callable for torch zip checkpoints"
+    )
+
+
 def _load_zip_checkpoint(file_obj, map_location=None, **pickle_load_args):
-    if map_location not in (None, "cpu"):
-        raise NotImplementedError(
-            "mindtorch_v2.load currently supports map_location=None or 'cpu' for torch zip checkpoints"
-        )
+    _validate_map_location(map_location)
 
     loaded_storages = {}
     with zipfile.ZipFile(file_obj, mode="r") as zf:
@@ -371,6 +410,7 @@ def _load_zip_checkpoint(file_obj, map_location=None, **pickle_load_args):
             np_dtype = to_numpy_dtype(dtype)
             arr = np.frombuffer(payload, dtype=np_dtype, count=int(numel)).copy()
             storage = typed_storage_from_numpy(arr, dtype=dtype, device="cpu")
+            storage = _apply_map_location(storage, location, map_location)
             loaded_storages[key] = storage
             return storage
 
