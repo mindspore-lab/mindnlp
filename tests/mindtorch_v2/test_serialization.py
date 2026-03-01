@@ -53,6 +53,22 @@ def test_torch_save_then_mindtorch_load_state_dict(tmp_path):
     _assert_state_dict_close(ref, loaded)
 
 
+def test_torch_legacy_save_then_mindtorch_load_state_dict(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_state_legacy.pth"
+    torch.save(model.state_dict(), path, _use_new_zipfile_serialization=False)
+
+    loaded = mt.load(path)
+
+    assert isinstance(loaded, OrderedDict)
+    assert set(loaded.keys()) == {"weight", "bias"}
+    for v in loaded.values():
+        assert isinstance(v, mt.Tensor)
+
+    ref = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+    _assert_state_dict_close(ref, loaded)
+
+
 def test_mindtorch_save_then_torch_load_state_dict(tmp_path):
     model = nn.Linear(4, 3)
     state = model.state_dict()

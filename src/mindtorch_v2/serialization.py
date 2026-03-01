@@ -171,6 +171,14 @@ class _StorageRef:
         self.raw_bytes = raw_bytes
 
 
+class _LegacyStorageView:
+    __slots__ = ("storage", "base_offset")
+
+    def __init__(self, storage, base_offset):
+        self.storage = storage
+        self.base_offset = int(base_offset)
+
+
 class _TensorReduceProxy:
     __slots__ = ("storage_ref", "storage_offset", "size", "stride", "requires_grad")
 
@@ -197,11 +205,16 @@ class _TensorReduceProxy:
 
 
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, _backward_hooks, _metadata=None):
+    offset = int(storage_offset)
+    if isinstance(storage, _LegacyStorageView):
+        offset += storage.base_offset
+        storage = storage.storage
+
     tensor = MindTensor(
         storage,
         tuple(size),
         tuple(stride),
-        offset=int(storage_offset),
+        offset=offset,
         requires_grad=bool(requires_grad),
     )
     if not requires_grad:
@@ -419,6 +432,100 @@ def _load_zip_checkpoint(file_obj, map_location=None, **pickle_load_args):
         return unpickler.load()
 
 
+
+
+def _legacy_element_size(dtype):
+    return int(np.dtype(to_numpy_dtype(dtype)).itemsize)
+
+
+def _load_legacy_checkpoint(file_obj, map_location=None, **pickle_load_args):
+    if map_location not in (None, "cpu"):
+        raise NotImplementedError(
+            "mindtorch_v2.load currently supports map_location=None or 'cpu' for legacy checkpoints"
+        )
+
+    deserialized_objects = {}
+
+    class _LegacyUnpickler(pickle.Unpickler):
+        def find_class(self, mod_name, name):
+            if mod_name == "torch._utils" and name in {"_rebuild_tensor_v2", "_rebuild_tensor"}:
+                return _rebuild_tensor_v2
+            if mod_name == "torch" and name in _STORAGE_NAME_TO_DTYPE:
+                return globals()[name]
+            if mod_name == "collections" and name == "OrderedDict":
+                return OrderedDict
+            return super().find_class(mod_name, name)
+
+    def persistent_load(saved_id):
+        assert isinstance(saved_id, tuple)
+        typename = _maybe_decode_ascii(saved_id[0])
+        data = saved_id[1:]
+
+        if typename == "module":
+            return data[0]
+
+        if typename == "storage":
+            storage_type, root_key, location, numel, view_metadata = data
+            root_key = _maybe_decode_ascii(root_key)
+            location = _maybe_decode_ascii(location)
+            if location not in ("cpu", None):
+                raise NotImplementedError(
+                    f"unsupported checkpoint storage location: {location}; only cpu is supported"
+                )
+
+            dtype = _storage_dtype_from_type(storage_type)
+            if root_key not in deserialized_objects:
+                arr = np.empty(int(numel), dtype=to_numpy_dtype(dtype))
+                deserialized_objects[root_key] = typed_storage_from_numpy(arr, dtype=dtype, device="cpu")
+            root_storage = deserialized_objects[root_key]
+
+            if view_metadata is not None:
+                view_key, offset, _view_size = view_metadata
+                view_key = _maybe_decode_ascii(view_key)
+                if view_key not in deserialized_objects:
+                    deserialized_objects[view_key] = _LegacyStorageView(root_storage, int(offset))
+                return deserialized_objects[view_key]
+            return root_storage
+
+        raise RuntimeError(f"Unknown saved id type: {saved_id[0]}")
+
+    magic_number = pickle.load(file_obj, **pickle_load_args)
+    if magic_number != 0x1950A86A20F9469CFC6C:
+        raise RuntimeError("Invalid magic number; corrupt file?")
+
+    protocol_version = pickle.load(file_obj, **pickle_load_args)
+    if protocol_version != 1001:
+        raise RuntimeError(f"Invalid protocol version: {protocol_version}")
+
+    _ = pickle.load(file_obj, **pickle_load_args)
+
+    unpickler = _LegacyUnpickler(file_obj, **pickle_load_args)
+    unpickler.persistent_load = persistent_load
+    result = unpickler.load()
+
+    deserialized_storage_keys = pickle.load(file_obj, **pickle_load_args)
+
+    for key in deserialized_storage_keys:
+        key = _maybe_decode_ascii(key)
+        storage = deserialized_objects[key]
+        if isinstance(storage, _LegacyStorageView):
+            storage = storage.storage
+
+        # Legacy stream stores an 8-byte record header before each raw storage payload.
+        header = file_obj.read(8)
+        if len(header) != 8:
+            raise RuntimeError("corrupt legacy checkpoint: missing storage record header")
+
+        nbytes = storage.nbytes()
+        payload = file_obj.read(nbytes)
+        if len(payload) != nbytes:
+            raise RuntimeError("corrupt legacy checkpoint: truncated storage payload")
+        arr = np.frombuffer(payload, dtype=storage.data.dtype, count=storage.size()).copy()
+        storage.data[:] = arr
+
+    return result
+
+
 def _is_zip_checkpoint(file_obj):
     try:
         cur = file_obj.tell()
@@ -462,8 +569,8 @@ def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, **kw
         with open(f, "rb") as fh:
             if _is_zip_checkpoint(fh):
                 return _load_zip_checkpoint(fh, map_location=map_location, encoding="utf-8")
-            return pickle.load(fh)
+            return _load_legacy_checkpoint(fh, map_location=map_location, encoding="utf-8")
 
     if _is_zip_checkpoint(f):
         return _load_zip_checkpoint(f, map_location=map_location, encoding="utf-8")
-    return pickle.load(f)
+    return _load_legacy_checkpoint(f, map_location=map_location, encoding="utf-8")
