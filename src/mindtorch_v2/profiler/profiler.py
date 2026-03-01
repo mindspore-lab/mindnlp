@@ -482,6 +482,7 @@ class _KeyAverages:
     def __init__(self, events, *, group_by_input_shape=False, group_by_stack_n=0):
         self._events = list(events)
         self._rows = None
+        self._row_cache = None
         self._group_by_input_shape = bool(group_by_input_shape)
         self._group_by_stack_n = int(group_by_stack_n)
 
@@ -561,16 +562,44 @@ class _KeyAverages:
             row["avg_device_time_ns"] = row["device_time_ns"] // max(1, row["count"])
 
         self._rows = list(grouped.values())
+        self._row_cache = None
         return self._rows
 
     def _row_objects(self):
-        return [_FunctionEventAvgRow(row) for row in self._build_rows()]
+        if self._row_cache is None:
+            self._row_cache = [_FunctionEventAvgRow(row) for row in self._build_rows()]
+        return self._row_cache
 
     def __iter__(self):
         return iter(self._row_objects())
 
     def __getitem__(self, idx):
         return self._row_objects()[idx]
+
+    def copy(self):
+        return list(self._row_objects())
+
+    def count(self, value):
+        return self._row_objects().count(value)
+
+    def sort(self, *, key=None, reverse=False):
+        self._row_objects().sort(key=key, reverse=reverse)
+
+    def reverse(self):
+        self._row_objects().reverse()
+
+    def key_averages(
+        self,
+        group_by_input_shapes=False,
+        group_by_stack_n=0,
+        group_by_overload_name=False,
+    ):
+        del group_by_overload_name
+        return _KeyAverages(
+            self._events,
+            group_by_input_shape=bool(group_by_input_shapes),
+            group_by_stack_n=int(group_by_stack_n),
+        )
 
     def _aggregate_totals(self):
         rows = self._build_rows()

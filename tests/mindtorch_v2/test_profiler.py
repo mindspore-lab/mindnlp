@@ -655,3 +655,46 @@ def test_profile_export_memory_timeline_requires_memory_related_flags(tmp_path):
     with pytest.raises(ValueError, match="record_shapes=True, profile_memory=True, with_stack=True required"):
         prof.export_memory_timeline(str(out))
 
+def test_key_averages_supports_copy_and_count():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    copied = rows.copy()
+
+    assert isinstance(copied, list)
+    assert len(copied) == len(rows)
+    assert rows.count(copied[0]) >= 1
+
+
+def test_key_averages_sort_and_reverse_operate_on_row_objects():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+        _ = x * x
+
+    rows = prof.key_averages()
+    rows.sort(key=lambda row: row.key)
+    keys_sorted = [row.key for row in rows]
+    rows.reverse()
+    keys_reversed = [row.key for row in rows]
+
+    assert keys_sorted
+    assert keys_reversed == list(reversed(keys_sorted))
+
+
+def test_key_averages_event_list_key_averages_accepts_torch_keywords():
+    with torch.profiler.profile(record_shapes=True, with_stack=True) as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    regrouped = rows.key_averages(
+        group_by_input_shapes=True,
+        group_by_stack_n=1,
+        group_by_overload_name=True,
+    )
+
+    assert len(regrouped) >= 1
+
