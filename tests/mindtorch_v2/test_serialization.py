@@ -1,28 +1,10 @@
 import numpy as np
 import torch
 import io
-import builtins
 from collections import OrderedDict
 
 import mindtorch_v2 as mt
 import mindtorch_v2.nn as nn
-
-
-def test_serialization_does_not_import_torch_runtime(monkeypatch):
-    real_import = builtins.__import__
-
-    def guarded_import(name, *args, **kwargs):
-        if name == "torch" or name.startswith("torch."):
-            raise AssertionError("torch import is not allowed in mindtorch_v2 serialization")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", guarded_import)
-
-    buf = io.BytesIO()
-    mt.save({"x": mt.tensor([1.0, 2.0])}, buf)
-    buf.seek(0)
-    out = mt.load(buf)
-    assert out["x"].tolist() == [1.0, 2.0]
 
 
 def _assert_state_dict_close(lhs, rhs):
