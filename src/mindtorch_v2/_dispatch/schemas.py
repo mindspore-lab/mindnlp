@@ -43,6 +43,13 @@ CORE_SCHEMA_OPS = (
     "mul_",
     "relu_",
     "zero_",
+    "uniform_",
+    "normal_",
+    "fill_",
+    "clamp_",
+    "copy_",
+    "erfinv_",
+    "sub_",
     "setitem",
     "all",
     "any",
@@ -192,6 +199,13 @@ def register_schemas():
     registry.register_schema("mul_", "mul_(Tensor(a!) self, Tensor other) -> Tensor")
     registry.register_schema("relu_", "relu_(Tensor(a!) self) -> Tensor")
     registry.register_schema("zero_", "zero_(Tensor(a!) self) -> Tensor")
+    registry.register_schema("uniform_", "uniform_(Tensor(a!) self, float low=0.0, float high=1.0) -> Tensor")
+    registry.register_schema("normal_", "normal_(Tensor(a!) self, float mean=0.0, float std=1.0) -> Tensor")
+    registry.register_schema("fill_", "fill_(Tensor(a!) self, Scalar value) -> Tensor")
+    registry.register_schema("clamp_", "clamp_(Tensor(a!) self, Scalar? min=None, Scalar? max=None) -> Tensor")
+    registry.register_schema("copy_", "copy_(Tensor(a!) self, Tensor src) -> Tensor")
+    registry.register_schema("erfinv_", "erfinv_(Tensor(a!) self) -> Tensor")
+    registry.register_schema("sub_", "sub_(Tensor(a!) self, Tensor other) -> Tensor")
     registry.register_schema("getitem", "getitem(Tensor self, Any key) -> Tensor")
     registry.register_schema("setitem", "setitem(Tensor(a!) self, Any key, Any value) -> Tensor")
 

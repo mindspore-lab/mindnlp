@@ -406,38 +406,54 @@ class Tensor:
         out = dispatch("zero_", self.device.type, self)
         return out
 
-    def copy_(self, other):
+    def uniform_(self, low=0.0, high=1.0):
+        from ._dispatch.dispatcher import dispatch
+
         self._check_inplace()
+        out = dispatch("uniform_", self.device.type, self, low, high)
+        return out
 
-        if self.device.type != "cpu":
-            raise RuntimeError("copy_ only supports CPU tensors")
+    def normal_(self, mean=0.0, std=1.0):
+        from ._dispatch.dispatcher import dispatch
 
-        if isinstance(other, Tensor):
-            if other.device.type != "cpu":
-                other = other.to("cpu")
-            src = other._numpy_view()
-        else:
-            src = np.array(other)
-
-        np.copyto(self._numpy_view(), src, casting="unsafe")
-        self._bump_version()
-        return self
-
-    def normal_(self, mean=0.0, std=1.0, *, generator=None):
         self._check_inplace()
-        if self.device.type != "cpu":
-            raise RuntimeError("normal_ currently only supports CPU tensors")
+        out = dispatch("normal_", self.device.type, self, mean, std)
+        return out
 
-        if hasattr(mean, "item"):
-            mean = mean.item()
-        if hasattr(std, "item"):
-            std = std.item()
+    def fill_(self, value):
+        from ._dispatch.dispatcher import dispatch
 
-        out = np.random.normal(loc=float(mean), scale=float(std), size=self.shape)
-        out = out.astype(to_numpy_dtype(self.dtype), copy=False)
-        np.copyto(self._numpy_view(), out, casting="unsafe")
-        self._bump_version()
-        return self
+        self._check_inplace()
+        out = dispatch("fill_", self.device.type, self, value)
+        return out
+
+    def clamp_(self, min=None, max=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("clamp_", self.device.type, self, min, max)
+        return out
+
+    def copy_(self, src):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("copy_", self.device.type, self, src)
+        return out
+
+    def erfinv_(self):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("erfinv_", self.device.type, self)
+        return out
+
+    def sub_(self, other):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("sub_", self.device.type, self, other)
+        return out
 
     def to(self, *args, **kwargs):
         if self._pending:

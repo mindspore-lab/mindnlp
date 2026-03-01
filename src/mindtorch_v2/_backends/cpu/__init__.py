@@ -70,6 +70,13 @@ from .ops import (
     mul_,
     relu_,
     zero_,
+    uniform_,
+    normal_,
+    fill_,
+    clamp_,
+    copy_,
+    erfinv_,
+    sub_,
     contiguous,
     abs,
     neg,
@@ -302,6 +309,13 @@ registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "cpu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "cpu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "cpu", zero_, meta=meta_infer.infer_unary)
+registry.register("uniform_", "cpu", uniform_, meta=meta_infer.infer_unary)
+registry.register("normal_", "cpu", normal_, meta=meta_infer.infer_unary)
+registry.register("fill_", "cpu", fill_, meta=meta_infer.infer_unary)
+registry.register("clamp_", "cpu", clamp_, meta=meta_infer.infer_unary)
+registry.register("copy_", "cpu", copy_, meta=meta_infer.infer_unary)
+registry.register("erfinv_", "cpu", erfinv_, meta=meta_infer.infer_unary)
+registry.register("sub_", "cpu", sub_, meta=meta_infer.infer_binary)
 registry.register("reshape", "cpu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "cpu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "cpu", view_backend.transpose, meta=meta_infer.infer_transpose)

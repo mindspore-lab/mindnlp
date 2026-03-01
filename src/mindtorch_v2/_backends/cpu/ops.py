@@ -644,13 +644,13 @@ def ge(a, b):
 
 def add_(a, b):
     arr = _to_numpy(a)
-    arr += _to_numpy(b)
+    arr += _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
 def mul_(a, b):
     arr = _to_numpy(a)
-    arr *= _to_numpy(b)
+    arr *= _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
@@ -663,6 +663,99 @@ def relu_(a):
 def zero_(a):
     arr = _to_numpy(a)
     arr.fill(0)
+    return a
+
+
+def uniform_(a, low=0.0, high=1.0):
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[:] = rng.uniform(low, high, arr.shape).astype(arr.dtype)
+    return a
+
+
+def normal_(a, mean=0.0, std=1.0):
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[:] = rng.normal(mean, std, arr.shape).astype(arr.dtype)
+    return a
+
+
+def fill_(a, value):
+    arr = _to_numpy(a)
+    arr.fill(value)
+    return a
+
+
+def clamp_(a, min_val=None, max_val=None):
+    arr = _to_numpy(a)
+    np.clip(arr, min_val, max_val, out=arr)
+    return a
+
+
+def copy_(a, src):
+    arr = _to_numpy(a)
+    src_arr = _to_numpy(src)
+    np.copyto(arr, src_arr)
+    return a
+
+
+def erfinv_(a):
+    arr = _to_numpy(a)
+    arr[:] = _ndtr_inv((arr + 1.0) / 2.0) / np.sqrt(2.0)
+    return a
+
+
+def _ndtr_inv(p):
+    """Inverse normal CDF (probit function) using rational approximation.
+    Used to compute erfinv: erfinv(x) = ndtr_inv((x+1)/2) / sqrt(2)."""
+    p = np.asarray(p, dtype=np.float64)
+    result = np.zeros_like(p)
+
+    # Central region: |p - 0.5| <= 0.425
+    q = p - 0.5
+    mask_central = np.abs(q) <= 0.425
+    if np.any(mask_central):
+        r = q[mask_central]
+        r2 = r * r
+        # Rational approximation coefficients (Beasley-Springer-Moro)
+        a = np.array([
+            2.50662823884, -18.61500062529, 41.39119773534, -25.44106049637
+        ])
+        b = np.array([
+            -8.47351093090, 23.08336743743, -21.06224101826, 3.13082909833
+        ])
+        num = ((a[3] * r2 + a[2]) * r2 + a[1]) * r2 + a[0]
+        den = (((b[3] * r2 + b[2]) * r2 + b[1]) * r2 + b[0]) * r2 + 1.0
+        result[mask_central] = r * num / den
+
+    # Tail regions
+    mask_tail = ~mask_central & (p > 0) & (p < 1)
+    if np.any(mask_tail):
+        pp = np.where(p[mask_tail] < 0.5, p[mask_tail], 1.0 - p[mask_tail])
+        r = np.sqrt(-2.0 * np.log(pp))
+        c = np.array([
+            2.515517, 0.802853, 0.010328
+        ])
+        d = np.array([
+            1.432788, 0.189269, 0.001308
+        ])
+        num = (c[2] * r + c[1]) * r + c[0]
+        den = ((d[2] * r + d[1]) * r + d[0]) * r + 1.0
+        val = r - num / den
+        val = np.where(p[mask_tail] < 0.5, -val, val)
+        result[mask_tail] = val
+
+    # Boundary cases
+    result[p <= 0] = -np.inf
+    result[p >= 1] = np.inf
+    return result
+
+
+def sub_(a, b):
+    arr = _to_numpy(a)
+    arr -= _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 def contiguous(a):

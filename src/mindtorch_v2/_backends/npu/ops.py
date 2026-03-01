@@ -2727,6 +2727,173 @@ def zero_(a):
     )
     return a
 
+
+def uniform_(a, low=0.0, high=1.0):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU uniform_ expects NPU tensors")
+
+    from ... import npu as npu_mod
+    seed = npu_mod._get_seed()
+    offset = npu_mod._get_and_advance_offset(advance=_numel(a.shape))
+
+    a_storage = _unwrap_storage(a)
+    aclnn.inplace_uniform(
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        float(low),
+        float(high),
+        seed,
+        offset,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def normal_(a, mean=0.0, std=1.0):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU normal_ expects NPU tensors")
+
+    from ... import npu as npu_mod
+    seed = npu_mod._get_seed()
+    offset = npu_mod._get_and_advance_offset(advance=_numel(a.shape))
+
+    a_storage = _unwrap_storage(a)
+    aclnn.inplace_normal(
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        float(mean),
+        float(std),
+        seed,
+        offset,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def fill_(a, value):
+    """In-place fill using aclnnInplaceFillScalar."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU fill_ expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    aclnn.inplace_fill_scalar(
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        float(value),
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def clamp_(a, min_val=None, max_val=None):
+    """In-place clamp: output written back to a's storage."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU clamp_ expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    # Use clamp_scalar with output == input for in-place
+    aclnn.clamp_scalar(
+        a_storage.data_ptr(),
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        min_val,
+        max_val,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def copy_(a, src):
+    """In-place copy from src into a."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU copy_ expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    src_storage = _unwrap_storage(src)
+    aclnn.inplace_copy(
+        a_storage.data_ptr(),
+        src_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        src.shape,
+        src.stride,
+        src.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def erfinv_(a):
+    """In-place erfinv using aclnnErfinv."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU erfinv_ expects NPU tensors")
+
+    a_storage = _unwrap_storage(a)
+    # erfinv: output to same storage for in-place
+    aclnn.erfinv(
+        a_storage.data_ptr(),
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
+def sub_(a, b):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if isinstance(b, (int, float)):
+        b = _scalar_to_npu_tensor(b, a)
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU sub_ expects NPU tensors")
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    aclnn.sub(
+        a_storage.data_ptr(),
+        b_storage.data_ptr(),
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        b.shape,
+        b.stride,
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
 def contiguous(a):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     if a.device.type != "npu":
