@@ -194,7 +194,7 @@ def logspace_create(start, end, steps, dtype=None, device=None):
     return npu_ops.pow(base, linear)
 
 
-def eye_create(n, m=None, dtype=None, device=None):
+def eye_create(n, m=None, dtype=None, device=None, out=None):
     if m is None:
         m = n
     if n < 0:
@@ -209,6 +209,12 @@ def eye_create(n, m=None, dtype=None, device=None):
     stride = _contiguous_stride(shape)
     runtime = npu_runtime.get_runtime(_device_index(device))
     stream = npu_state.current_stream(_device_index(device))
+
+    if out is not None:
+        out_storage = out.storage()
+        aclnn.eye(n, m, out_storage.data_ptr(), out.shape, out.stride, out.dtype, runtime, stream=stream.stream)
+        return out
+
     size = int(n) * int(m)
     itemsize = np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
     ptr = npu_runtime._alloc_device(max(size, 1) * itemsize, runtime=runtime)

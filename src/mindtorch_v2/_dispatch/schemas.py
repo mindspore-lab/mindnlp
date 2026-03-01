@@ -190,7 +190,7 @@ def register_schemas():
     registry.register_schema("linspace", "linspace(Scalar start, Scalar end, int steps, Dtype? dtype=None) -> Tensor")
     registry.register_schema("full", "full(int[] size, Scalar fill_value, Dtype? dtype=None) -> Tensor")
     registry.register_schema("logspace", "logspace(Scalar start, Scalar end, int steps, Dtype? dtype=None) -> Tensor")
-    registry.register_schema("eye", "eye(int n, int? m=None, Dtype? dtype=None) -> Tensor")
+    registry.register_schema("eye", "eye(int n, int? m=None, Dtype? dtype=None, Tensor? out=None) -> Tensor")
     registry.register_schema("range", "range(Scalar start, Scalar end, Scalar step=1, Dtype? dtype=None) -> Tensor")
     registry.register_schema("randn", "randn(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None) -> Tensor")
     registry.register_schema("rand", "rand(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None) -> Tensor")
