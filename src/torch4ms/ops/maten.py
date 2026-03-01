@@ -1385,16 +1385,91 @@ def _aten_lerp(start, end, weight):
     return start + weight * (end - start)
 
 
+def _broadcast_shape(shape1, shape2):
+    """计算两个形状的广播后形状（PyTorch风格）"""
+    # 从右到左对齐维度
+    max_ndim = max(len(shape1), len(shape2))
+    # 左填充维度为1
+    shape1_padded = [1] * (max_ndim - len(shape1)) + list(shape1)
+    shape2_padded = [1] * (max_ndim - len(shape2)) + list(shape2)
+    
+    # 计算广播后的形状
+    broadcast_shape = []
+    for s1, s2 in zip(shape1_padded, shape2_padded):
+        if s1 == s2:
+            broadcast_shape.append(s1)
+        elif s1 == 1:
+            broadcast_shape.append(s2)
+        elif s2 == 1:
+            broadcast_shape.append(s1)
+        else:
+            raise ValueError(f"Cannot broadcast shapes {shape1} and {shape2}")
+    return tuple(broadcast_shape)
+
+
+def _broadcast_tensors(*tensors):
+    """将多个张量广播到相同的形状"""
+    if len(tensors) == 0:
+        return []
+    if len(tensors) == 1:
+        return tensors
+    
+    # 计算所有张量的广播后形状
+    shapes = [tuple(t.shape) for t in tensors]
+    # 从右到左对齐，找到最大维度数
+    max_ndim = max(len(s) for s in shapes)
+    
+    # 左填充维度为1
+    padded_shapes = []
+    for s in shapes:
+        padded = [1] * (max_ndim - len(s)) + list(s)
+        padded_shapes.append(padded)
+    
+    # 计算广播后的形状
+    broadcast_shape = []
+    for i in range(max_ndim):
+        dims = [s[i] for s in padded_shapes]
+        # 找到非1的维度，如果都相同或其中一个为1，则可以广播
+        non_one_dims = [d for d in dims if d != 1]
+        if len(non_one_dims) == 0:
+            broadcast_shape.append(1)
+        elif len(set(non_one_dims)) == 1:
+            broadcast_shape.append(non_one_dims[0])
+        else:
+            # 检查是否有冲突
+            if len(set(non_one_dims)) > 1:
+                raise ValueError(f"Cannot broadcast shapes {shapes}")
+            broadcast_shape.append(non_one_dims[0])
+    
+    target_shape = tuple(broadcast_shape)
+    
+    # 广播所有张量
+    broadcasted = []
+    for t in tensors:
+        if tuple(t.shape) == target_shape:
+            broadcasted.append(t)
+        else:
+            broadcasted.append(mnp.broadcast_to(t, target_shape))
+    
+    return broadcasted
+
+
 @op(torch.ops.aten.addcmul)
 def _aten_addcmul(input, tensor1, tensor2, *, value=1):
-    """执行 tensor1 * tensor2 * value + input"""
-    return input + value * tensor1 * tensor2
+    """执行 tensor1 * tensor2 * value + input，支持广播"""
+    # 将所有张量广播到相同的形状
+    input_bc, tensor1_bc, tensor2_bc = _broadcast_tensors(input, tensor1, tensor2)
+    # 执行计算
+    return input_bc + value * tensor1_bc * tensor2_bc
 
 
 @op(torch.ops.aten.addcdiv)
 def _aten_addcdiv(input, tensor1, tensor2, *, value=1):
-    """执行 tensor1 / tensor2 * value + input"""
-    return input + value * (tensor1 / tensor2)
+    """执行 tensor1 / tensor2 * value + input，支持广播"""
+    # 将所有张量广播到相同的形状
+    input_bc, tensor1_bc, tensor2_bc = _broadcast_tensors(input, tensor1, tensor2)
+    # 执行计算
+    return input_bc + value * (tensor1_bc / tensor2_bc)
 
 
 @op(torch.ops.aten.triu_indices)
@@ -1409,3 +1484,419 @@ def _aten_tril_indices(row, col, offset=0, dtype=None, device=None):
     """返回下三角矩阵的索引"""
     a, b = mnp.tril_indices(row, offset, col)
     return mnp.stack((a, b))
+
+
+# ==================== 张量创建算子 ====================
+
+@op(torch.ops.aten.zeros, needs_env=True)
+def _aten_zeros(*size, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建全零张量"""
+    if not size:
+        shape = (1,)
+    elif len(size) == 1 and isinstance(size[0], (list, tuple)):
+        shape = tuple(int(x) for x in size[0])
+    else:
+        shape = tuple(int(x) for x in size)
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    tensor = ops.zeros(shape, dtype=ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.ones, needs_env=True)
+def _aten_ones(*size, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建全一张量"""
+    if not size:
+        shape = (1,)
+    elif len(size) == 1 and isinstance(size[0], (list, tuple)):
+        shape = tuple(int(x) for x in size[0])
+    else:
+        shape = tuple(int(x) for x in size)
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    tensor = ops.ones(shape, dtype=ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.full, needs_env=True)
+def _aten_full(size, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建填充指定值的张量"""
+    if isinstance(size, int):
+        shape = (size,)
+    elif isinstance(size, (list, tuple)):
+        shape = tuple(int(x) for x in size)
+    else:
+        shape = tuple(int(x) for x in size)
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    # 使用ones_like然后乘以fill_value，或者使用mnp.full
+    try:
+        tensor = mnp.full(shape, fill_value, dtype=ms_dtype)
+    except:
+        # 回退方案：使用ones然后乘以fill_value
+        tensor = ops.ones(shape, dtype=ms_dtype) * fill_value
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.full_like)
+def _aten_full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    """创建与输入张量形状相同、填充指定值的张量"""
+    if dtype is not None:
+        ms_dtype = mappings.t2ms_dtype(dtype) if isinstance(dtype, torch.dtype) else dtype
+    else:
+        ms_dtype = input.dtype if hasattr(input, 'dtype') else ms.float32
+    
+    shape = input.shape if hasattr(input, 'shape') else tuple(input.shape)
+    # 使用ones_like然后乘以fill_value，或者使用mnp.full
+    try:
+        return mnp.full(shape, fill_value, dtype=ms_dtype)
+    except:
+        # 回退方案：使用ones_like然后乘以fill_value
+        return ops.ones_like(input, dtype=ms_dtype) * fill_value
+
+
+@op(torch.ops.aten.empty, needs_env=True)
+def _aten_empty(*size, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建未初始化的张量（MindSpore中创建全零张量）"""
+    if not size:
+        shape = (1,)
+    elif len(size) == 1 and isinstance(size[0], (list, tuple)):
+        shape = tuple(int(x) for x in size[0])
+    else:
+        shape = tuple(int(x) for x in size)
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    # MindSpore没有真正的未初始化张量，使用全零代替
+    tensor = ops.zeros(shape, dtype=ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.empty_like)
+def _aten_empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    """创建与输入张量形状相同的未初始化张量"""
+    if dtype is not None:
+        ms_dtype = mappings.t2ms_dtype(dtype) if isinstance(dtype, torch.dtype) else dtype
+    else:
+        ms_dtype = input.dtype if hasattr(input, 'dtype') else ms.float32
+    
+    shape = input.shape if hasattr(input, 'shape') else tuple(input.shape)
+    # MindSpore没有真正的未初始化张量，使用全零代替
+    return ops.zeros(shape, dtype=ms_dtype)
+
+
+@op(torch.ops.aten.arange, needs_env=True)
+def _aten_arange(*args, step=None, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建等差数列张量
+    
+    PyTorch的arange签名：
+    - arange(end) -> 从0到end-1
+    - arange(start, end) -> 从start到end-1
+    - arange(start, end, step) -> 从start开始，步长为step，到end-1
+    
+    注意：aten.ops.aten.arange可能以位置参数形式调用
+    """
+    # 处理参数：根据位置参数数量判断
+    if len(args) == 1:
+        # arange(end)
+        start_val = 0
+        end_val = args[0]
+        step_val = step if step is not None else 1
+    elif len(args) == 2:
+        # arange(start, end)
+        start_val = args[0]
+        end_val = args[1]
+        step_val = step if step is not None else 1
+    elif len(args) >= 3:
+        # arange(start, end, step)
+        start_val = args[0]
+        end_val = args[1]
+        step_val = args[2] if len(args) > 2 else (step if step is not None else 1)
+    else:
+        raise ValueError("arange requires at least 1 argument")
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.int64
+    tensor = mnp.arange(start_val, end_val, step_val, dtype=ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.linspace, needs_env=True)
+def _aten_linspace(start, end, steps, *, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建线性空间张量"""
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    tensor = mnp.linspace(start, end, steps, dtype=ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.rand, needs_env=True)
+def _aten_rand(*size, generator=None, out=None, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建均匀分布随机数张量 [0, 1)"""
+    if not size:
+        shape = (1,)
+    elif len(size) == 1 and isinstance(size[0], (list, tuple)):
+        shape = tuple(int(x) for x in size[0])
+    else:
+        shape = tuple(int(x) for x in size)
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    # MindSpore使用uniform生成[0, 1)区间的均匀分布
+    # 注意：MindSpore的uniform可能需要使用不同的API
+    try:
+        # 尝试使用ops.uniform
+        tensor = ops.uniform(shape, ms_dtype, 0.0, 1.0)
+    except (AttributeError, TypeError):
+        # 回退方案：使用normal然后转换，或者使用numpy
+        import numpy as np
+        np_array = np.random.rand(*shape).astype(np.float32)
+        tensor = ms.Tensor(np_array, dtype=ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+@op(torch.ops.aten.normal, needs_env=True)
+def _aten_normal(mean, std, size=None, *, generator=None, out=None, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False, env=None):
+    """创建正态分布随机数张量"""
+    if size is None:
+        if isinstance(mean, (int, float)) and isinstance(std, (int, float)):
+            shape = (1,)
+        else:
+            # mean和std是张量，使用它们的形状
+            shape = mean.shape if hasattr(mean, 'shape') else tuple(mean.shape)
+    else:
+        if isinstance(size, int):
+            shape = (size,)
+        elif isinstance(size, (list, tuple)):
+            shape = tuple(int(x) for x in size)
+        else:
+            shape = tuple(int(x) for x in size)
+    
+    ms_dtype = mappings.t2ms_dtype(dtype) if dtype is not None else ms.float32
+    
+    # 如果mean和std是标量
+    if isinstance(mean, (int, float)) and isinstance(std, (int, float)):
+        tensor = ops.normal(shape=shape, mean=float(mean), stddev=float(std))
+    else:
+        # mean和std是张量，需要广播
+        mean_tensor = mean if hasattr(mean, 'shape') else mnp.array(mean)
+        std_tensor = std if hasattr(std, 'shape') else mnp.array(std)
+        # 简化实现：使用固定mean和std
+        tensor = ops.normal(shape=shape, mean=0.0, stddev=1.0) * std_tensor + mean_tensor
+    
+    if dtype is not None:
+        tensor = tensor.astype(ms_dtype)
+    
+    if env is not None:
+        return env.ms2t_iso(tensor)
+    return tensor
+
+
+# ==================== 索引和查找算子 ====================
+
+@op(torch.ops.aten.nonzero)
+def _aten_nonzero(input, *, as_tuple=False):
+    """查找非零元素的索引"""
+    indices = ops.nonzero(input)
+    if as_tuple:
+        # 返回元组形式，每个维度一个张量
+        if indices.shape[0] == 0:
+            # 如果没有非零元素，返回空张量的元组
+            return tuple(ops.zeros((0,), dtype=ms.int64) for _ in range(input.ndim))
+        # 转置并分离每个维度
+        indices_t = ops.transpose(indices, (1, 0))
+        return tuple(indices_t[i] for i in range(input.ndim))
+    return indices
+
+
+@op(torch.ops.aten.unique_consecutive)
+def _aten_unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):
+    """查找连续的唯一值"""
+    # 手动实现unique_consecutive（MindSpore可能没有这个函数）
+    # 先将input转换为numpy数组进行计算，然后转换回MindSpore
+    if hasattr(input, 'asnumpy'):
+        input_np = input.asnumpy()
+    elif hasattr(input, 'numpy'):
+        input_np = input.numpy()
+    else:
+        input_np = np.array(input)
+    
+    if dim is None:
+        # 展平处理
+        input_flat_np = input_np.flatten()
+        if len(input_flat_np) == 0:
+            unique_vals_np = input_flat_np
+            inverse_indices_np = np.array([], dtype=np.int64) if return_inverse else None
+            counts_np = np.array([], dtype=np.int64) if return_counts else None
+        else:
+            # 找到连续不同的值
+            if len(input_flat_np) == 1:
+                mask_np = np.array([True])
+            else:
+                # 第一个元素总是保留，然后找出与前面不同的元素
+                diff = input_flat_np[1:] != input_flat_np[:-1]
+                mask_np = np.concatenate([np.array([True]), diff])
+            
+            unique_vals_np = input_flat_np[mask_np]
+            
+            if return_inverse:
+                # 计算inverse_indices：每个元素在unique_vals中的索引
+                inverse_indices_np = np.cumsum(mask_np.astype(np.int64)) - 1
+            else:
+                inverse_indices_np = None
+            
+            if return_counts:
+                # 计算每个唯一值的连续出现次数
+                input_len = len(input_flat_np)
+                if input_len == 1:
+                    counts_np = np.array([1], dtype=np.int64)
+                else:
+                    # 找出mask中True的位置
+                    true_indices_np = np.where(mask_np)[0]
+                    num_unique = len(true_indices_np)
+                    if num_unique == 1:
+                        counts_np = np.array([input_len], dtype=np.int64)
+                    else:
+                        # 计算每个区间的长度：相邻True位置之间的差值
+                        intervals = []
+                        for i in range(len(true_indices_np)):
+                            if i == len(true_indices_np) - 1:
+                                # 最后一个区间：从当前位置到末尾
+                                intervals.append(input_len - int(true_indices_np[i]))
+                            else:
+                                # 中间区间：相邻位置之间的差值
+                                intervals.append(int(true_indices_np[i+1]) - int(true_indices_np[i]))
+                        counts_np = np.array(intervals, dtype=np.int64)
+            else:
+                counts_np = None
+        
+        # 转换回MindSpore Tensor
+        unique_vals = ms.Tensor(unique_vals_np, dtype=input.dtype if hasattr(input, 'dtype') else ms.float32)
+        if return_inverse and inverse_indices_np is not None:
+            inverse_indices = ms.Tensor(inverse_indices_np, dtype=ms.int64)
+        else:
+            inverse_indices = None
+        if return_counts and counts_np is not None:
+            counts = ms.Tensor(counts_np, dtype=ms.int64)
+        else:
+            counts = None
+    else:
+        # 沿指定维度处理 - 简化实现，只处理1D情况
+        if input.ndim == 1:
+            return _aten_unique_consecutive(input, return_inverse, return_counts, dim=None)
+        else:
+            # 对于多维情况，简化处理
+            raise NotImplementedError("unique_consecutive with dim parameter for multi-dimensional tensors is not fully implemented")
+    
+    result = [unique_vals]
+    if return_inverse and inverse_indices is not None:
+        result.append(inverse_indices)
+    if return_counts and counts is not None:
+        result.append(counts)
+    
+    return result[0] if len(result) == 1 else tuple(result)
+
+
+@op(torch.ops.aten.bincount)
+def _aten_bincount(input, weights=None, minlength=0):
+    """计算每个值的出现次数"""
+    # MindSpore的bincount实现
+    if weights is None:
+        return ops.bincount(input, minlength=minlength)
+    else:
+        return ops.bincount(input, weights=weights, minlength=minlength)
+
+
+@op(torch.ops.aten.bucketize)
+def _aten_bucketize(input, boundaries, *, out_int32=False, right=False):
+    """将输入值分桶到边界定义的区间"""
+    # MindSpore可能没有直接的bucketize，使用searchsorted实现
+    if right:
+        # right=True: 使用右边界（包含右边界）
+        indices = mnp.searchsorted(boundaries, input, side='right')
+    else:
+        # right=False: 使用左边界（包含左边界）
+        indices = mnp.searchsorted(boundaries, input, side='left')
+    
+    if out_int32:
+        indices = indices.astype(ms.int32)
+    return indices
+
+
+@op(torch.ops.aten.searchsorted)
+def _aten_searchsorted(sorted_sequence, self, *, out_int32=False, right=False):
+    """在排序序列中搜索插入位置"""
+    if right:
+        indices = mnp.searchsorted(sorted_sequence, self, side='right')
+    else:
+        indices = mnp.searchsorted(sorted_sequence, self, side='left')
+    
+    if out_int32:
+        indices = indices.astype(ms.int32)
+    return indices
+
+
+# ==================== 其他实用算子 ====================
+
+@op(torch.ops.aten.unfold)
+def _aten_unfold(input, dimension, size, step):
+    """展开张量（滑动窗口）"""
+    # MindSpore可能没有直接的unfold，使用slice和stack实现
+    dim = dimension
+    if dim < 0:
+        dim += input.ndim
+    
+    input_shape = list(input.shape)
+    num_windows = (input_shape[dim] - size) // step + 1
+    
+    # 创建索引列表
+    slices = []
+    for i in range(num_windows):
+        start_idx = i * step
+        end_idx = start_idx + size
+        indices = [slice(None)] * input.ndim
+        indices[dim] = slice(start_idx, end_idx)
+        slices.append(input[tuple(indices)])
+    
+    # 堆叠所有切片
+    result = ops.stack(slices, axis=dim)
+    return result
+
+
+@op(torch.ops.aten.as_strided)
+def _aten_as_strided(input, size, stride, storage_offset=None):
+    """使用指定的步长创建视图（简化实现）"""
+    # 这是一个复杂的操作，MindSpore可能不完全支持
+    # 这里提供一个简化实现
+    if storage_offset is not None and storage_offset != 0:
+        # 如果有偏移，先切片
+        indices = [slice(None)] * input.ndim
+        indices[0] = slice(storage_offset, None)
+        input = input[tuple(indices)]
+    
+    # 简化：只处理基本的reshape和transpose
+    # 实际实现需要更复杂的stride处理
+    return ops.reshape(input, size)
+
+
+@op(torch.ops.aten.unsafe_chunk)
+def _aten_unsafe_chunk(input, chunks, dim=0):
+    """不安全的分块操作（与chunk相同）"""
+    return ops.chunk(input, chunks, axis=dim)

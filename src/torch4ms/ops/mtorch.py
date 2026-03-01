@@ -60,7 +60,18 @@ def _tensor(data, *, dtype=None, **kwargs):
 
 @register_function(torch.allclose)
 def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
-    return mnp.allclose(input, other, rtol, atol, equal_nan)
+    # mindspore.numpy 可能没有 allclose，使用 mindspore.ops 的实现
+    from mindspore import ops
+    # 计算绝对误差和相对误差
+    abs_diff = ops.abs(input - other)
+    rel_diff = abs_diff / (ops.abs(other) + rtol)
+    close = (abs_diff <= atol) | (rel_diff <= rtol)
+    if equal_nan:
+        # 处理 NaN 的情况
+        isnan_input = ops.isnan(input)
+        isnan_other = ops.isnan(other)
+        close = close | (isnan_input & isnan_other)
+    return ops.all(close)
 
 
 @register_function(torch.angle)
@@ -654,8 +665,8 @@ def svd(a, some=True, compute_uv=True):
 
 @register_function(torch.cdist)
 def _cdist(x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"):
-    # Use MindSpore's cdist implementation
-    return mnp.linalg.cdist(x1, x2, p=p)
+    # MindSpore 的 numpy 无 linalg，使用 mindspore.ops.cdist
+    return mops.cdist(x1, x2, p=float(p))
 
 
 @register_function(torch.lu)
@@ -705,9 +716,14 @@ def linalg_tensorsolve(A, b, dims=None):
 
 @register_function(torch.nn.functional.linear)
 def functional_linear(self, weights, bias=None):
-    res = ms.ops.einsum("...a,ba->...b", self, weights)
+    # 使用 matmul 和 transpose 替代 einsum（CPU 不支持 einsum）
+    # torch.nn.functional.linear 的计算是: input @ weight.T + bias
+    # 其中 weight 的形状是 (out_features, in_features)
+    # 我们需要计算 input @ weight.T，即 input @ transpose(weight, (1, 0))
+    weight_t = ms.ops.transpose(weights, (1, 0))
+    res = ms.ops.matmul(self, weight_t)
     if bias is not None:
-        res += bias
+        res = res + bias
     return res
 
 

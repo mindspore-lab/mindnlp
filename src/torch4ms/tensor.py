@@ -311,9 +311,9 @@ class Tensor(torch.Tensor):
         # 确保other是Tensor类型
         if not isinstance(other, Tensor):
             raise TypeError(f"Expected Tensor, got {type(other).__name__}")
-        # 获取目标数据类型并转换
-        target_dtype = other.dtype
-        return self._env.ms2t_iso(mnp.astype(self._elem, target_dtype))
+        # 获取目标数据类型（MindSpore dtype，供 mnp.astype 使用）
+        target_ms_dtype = other._elem.dtype
+        return self._env.ms2t_iso(mnp.astype(self._elem, target_ms_dtype))
 
     __torch_function__ = torch._C._disabled_torch_function_impl
 
@@ -448,15 +448,24 @@ class Tensor(torch.Tensor):
 
     @property
     def dtype(self):
-        return self._elem.dtype
+        # 返回 PyTorch dtype，便于 fallback 到 PyTorch 时通过 isinstance(dtype, torch.dtype) 等检查
+        return mappings.ms2t_dtype(self._elem.dtype)
 
     def dim(self):
         return self.ndim
 
     @property
     def device(self):
-        # 返回MindSpore设备信息
-        return str(self._elem.device)
+        # 返回 PyTorch 可识别的 torch.device（小写），便于 fallback 时 TensorMeta 等通过 torch.device(device) 校验
+        _ms_dev = str(self._elem.device).upper()
+        if _ms_dev.startswith("CPU"):
+            return torch.device("cpu")
+        if _ms_dev.startswith("GPU"):
+            idx = 0
+            if ":" in _ms_dev:
+                idx = int(_ms_dev.split(":")[-1])
+            return torch.device("cuda", idx)
+        return torch.device("cpu")
 
     @property
     def data(self):
@@ -661,6 +670,10 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
                 return self.env.dispatch(func, types, args, kwargs)
             except OperatorNotFound:
                 pass
+            # backward 不能 fallback（转换后的 tensor 无计算图），必须走 torch4ms autograd
+            if _name_of_func(func) == "backward" and args and isinstance(args[0], Tensor):
+                args[0].backward(**(kwargs or {}))
+                return None
             if _name_of_func(func) in (
                     "rot90"):  # skip rot90 with k%4==0 due to no change
                 if len(args) >= 2 and type(args[1]) == int:

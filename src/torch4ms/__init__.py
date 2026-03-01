@@ -44,6 +44,26 @@ except (ImportError, AttributeError):
 # Import mapping functions from ops module
 from .ops.mappings import t2ms
 
+# Import optimizers (optax-style)
+try:
+    from .optim import SGD, Adam, AdamW, RMSprop, Optimizer, chain, clip_by_global_norm, scale_by_learning_rate, add_decayed_weights, Torch4msOptimizer
+    __all__.extend(["SGD", "Adam", "AdamW", "RMSprop", "Optimizer", "chain", "clip_by_global_norm", "scale_by_learning_rate", "add_decayed_weights", "Torch4msOptimizer"])
+except (ImportError, AttributeError):
+    # Define dummy classes that raise helpful errors when called
+    class Optimizer:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("MindSpore is required for optimizer functionality")
+    
+    class Torch4msOptimizer:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("MindSpore is required for Torch4msOptimizer functionality")
+    
+    SGD = Adam = AdamW = RMSprop = Optimizer
+    def chain(*args): raise ImportError("MindSpore is required")
+    def clip_by_global_norm(*args): raise ImportError("MindSpore is required")
+    def scale_by_learning_rate(*args): raise ImportError("MindSpore is required")
+    def add_decayed_weights(*args): raise ImportError("MindSpore is required")
+
 os.environ.setdefault("ENABLE_RUNTIME_UPTIME_TELEMETRY", "1")
 
 # Initialize MindSpore environment

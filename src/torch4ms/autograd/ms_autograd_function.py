@@ -470,6 +470,8 @@ def make_train_step(model_fn: Callable, loss_fn: Callable, optimizer=None):
     关键思路：将 model_fn 和 loss_fn 组合成完整的 loss 函数，
     然后使用 GradOperation 对整个函数求梯度，自动跟踪所有操作。
     
+    支持 PyTorch 优化器（通过 Torch4msOptimizer 适配器）和 torch4ms 优化器。
+    
     Args:
         model_fn: 函数式的模型前向函数
             Callable[weights, buffers, args] -> result
@@ -477,20 +479,47 @@ def make_train_step(model_fn: Callable, loss_fn: Callable, optimizer=None):
         loss_fn: PyTorch 的 loss 函数（如 torch.nn.CrossEntropyLoss()）
             Callable[result, label] -> loss
         optimizer: 优化器（可选）
+            - PyTorch 优化器（如 torch.optim.SGD）：会自动使用 Torch4msOptimizer 适配
+            - torch4ms 优化器（如 torch4ms.optim.SGD）：直接使用
+            - None：不执行优化步骤
     
     Returns:
         step 函数：执行一个训练步骤
             Callable[weights, buffers, args, labels] -> (loss, weights, buffers)
+            或 Callable[inputs, labels] -> (loss, module) 如果 model_fn 是 Module
+    
+    Examples:
+        >>> import torch.optim as optim
+        >>> model = nn.Linear(10, 1)
+        >>> optimizer = optim.SGD(model.parameters(), lr=0.01)
+        >>> step_fn = make_train_step(model, loss_fn, optimizer)
+        >>> loss, model = step_fn(inputs, labels)
     """
     import torch4ms
     from torch4ms.autograd.forward_extractor import AutogradForwardExtractor
     
     env = torch4ms.default_env()
     
+    # 检查优化器是否是 PyTorch 优化器，如果是，需要适配
+    is_pytorch_optimizer = False
+    if optimizer is not None:
+        # 检查是否是 torch.optim 中的优化器
+        import torch.optim as optim
+        is_pytorch_optimizer = isinstance(optimizer, (optim.Optimizer,))
+        
+        # 如果是 PyTorch 优化器，使用 Torch4msOptimizer 适配
+        if is_pytorch_optimizer:
+            from torch4ms.optim import Torch4msOptimizer
+            # 需要获取模型（如果 model_fn 是 Module）
+            if isinstance(model_fn, torch.nn.Module):
+                optimizer = Torch4msOptimizer(optimizer, model_fn)
+            else:
+                warnings.warn("PyTorch optimizer provided but model_fn is not a Module. "
+                            "Torch4msOptimizer adapter may not work correctly.")
+    
     # 如果 model_fn 是 torch.nn.Module，提取函数式版本
     if isinstance(model_fn, torch.nn.Module):
         module = model_fn
-        extractor = AutogradForwardExtractor(module)
         
         def step(inputs, labels):
             """执行一个训练步骤（使用 Module）"""
@@ -499,8 +528,10 @@ def make_train_step(model_fn: Callable, loss_fn: Callable, optimizer=None):
                 loss_wrapper = extract_and_wrap_loss_fn(module, loss_fn, inputs, labels)
                 loss = loss_wrapper.output
                 
-                # backward（自动使用保存的 forward_fn）
-                loss.backward()
+                # backward（自动使用保存的 forward_fn，并传递 module 以启用梯度自动同步）
+                # 注意：extract_and_wrap_loss_fn 已经保存了 forward_fn 和 inputs
+                # backward 会自动使用这些信息，但我们需要确保梯度同步到模块参数
+                loss.backward(module=module)
                 
                 # 更新参数（如果有优化器）
                 if optimizer is not None:
@@ -522,6 +553,7 @@ def make_train_step(model_fn: Callable, loss_fn: Callable, optimizer=None):
                 # backward（需要提取完整的 forward_fn）
                 # 这里需要将整个 (model_fn + loss_fn) 组合成 forward_fn
                 # 然后使用 GradOperation 求梯度
+                # 注意：函数式模式下，无法自动同步梯度到模块参数
                 loss.backward()
                 
                 # 更新参数（如果有优化器）
