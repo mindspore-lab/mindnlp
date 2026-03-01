@@ -2917,124 +2917,853 @@ def contiguous(a):
 
 
 def getitem(tensor, key):
-    """NPU tensor indexing via D2D memcpy of contiguous sub-regions."""
-    itemsize = _dtype_itemsize(tensor.dtype)
+    """NPU tensor indexing — full support for basic and advanced indexing."""
+    if not isinstance(key, tuple):
+        key = (key,)
 
-    if isinstance(key, int):
-        if key < 0:
-            key += tensor.shape[0]
-        if tensor.dim() == 1:
-            # Return 0-dim tensor (matches PyTorch behavior)
-            runtime = npu_runtime.get_runtime((tensor.device.index or 0))
-            src_ptr = int(_unwrap_storage(tensor).data_ptr()) + key * itemsize
-            out_ptr = npu_runtime._alloc_device(itemsize, runtime=runtime)
-            ret = npu_runtime.acl.rt.memcpy(out_ptr, itemsize, src_ptr, itemsize, 3)  # D2D
-            if ret != npu_runtime.ACL_ERROR_CODE:
-                raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
-            storage = npu_typed_storage_from_ptr(out_ptr, 1, tensor.dtype, device=tensor.device)
-            return _wrap_tensor(storage, (), ())
-        # Multi-dim: slice [key:key+1] then reshape to drop dim 0
-        sliced = getitem(tensor, slice(key, key + 1))
-        from ..common import view as view_backend
-        return view_backend.reshape(sliced, tensor.shape[1:])
+    if _is_basic_index_key(key):
+        view = _npu_basic_getitem_view(tensor, key)
+        if view is not None:
+            return view
 
-    if isinstance(key, slice):
-        start, stop, step = key.indices(tensor.shape[0])
-        if step != 1:
-            raise NotImplementedError("NPU getitem with step != 1 not supported")
-        length = max(0, stop - start)
-        out_shape = (length,) + tensor.shape[1:]
-        out_numel = _numel(out_shape)
-        if out_numel == 0:
-            out_shape_list = list(out_shape)
-            out_stride = npu_runtime._contiguous_stride(out_shape) if out_numel else tuple([0] * len(out_shape))
-            runtime = npu_runtime.get_runtime((tensor.device.index or 0))
-            out_ptr = npu_runtime._alloc_device(max(itemsize, 1), runtime=runtime)
-            storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), tensor.dtype, device=tensor.device)
-            return _wrap_tensor(storage, out_shape, out_stride)
-
-        runtime = npu_runtime.get_runtime((tensor.device.index or 0))
-        src_storage = _unwrap_storage(tensor)
-        # Compute byte offset for start along dim 0
-        stride0 = tensor.stride[0] if tensor.stride else 1
-        byte_offset = int(start * stride0 * itemsize)
-        src_ptr = int(src_storage.data_ptr()) + byte_offset
-        out_size = int(out_numel * itemsize)
-        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
-        ret = npu_runtime.acl.rt.memcpy(out_ptr, out_size, src_ptr, out_size, 3)  # D2D
-        if ret != npu_runtime.ACL_ERROR_CODE:
-            raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
-        out_stride = npu_runtime._contiguous_stride(out_shape)
-        storage = npu_typed_storage_from_ptr(out_ptr, out_numel, tensor.dtype, device=tensor.device)
-        return _wrap_tensor(storage, out_shape, out_stride)
-
-    raise NotImplementedError(f"NPU getitem not implemented for key type: {type(key)}")
+    return _npu_advanced_getitem(tensor, key)
 
 
 def setitem(tensor, key, value):
-    """NPU tensor index assignment via D2D memcpy."""
-    itemsize = _dtype_itemsize(tensor.dtype)
+    """NPU tensor index assignment — full support for basic and advanced indexing."""
+    if not isinstance(key, tuple):
+        key = (key,)
 
-    if isinstance(key, int):
-        if key < 0:
-            key += tensor.shape[0]
-        key = slice(key, key + 1)
-
-    if isinstance(key, slice):
-        start, stop, step = key.indices(tensor.shape[0])
-        if step != 1:
-            raise NotImplementedError("NPU setitem with step != 1 not supported")
-        length = max(0, stop - start)
-        if length == 0:
+    if _is_basic_index_key(key):
+        view = _npu_basic_getitem_view(tensor, key)
+        if view is not None:
+            _npu_assign_to_view(view, value)
             return tensor
 
-        stride0 = tensor.stride[0] if tensor.stride else 1
-        byte_offset = int(start * stride0 * itemsize)
-        dst_ptr = int(_unwrap_storage(tensor).data_ptr()) + byte_offset
-        slice_numel = length
-        for d in tensor.shape[1:]:
-            slice_numel *= d
-        copy_size = int(slice_numel * itemsize)
+    _npu_advanced_setitem(tensor, key, value)
+    return tensor
 
-        runtime = npu_runtime.get_runtime((tensor.device.index or 0))
 
-        if isinstance(value, (int, float)):
-            slice_shape = (length,) + tuple(tensor.shape[1:])
-            if tensor.stride:
-                slice_stride = (tensor.stride[0],) + tuple(tensor.stride[1:])
+# ---------------------------------------------------------------------------
+# Indexing helpers
+# ---------------------------------------------------------------------------
+
+def _is_int_index(key):
+    """True for integer indices (not bool). Handles numpy.integer too."""
+    import numpy as np
+    return isinstance(key, (int, np.integer)) and not isinstance(key, (bool, np.bool_))
+
+
+def _is_basic_index_key(keys):
+    """True when *keys* (a tuple) contains only int/slice/None/Ellipsis/bool."""
+    import numpy as np
+    for item in keys:
+        if item is Ellipsis or item is None:
+            continue
+        if isinstance(item, slice):
+            continue
+        if _is_int_index(item):
+            continue
+        # Python bool / numpy.bool_ treated as basic index
+        # (True → unsqueeze+keep, False → unsqueeze+empty)
+        if isinstance(item, (bool, np.bool_)):
+            continue
+        return False
+    return True
+
+
+def _expand_ellipsis(keys, ndim):
+    """Expand Ellipsis into the right number of ``slice(None)``."""
+    import numpy as np
+    ellipsis_count = sum(1 for item in keys if item is Ellipsis)
+    if ellipsis_count > 1:
+        raise IndexError("an index can only have a single ellipsis ('...')")
+    if ellipsis_count == 0:
+        return list(keys)
+
+    # Count dims that consume real tensor dimensions
+    # None, Ellipsis, and bool don't consume tensor dims
+    specified_dims = 0
+    for item in keys:
+        if item is None or item is Ellipsis:
+            continue
+        if isinstance(item, (bool, np.bool_)):
+            continue
+        specified_dims += 1
+    fill = ndim - specified_dims
+    if fill < 0:
+        raise IndexError("too many indices for tensor")
+
+    expanded = []
+    for item in keys:
+        if item is Ellipsis:
+            expanded.extend([slice(None)] * fill)
+        else:
+            expanded.append(item)
+    return expanded
+
+
+def _npu_basic_getitem_view(tensor, key):
+    """Create a view for basic indexing (int, slice, None, Ellipsis, bool).
+
+    Returns a Tensor sharing the same storage, or None if we need to fall back
+    to a copy (e.g. negative-step slices that require aclnnSlice).
+    """
+    from ..._tensor import Tensor
+    import numpy as np
+
+    keys = list(key) if isinstance(key, tuple) else [key]
+    keys = _expand_ellipsis(keys, tensor.dim())
+
+    in_dim = 0
+    out_shape = []
+    out_stride = []
+    out_offset = tensor.offset
+
+    needs_aclnn_slice = False
+
+    for item in keys:
+        if item is None:
+            out_shape.append(1)
+            if in_dim < tensor.dim():
+                out_stride.append(tensor.stride[in_dim] * tensor.shape[in_dim])
             else:
-                slice_stride = npu_runtime._contiguous_stride(slice_shape)
-            stream = npu_state.current_stream((tensor.device.index or 0))
-            temp_ptr = npu_runtime._alloc_device(copy_size, runtime=runtime)
-            aclnn.inplace_zero(
-                temp_ptr,
-                slice_shape,
-                slice_stride,
-                tensor.dtype,
+                out_stride.append(1)
+            continue
+
+        # Python bool / np.bool_: True → unsqueeze (size 1), False → empty dim (size 0)
+        # Does NOT consume a tensor dimension (same as None).
+        if isinstance(item, (bool, np.bool_)):
+            if item:
+                out_shape.append(1)
+            else:
+                out_shape.append(0)
+            if in_dim < tensor.dim():
+                out_stride.append(tensor.stride[in_dim] * tensor.shape[in_dim])
+            else:
+                out_stride.append(1)
+            continue
+
+        if in_dim >= tensor.dim():
+            raise IndexError("too many indices for tensor")
+
+        dim_size = tensor.shape[in_dim]
+        dim_stride = tensor.stride[in_dim]
+
+        if _is_int_index(item):
+            idx = int(item)
+            if idx < 0:
+                idx += dim_size
+            if idx < 0 or idx >= dim_size:
+                raise IndexError(
+                    f"index {item} is out of bounds for dimension {in_dim} with size {dim_size}"
+                )
+            out_offset += idx * dim_stride
+            in_dim += 1
+            continue
+
+        if isinstance(item, slice):
+            start, stop, step = item.indices(dim_size)
+            if step < 0:
+                # Negative step requires data reversal — fall back to aclnnSlice
+                needs_aclnn_slice = True
+                break
+            length = len(range(start, stop, step))
+            out_offset += start * dim_stride
+            out_shape.append(length)
+            out_stride.append(dim_stride * step)
+            in_dim += 1
+            continue
+
+        # Non-basic element — shouldn't reach here due to _is_basic_index_key check
+        return None
+
+    if needs_aclnn_slice:
+        return _npu_basic_getitem_with_strided_slices(tensor, keys)
+
+    # Append remaining dims
+    while in_dim < tensor.dim():
+        out_shape.append(tensor.shape[in_dim])
+        out_stride.append(tensor.stride[in_dim])
+        in_dim += 1
+
+    out_shape = tuple(out_shape)
+    out_stride = tuple(out_stride)
+
+    return Tensor(tensor.storage(), out_shape, out_stride, out_offset)
+
+
+def _npu_basic_getitem_with_strided_slices(tensor, keys):
+    """Handle basic indexing when one or more slices have step != 1.
+
+    Process left-to-right: step==1 slices and ints become view ops;
+    step!=1 slices use aclnnSlice which produces a contiguous copy.
+    """
+    from ..._tensor import Tensor
+
+    cur = tensor
+    in_dim = 0
+    pending_none_count = 0
+
+    for item in keys:
+        if item is None:
+            pending_none_count += 1
+            continue
+
+        if in_dim >= cur.dim():
+            raise IndexError("too many indices for tensor")
+
+        # Insert pending None (unsqueeze) dimensions before this real dim
+        for _ in range(pending_none_count):
+            cur = _npu_unsqueeze_view(cur, in_dim)
+            in_dim += 1
+        pending_none_count = 0
+
+        dim_size = cur.shape[in_dim]
+
+        if _is_int_index(item):
+            idx = int(item)
+            if idx < 0:
+                idx += dim_size
+            cur = _npu_select_view(cur, in_dim, idx)
+            # select removes the dim, so in_dim stays the same
+            continue
+
+        if isinstance(item, slice):
+            start, stop, step = item.indices(dim_size)
+            if step > 0:
+                # Positive step: strided view (no copy)
+                cur = _npu_strided_slice_view(cur, in_dim, start, stop, step)
+            else:
+                # Negative step: requires data reversal, use aclnnSlice kernel
+                cur = _npu_aclnn_slice(cur, in_dim, start, stop, step)
+            in_dim += 1
+            continue
+
+    # Insert any trailing None dims
+    for _ in range(pending_none_count):
+        cur = _npu_unsqueeze_view(cur, cur.dim())
+
+    return cur
+
+
+def _npu_select_view(tensor, dim, idx):
+    """Select a single element along *dim* — returns a view with dim removed."""
+    from ..._tensor import Tensor
+    new_offset = tensor.offset + idx * tensor.stride[dim]
+    new_shape = tensor.shape[:dim] + tensor.shape[dim + 1:]
+    new_stride = tensor.stride[:dim] + tensor.stride[dim + 1:]
+    return Tensor(tensor.storage(), new_shape, new_stride, new_offset)
+
+
+def _npu_slice_view(tensor, dim, start, stop):
+    """Step-1 slice as a view — adjust offset and shape[dim]."""
+    from ..._tensor import Tensor
+    length = max(0, stop - start)
+    new_offset = tensor.offset + start * tensor.stride[dim]
+    new_shape = tensor.shape[:dim] + (length,) + tensor.shape[dim + 1:]
+    new_stride = tensor.stride  # stride unchanged for step==1
+    return Tensor(tensor.storage(), new_shape, new_stride, new_offset)
+
+
+def _npu_strided_slice_view(tensor, dim, start, stop, step):
+    """Strided slice as a view — adjust offset, shape, and stride. step must be > 0."""
+    from ..._tensor import Tensor
+    length = len(range(start, stop, step))
+    new_offset = tensor.offset + start * tensor.stride[dim]
+    new_shape = tensor.shape[:dim] + (length,) + tensor.shape[dim + 1:]
+    new_stride = tensor.stride[:dim] + (tensor.stride[dim] * step,) + tensor.stride[dim + 1:]
+    return Tensor(tensor.storage(), new_shape, new_stride, new_offset)
+
+
+def _npu_unsqueeze_view(tensor, dim):
+    """Insert a size-1 dimension at *dim* — pure view."""
+    from ..._tensor import Tensor
+    new_shape = tensor.shape[:dim] + (1,) + tensor.shape[dim:]
+    # Compute a stride that keeps the tensor contiguous-looking
+    if dim < len(tensor.stride):
+        new_s = tensor.stride[dim] * tensor.shape[dim]
+    elif len(tensor.stride) > 0:
+        new_s = 1
+    else:
+        new_s = 1
+    new_stride = tensor.stride[:dim] + (new_s,) + tensor.stride[dim:]
+    return Tensor(tensor.storage(), new_shape, new_stride, tensor.offset)
+
+
+def _npu_aclnn_slice(tensor, dim, start, stop, step):
+    """Strided slice via aclnnSlice kernel — returns a new contiguous tensor."""
+    length = len(range(start, stop, step))
+    out_shape = tensor.shape[:dim] + (length,) + tensor.shape[dim + 1:]
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(tensor.dtype)
+    runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+    stream = npu_state.current_stream((tensor.device.index or 0))
+
+    if out_numel == 0:
+        out_stride = npu_runtime._contiguous_stride(out_shape) if out_shape else ()
+        out_ptr = npu_runtime._alloc_device(max(itemsize, 1), runtime=runtime)
+        storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), tensor.dtype, device=tensor.device)
+        return _wrap_tensor(storage, out_shape, out_stride)
+
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+
+    # Compute the data pointer including any offset from prior view ops
+    src_ptr = int(_unwrap_storage(tensor).data_ptr()) + tensor.offset * itemsize
+
+    aclnn.slice_op(
+        src_ptr,
+        tensor.shape,
+        tensor.stride,
+        tensor.dtype,
+        dim,
+        start,
+        stop,
+        step,
+        out_ptr,
+        out_shape,
+        out_stride,
+        tensor.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    storage = npu_typed_storage_from_ptr(out_ptr, out_numel, tensor.dtype, device=tensor.device)
+    return _wrap_tensor(storage, out_shape, out_stride)
+
+
+def _npu_data_ptr(tensor):
+    """Return the effective data pointer for *tensor* (base + offset)."""
+    itemsize = _dtype_itemsize(tensor.dtype)
+    return int(_unwrap_storage(tensor).data_ptr()) + tensor.offset * itemsize
+
+
+def _npu_assign_to_view(view, value):
+    """Write *value* into a view tensor (which shares storage with the original).
+
+    For contiguous views, use D2D memcpy.  Otherwise, use aclnnInplaceCopy.
+    """
+    runtime = npu_runtime.get_runtime((view.device.index or 0))
+    stream = npu_state.current_stream((view.device.index or 0))
+    itemsize = _dtype_itemsize(view.dtype)
+
+    if isinstance(value, (int, float)):
+        # Create a filled tensor matching the view shape, then copy
+        from .creation import zeros_create
+        temp = zeros_create(view.shape, dtype=view.dtype, device=view.device)
+        temp = _scalar_to_npu_tensor(value, temp)
+        value = temp
+
+    if hasattr(value, 'storage'):
+        if view.is_contiguous() and value.is_contiguous() and view.shape == value.shape:
+            dst_ptr = _npu_data_ptr(view)
+            numel = view.numel()
+            copy_size = numel * itemsize
+            if value.device.type != "npu":
+                src_ptr = value.storage().data_ptr()
+                ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 1)  # H2D
+            else:
+                src_ptr = _npu_data_ptr(value)
+                ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 3)  # D2D
+            if ret != npu_runtime.ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
+        else:
+            # Non-contiguous: use aclnnInplaceCopy
+            dst_ptr = _npu_data_ptr(view)
+            if value.device.type != "npu":
+                # Move value to NPU first
+                from .creation import tensor_create
+                import numpy as np
+                value = tensor_create(value._numpy_view().copy(), dtype=value.dtype, device=view.device)
+            src_ptr = _npu_data_ptr(value)
+            aclnn.inplace_copy(
+                dst_ptr,
+                src_ptr,
+                view.shape,
+                view.stride,
+                view.dtype,
+                value.shape,
+                value.stride,
+                value.dtype,
                 runtime,
                 stream=stream.stream,
             )
-            # Fill via host buffer then copy into destination
-            temp_storage = npu_typed_storage_from_ptr(temp_ptr, slice_numel, tensor.dtype, device=tensor.device)
-            temp_tensor = _wrap_tensor(temp_storage, slice_shape, slice_stride)
-            filled = _scalar_to_npu_tensor(value, temp_tensor)
-            ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, filled.storage().data_ptr(), copy_size, 3)
-            if ret != npu_runtime.ACL_ERROR_CODE:
-                raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
-            runtime.defer_free(temp_ptr)
-        elif hasattr(value, 'storage'):
-            src_ptr = value.storage().data_ptr()
-            if value.device.type != "npu":
-                # CPU tensor -> H2D
-                ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 1)
-            else:
-                # NPU tensor -> D2D
-                ret = npu_runtime.acl.rt.memcpy(dst_ptr, copy_size, src_ptr, copy_size, 3)
-            if ret != npu_runtime.ACL_ERROR_CODE:
-                raise RuntimeError(f"acl.rt.memcpy failed: {ret}")
-        return tensor
+    else:
+        raise TypeError(f"Cannot assign {type(value)} to NPU tensor view")
 
-    raise NotImplementedError(f"NPU setitem not implemented for key type: {type(key)}")
+
+# ---------------------------------------------------------------------------
+# Advanced indexing (Tensor, bool mask, list, mixed)
+# ---------------------------------------------------------------------------
+
+def _is_advanced_index(item):
+    """True if *item* is a Tensor, list, or other advanced index."""
+    from ..._tensor import Tensor
+    if isinstance(item, Tensor):
+        return True
+    if isinstance(item, (list, tuple)):
+        # A list/tuple of numbers is advanced indexing
+        return True
+    return False
+
+
+def _to_npu_index_tensor(key, device, dtype_hint=None):
+    """Convert a Python int/list/Tensor to an NPU int64 tensor for indexing."""
+    from ..._tensor import Tensor
+    from .creation import tensor_create
+    import numpy as np
+
+    if isinstance(key, Tensor):
+        if key.dtype.name == 'bool':
+            # Bool tensor → nonzero indices
+            return _expand_bool_tensor(key)
+        if key.device.type == "npu":
+            if key.dtype == int64_dtype:
+                return key
+            # Cast to int64
+            return _cast_to_int64(key)
+        # CPU tensor → move to NPU
+        arr = key._numpy_view().copy()
+        return tensor_create(arr.astype(np.int64), dtype=int64_dtype, device=device)
+
+    if isinstance(key, (list, tuple)):
+        arr = np.array(key, dtype=np.int64)
+        return tensor_create(arr, dtype=int64_dtype, device=device)
+
+    if isinstance(key, (int, np.integer)):
+        arr = np.array([int(key)], dtype=np.int64)
+        t = tensor_create(arr, dtype=int64_dtype, device=device)
+        return reshape(t, ())
+
+    if isinstance(key, (bool, np.bool_)):
+        arr = np.array([int(key)], dtype=np.int64)
+        t = tensor_create(arr, dtype=int64_dtype, device=device)
+        return reshape(t, ())
+
+    raise TypeError(f"Cannot convert {type(key)} to index tensor")
+
+
+def _cast_to_int64(tensor):
+    """Cast an NPU tensor to int64 dtype."""
+    runtime = npu_runtime.get_runtime((tensor.device.index or 0))
+    stream = npu_state.current_stream((tensor.device.index or 0))
+    out_numel = _numel(tensor.shape)
+    out_ptr = npu_runtime._alloc_device(out_numel * 8, runtime=runtime)  # int64 = 8 bytes
+    src_ptr = _npu_data_ptr(tensor)
+    aclnn.cast(
+        src_ptr,
+        out_ptr,
+        tensor.shape,
+        tensor.stride,
+        tensor.dtype,
+        int64_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_stride = npu_runtime._contiguous_stride(tensor.shape)
+    storage = npu_typed_storage_from_ptr(out_ptr, out_numel, int64_dtype, device=tensor.device)
+    return _wrap_tensor(storage, tensor.shape, out_stride)
+
+
+def _expand_bool_tensor(mask):
+    """Convert a bool mask tensor to a tuple of int64 index tensors via nonzero."""
+    result = nonzero(mask, as_tuple=True)
+    return result
+
+
+def _compute_broadcast_shape(shapes):
+    """Broadcast multiple shapes together following NumPy rules."""
+    if not shapes:
+        return ()
+    result = list(shapes[0])
+    for shape in shapes[1:]:
+        if len(shape) > len(result):
+            result = [1] * (len(shape) - len(result)) + result
+        elif len(result) > len(shape):
+            shape = (1,) * (len(result) - len(shape)) + tuple(shape)
+        new_result = []
+        for a, b in zip(result, shape):
+            if a == 1:
+                new_result.append(b)
+            elif b == 1:
+                new_result.append(a)
+            elif a == b:
+                new_result.append(a)
+            else:
+                raise ValueError(f"Cannot broadcast shapes")
+        result = new_result
+    return tuple(result)
+
+
+def _npu_advanced_getitem(tensor, key):
+    """Full getitem supporting mixed basic + advanced indexing.
+
+    Phase 1: Process basic indices (int, slice, None, Ellipsis) via views.
+    Phase 2: Process advanced indices (Tensor, list, bool) via aclnnIndex.
+    """
+    from ..._tensor import Tensor
+
+    keys = list(key) if isinstance(key, tuple) else [key]
+
+    # Step 1: Expand bool Tensor indices BEFORE expanding Ellipsis.
+    # A bool tensor of N dims consumes N real dims, and we need the correct
+    # dim count for Ellipsis expansion.
+    expanded_keys = []
+    for item in keys:
+        if isinstance(item, Tensor) and item.dtype.name == 'bool':
+            nz_indices = nonzero(item, as_tuple=True)
+            for idx_t in nz_indices:
+                expanded_keys.append(idx_t)
+        else:
+            expanded_keys.append(item)
+    keys = expanded_keys
+
+    # Step 2: Expand Ellipsis (now with the correct real dim count)
+    ellipsis_count = sum(1 for item in keys if item is Ellipsis)
+    if ellipsis_count > 1:
+        raise IndexError("an index can only have a single ellipsis ('...')")
+    if ellipsis_count == 1:
+        keys = _expand_ellipsis(keys, tensor.dim())
+
+    # Check if there are any remaining advanced indices
+    has_advanced = any(isinstance(item, (Tensor, list)) for item in keys)
+
+    if not has_advanced:
+        # All basic — use view path (with potential aclnnSlice)
+        return _npu_basic_getitem_with_strided_slices(tensor, keys)
+
+    # Pad keys to ndim with slice(None)
+    ndim = tensor.dim()
+    real_keys = [k for k in keys if k is not None]
+    while len(real_keys) < ndim:
+        real_keys.append(slice(None))
+        keys.append(slice(None))
+
+    # Separate real-dim actions from None (newaxis) positions
+    dim_idx = 0
+    dim_actions = []  # (position_in_dim_actions, key_item)
+    none_positions = []
+
+    pos = 0
+    for item in keys:
+        if item is None:
+            none_positions.append(pos)
+            pos += 1
+            continue
+        dim_actions.append((dim_idx, item))
+        dim_idx += 1
+        pos += 1
+
+    # Find which positions in dim_actions have advanced indices
+    adv_dims = [i for i, (d, item) in enumerate(dim_actions) if isinstance(item, (Tensor, list))]
+
+    if not adv_dims:
+        return _npu_basic_getitem_with_strided_slices(tensor, keys)
+
+    # Pre-apply basic indices on non-advanced dims (high → low to avoid shift)
+    prepared = tensor
+    dim_remap = list(range(len(dim_actions)))
+
+    for i in range(len(dim_actions) - 1, -1, -1):
+        d_orig, item = dim_actions[i]
+        if i in adv_dims:
+            continue
+        cur_dim = dim_remap[i]
+        if _is_int_index(item):
+            idx = int(item)
+            if idx < 0:
+                idx += prepared.shape[cur_dim]
+            prepared = _npu_select_view(prepared, cur_dim, idx)
+            for j in range(len(dim_remap)):
+                if dim_remap[j] > cur_dim:
+                    dim_remap[j] -= 1
+            dim_remap[i] = -1  # removed
+        elif isinstance(item, slice):
+            start, stop, step = item.indices(prepared.shape[cur_dim])
+            if step == 1:
+                prepared = _npu_slice_view(prepared, cur_dim, start, stop)
+            else:
+                prepared = _npu_aclnn_slice(prepared, cur_dim, start, stop, step)
+
+    # Build advanced index tensors and their current dim positions
+    adv_index_tensors = []
+    adv_current_dims = []
+    for i in adv_dims:
+        cur_dim = dim_remap[i]
+        if cur_dim < 0:
+            continue
+        adv_current_dims.append(cur_dim)
+        idx_tensor = _to_npu_index_tensor(dim_actions[i][1], prepared.device)
+        adv_index_tensors.append(idx_tensor)
+
+    if not adv_index_tensors:
+        result = prepared
+        for pos in none_positions:
+            result = _npu_unsqueeze_view(result, pos)
+        return result
+
+    # Broadcast all advanced index tensors
+    idx_shapes = [t.shape for t in adv_index_tensors]
+    broadcast_shape = _compute_broadcast_shape(idx_shapes)
+
+    expanded_idx_tensors = []
+    for t in adv_index_tensors:
+        if t.shape != broadcast_shape:
+            t = _npu_expand(t, broadcast_shape)
+        expanded_idx_tensors.append(t)
+
+    # Build entries list for aclnnIndex (None for dims not indexed)
+    entries = [None] * prepared.dim()
+    for dim_pos, idx_t in zip(adv_current_dims, expanded_idx_tensors):
+        entries[dim_pos] = (
+            _npu_data_ptr(idx_t),
+            idx_t.shape,
+            idx_t.stride,
+            idx_t.dtype,
+        )
+
+    # Compute output shape following PyTorch advanced indexing rules:
+    # - If advanced dims are contiguous: broadcast_shape replaces them in-place
+    # - If advanced dims are non-contiguous: broadcast_shape goes to the front
+    adv_dim_positions = sorted(adv_current_dims)
+    are_contiguous = all(
+        adv_dim_positions[j] == adv_dim_positions[j - 1] + 1
+        for j in range(1, len(adv_dim_positions))
+    )
+
+    out_shape_parts = []
+    if are_contiguous:
+        adv_inserted = False
+        for i in range(prepared.dim()):
+            if entries[i] is not None:
+                if not adv_inserted:
+                    out_shape_parts.extend(broadcast_shape)
+                    adv_inserted = True
+            else:
+                out_shape_parts.append(prepared.shape[i])
+    else:
+        # Non-contiguous: broadcast shape goes to the front
+        out_shape_parts.extend(broadcast_shape)
+        for i in range(prepared.dim()):
+            if entries[i] is None:
+                out_shape_parts.append(prepared.shape[i])
+
+    out_shape = tuple(out_shape_parts)
+    out_numel = _numel(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    itemsize = _dtype_itemsize(prepared.dtype)
+
+    runtime = npu_runtime.get_runtime((prepared.device.index or 0))
+    stream = npu_state.current_stream((prepared.device.index or 0))
+
+    if out_numel == 0:
+        out_ptr = npu_runtime._alloc_device(max(itemsize, 1), runtime=runtime)
+        storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), prepared.dtype, device=prepared.device)
+        return _wrap_tensor(storage, out_shape, out_stride)
+
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+    src_ptr = _npu_data_ptr(prepared)
+
+    aclnn.index(
+        src_ptr,
+        prepared.shape,
+        prepared.stride,
+        prepared.dtype,
+        entries,
+        out_ptr,
+        out_shape,
+        out_stride,
+        prepared.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    storage = npu_typed_storage_from_ptr(out_ptr, out_numel, prepared.dtype, device=prepared.device)
+    result = _wrap_tensor(storage, out_shape, out_stride)
+
+    # Apply None insertions
+    for pos in none_positions:
+        result = _npu_unsqueeze_view(result, pos)
+
+    return result
+
+
+def _npu_expand(tensor, target_shape):
+    """Expand tensor to target shape (broadcast — no data copy, just stride manipulation)."""
+    from ..._tensor import Tensor
+
+    src_shape = tensor.shape
+    src_stride = tensor.stride
+    ndiff = len(target_shape) - len(src_shape)
+
+    # Pad shape/stride on the left with 1s/0s
+    padded_shape = (1,) * ndiff + src_shape
+    padded_stride = (0,) * ndiff + src_stride
+
+    new_stride = []
+    for i, (ts, ps, pst) in enumerate(zip(target_shape, padded_shape, padded_stride)):
+        if ps == ts:
+            new_stride.append(pst)
+        elif ps == 1:
+            new_stride.append(0)
+        else:
+            raise RuntimeError(f"Cannot expand dim {i} from {ps} to {ts}")
+
+    return Tensor(tensor.storage(), tuple(target_shape), tuple(new_stride), tensor.offset)
+
+
+def _npu_advanced_setitem(tensor, key, value):
+    """Full setitem for advanced indexing using aclnnIndexPutImpl."""
+    from ..._tensor import Tensor
+    import numpy as np
+
+    keys = list(key) if isinstance(key, tuple) else [key]
+
+    # Step 1: Expand bool tensors BEFORE Ellipsis (same reason as getitem)
+    expanded_keys = []
+    for item in keys:
+        if isinstance(item, Tensor) and item.dtype.name == 'bool':
+            nz_indices = nonzero(item, as_tuple=True)
+            for idx_t in nz_indices:
+                expanded_keys.append(idx_t)
+        else:
+            expanded_keys.append(item)
+    keys = expanded_keys
+
+    # Step 2: Expand Ellipsis
+    ellipsis_count = sum(1 for item in keys if item is Ellipsis)
+    if ellipsis_count > 1:
+        raise IndexError("an index can only have a single ellipsis ('...')")
+    if ellipsis_count == 1:
+        keys = _expand_ellipsis(keys, tensor.dim())
+
+    # Remove None entries (newaxis doesn't apply to setitem destination)
+    keys = [k for k in keys if k is not None]
+
+    # Pad to ndim
+    while len(keys) < tensor.dim():
+        keys.append(slice(None))
+
+    # Separate basic and advanced indices
+    # For setitem, we apply basic slices as views on the target tensor,
+    # then use index_put_impl for the advanced indices.
+
+    prepared = tensor
+    adv_dims = []
+
+    dim_remap = list(range(len(keys)))
+
+    for i, item in enumerate(keys):
+        if isinstance(item, (Tensor, list)):
+            adv_dims.append(i)
+
+    if not adv_dims:
+        # All basic — use view + assign
+        view = _npu_basic_getitem_with_strided_slices(prepared, keys)
+        if view is not None:
+            _npu_assign_to_view(view, value)
+            return
+
+    # Apply basic slices on non-advanced dims (from high to low)
+    dim_actions = list(enumerate(keys))
+    for i in range(len(dim_actions) - 1, -1, -1):
+        orig_i, item = dim_actions[i]
+        if i in adv_dims:
+            continue
+        cur_dim = dim_remap[i]
+        if _is_int_index(item):
+            idx = int(item)
+            if idx < 0:
+                idx += prepared.shape[cur_dim]
+            prepared = _npu_select_view(prepared, cur_dim, idx)
+            for j in range(len(dim_remap)):
+                if dim_remap[j] > cur_dim:
+                    dim_remap[j] -= 1
+            dim_remap[i] = -1
+        elif isinstance(item, slice):
+            start, stop, step = item.indices(prepared.shape[cur_dim])
+            if step == 1:
+                prepared = _npu_slice_view(prepared, cur_dim, start, stop)
+            else:
+                # For setitem with step!=1, we can't slice as view.
+                # Keep the full dim and let index_put_impl handle it.
+                # Convert slice to an index tensor
+                import numpy as np
+                from .creation import tensor_create
+                indices = list(range(start, stop, step))
+                idx_t = tensor_create(np.array(indices, dtype=np.int64), dtype=int64_dtype, device=prepared.device)
+                adv_dims.append(i)
+                keys[i] = idx_t
+
+    # Build index tensors for the advanced dims
+    adv_index_tensors = []
+    for i in adv_dims:
+        cur_dim = dim_remap[i]
+        if cur_dim < 0:
+            continue
+        item = keys[i]
+        idx_tensor = _to_npu_index_tensor(item, prepared.device)
+        if isinstance(idx_tensor, tuple):
+            for t in idx_tensor:
+                adv_index_tensors.append(t)
+        else:
+            adv_index_tensors.append(idx_tensor)
+
+    if not adv_index_tensors:
+        return
+
+    # Prepare value tensor
+    if isinstance(value, (int, float)):
+        from .creation import tensor_create
+        import numpy as np
+        val_arr = np.full((1,), value, dtype=npu_runtime._dtype_to_numpy(prepared.dtype))
+        value_tensor = tensor_create(val_arr, dtype=prepared.dtype, device=prepared.device)
+    elif hasattr(value, 'storage'):
+        value_tensor = value
+        if value_tensor.device.type != "npu":
+            from .creation import tensor_create
+            import numpy as np
+            value_tensor = tensor_create(
+                value_tensor._numpy_view().copy(),
+                dtype=value_tensor.dtype,
+                device=prepared.device,
+            )
+    else:
+        from .creation import tensor_create
+        import numpy as np
+        value_tensor = tensor_create(
+            np.array(value, dtype=npu_runtime._dtype_to_numpy(prepared.dtype)),
+            dtype=prepared.dtype,
+            device=prepared.device,
+        )
+
+    runtime = npu_runtime.get_runtime((prepared.device.index or 0))
+    stream = npu_state.current_stream((prepared.device.index or 0))
+
+    index_ptrs = [_npu_data_ptr(t) for t in adv_index_tensors]
+    index_shapes = [t.shape for t in adv_index_tensors]
+    index_strides = [t.stride for t in adv_index_tensors]
+    index_dtypes = [t.dtype for t in adv_index_tensors]
+
+    aclnn.index_put_impl(
+        _npu_data_ptr(prepared),
+        prepared.shape,
+        prepared.stride,
+        prepared.dtype,
+        index_ptrs,
+        index_shapes,
+        index_strides,
+        index_dtypes,
+        _npu_data_ptr(value_tensor),
+        value_tensor.shape,
+        value_tensor.stride,
+        value_tensor.dtype,
+        False,  # accumulate
+        False,  # unsafe
+        runtime,
+        stream=stream.stream,
+    )
 
 
 def cat(tensors, dim=0):

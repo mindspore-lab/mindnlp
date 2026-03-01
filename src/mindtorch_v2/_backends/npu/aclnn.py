@@ -555,6 +555,49 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnIndex (advanced indexing getitem)
+        self.aclnn_index_get_workspace = _optional_symbol(
+            libs,
+            "aclnnIndexGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_index = _optional_symbol(
+            libs,
+            "aclnnIndex",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnSlice (strided slicing on any dim)
+        self.aclnn_slice_get_workspace = _optional_symbol(
+            libs,
+            "aclnnSliceGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_slice = _optional_symbol(
+            libs,
+            "aclnnSlice",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
         self.aclnn_sub_get_workspace = _optional_symbol(
             libs,
             "aclnnSubGetWorkspaceSize",
@@ -6120,6 +6163,181 @@ def _create_tensor_list(bindings, tensor_ptrs, shapes, strides, dtypes):
         raise RuntimeError("aclCreateTensorList failed")
 
     return tensor_list, tensor_keeps
+
+
+def _create_tensor_list_with_nones(bindings, entries):
+    """Create aclTensorList where entries may be None (null pointer in the list).
+
+    *entries* is a list of either ``None`` or a tuple
+    ``(data_ptr, shape, stride, dtype)`` for each dimension.
+    """
+    if bindings.acl_create_tensor_list is None:
+        raise RuntimeError("aclCreateTensorList not available")
+
+    num = len(entries)
+    tensor_array = (ctypes.c_void_p * num)()
+    tensor_keeps = []
+
+    for i, entry in enumerate(entries):
+        if entry is None:
+            tensor_array[i] = ctypes.c_void_p(0)
+            tensor_keeps.append(None)
+        else:
+            data_ptr, shape, stride, dtype = entry
+            tensor, keep = _create_tensor(bindings, shape, stride, dtype, data_ptr)
+            tensor_array[i] = tensor
+            tensor_keeps.append((tensor, keep))
+
+    tensor_list = bindings.acl_create_tensor_list(tensor_array, ctypes.c_uint64(num))
+    if not tensor_list:
+        raise RuntimeError("aclCreateTensorList failed")
+
+    return tensor_list, tensor_keeps
+
+
+def index_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_index_get_workspace,
+            bindings.aclnn_index,
+        ])
+    except Exception:
+        return False
+
+
+def slice_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_slice_get_workspace,
+            bindings.aclnn_slice,
+        ])
+    except Exception:
+        return False
+
+
+def index(self_ptr, self_shape, self_stride, self_dtype,
+          index_entries, out_ptr, out_shape, out_stride, out_dtype,
+          runtime, stream=None):
+    """aclnnIndex — advanced indexing getitem.
+
+    *index_entries* is a list (length == ndim of self) where each element is
+    either ``None`` (dimension not indexed) or a tuple
+    ``(data_ptr, shape, stride, dtype)`` for an index tensor.
+    """
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_index_get_workspace is None or bindings.aclnn_index is None:
+        raise RuntimeError("aclnnIndex symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    tensor_list = None
+    tensor_keeps = []
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        tensor_list, tensor_keeps = _create_tensor_list_with_nones(bindings, index_entries)
+
+        ret = bindings.aclnn_index_get_workspace(
+            self_tensor,
+            tensor_list,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnIndexGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_index(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnIndex failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        if tensor_list is not None and bindings.acl_destroy_tensor_list:
+            bindings.acl_destroy_tensor_list(tensor_list)
+        else:
+            for item in tensor_keeps:
+                if item is not None:
+                    bindings.acl_destroy_tensor(item[0])
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep)
+
+
+def slice_op(self_ptr, self_shape, self_stride, self_dtype,
+             dim, start, end, step,
+             out_ptr, out_shape, out_stride, out_dtype,
+             runtime, stream=None):
+    """aclnnSlice — strided slicing on a single dimension."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_slice_get_workspace is None or bindings.aclnn_slice is None:
+        raise RuntimeError("aclnnSlice symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_slice_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            ctypes.c_int64(start),
+            ctypes.c_int64(end),
+            ctypes.c_int64(step),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSliceGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_slice(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSlice failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep)
 
 
 def cat(tensor_ptrs, shapes, strides, dtypes, dim, out_ptr, out_shape, out_stride, out_dtype, runtime, stream=None):
