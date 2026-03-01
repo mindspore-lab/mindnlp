@@ -588,6 +588,30 @@ class _KeyAverages:
     def reverse(self):
         self._row_objects().reverse()
 
+    def append(self, value):
+        self._row_objects().append(value)
+
+    def extend(self, values):
+        self._row_objects().extend(values)
+
+    def insert(self, index, value):
+        self._row_objects().insert(index, value)
+
+    def pop(self, index=-1):
+        return self._row_objects().pop(index)
+
+    def remove(self, value):
+        self._row_objects().remove(value)
+
+    def clear(self):
+        self._row_objects().clear()
+
+    def index(self, value, start=0, stop=None):
+        rows = self._row_objects()
+        if stop is None:
+            return rows.index(value, start)
+        return rows.index(value, start, stop)
+
     def key_averages(
         self,
         group_by_input_shapes=False,
@@ -701,7 +725,7 @@ class _KeyAverages:
         return "\n".join(lines)
 
     def __len__(self):
-        return len(self._build_rows())
+        return len(self._row_objects())
 
 
 class profile:
