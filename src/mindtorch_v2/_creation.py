@@ -45,8 +45,8 @@ def logspace(start, end, steps, dtype=float32, device=None):
     return logspace_dispatch(start, end, steps, dtype=dtype, device=device)
 
 
-def eye(n, m=None, dtype=float32, device=None):
-    return eye_dispatch(n, m, dtype=dtype, device=device)
+def eye(n, m=None, dtype=float32, device=None, out=None, requires_grad=False):
+    return eye_dispatch(n, m, dtype=dtype, device=device, out=out)
 
 
 def range(start, end, step=1, dtype=float32, device=None):

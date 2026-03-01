@@ -646,9 +646,9 @@ def logspace(start, end, steps, dtype=None, device=None):
     return dispatch("logspace", dev, start, end, steps, dtype=dtype)
 
 
-def eye(n, m=None, dtype=None, device=None):
+def eye(n, m=None, dtype=None, device=None, out=None):
     dev = _as_device(device)
-    return dispatch("eye", dev, n, m, dtype=dtype)
+    return dispatch("eye", dev, n, m, dtype=dtype, out=out)
 
 
 def range(start, end, step=1, dtype=None, device=None):

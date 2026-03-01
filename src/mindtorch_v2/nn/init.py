@@ -211,9 +211,8 @@ def eye_(tensor):
     from .._autograd.grad_mode import no_grad
     with no_grad():
         from .._creation import eye as _eye
-        eye_t = _eye(tensor.shape[0], tensor.shape[1],
-                      dtype=tensor.dtype, device=tensor.device)
-        tensor.copy_(eye_t)
+        _eye(tensor.shape[0], tensor.shape[1],
+             dtype=tensor.dtype, device=tensor.device, out=tensor)
     return tensor
 
 

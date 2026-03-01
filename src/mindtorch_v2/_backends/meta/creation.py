@@ -70,9 +70,11 @@ def logspace_create_meta(start, end, steps, dtype=None, device=None):
     return Tensor(storage, arr.shape, stride)
 
 
-def eye_create_meta(n, m=None, dtype=None, device=None):
+def eye_create_meta(n, m=None, dtype=None, device=None, out=None):
     if m is None:
         m = n
+    if out is not None:
+        return out
     arr = np.eye(n, m, dtype=to_numpy_dtype(dtype))
     stride = tuple(np.array(arr.strides) // arr.itemsize)
     storage = meta_typed_storage_from_shape(arr.shape, dtype, device=device)
