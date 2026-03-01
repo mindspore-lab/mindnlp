@@ -698,3 +698,40 @@ def test_key_averages_event_list_key_averages_accepts_torch_keywords():
 
     assert len(regrouped) >= 1
 
+def test_key_averages_supports_append_extend_insert_pop_remove_clear():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = rows[0]
+    base = len(rows)
+
+    rows.append(first)
+    assert len(rows) == base + 1
+    rows.insert(0, first)
+    assert len(rows) == base + 2
+    rows.extend([first])
+    assert len(rows) == base + 3
+
+    popped = rows.pop()
+    assert popped is first
+    assert len(rows) == base + 2
+
+    rows.remove(first)
+    assert len(rows) == base + 1
+
+    rows.clear()
+    assert len(rows) == 0
+
+
+def test_key_averages_supports_index_lookup():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = rows[0]
+
+    assert rows.index(first) == 0
+
