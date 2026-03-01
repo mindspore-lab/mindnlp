@@ -36,6 +36,17 @@ def mul(a, b):
     return _from_numpy(a_np * b_np, a.dtype, a.device)
 
 
+def div(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    out = np.true_divide(a_np, b_np)
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype), copy=False), a.dtype, a.device)
+
+
+def true_divide(a, b):
+    return div(a, b)
+
+
 def matmul(a, b):
     return _from_numpy(_to_numpy(a) @ _to_numpy(b), a.dtype, a.device)
 
@@ -58,6 +69,14 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
 
 def mean_(a, dim=None, keepdim=False):
     return _from_numpy(_to_numpy(a).mean(axis=dim, keepdims=keepdim), a.dtype, a.device)
+
+
+def std_(a, dim=None, keepdim=False, unbiased=True):
+    if not a.dtype.is_floating_point and not a.dtype.is_complex:
+        raise RuntimeError("std and var only support floating point and complex dtypes")
+    ddof = 1 if unbiased else 0
+    out = np.std(_to_numpy(a), axis=dim, keepdims=keepdim, ddof=ddof)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
 def all_(a, dim=None, keepdim=False):
@@ -487,7 +506,7 @@ def chunk(a, chunks, dim=0):
             break
         slices = [slice(None)] * arr.ndim
         slices[dim] = slice(start, end)
-        out = arr[tuple(slices)]
+        out = np.ascontiguousarray(arr[tuple(slices)])
         outputs.append(_from_numpy(out, a.dtype, a.device))
     return tuple(outputs)
 
@@ -982,9 +1001,108 @@ def _normalize_index_key(key):
     return key
 
 
+def _is_int_index(key):
+    return isinstance(key, (int, np.integer)) and not isinstance(key, (bool, np.bool_))
+
+
+def _is_basic_index_key(key):
+    keys = key if isinstance(key, tuple) else (key,)
+    for item in keys:
+        if item is Ellipsis or item is None:
+            continue
+        if isinstance(item, slice):
+            continue
+        if _is_int_index(item):
+            continue
+        return False
+    return True
+
+
+def _expand_ellipsis(keys, ndim):
+    ellipsis_count = sum(1 for item in keys if item is Ellipsis)
+    if ellipsis_count > 1:
+        raise IndexError("an index can only have a single ellipsis ('...')")
+    if ellipsis_count == 0:
+        return keys
+
+    specified_dims = sum(1 for item in keys if item is not None and item is not Ellipsis)
+    fill = ndim - specified_dims
+    if fill < 0:
+        raise IndexError("too many indices for tensor")
+
+    expanded = []
+    for item in keys:
+        if item is Ellipsis:
+            expanded.extend([slice(None)] * fill)
+        else:
+            expanded.append(item)
+    return expanded
+
+
+def _basic_getitem_view(tensor, key):
+    keys = list(key) if isinstance(key, tuple) else [key]
+    keys = _expand_ellipsis(keys, tensor.dim())
+
+    in_dim = 0
+    out_shape = []
+    out_stride = []
+    out_offset = tensor.offset
+
+    for item in keys:
+        if item is None:
+            out_shape.append(1)
+            out_stride.append(0)
+            continue
+
+        if in_dim >= tensor.dim():
+            raise IndexError("too many indices for tensor")
+
+        dim_size = tensor.shape[in_dim]
+        dim_stride = tensor.stride[in_dim]
+
+        if _is_int_index(item):
+            idx = int(item)
+            if idx < 0:
+                idx += dim_size
+            if idx < 0 or idx >= dim_size:
+                raise IndexError("index out of range")
+            out_offset += idx * dim_stride
+            in_dim += 1
+            continue
+
+        if isinstance(item, slice):
+            start, stop, step = item.indices(dim_size)
+            out_offset += start * dim_stride
+            out_shape.append(len(range(start, stop, step)))
+            out_stride.append(dim_stride * step)
+            in_dim += 1
+            continue
+
+        return None
+
+    while in_dim < tensor.dim():
+        out_shape.append(tensor.shape[in_dim])
+        out_stride.append(tensor.stride[in_dim])
+        in_dim += 1
+
+    # Keep fallback copy path for negative strides until Tensor._numpy_view
+    # supports them safely.
+    if any(s < 0 for s in out_stride):
+        return None
+
+    return Tensor(tensor.storage(), tuple(out_shape), tuple(out_stride), out_offset)
+
+
 def getitem(tensor, key):
+    norm_key = _normalize_index_key(key)
     arr = _to_numpy(tensor)
-    result = arr[_normalize_index_key(key)]
+    result = arr[norm_key]
+
+    if _is_basic_index_key(norm_key):
+        view = _basic_getitem_view(tensor, norm_key)
+        if view is not None:
+            return view
+
     if isinstance(result, np.generic) or (isinstance(result, np.ndarray) and result.ndim == 0):
         # Return 0-dim tensor (matches PyTorch behavior)
         scalar_arr = np.array(result)
@@ -1067,23 +1185,47 @@ def dropout(a, p=0.5, training=True):
 def pad(a, pad_widths, mode='constant', value=0):
     arr = _to_numpy(a)
     ndim = len(arr.shape)
-    np_pad = [(0, 0)] * ndim
-    # PyTorch pad format: (left, right, top, bottom, front, back, ...)
-    # Applied to last dims first
+
+    if len(pad_widths) % 2 != 0:
+        raise ValueError("Padding length must be divisible by 2")
+
     n_pairs = len(pad_widths) // 2
+    if n_pairs > ndim:
+        raise ValueError("Padding length too large for input dimensions")
+
+    pads = [(0, 0)] * ndim
+    # PyTorch pad format: (left, right, top, bottom, front, back, ...)
+    # Applied to last dims first.
     for i in range(n_pairs):
         dim = ndim - 1 - i
-        np_pad[dim] = (int(pad_widths[2 * i]), int(pad_widths[2 * i + 1]))
-    if mode == 'constant':
-        result = np.pad(arr, np_pad, mode='constant', constant_values=value)
-    elif mode == 'reflect':
-        result = np.pad(arr, np_pad, mode='reflect')
-    elif mode == 'replicate':
-        result = np.pad(arr, np_pad, mode='edge')
-    elif mode == 'circular':
-        result = np.pad(arr, np_pad, mode='wrap')
+        pads[dim] = (int(pad_widths[2 * i]), int(pad_widths[2 * i + 1]))
+
+    # Negative padding crops first, then positive padding extends.
+    slices = [slice(None)] * ndim
+    for dim, (left, right) in enumerate(pads):
+        start = max(-left, 0)
+        end = arr.shape[dim] - max(-right, 0)
+        length = end - start
+        if length < 0:
+            raise RuntimeError("narrow(): length must be non-negative.")
+        slices[dim] = slice(start, end)
+    result = arr[tuple(slices)]
+
+    np_pad = [(max(left, 0), max(right, 0)) for left, right in pads]
+    if any(left or right for left, right in np_pad):
+        if mode == 'constant':
+            result = np.pad(result, np_pad, mode='constant', constant_values=value)
+        elif mode == 'reflect':
+            result = np.pad(result, np_pad, mode='reflect')
+        elif mode == 'replicate':
+            result = np.pad(result, np_pad, mode='edge')
+        elif mode == 'circular':
+            result = np.pad(result, np_pad, mode='wrap')
+        else:
+            raise ValueError(f"Unsupported pad mode: {mode}")
     else:
-        raise ValueError(f"Unsupported pad mode: {mode}")
+        result = np.ascontiguousarray(result)
+
     return _from_numpy(result, a.dtype, a.device)
 
 

@@ -1,6 +1,17 @@
 from .graph import current_saved_tensors_hooks
 
 
+class _SavedValue:
+    def __init__(self, value):
+        self._value = value
+
+    def release(self):
+        return
+
+    def materialize(self):
+        return self._value
+
+
 class SavedTensor:
     def __init__(self, tensor):
         self._tensor_ref = tensor
@@ -47,7 +58,13 @@ class Node:
         self._saved_tensors = []
 
     def save_for_backward(self, *tensors):
-        self._saved_tensors = [SavedTensor(t) for t in tensors]
+        saved = []
+        for t in tensors:
+            if hasattr(t, "_version_counter"):
+                saved.append(SavedTensor(t))
+            else:
+                saved.append(_SavedValue(t))
+        self._saved_tensors = saved
 
     def saved_tensors(self):
         return tuple(saved.materialize() for saved in self._saved_tensors)

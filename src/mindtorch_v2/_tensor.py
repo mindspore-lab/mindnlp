@@ -12,7 +12,7 @@ from ._device import _default_device, device as Device
 from ._dtype import float32, float16, float64, bfloat16, int8, int16, int32, int64, uint8
 from ._dtype import bool as dtype_bool
 from ._dtype import to_numpy_dtype
-from ._functional import add, mul, matmul, relu, sum, abs as abs_dispatch, neg as neg_dispatch
+from ._functional import add, mul, matmul, relu, sum, mean as mean_dispatch, std as std_dispatch, true_divide as true_divide_dispatch, repeat as repeat_dispatch, chunk as chunk_dispatch, split as split_dispatch, abs as abs_dispatch, neg as neg_dispatch
 from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
 from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_dispatch
 from ._functional import tanh as tanh_dispatch, sigmoid as sigmoid_dispatch
@@ -134,6 +134,19 @@ class Tensor:
     def dim(self):
         return len(self.shape)
 
+    @property
+    def ndim(self):
+        return len(self.shape)
+
+    def size(self, dim=None):
+        if dim is None:
+            return self.shape
+        if dim < 0:
+            dim += len(self.shape)
+        if dim < 0 or dim >= len(self.shape):
+            raise IndexError("Dimension out of range")
+        return self.shape[dim]
+
     def numel(self):
         result = 1
         for s in self.shape:
@@ -179,8 +192,12 @@ class Tensor:
             base[self.offset:], shape=self.shape, strides=strides
         )
 
-    def reshape(self, new_shape):
-        return reshape_dispatch(self, new_shape)
+    def reshape(self, *shape):
+        if not shape:
+            raise TypeError("reshape() missing shape arguments")
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = tuple(shape[0])
+        return reshape_dispatch(self, shape)
 
     def view(self, *shape):
         if not shape:
@@ -193,6 +210,27 @@ class Tensor:
             shape = shape[0]
         return view_dispatch(self, shape)
 
+    def flatten(self, start_dim=0, end_dim=-1):
+        ndim = len(self.shape)
+        if ndim == 0:
+            return self.reshape((1,))
+        if start_dim < 0:
+            start_dim += ndim
+        if end_dim < 0:
+            end_dim += ndim
+        if start_dim < 0 or start_dim >= ndim:
+            raise IndexError("Dimension out of range")
+        if end_dim < 0 or end_dim >= ndim:
+            raise IndexError("Dimension out of range")
+        if start_dim > end_dim:
+            raise RuntimeError("flatten() has invalid args: start_dim cannot come after end_dim")
+
+        flattened = 1
+        for d in self.shape[start_dim:end_dim + 1]:
+            flattened *= d
+        new_shape = self.shape[:start_dim] + (flattened,) + self.shape[end_dim + 1:]
+        return self.reshape(new_shape)
+
     def transpose(self, dim0, dim1):
         return transpose_dispatch(self, dim0, dim1)
 
@@ -203,6 +241,10 @@ class Tensor:
         if len(self.shape) < 2:
             return self
         return self.transpose(0, 1)
+
+    @property
+    def T(self):
+        return self.t()
 
     def _ones_like(self):
         if self.device.type == "meta":
@@ -364,6 +406,39 @@ class Tensor:
         out = dispatch("zero_", self.device.type, self)
         return out
 
+    def copy_(self, other):
+        self._check_inplace()
+
+        if self.device.type != "cpu":
+            raise RuntimeError("copy_ only supports CPU tensors")
+
+        if isinstance(other, Tensor):
+            if other.device.type != "cpu":
+                other = other.to("cpu")
+            src = other._numpy_view()
+        else:
+            src = np.array(other)
+
+        np.copyto(self._numpy_view(), src, casting="unsafe")
+        self._bump_version()
+        return self
+
+    def normal_(self, mean=0.0, std=1.0, *, generator=None):
+        self._check_inplace()
+        if self.device.type != "cpu":
+            raise RuntimeError("normal_ currently only supports CPU tensors")
+
+        if hasattr(mean, "item"):
+            mean = mean.item()
+        if hasattr(std, "item"):
+            std = std.item()
+
+        out = np.random.normal(loc=float(mean), scale=float(std), size=self.shape)
+        out = out.astype(to_numpy_dtype(self.dtype), copy=False)
+        np.copyto(self._numpy_view(), out, casting="unsafe")
+        self._bump_version()
+        return self
+
     def to(self, *args, **kwargs):
         if self._pending:
             from ._dispatch.pipeline import current_pipeline
@@ -412,6 +487,25 @@ class Tensor:
         if result is self and dtype is None and device is None:
             return self
         return result
+
+    def cpu(self, memory_format=None):
+        if memory_format is None:
+            return self.to("cpu")
+        return self.to("cpu", memory_format=memory_format)
+
+    def npu(self, device=None, non_blocking=False, memory_format=None):
+        if device is None:
+            device = "npu"
+        return self.to(device, non_blocking=non_blocking, memory_format=memory_format)
+
+    def cuda(self, device=None, non_blocking=False, memory_format=None):
+        if device is None:
+            target = "npu"
+        elif isinstance(device, str):
+            target = device.replace("cuda", "npu", 1)
+        else:
+            target = f"npu:{int(device)}"
+        return self.to(target, non_blocking=non_blocking, memory_format=memory_format)
 
     def _to_dtype(self, dtype):
         if self.device.type == "cpu":
@@ -498,6 +592,24 @@ class Tensor:
     def bool(self):
         return self._to_dtype(dtype_bool) if self.dtype != dtype_bool else self
 
+    def new_ones(self, size, dtype=None, device=None):
+        from ._creation import ones
+
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = self.device
+        return ones(size, dtype=dtype, device=device)
+
+    def new_zeros(self, size, dtype=None, device=None):
+        from ._creation import zeros
+
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = self.device
+        return zeros(size, dtype=dtype, device=device)
+
     def type(self, dtype=None):
         if dtype is None:
             return f"torch.{self.dtype.name.capitalize()}Tensor"
@@ -524,8 +636,25 @@ class Tensor:
     def __add__(self, other):
         return add(self, other)
 
+    def __sub__(self, other):
+        if isinstance(other, Tensor):
+            return add(self, neg_dispatch(other))
+        return add(self, -other)
+
+    def __rsub__(self, other):
+        return add(neg_dispatch(self), other)
+
     def __mul__(self, other):
         return mul(self, other)
+
+    def __rmul__(self, other):
+        return mul(self, other)
+
+    def __truediv__(self, other):
+        return true_divide_dispatch(self, other)
+
+    def __rtruediv__(self, other):
+        return true_divide_dispatch(other, self)
 
     def __neg__(self):
         return neg_dispatch(self)
@@ -537,6 +666,12 @@ class Tensor:
 
     def matmul(self, other):
         return matmul(self, other)
+
+    def __matmul__(self, other):
+        return matmul(self, other)
+
+    def __rmatmul__(self, other):
+        return matmul(other, self)
 
     def relu(self):
         return relu(self)
@@ -658,6 +793,11 @@ class Tensor:
     def clamp_max(self, max_val):
         return clamp_max_dispatch(self, max_val)
 
+    def clamp_(self, min=None, max=None):
+        self._check_inplace()
+        out = clamp_dispatch(self, min, max)
+        return self.copy_(out)
+
     def relu6(self):
         return relu6_dispatch(self)
 
@@ -723,6 +863,16 @@ class Tensor:
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 
+    def mean(self, dim=None, keepdim=False, axis=None):
+        if axis is not None:
+            dim = axis
+        return mean_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def std(self, dim=None, keepdim=False, unbiased=True, axis=None):
+        if axis is not None:
+            dim = axis
+        return std_dispatch(self, dim=dim, keepdim=keepdim, unbiased=unbiased)
+
     def all(self, dim=None, keepdim=False):
         return all_dispatch(self, dim=dim, keepdim=keepdim)
 
@@ -756,6 +906,17 @@ class Tensor:
     def topk(self, k, dim=-1, largest=True, sorted=True):
         return topk_dispatch(self, k, dim=dim, largest=largest, sorted=sorted)
 
+    def split(self, split_size_or_sections, dim=0):
+        return split_dispatch(self, split_size_or_sections, dim=dim)
+
+    def chunk(self, chunks, dim=0):
+        return chunk_dispatch(self, chunks, dim=dim)
+
+    def repeat(self, *repeats):
+        if len(repeats) == 1 and isinstance(repeats[0], (tuple, list)):
+            repeats = tuple(repeats[0])
+        return repeat_dispatch(self, repeats)
+
     def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
         return allclose_dispatch(self, other, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
@@ -764,6 +925,12 @@ class Tensor:
 
     def equal(self, other):
         return equal_dispatch(self, other)
+
+    def eq(self, other):
+        return self.__eq__(other)
+
+    def ne(self, other):
+        return self.__ne__(other)
 
     def __getitem__(self, key):
         from ._dispatch.dispatcher import dispatch
@@ -826,6 +993,15 @@ class Tensor:
         if isinstance(other, Tensor) or self._is_scalar_comparable(other):
             return ne_dispatch(self, other)
         return True
+
+    def __and__(self, other):
+        return mul(self.bool(), other.bool() if isinstance(other, Tensor) else bool(other))
+
+    def __or__(self, other):
+        return add(self.bool(), other.bool() if isinstance(other, Tensor) else bool(other))
+
+    def __xor__(self, other):
+        return ne_dispatch(self.bool(), other.bool() if isinstance(other, Tensor) else bool(other))
 
     def __hash__(self):
         return id(self)

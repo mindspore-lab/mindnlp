@@ -25,6 +25,7 @@ CORE_SCHEMA_OPS = (
     "relu",
     "sum",
     "mean",
+    "std",
     "reshape",
     "view",
     "transpose",
@@ -149,6 +150,7 @@ def register_schemas():
         },
     )
     registry.register_schema("mean", "mean(Tensor input, int[]? dim=None, bool keepdim=False, Dtype? dtype=None) -> Tensor")
+    registry.register_schema("std", "std(Tensor input, int[]? dim=None, bool keepdim=False, bool unbiased=True) -> Tensor")
 
     registry.register_schema("reshape", "reshape(Tensor(a) input, int[] shape) -> Tensor(a)")
     registry.register_error_overrides(
@@ -256,12 +258,14 @@ def register_schemas():
         "sin", "cos", "tan", "tanh", "sigmoid", "floor", "ceil", "round", "trunc", "frac",
         "log2", "log10", "exp2", "rsqrt", "sign", "signbit", "isnan", "isinf", "isfinite",
         "sinh", "cosh", "asinh", "acosh", "atanh", "erf", "erfc", "softplus",
-        "relu6", "contiguous", "gelu", "silu", "leaky_relu", "elu", "mish",
-        "dropout",
+        "relu6", "contiguous", "gelu", "silu", "mish",
     ))
     registry.register_schema("hardtanh", "hardtanh(Tensor input, Scalar min_val=-1.0, Scalar max_val=1.0) -> Tensor")
     registry.register_schema("softmax", "softmax(Tensor input, int dim=-1, Dtype? dtype=None) -> Tensor")
     registry.register_schema("log_softmax", "log_softmax(Tensor input, int dim=-1, Dtype? dtype=None) -> Tensor")
+    registry.register_schema("dropout", "dropout(Tensor input, float p=0.5, bool training=True) -> Tensor")
+    registry.register_schema("leaky_relu", "leaky_relu(Tensor input, float negative_slope=0.01) -> Tensor")
+    registry.register_schema("elu", "elu(Tensor input, float alpha=1.0) -> Tensor")
     _register_binary_ops(("pow", "sub", "div", "true_divide", "min", "max", "fmin", "fmax", "atan2", "lerp", "addcmul", "addcdiv", "logaddexp", "logaddexp2", "hypot", "remainder", "fmod"), other_type="Any")
     registry.register_schema("where", "where(Tensor cond, Tensor x, Tensor y) -> Tensor")
     registry.register_schema("clamp", "clamp(Tensor input, Any min_val=None, Any max_val=None) -> Tensor")

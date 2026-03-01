@@ -20,9 +20,12 @@ from .ops import (
     add,
     matmul,
     mul,
+    div,
+    true_divide,
     relu,
     sum_,
     mean_,
+    std_,
     all_,
     any_,
     argmax,
@@ -101,6 +104,7 @@ from .ops import (
     erf,
     erfc,
     softplus,
+    gelu,
     silu,
     leaky_relu,
     elu,
@@ -149,6 +153,7 @@ from .ops import (
     setitem,
     batch_norm,
     group_norm,
+    layer_norm,
     dropout,
     pad,
     softmax,
@@ -157,6 +162,8 @@ from .ops import (
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
 registry.register("mul", "cpu", mul, meta=meta_infer.infer_binary)
+registry.register("div", "cpu", div, meta=meta_infer.infer_binary)
+registry.register("true_divide", "cpu", true_divide, meta=meta_infer.infer_binary)
 registry.register("matmul", "cpu", matmul, meta=meta_infer.infer_matmul)
 registry.register("relu", "cpu", relu, meta=meta_infer.infer_unary)
 registry.register("abs", "cpu", abs, meta=meta_infer.infer_unary)
@@ -241,10 +248,13 @@ registry.register("setitem", "cpu", setitem)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("mean", "cpu", mean_, meta=meta_infer.infer_sum)
+registry.register("std", "cpu", std_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)
+registry.register("layer_norm", "cpu", layer_norm, meta=meta_infer.infer_unary)
 registry.register("dropout", "cpu", dropout, meta=meta_infer.infer_unary)
+registry.register("gelu", "cpu", gelu, meta=meta_infer.infer_unary)
 registry.register("pad", "cpu", pad, meta=meta_infer.infer_unary)
 registry.register("softmax", "cpu", softmax, meta=meta_infer.infer_unary)
 registry.register("log_softmax", "cpu", log_softmax, meta=meta_infer.infer_unary)

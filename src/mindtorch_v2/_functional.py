@@ -268,8 +268,16 @@ def true_divide(a, b):
     return dispatch("true_divide", a.device.type, a, b)
 
 
-def mean(a, dim=None, keepdim=False, *, dtype=None):
+def mean(a, dim=None, keepdim=False, *, dtype=None, axis=None):
+    if axis is not None:
+        dim = axis
     return dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def std(a, dim=None, keepdim=False, unbiased=True, *, axis=None):
+    if axis is not None:
+        dim = axis
+    return dispatch("std", a.device.type, a, dim=dim, keepdim=keepdim, unbiased=unbiased)
 
 
 def sinh(a):
