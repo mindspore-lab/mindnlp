@@ -416,6 +416,13 @@ def record_function(name):
 class _FunctionEventAvgRow:
     def __init__(self, row):
         self._row = row
+        self._apply_row(row)
+
+    @staticmethod
+    def _format_us(value):
+        return f"{float(value):.3f}us"
+
+    def _apply_row(self, row):
         self.key = row.get("name")
         self.count = int(row.get("count", 0))
         self.self_cpu_time_total = float(row.get("self_time_ns", 0)) / 1000.0
@@ -436,6 +443,44 @@ class _FunctionEventAvgRow:
         self.scope = int(row.get("scope", 0))
         self.use_device = row.get("use_device", None)
         self.is_user_annotation = bool(row.get("is_user_annotation", False))
+        self.node_id = int(row.get("node_id", -1))
+        self.is_legacy = bool(row.get("is_legacy", False))
+        self.is_remote = bool(row.get("is_remote", False))
+        self.overload_name = str(row.get("overload_name", ""))
+        self.cpu_children = list(row.get("cpu_children", []))
+        self.cpu_parent = row.get("cpu_parent", None)
+        self.cpu_time_str = self._format_us(self.cpu_time)
+        self.cpu_time_total_str = self._format_us(self.cpu_time_total)
+        self.self_cpu_time_total_str = self._format_us(self.self_cpu_time_total)
+        self.device_time_str = self._format_us(self.device_time)
+        self.device_time_total_str = self._format_us(self.device_time_total)
+        self.self_device_time_total_str = self._format_us(self.self_device_time_total)
+        self.cuda_time = self.device_time
+
+    def add(self, other):
+        if not isinstance(other, _FunctionEventAvgRow):
+            raise TypeError("other must be FunctionEventAvg")
+
+        self._row["count"] = int(self._row.get("count", 0)) + int(other._row.get("count", 0))
+        for key in (
+            "self_time_ns",
+            "total_time_ns",
+            "device_time_ns",
+            "self_device_time_ns",
+            "cpu_memory_usage",
+            "self_cpu_memory_usage",
+            "device_memory_usage",
+            "self_device_memory_usage",
+            "flops",
+        ):
+            self._row[key] = int(self._row.get(key, 0)) + int(other._row.get(key, 0))
+
+        count = max(1, int(self._row.get("count", 0)))
+        self._row["avg_time_ns"] = self._row.get("total_time_ns", 0) // count
+        self._row["avg_device_time_ns"] = self._row.get("device_time_ns", 0) // count
+
+        self._apply_row(self._row)
+        return self
 
     def __repr__(self):
         return (
@@ -529,6 +574,12 @@ class _KeyAverages:
                     "scope": 0,
                     "use_device": None,
                     "is_user_annotation": False,
+                    "node_id": -1,
+                    "is_legacy": False,
+                    "is_remote": False,
+                    "overload_name": "",
+                    "cpu_children": [],
+                    "cpu_parent": None,
                 },
             )
             metadata = event.metadata or {}
@@ -696,6 +747,12 @@ class _KeyAverages:
             "scope": 0,
             "use_device": None,
             "is_user_annotation": False,
+            "node_id": -1,
+            "is_legacy": False,
+            "is_remote": False,
+            "overload_name": "",
+            "cpu_children": [],
+            "cpu_parent": None,
         }
         return _FunctionEventAvgRow(row)
 

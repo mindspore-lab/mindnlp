@@ -735,3 +735,43 @@ def test_key_averages_supports_index_lookup():
 
     assert rows.index(first) == 0
 
+def test_key_averages_row_exposes_torch_compat_fields_and_time_strings():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages()))
+
+    assert hasattr(row, "node_id")
+    assert hasattr(row, "is_legacy")
+    assert hasattr(row, "is_remote")
+    assert hasattr(row, "overload_name")
+    assert hasattr(row, "cpu_children")
+    assert hasattr(row, "cpu_parent")
+    assert hasattr(row, "cpu_time_str")
+    assert hasattr(row, "cpu_time_total_str")
+    assert hasattr(row, "self_cpu_time_total_str")
+    assert hasattr(row, "device_time_str")
+    assert hasattr(row, "device_time_total_str")
+    assert hasattr(row, "self_device_time_total_str")
+    assert hasattr(row, "cuda_time")
+    assert row.cpu_time_str.endswith("us")
+    assert row.device_time_str.endswith("us")
+
+
+def test_key_averages_row_add_merges_counts_and_times():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages()))
+    clone = row.__class__(dict(row._row))
+
+    base_count = row.count
+    base_total = row.cpu_time_total
+    merged = row.add(clone)
+
+    assert merged is row
+    assert row.count == base_count + clone.count
+    assert row.cpu_time_total >= base_total
+
