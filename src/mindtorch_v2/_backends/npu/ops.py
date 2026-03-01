@@ -90,6 +90,10 @@ def _npu_arange_1d(size, device):
     return _wrap_tensor(storage, shape, stride)
 
 
+def _is_310b_profile():
+    return npu_runtime.soc_profile() == "310b"
+
+
 def _npu_add_scalar_(tensor, scalar):
     runtime = npu_runtime.get_runtime((tensor.device.index or 0))
     stream = npu_state.current_stream((tensor.device.index or 0))
@@ -4713,8 +4717,69 @@ def _normalize_negative_indices(indices, dim_size):
     neg_mask = lt(indices, _scalar_to_npu_tensor(0, indices))
     if not _read_bool_scalar(any_(neg_mask)):
         return indices
+
+    # 310B static path: avoid SWhere by converting mask to int64 and blending arithmetically.
+    if _is_310b_profile():
+        if not aclnn.cast_symbols_ok():
+            raise RuntimeError("aclnnCast symbols not available")
+        runtime = npu_runtime.get_runtime((indices.device.index or 0))
+        stream = npu_state.current_stream((indices.device.index or 0))
+
+        shape = tuple(indices.shape)
+        stride = tuple(indices.stride)
+        numel = max(_numel(shape), 1)
+
+        mask_i64_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+        aclnn.cast(
+            _unwrap_storage(neg_mask).data_ptr(),
+            mask_i64_ptr,
+            shape,
+            stride,
+            bool_dtype,
+            int64_dtype,
+            runtime,
+            stream=stream.stream,
+        )
+        mask_i64_storage = npu_typed_storage_from_ptr(mask_i64_ptr, numel, int64_dtype, device=indices.device)
+        mask_i64 = _wrap_tensor(mask_i64_storage, shape, stride)
+
+        offset = _scalar_to_npu_tensor(int(dim_size), indices)
+        return add(indices, mul(mask_i64, offset))
+
     return where(neg_mask, add(indices, _scalar_to_npu_tensor(int(dim_size), indices)), indices)
 
+def _move_dim_to_last(a, dim):
+    dim = _normalize_dim(dim, a.dim())
+    out = a
+    for i in range(dim, a.dim() - 1):
+        out = view_backend.transpose(out, i, i + 1)
+    return out
+
+
+def _gather_310b_fallback(a, dim, index):
+    from .creation import ones_create, zeros_create
+
+    dim = _normalize_dim(dim, a.dim())
+    dim_size = int(a.shape[dim])
+    flat_idx = view_backend.reshape(index, (index.numel(),))
+    n = int(flat_idx.shape[0])
+
+    # Build one-hot(index) on NPU via scatter to avoid aclnnGather.
+    base = zeros_create((n, dim_size), dtype=a.dtype, device=a.device)
+    idx2d = view_backend.reshape(flat_idx, (n, 1))
+    src = ones_create((n, 1), dtype=a.dtype, device=a.device)
+    one_hot_2d = scatter(base, 1, idx2d, src)
+    one_hot = view_backend.reshape(one_hot_2d, tuple(index.shape) + (dim_size,))
+
+    # Move gather dim to last and broadcast over index dim.
+    moved = _move_dim_to_last(a, dim)
+    moved_shape = list(moved.shape)
+    moved_shape.insert(dim, 1)
+    moved = view_backend.reshape(moved, tuple(moved_shape))
+    moved = _npu_broadcast_to(moved, one_hot.shape)
+
+    weighted = mul(one_hot, moved)
+    return sum_(weighted, dim=weighted.dim() - 1, keepdim=False)
 def gather(a, dim, index):
     dim = _normalize_dim(dim, a.dim())
     _require_int64_indices(index, "gather")
@@ -4724,6 +4789,10 @@ def gather(a, dim, index):
         if i != dim and size != a.shape[i]:
             raise ValueError("index shape mismatch")
     _validate_index_bounds(index, a.shape[dim], allow_negative=False, name="gather")
+
+    if _is_310b_profile():
+        return _gather_310b_fallback(a, dim, index)
+
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     out_shape = index.shape
