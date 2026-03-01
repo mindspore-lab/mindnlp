@@ -12,6 +12,12 @@ def _to_numpy(t):
     return t._numpy_view()
 
 
+def _normalize_tensor_sequence_args(tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        return tuple(tensors[0])
+    return tuple(tensors)
+
+
 def _from_numpy(arr, dtype, device):
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
@@ -423,6 +429,7 @@ def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right
 
 
 def block_diag(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     arrays = [_to_numpy(t) for t in tensors]
     rows = sum(a.shape[0] for a in arrays)
     cols = sum(a.shape[1] for a in arrays)
@@ -454,6 +461,7 @@ def diag(a, diagonal=0):
 
 
 def cartesian_prod(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     arrays = [_to_numpy(t) for t in tensors]
     grids = np.meshgrid(*arrays, indexing="ij")
     stacked = np.stack([g.reshape(-1) for g in grids], axis=1)
