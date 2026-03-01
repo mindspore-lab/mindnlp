@@ -165,6 +165,7 @@ from .ops import (
     pad,
     softmax,
     log_softmax,
+    linalg_qr,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -333,3 +334,4 @@ registry.register("eye", "cpu", eye_create)
 registry.register("range", "cpu", range_create)
 registry.register("randn", "cpu", randn_create)
 registry.register("rand", "cpu", rand_create)
+registry.register("linalg_qr", "cpu", linalg_qr)

@@ -2198,6 +2198,27 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # LinalgQr (for torch.linalg.qr)
+        self.aclnn_linalg_qr_get_workspace = _optional_symbol(
+            libs,
+            "aclnnLinalgQrGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,  # self
+                ctypes.c_int64,   # mode
+                ctypes.c_void_p,  # Q out
+                ctypes.c_void_p,  # R out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_linalg_qr = _optional_symbol(
+            libs,
+            "aclnnLinalgQr",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -7811,3 +7832,56 @@ def erfinv(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
         if workspace is not None:
             runtime.defer_raw_free(workspace)
         _ = (self_keep, out_keep)
+
+
+def linalg_qr(self_ptr, q_ptr, r_ptr, self_shape, self_stride, q_shape, q_stride, r_shape, r_stride, dtype, mode, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_linalg_qr_get_workspace is None or bindings.aclnn_linalg_qr is None:
+        raise RuntimeError("aclnnLinalgQr symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    q_tensor, q_keep = _create_tensor(bindings, q_shape, q_stride, dtype, q_ptr)
+    r_tensor, r_keep = _create_tensor(bindings, r_shape, r_stride, dtype, r_ptr)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+
+    try:
+        ret = bindings.aclnn_linalg_qr_get_workspace(
+            self_tensor,
+            ctypes.c_int64(int(mode)),
+            q_tensor,
+            r_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLinalgQrGetWorkspaceSize failed: {ret}")
+
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+
+        ret = bindings.aclnn_linalg_qr(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLinalgQr failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(q_tensor)
+        bindings.acl_destroy_tensor(r_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, q_keep, r_keep)

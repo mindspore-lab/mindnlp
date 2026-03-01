@@ -363,50 +363,32 @@ def orthogonal_(tensor, gain=1.0):
     """
     if tensor.dim() < 2:
         raise ValueError("Only tensors with 2 or more dimensions are supported")
-    if 0 in tensor.shape:
-        warnings.warn("Initializing zero-element tensors is a no-op")
+    if tensor.numel() == 0:
         return tensor
 
+    rows = tensor.shape[0]
+    cols = tensor.numel() // rows
+    from .._creation import randn as _randn
+    flattened = _randn(rows, cols, dtype=tensor.dtype, device=tensor.device)
+
+    if rows < cols:
+        flattened.t_()
+
+    # Compute the QR factorization
+    from .._functional import linalg_qr, diag, sign
+    q, r = linalg_qr(flattened)
+    # Make Q uniform according to https://arxiv.org/pdf/math-ph/0609050.pdf
+    d = diag(r, 0)
+    ph = sign(d)
+    q = q * ph.reshape(1, ph.shape[0])
+
+    if rows < cols:
+        q = q.t()
+
     from .._autograd.grad_mode import no_grad
-    import numpy as np
-
     with no_grad():
-        rows = tensor.shape[0]
-        cols = 1
-        for s in tensor.shape[1:]:
-            cols *= s
-
-        # Generate random matrix
-        flat_shape = (rows, cols) if rows >= cols else (cols, rows)
-        # Use numpy for QR decomposition (not available through dispatch yet)
-        from .._random import _get_cpu_rng
-        rng = _get_cpu_rng()
-        a = rng.standard_normal(flat_shape)
-        q, r = np.linalg.qr(a)
-        # Make Q uniform according to https://arxiv.org/abs/math-ph/0609050
-        d = np.diag(r)
-        ph = np.sign(d)
-        q *= ph
-
-        if rows < cols:
-            q = q.T
-
-        q = q.reshape(tensor.shape)
-        q *= gain
-
-        # Copy result back to the tensor
-        if tensor.device.type == "cpu":
-            from .._dtype import to_numpy_dtype
-            arr = tensor._numpy_view()
-            arr[:] = q.astype(to_numpy_dtype(tensor.dtype))
-        else:
-            # For non-CPU: create a CPU tensor, copy data, then move to device
-            from .._creation import tensor as create_tensor
-            from .._dtype import to_numpy_dtype
-            q_arr = q.astype(to_numpy_dtype(tensor.dtype))
-            q_tensor = create_tensor(q_arr, dtype=tensor.dtype, device=tensor.device)
-            tensor.copy_(q_tensor)
-
+        tensor.view_as(q).copy_(q)
+        tensor.mul_(gain)
     return tensor
 
 

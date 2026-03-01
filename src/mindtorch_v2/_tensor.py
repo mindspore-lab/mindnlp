@@ -242,9 +242,31 @@ class Tensor:
             return self
         return self.transpose(0, 1)
 
+    def t_(self):
+        """In-place transpose for 2D tensors."""
+        if len(self.shape) > 2:
+            raise RuntimeError(f"t_() expects a tensor with <= 2 dimensions, but self is {len(self.shape)}D")
+        if len(self.shape) < 2:
+            return self
+        # Swap shape and stride dimensions in-place
+        self.shape = (self.shape[1], self.shape[0])
+        self.stride = (self.stride[1], self.stride[0])
+        return self
+
     @property
     def T(self):
         return self.t()
+
+    def view_as(self, other):
+        """Reshape this tensor to the same shape as other."""
+        return self.view(other.shape)
+
+    def new_empty(self, size, *, dtype=None, device=None, requires_grad=False):
+        """Create a new empty tensor with the same dtype and device as self."""
+        from ._creation import empty
+        dt = dtype if dtype is not None else self.dtype
+        dev = device if device is not None else self.device
+        return empty(size, dtype=dt, device=dev)
 
     def _ones_like(self):
         if self.device.type == "meta":
