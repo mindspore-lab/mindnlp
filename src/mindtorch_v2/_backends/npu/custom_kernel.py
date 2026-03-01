@@ -201,7 +201,16 @@ class AclnnCustomLauncher:
 
         try:
             # Phase 1: GetWorkspaceSize
-            full_args = list(get_workspace_args) + [
+            # Convert raw int handles (e.g. ACL tensor pointers) to ctypes
+            typed_args = []
+            for a in get_workspace_args:
+                if isinstance(a, int):
+                    typed_args.append(ctypes.c_void_p(a))
+                elif a is None:
+                    typed_args.append(ctypes.c_void_p(0))
+                else:
+                    typed_args.append(a)
+            full_args = typed_args + [
                 ctypes.byref(workspace_size),
                 ctypes.byref(executor),
             ]
@@ -252,10 +261,11 @@ def tensor_to_acl(t):
     from .aclnn import get_bindings, _create_tensor
 
     bindings = get_bindings()
+    strides = t.stride if isinstance(t.stride, tuple) else t.stride()
     return _create_tensor(
         bindings,
         t.shape,
-        t.stride(),
+        strides,
         t.dtype,
         t.storage().data_ptr(),
     )
