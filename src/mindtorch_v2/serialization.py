@@ -584,6 +584,20 @@ def _is_zip_checkpoint(file_obj):
                 pass
 
 
+def _coerce_map_location_arg(map_location):
+    if map_location in (None, "cpu"):
+        return map_location
+    if isinstance(map_location, dict) or callable(map_location):
+        return map_location
+
+    # Accept torch.device(cpu) style objects without importing torch.
+    device_type = getattr(map_location, "type", None)
+    if device_type is not None and str(device_type) == "cpu":
+        return "cpu"
+
+    return map_location
+
+
 def save(obj, f, pickle_module=pickle, pickle_protocol=2, **kwargs):
     """Save object in torch-compatible zip checkpoint format without torch import."""
     _check_filelike_for_write(f)
@@ -605,6 +619,7 @@ def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, **kw
     files if needed.
     """
     _check_filelike_for_read(f)
+    map_location = _coerce_map_location_arg(map_location)
     _ = pickle_module, weights_only, kwargs
 
     if _is_pathlike(f):

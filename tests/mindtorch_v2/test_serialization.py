@@ -213,6 +213,17 @@ def test_torch_load_with_map_location_callable(tmp_path):
     assert calls and set(calls) == {"cpu"}
 
 
+def test_torch_load_with_map_location_torch_device_cpu(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_state_dict_map_loc_device_cpu.pth"
+    torch.save(model.state_dict(), path)
+
+    loaded = mt.load(path, map_location=torch.device("cpu"))
+
+    assert isinstance(loaded, OrderedDict)
+    assert set(loaded.keys()) == {"weight", "bias"}
+
+
 def test_mindtorch_roundtrip_preserves_storage_aliasing():
     base = mt.tensor([0.0, 1.0, 2.0, 3.0])
     view1 = base[:3]
