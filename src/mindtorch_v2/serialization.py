@@ -274,6 +274,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, _ba
 
 
 def _tensor_to_proxy(tensor, storage_refs_by_id):
+    source_location = str(tensor.device)
     cpu_tensor = tensor.detach().to("cpu") if tensor.device.type != "cpu" else tensor.detach()
     storage = cpu_tensor.storage()
     untyped = storage.untyped_storage()
@@ -287,7 +288,7 @@ def _tensor_to_proxy(tensor, storage_refs_by_id):
         storage_ref = _StorageRef(
             storage_type=storage_type,
             key=str(len(storage_refs_by_id)),
-            location="cpu",
+            location=source_location,
             numel=int(storage.size()),
             raw_bytes=raw,
         )
@@ -403,14 +404,20 @@ class _TorchCompatUnpickler(pickle.Unpickler):
 
 
 def _apply_map_location(storage, location, map_location):
-    if map_location is None or map_location == "cpu":
+    if map_location is None:
+        return storage
+
+    if isinstance(map_location, str):
+        return storage
+
+    if hasattr(map_location, "type"):
         return storage
 
     if isinstance(map_location, dict):
         mapped = map_location.get(location, location)
         if mapped not in ("cpu", None):
-            raise NotImplementedError(
-                f"unsupported remapped location: {mapped}; only cpu is supported"
+            raise RuntimeError(
+                f"unsupported remapped location: {mapped}; target device is not available"
             )
         return storage
 
@@ -421,36 +428,59 @@ def _apply_map_location(storage, location, map_location):
         return remapped
 
     raise NotImplementedError(
-        "mindtorch_v2.load supports map_location=None, 'cpu', dict, or callable for torch zip checkpoints"
+        "mindtorch_v2.load supports map_location=None, string/device, dict, or callable for torch zip checkpoints"
     )
 
 
 
-
-def _resolve_storage_location(location, map_location):
-    if map_location is None or map_location == "cpu":
+def _resolve_storage_location(location, map_location, storage=None):
+    if map_location is None:
         return location
+    if isinstance(map_location, str):
+        return map_location
+    if hasattr(map_location, "type"):
+        if getattr(map_location, "index", None) is None:
+            return str(map_location.type)
+        return f"{map_location.type}:{map_location.index}"
     if isinstance(map_location, dict):
         return map_location.get(location, location)
     if callable(map_location):
+        remapped = map_location(storage, location)
+        if remapped is None:
+            return location
+        if isinstance(remapped, str):
+            return remapped
+        remap_device = getattr(remapped, "device", None)
+        if remap_device is not None:
+            return str(remap_device)
         return location
     return location
 
+
+def _validate_resolved_location(resolved_location):
+    if resolved_location in ("cpu", None):
+        return
+    raise RuntimeError(
+        f"unsupported checkpoint storage location: {resolved_location}; target device is not available"
+    )
+
+
 def _validate_map_location(map_location):
-    if map_location in (None, "cpu"):
+    if map_location is None:
+        return
+    if isinstance(map_location, str):
+        return
+    if hasattr(map_location, "type"):
         return
     if isinstance(map_location, dict):
-        for _, mapped in map_location.items():
-            if mapped not in ("cpu", None):
-                raise NotImplementedError(
-                    f"unsupported remapped location: {mapped}; only cpu is supported"
-                )
         return
     if callable(map_location):
         return
     raise NotImplementedError(
-        "mindtorch_v2.load supports map_location=None, 'cpu', dict, or callable for torch zip checkpoints"
+        "mindtorch_v2.load supports map_location=None, string/device, dict, or callable for torch zip checkpoints"
     )
+
+
 
 
 def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pickle_load_args):
@@ -472,11 +502,6 @@ def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pick
             storage_type, key, location, numel = saved_id[1:]
             key = _maybe_decode_ascii(key)
             location = _maybe_decode_ascii(location)
-            resolved_location = _resolve_storage_location(location, map_location)
-            if resolved_location not in ("cpu", None):
-                raise NotImplementedError(
-                    f"unsupported checkpoint storage location: {resolved_location}; only cpu is supported"
-                )
 
             if key in loaded_storages:
                 return loaded_storages[key]
@@ -486,6 +511,10 @@ def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pick
             np_dtype = to_numpy_dtype(dtype)
             arr = np.frombuffer(payload, dtype=np_dtype, count=int(numel)).copy()
             storage = typed_storage_from_numpy(arr, dtype=dtype, device="cpu")
+
+            resolved_location = _resolve_storage_location(location, map_location)
+            _validate_resolved_location(resolved_location)
+
             storage = _apply_map_location(storage, location, map_location)
             loaded_storages[key] = storage
             return storage
@@ -522,10 +551,7 @@ def _load_legacy_checkpoint(file_obj, map_location=None, weights_only=False, **p
             root_key = _maybe_decode_ascii(root_key)
             location = _maybe_decode_ascii(location)
             resolved_location = _resolve_storage_location(location, map_location)
-            if resolved_location not in ("cpu", None):
-                raise NotImplementedError(
-                    f"unsupported checkpoint storage location: {resolved_location}; only cpu is supported"
-                )
+            _validate_resolved_location(resolved_location)
 
             dtype = _storage_dtype_from_type(storage_type)
             if root_key not in deserialized_objects:

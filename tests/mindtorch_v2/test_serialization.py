@@ -7,6 +7,7 @@ import zipfile
 from collections import OrderedDict
 
 import mindtorch_v2 as mt
+import mindtorch_v2.serialization as ser
 import mindtorch_v2.nn as nn
 
 
@@ -252,8 +253,42 @@ def test_load_zip_non_cpu_location_without_remap_raises(tmp_path):
     torch.save({"x": torch.tensor([3.0])}, src)
     _patch_checkpoint_location_tag(src, patched, old=b"cpu", new=b"npu")
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(RuntimeError):
         mt.load(patched)
+
+
+def test_strict_map_location_callable_invoked_for_non_cpu_source(tmp_path):
+    src = tmp_path / "src_strict_callable.pth"
+    patched = tmp_path / "patched_strict_callable.pth"
+    torch.save({"x": torch.tensor([5.0])}, src)
+    _patch_checkpoint_location_tag(src, patched, old=b"cpu", new=b"npu")
+
+    calls = []
+
+    def mapper(storage, loc):
+        calls.append(loc)
+        return None
+
+    with pytest.raises(RuntimeError):
+        mt.load(patched, map_location=mapper)
+
+    assert calls == ["npu"]
+
+
+def test_strict_map_location_string_non_cpu_does_not_fallback_to_cpu(tmp_path):
+    path = tmp_path / "strict_map_loc_string.pth"
+    torch.save({"x": torch.tensor([7.0])}, path)
+
+    with pytest.raises(RuntimeError):
+        mt.load(path, map_location="npu:0")
+
+
+def test_strict_map_location_cuda_string_does_not_fallback_to_cpu(tmp_path):
+    path = tmp_path / "strict_map_loc_cuda.pth"
+    torch.save({"x": torch.tensor([9.0])}, path)
+
+    with pytest.raises(RuntimeError):
+        mt.load(path, map_location="cuda:0")
 
 
 def test_save_legacy_flag_false_is_explicitly_rejected(tmp_path):
@@ -266,6 +301,26 @@ def test_save_legacy_flag_true_still_writes_zip(tmp_path):
     path = tmp_path / "legacy_flag_true.pth"
     mt.save({"x": mt.tensor([1.0])}, path, _use_new_zipfile_serialization=True)
     assert zipfile.is_zipfile(path)
+
+
+def test_strict_save_preserves_source_location_in_storage_ref():
+    base = mt.tensor([1.0, 2.0])
+
+    class _FakeTensor:
+        device = mt.device("npu:0")
+        requires_grad = False
+
+        def detach(self):
+            return base
+
+    proxy = ser._tensor_to_proxy(_FakeTensor(), {})
+    assert proxy.storage_ref.location == "npu:0"
+
+
+def test_strict_save_cpu_source_location_stays_cpu():
+    t = mt.tensor([3.0])
+    proxy = ser._tensor_to_proxy(t, {})
+    assert proxy.storage_ref.location == "cpu"
 
 
 def test_mindtorch_roundtrip_preserves_storage_aliasing():
