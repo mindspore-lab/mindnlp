@@ -9,14 +9,9 @@ import mindtorch_v2 as torch
 def _reset_npu_state():
     import mindtorch_v2._backends.npu.state as npu_state
 
-    state = npu_state._state()
-    state.current_device = 0
-    state.current_streams = {}
-    state.default_streams = {}
+    npu_state._reset_state_for_test()
     yield
-    state.current_device = 0
-    state.current_streams = {}
-    state.default_streams = {}
+    npu_state._reset_state_for_test()
 
 
 def _stub_runtime(monkeypatch):
