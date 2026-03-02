@@ -67,3 +67,31 @@ def test_dispatch_sum_rejects_invalid_keepdim_type_matches_torch():
         pt.sum(pt.tensor([1.0]), keepdim="x")
 
     assert_torch_error(mt, th)
+
+def test_dispatch_addcmul_kwonly_value_matches_torch():
+    a = torch.tensor([1.0])
+    b = torch.tensor([2.0])
+    c = torch.tensor([3.0])
+
+    def mt():
+        dispatch("addcmul", a.device.type, a, b, c, 0.5)
+
+    def th():
+        pt.addcmul(pt.tensor([1.0]), pt.tensor([2.0]), pt.tensor([3.0]), 0.5)
+
+    assert_torch_error(mt, th)
+
+
+def test_dispatch_addcdiv_kwonly_value_matches_torch():
+    a = torch.tensor([1.0])
+    b = torch.tensor([2.0])
+    c = torch.tensor([3.0])
+
+    def mt():
+        dispatch("addcdiv", a.device.type, a, b, c, 0.5)
+
+    def th():
+        pt.addcdiv(pt.tensor([1.0]), pt.tensor([2.0]), pt.tensor([3.0]), 0.5)
+
+    assert_torch_error(mt, th)
+
