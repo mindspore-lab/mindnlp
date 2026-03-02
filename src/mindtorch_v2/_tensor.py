@@ -538,11 +538,11 @@ class Tensor:
 
     def cuda(self, device=None, non_blocking=False, memory_format=None):
         if device is None:
-            target = "npu"
+            target = "cuda"
         elif isinstance(device, str):
-            target = device.replace("cuda", "npu", 1)
+            target = device
         else:
-            target = f"npu:{int(device)}"
+            target = f"cuda:{int(device)}"
         return self.to(target, non_blocking=non_blocking, memory_format=memory_format)
 
     def _to_dtype(self, dtype):

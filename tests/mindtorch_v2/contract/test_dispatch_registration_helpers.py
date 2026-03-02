@@ -20,6 +20,11 @@ def test_resolve_dispatch_key_supports_cuda_reserved_dispatch_key():
     assert resolve_dispatch_key("cuda") is DispatchKey.PrivateUse1
 
 
+def test_resolve_dispatch_key_rejects_unknown_registration_device():
+    with pytest.raises(ValueError, match="unsupported registration device"):
+        resolve_dispatch_key("xpu")
+
+
 def test_register_forward_kernels_registers_cpu_npu_meta_from_one_call():
     op = _new_op("forward_batch")
 

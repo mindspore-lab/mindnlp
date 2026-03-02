@@ -133,23 +133,23 @@ _register_global_fallthroughs()
 def resolve_dispatch_key(device):
     if isinstance(device, DispatchKey):
         return device
+
+    label = None
     if hasattr(device, "type"):
-        if device.type == "meta":
-            return DispatchKey.Meta
-        if device.type == "npu":
-            return DispatchKey.NPU
-        if device.type == "cuda":
-            return DispatchKey.PrivateUse1
+        label = str(device.type).lower()
+    elif isinstance(device, str):
+        label = device.lower()
+
+    if label == "cpu":
         return DispatchKey.CPU
-    if device == "cuda":
-        return DispatchKey.PrivateUse1
-    if device == "meta":
-        return DispatchKey.Meta
-    if device == "npu":
+    if label == "npu":
         return DispatchKey.NPU
-    if device == "cpu":
-        return DispatchKey.CPU
-    return DispatchKey.CPU
+    if label == "meta":
+        return DispatchKey.Meta
+    if label == "cuda":
+        return DispatchKey.PrivateUse1
+
+    raise ValueError(f"unsupported registration device: {device}")
 
 
 _DISPATCH_KEY_STRING_MAP = {
