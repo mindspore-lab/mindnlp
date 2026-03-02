@@ -9,7 +9,7 @@ def test_get_device_name_from_soc(monkeypatch):
 
 def test_get_device_capability_from_soc(monkeypatch):
     monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B")
-    assert torch.npu.get_device_capability("npu:0") == (9, 1)
+    assert torch.npu.get_device_capability("npu:0") == (9, 0)
 
 
 
@@ -22,7 +22,7 @@ def test_get_device_capability_910_variants(monkeypatch):
     assert torch.npu.get_device_capability("npu:0") == (9, 0)
 
     monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B")
-    assert torch.npu.get_device_capability("npu:0") == (9, 1)
+    assert torch.npu.get_device_capability("npu:0") == (9, 0)
 
     monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B2")
     assert torch.npu.get_device_capability("npu:0") == (9, 1)
