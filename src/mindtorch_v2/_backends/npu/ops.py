@@ -77,15 +77,25 @@ def _npu_broadcast_to(tensor, shape):
 
 
 def _npu_arange_1d(size, device):
+    size = int(size)
+    shape = (size,)
+
+    if npu_runtime.soc_profile() == "310b":
+        from .creation import empty_create, ones_create
+
+        if size == 0:
+            return empty_create(shape, dtype=int64_dtype, device=device)
+        ones = ones_create(shape, dtype=int64_dtype, device=device)
+        return sub(cumsum(ones, dim=0), 1)
+
     runtime = npu_runtime.get_runtime((device.index or 0))
     stream = npu_state.current_stream((device.index or 0))
     if not aclnn.arange_symbols_ok():
         raise RuntimeError("aclnnArange symbols not available")
-    shape = (int(size),)
     stride = npu_runtime._contiguous_stride(shape)
     out_size = _numel(shape) * _dtype_itemsize(int64_dtype)
     out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
-    aclnn.arange(0, int(size), 1, out_ptr, shape, stride, int64_dtype, runtime, stream=stream.stream)
+    aclnn.arange(0, size, 1, out_ptr, shape, stride, int64_dtype, runtime, stream=stream.stream)
     storage = npu_typed_storage_from_ptr(out_ptr, _numel(shape), int64_dtype, device=device)
     return _wrap_tensor(storage, shape, stride)
 
@@ -1443,12 +1453,84 @@ def _build_repeat_interleave_indices(dim_size, repeats, device):
     return cat(idx_chunks, dim=0), output_size
 
 
+def _flip_310b_fallback(a, dims):
+    out = a
+    for d in dims:
+        size = int(out.shape[d])
+        if size <= 1:
+            continue
+        parts = split(out, 1, dim=d)
+        out = cat(tuple(reversed(parts)), dim=d)
+    return out
+
+
+def _topk_310b_fill_value(dtype, largest):
+    name = getattr(dtype, "name", None) or str(dtype).split(".")[-1]
+    if name in ("float16", "float32", "float64", "bfloat16"):
+        return -float("inf") if largest else float("inf")
+    if name == "int8":
+        return -128 if largest else 127
+    if name == "uint8":
+        return 0 if largest else 255
+    if name == "int16":
+        return -32768 if largest else 32767
+    if name == "int32":
+        return -2147483648 if largest else 2147483647
+    if name == "int64":
+        return -9223372036854775808 if largest else 9223372036854775807
+    raise RuntimeError(f"NPU topk 310B fallback does not support dtype {dtype}")
+
+
+def _topk_310b_fallback(a, k, dim, largest, sorted_flag):
+    from .creation import empty_create
+
+    out_shape = list(a.shape)
+    out_shape[dim] = int(k)
+    out_shape = tuple(out_shape)
+
+    if int(k) == 0:
+        values = empty_create(out_shape, dtype=a.dtype, device=a.device)
+        indices = empty_create(out_shape, dtype=int64_dtype, device=a.device)
+        return values, indices
+
+    work = a
+    values_parts = []
+    indices_parts = []
+    fill_value = _topk_310b_fill_value(a.dtype, largest)
+
+    for _ in range(int(k)):
+        if largest:
+            idx = argmax(work, dim=dim, keepdim=True)
+            val = amax(work, dim=dim, keepdim=True)
+        else:
+            idx = argmin(work, dim=dim, keepdim=True)
+            val = amin(work, dim=dim, keepdim=True)
+        values_parts.append(val)
+        indices_parts.append(idx)
+        work = scatter(work, dim, idx, fill_value)
+
+    if len(values_parts) == 1:
+        values = values_parts[0]
+        indices = indices_parts[0]
+    else:
+        values = cat(values_parts, dim=dim)
+        indices = cat(indices_parts, dim=dim)
+
+    if not bool(sorted_flag):
+        return values, indices
+    return values, indices
+
+
 def flip(a, dims):
     if a.device.type != "npu":
         raise ValueError("NPU flip expects NPU tensors")
     dims = _normalize_dims_tuple(dims, a.dim(), "flip")
     if len(dims) == 0:
         return a
+
+    if _is_310b_profile():
+        return _flip_310b_fallback(a, dims)
+
     if not aclnn.flip_symbols_ok():
         raise RuntimeError("aclnnFlip symbols not available")
     runtime = npu_runtime.get_runtime((a.device.index or 0))
@@ -1592,6 +1674,10 @@ def argsort(a, dim=-1, descending=False, stable=False):
         raise ValueError("NPU argsort expects NPU tensors")
     dim = _normalize_dim(dim, a.dim())
 
+    if _is_310b_profile():
+        _, indices = _topk_310b_fallback(a, k=a.shape[dim], dim=dim, largest=bool(descending), sorted_flag=True)
+        return indices
+
     # aclnnArgsort/aclnnSort can poison subsequent topk in current runtime.
     # Use topk(k=full_dim) for stable=False to keep behavior and runtime stability.
     if not stable:
@@ -1625,6 +1711,9 @@ def sort(a, dim=-1, descending=False, stable=False):
     if a.device.type != "npu":
         raise ValueError("NPU sort expects NPU tensors")
     dim = _normalize_dim(dim, a.dim())
+
+    if _is_310b_profile():
+        return _topk_310b_fallback(a, k=a.shape[dim], dim=dim, largest=bool(descending), sorted_flag=True)
 
     # Keep runtime stable for default unstable sort path.
     if not stable:
@@ -1665,6 +1754,10 @@ def topk(a, k, dim=-1, largest=True, sorted=True):
     dim_size = a.shape[dim]
     if k < 0 or k > dim_size:
         raise RuntimeError("selected index k out of range")
+
+    if _is_310b_profile():
+        return _topk_310b_fallback(a, k=k, dim=dim, largest=bool(largest), sorted_flag=bool(sorted))
+
     if not aclnn.topk_symbols_ok():
         raise RuntimeError("aclnnTopk symbols not available")
     runtime = npu_runtime.get_runtime((a.device.index or 0))
