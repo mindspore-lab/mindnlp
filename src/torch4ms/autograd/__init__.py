@@ -186,7 +186,7 @@ def backward(
         extractor = AutogradForwardExtractor(module)
         if forward_fn is None:
             forward_fn = extractor.get_ms_forward_fn(env, include_buffers=False)
-        if inputs is None:
+        if inputs is None or len(inputs) == 0:
             # 自动使用所有可训练参数作为 inputs（torch4ms.Tensor）
             param_list = extractor.get_trainable_params()
             inputs = tuple(_to_torch4ms_tensor(param, env) for param in param_list)
@@ -212,7 +212,50 @@ def backward(
     
     # Use GradOperation to compute gradients
     # If forward_fn is provided, use it directly; otherwise rebuild from computation graph
-    _run_backward(tensors, grad_tensors_, retain_graph, create_graph, inputs, forward_fn=forward_fn)
+    # 保存模块信息用于梯度同步
+    _run_backward(tensors, grad_tensors_, retain_graph, create_graph, inputs, forward_fn=forward_fn, module=module)
+
+
+def _sync_grad_to_param_grad(param_tensor: Tensor, grad_value: Tensor, env, module: Optional["torch.nn.Module"] = None, param_index: Optional[int] = None):
+    """
+    将 torch4ms.Tensor 的梯度同步到模型参数的 grad 属性
+    
+    如果提供了 module 和 param_index，将梯度同步到对应的模型参数。
+    否则，如果 param_tensor 本身就是 torch.nn.Parameter，直接同步。
+    
+    Args:
+        param_tensor: torch4ms.Tensor（可能是模型参数）
+        grad_value: 梯度值（torch4ms.Tensor）
+        env: Environment 对象
+        module: 可选的 PyTorch 模块，用于查找对应的参数
+        param_index: 可选的参数索引，用于在 module 中查找对应的参数
+    """
+    import torch.utils._mode_utils as mode_utils
+    from torch4ms.ops import mappings
+    
+    try:
+        # 如果提供了 module 和 param_index，直接同步到对应的参数
+        if module is not None and param_index is not None:
+            param_list = list(module.parameters())
+            if param_index < len(param_list):
+                original_param = param_list[param_index]
+                # 将梯度转换为普通 torch.Tensor 并设置到 grad 属性
+                with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+                    grad_torch = mappings.ms2t(grad_value._elem)
+                with torch.no_grad():
+                    original_param.grad = grad_torch
+                return
+        
+        # 如果 param_tensor 本身就是 torch.nn.Parameter（继承自 Tensor）
+        if isinstance(param_tensor, torch.nn.Parameter):
+            # 将梯度转换为普通 torch.Tensor 并设置到 grad 属性
+            with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+                grad_torch = mappings.ms2t(grad_value._elem)
+            with torch.no_grad():
+                param_tensor.grad = grad_torch
+    except Exception:
+        # 如果同步失败，忽略错误（不影响 _t4ms_grad 的设置）
+        pass
 
 
 def _run_backward(
@@ -222,6 +265,7 @@ def _run_backward(
     create_graph: bool,
     inputs: Tuple[Tensor, ...],
     forward_fn: Optional[Callable] = None,
+    module: Optional["torch.nn.Module"] = None,
 ) -> None:
     """
     Internal function to run backward pass using MindSpore.
@@ -268,6 +312,12 @@ def _run_backward(
             grad_fn = grad_op(forward_fn)
             
             try:
+                # 用当前 forward 的实际输出构造 sens，避免最后一批 batch size 不同时 sens 与 out 形状不一致
+                try:
+                    actual_out = forward_fn(*ms_inputs)
+                    grad_output = ops.ones_like(actual_out)
+                except Exception:
+                    pass  # 保持原 grad_output
                 # 调用 grad_fn: grad_fn(*inputs, grad_output)
                 grads = grad_fn(*ms_inputs, grad_output)
 
@@ -325,6 +375,12 @@ def _run_backward(
                             else:
                                 # 设置梯度（torch4ms-side）
                                 object.__setattr__(inp, "_t4ms_grad", grad_value)
+                            
+                            # 自动同步梯度到模型参数的 grad 属性（优先级 2：梯度自动同步）
+                            # 如果提供了 module，尝试同步到对应的模型参数
+                            # 这样 PyTorch 优化器就可以直接使用 param.grad
+                            _sync_grad_to_param_grad(inp, grad_value, env, module=module, param_index=i)
+                            
                             if _debug:
                                 try:
                                     print("[torch4ms][backward] write grad for input", i, "after:", object.__getattribute__(inp, "_t4ms_grad"))
@@ -633,6 +689,12 @@ def _run_grad(
             grad_fn = grad_op(forward_fn)
             
             try:
+                # 用当前 forward 的实际输出构造 sens，避免 batch size 不同时 sens 与 out 形状不一致
+                try:
+                    actual_out = forward_fn(*ms_inputs)
+                    grad_output = ops.ones_like(actual_out)
+                except Exception:
+                    pass
                 # 调用 grad_fn: grad_fn(*inputs, grad_output)
                 grads = grad_fn(*ms_inputs, grad_output)
                 

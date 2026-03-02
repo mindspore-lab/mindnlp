@@ -17,6 +17,16 @@ def t2ms(t, use_dlpack=True):
     """将 PyTorch 张量转换为 MindSpore 张量"""
     # 使用 no_dispatch 避免触发 torch4ms 的 dispatch 机制
     with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+        # 检查是否是 meta 设备上的 tensor
+        if t.device.type == 'meta':
+            raise RuntimeError(
+                "Cannot convert meta tensor to MindSpore tensor. "
+                "Meta tensors have no data. "
+                "If you're seeing this error, it may indicate that a tensor "
+                "was created on the meta device. Please ensure tensors are created "
+                "on a real device (CPU/GPU) before conversion."
+            )
+        
         is_bool = False
         if t.dtype == torch.bool:
             is_bool = True
