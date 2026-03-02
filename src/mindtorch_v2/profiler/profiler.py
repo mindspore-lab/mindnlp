@@ -822,10 +822,12 @@ class profile:
         with_flops=False,
         with_modules=False,
         experimental_config=None,
+        execution_trace_observer=None,
         acc_events=False,
         use_cuda=None,
+        custom_trace_id_callback=None,
     ):
-        del with_flops, with_modules, experimental_config, use_cuda
+        del execution_trace_observer, use_cuda
 
         self.activities = _resolve_activities(activities)
         self._session = _ProfilerSession(
@@ -838,12 +840,35 @@ class profile:
         self._stopped = False
         self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
         self._owns_tracemalloc = False
+
+        if schedule is not None and not callable(schedule):
+            raise TypeError("schedule must be callable")
+
         self.acc_events = bool(acc_events)
         self._preset_metadata = {}
         self._metadata = {}
 
-        if schedule is not None and not callable(schedule):
-            raise TypeError("schedule must be callable")
+        self.schedule = schedule if schedule is not None else (lambda _step: ProfilerAction.RECORD)
+        self.on_trace_ready = self._trace_ready
+        self.step_num = 0
+        self.current_action = self.schedule(self.step_num)
+        self.record_steps = schedule is not None
+        self.step_rec_fn = None
+        self.action_map = {}
+
+        self.profiler = None
+        self.mem_tl = None
+        self.preset_metadata = self._preset_metadata
+        self.record_shapes = bool(record_shapes)
+        self.profile_memory = bool(profile_memory)
+        self.with_stack = bool(with_stack)
+        self.with_flops = bool(with_flops)
+        self.with_modules = bool(with_modules)
+        self.experimental_config = experimental_config
+        self.use_device = None
+        self.custom_trace_id_callback = custom_trace_id_callback
+        self.execution_trace_observer = None
+
         self._schedule = schedule
         self._current_action = ProfilerAction.RECORD if schedule is None else ProfilerAction.NONE
 
@@ -889,6 +914,8 @@ class profile:
 
     def _set_action_for_step(self, step):
         self._current_action = self._action_for_step(step)
+        self.current_action = self._current_action
+        self.step_num = int(step)
         self._session.is_recording = self._current_action in (
             ProfilerAction.RECORD,
             ProfilerAction.RECORD_AND_SAVE,
@@ -906,6 +933,7 @@ class profile:
 
         self._started = True
         self._stopped = False
+        self.profiler = self._session
         self._maybe_start_cpu_memory_tracer()
         self._set_action_for_step(self._session.current_step)
 
@@ -994,6 +1022,9 @@ class profile:
 
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle)
+
+    def export_stacks(self, path, metric="self_cpu_time_total"):
+        self.key_averages().export_stacks(path, metric)
 
     def events(self):
         events = self._session.snapshot()
