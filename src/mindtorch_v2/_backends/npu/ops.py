@@ -4954,3 +4954,529 @@ def linalg_qr(a, mode='reduced'):
     Q = _wrap_tensor(q_storage, q_shape, q_stride)
     R = _wrap_tensor(r_storage, r_shape, r_stride)
     return Q, R
+
+
+# ---------------------------------------------------------------------------
+# Tensor indexing / selection ops
+# ---------------------------------------------------------------------------
+
+def narrow(a, dim, start, length):
+    """narrow — returns a view of the tensor narrowed along *dim*."""
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    new_shape = a.shape[:d] + (int(length),) + a.shape[d + 1:]
+    new_offset = a.offset + int(start) * a.stride[d]
+    return Tensor(a.storage(), new_shape, a.stride, new_offset)
+
+
+def select(a, dim, index):
+    """select — returns a view with *dim* removed at *index*."""
+    return _npu_select_view(a, dim if dim >= 0 else dim + a.dim(),
+                            int(index) if index >= 0 else int(index) + a.shape[dim if dim >= 0 else dim + a.dim()])
+
+
+def expand(a, sizes):
+    """expand — broadcast-expand a tensor (view, no copy)."""
+    from ..._tensor import Tensor
+    sizes = tuple(sizes)
+    ndiff = len(sizes) - a.dim()
+    if ndiff < 0:
+        raise RuntimeError("expand: number of sizes must be >= tensor dim")
+    src_shape = (1,) * ndiff + a.shape
+    src_stride = (0,) * ndiff + a.stride
+    out_shape = []
+    out_stride = []
+    for i, sz in enumerate(sizes):
+        if sz == -1:
+            out_shape.append(src_shape[i])
+            out_stride.append(src_stride[i])
+        elif src_shape[i] == 1:
+            out_shape.append(sz)
+            out_stride.append(0)
+        elif src_shape[i] == sz:
+            out_shape.append(sz)
+            out_stride.append(src_stride[i])
+        else:
+            raise RuntimeError(
+                f"expand: size {sz} not compatible with dim size {src_shape[i]}"
+            )
+    return Tensor(a.storage(), tuple(out_shape), tuple(out_stride), a.offset)
+
+
+def masked_fill(a, mask, value):
+    """masked_fill — out-of-place masked fill (returns a copy)."""
+    from ..._dispatch.dispatcher import dispatch
+    result = dispatch("clone", a.device.type, a)
+    return masked_fill_(result, mask, value)
+
+
+def masked_fill_(a, mask, value):
+    """masked_fill_ — in-place masked fill with scalar value."""
+    if not aclnn.masked_fill_scalar_symbols_ok():
+        raise RuntimeError("aclnnInplaceMaskedFillScalar symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_masked_fill_scalar(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        _npu_data_ptr(mask), mask.shape, mask.stride, mask.dtype,
+        value, runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_put_(a, indices, values, accumulate=False):
+    """index_put_ — in-place index put using list of index tensors."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    idx_ptrs = [_npu_data_ptr(t) for t in indices]
+    idx_shapes = [t.shape for t in indices]
+    idx_strides = [t.stride for t in indices]
+    idx_dtypes = [t.dtype for t in indices]
+
+    if hasattr(values, 'storage'):
+        val_ptr = _npu_data_ptr(values)
+        val_shape = values.shape
+        val_stride = values.stride
+        val_dtype = values.dtype
+    else:
+        # scalar
+        from .creation import tensor_create
+        import numpy as np
+        val_t = tensor_create(
+            np.array(values, dtype=npu_runtime._dtype_to_numpy(a.dtype)),
+            dtype=a.dtype, device=a.device,
+        )
+        val_ptr = _npu_data_ptr(val_t)
+        val_shape = val_t.shape
+        val_stride = val_t.stride
+        val_dtype = val_t.dtype
+
+    aclnn.index_put_impl(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        idx_ptrs, idx_shapes, idx_strides, idx_dtypes,
+        val_ptr, val_shape, val_stride, val_dtype,
+        accumulate, False,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_put(a, indices, values, accumulate=False):
+    """index_put — out-of-place index put (returns a copy)."""
+    from ..._dispatch.dispatcher import dispatch
+    result = dispatch("clone", a.device.type, a)
+    return index_put_(result, indices, values, accumulate)
+
+
+def index_copy_(a, dim, index, source):
+    """index_copy_ — in-place copy along dim using index tensor."""
+    if not aclnn.index_copy_symbols_ok():
+        raise RuntimeError("aclnnInplaceIndexCopy symbols not available")
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_index_copy(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        _npu_data_ptr(source), source.shape, source.stride, source.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_fill_(a, dim, index, value):
+    """index_fill_ — in-place fill along dim using index tensor with scalar value."""
+    if not aclnn.index_fill_symbols_ok():
+        raise RuntimeError("aclnnInplaceIndexFill symbols not available")
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_index_fill(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        value, runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_add_(a, dim, index, source, alpha=1.0):
+    """index_add_ — in-place add along dim using index tensor with alpha."""
+    if not aclnn.index_add_symbols_ok():
+        raise RuntimeError("aclnnIndexAdd symbols not available")
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    # aclnnIndexAdd is not in-place: self → out. Use self as both.
+    aclnn.index_add(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        _npu_data_ptr(source), source.shape, source.stride, source.dtype,
+        float(alpha),
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def scatter_(a, dim, index, src):
+    """scatter_ — in-place scatter along dim."""
+    d = dim if dim >= 0 else dim + a.dim()
+    _require_int64_indices(index, "scatter_")
+
+    if hasattr(src, "shape"):
+        src_tensor = src
+    else:
+        src_tensor = _scalar_to_npu_tensor(src, a)
+
+    if src_tensor.shape != index.shape:
+        src_tensor = _npu_broadcast_to(src_tensor, index.shape)
+
+    if not aclnn.scatter_symbols_ok():
+        raise RuntimeError("aclnnScatter symbols not available")
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    # Use self as both input and output for in-place
+    aclnn.scatter(
+        _npu_data_ptr(a),
+        _npu_data_ptr(index),
+        _npu_data_ptr(src_tensor),
+        _npu_data_ptr(a),
+        a.shape, a.stride, a.dtype,
+        index.shape, index.stride, index.dtype,
+        src_tensor.shape, src_tensor.stride, src_tensor.dtype,
+        d, 0,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def scatter_add_(a, dim, index, src):
+    """scatter_add_ — in-place scatter add along dim."""
+    d = dim if dim >= 0 else dim + a.dim()
+    _require_int64_indices(index, "scatter_add_")
+
+    if not aclnn.scatter_add_symbols_ok():
+        raise RuntimeError("aclnnScatterAdd symbols not available")
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_ptr = npu_runtime._alloc_device(max(_numel(a.shape), 1) * _dtype_itemsize(a.dtype), runtime=runtime)
+    out_stride = npu_runtime._contiguous_stride(a.shape)
+
+    aclnn.scatter_add_op(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        _npu_data_ptr(src), src.shape, src.stride, src.dtype,
+        out_ptr, a.shape, out_stride, a.dtype,
+        runtime, stream=stream.stream,
+    )
+    # Copy result back to a
+    nbytes = max(_numel(a.shape), 1) * _dtype_itemsize(a.dtype)
+    ret = npu_runtime.acl.rt.memcpy(_npu_data_ptr(a), nbytes, out_ptr, nbytes, 3)
+    if ret != npu_runtime.ACL_ERROR_CODE:
+        raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+    runtime.defer_free(out_ptr)
+    return a
+
+
+def masked_scatter_(a, mask, source):
+    """masked_scatter_ — in-place masked scatter."""
+    if not aclnn.masked_scatter_symbols_ok():
+        raise RuntimeError("aclnnInplaceMaskedScatter symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_masked_scatter(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        _npu_data_ptr(mask), mask.shape, mask.stride, mask.dtype,
+        _npu_data_ptr(source), source.shape, source.stride, source.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def unfold(a, dimension, size, step):
+    """unfold — returns a view of the original tensor with an additional dimension of size *size*."""
+    from ..._tensor import Tensor
+    d = dimension if dimension >= 0 else dimension + a.dim()
+    dim_size = a.shape[d]
+    n_windows = max(0, (dim_size - size) // step + 1)
+
+    new_shape = a.shape[:d] + (n_windows,) + a.shape[d + 1:] + (size,)
+    new_stride = a.stride[:d] + (a.stride[d] * step,) + a.stride[d + 1:] + (a.stride[d],)
+    return Tensor(a.storage(), new_shape, new_stride, a.offset)
+
+
+# ---------------------------------------------------------------------------
+# Tensor indexing / selection ops
+# ---------------------------------------------------------------------------
+
+def narrow(a, dim, start, length):
+    """Narrow: return a view of tensor along dim from start to start+length."""
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    new_shape = list(a.shape)
+    new_shape[d] = int(length)
+    new_offset = a.offset + int(start) * a.stride[d]
+    return Tensor(a.storage(), tuple(new_shape), a.stride, new_offset)
+
+
+def select(a, dim, index):
+    """Select: remove dim by indexing a single element along it (view op)."""
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    idx = int(index)
+    if idx < 0:
+        idx += a.shape[d]
+    new_shape = list(a.shape)
+    del new_shape[d]
+    new_stride = list(a.stride)
+    new_offset = a.offset + idx * a.stride[d]
+    del new_stride[d]
+    return Tensor(a.storage(), tuple(new_shape), tuple(new_stride), new_offset)
+
+
+def expand(a, sizes):
+    """Expand: broadcast tensor to larger sizes (view op, no copy)."""
+    from ..._tensor import Tensor
+    sizes = tuple(sizes)
+    ndiff = len(sizes) - a.dim()
+    if ndiff < 0:
+        raise RuntimeError("expand: number of sizes must be >= tensor dim")
+    src_shape = (1,) * ndiff + a.shape
+    src_stride = (0,) * ndiff + a.stride
+    out_shape = []
+    out_stride = []
+    for i, sz in enumerate(sizes):
+        if sz == -1:
+            out_shape.append(src_shape[i])
+            out_stride.append(src_stride[i])
+        elif src_shape[i] == 1:
+            out_shape.append(sz)
+            out_stride.append(0)
+        elif src_shape[i] == sz:
+            out_shape.append(sz)
+            out_stride.append(src_stride[i])
+        else:
+            raise RuntimeError(
+                f"expand: size {sz} not compatible with dim size {src_shape[i]}"
+            )
+    return Tensor(a.storage(), tuple(out_shape), tuple(out_stride), a.offset)
+
+
+def masked_fill(a, mask, value):
+    """Non-inplace masked fill — returns a copy with mask applied."""
+    result = a.clone()
+    masked_fill_(result, mask, value)
+    return result
+
+
+def masked_fill_(a, mask, value):
+    """In-place masked fill using aclnnInplaceMaskedFillScalar."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_masked_fill_scalar(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        _npu_data_ptr(mask), mask.shape, mask.stride, mask.dtype,
+        value, runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_put_(a, indices, values, accumulate=False):
+    """In-place index_put_ using aclnnIndexPutImpl."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    index_ptrs = [_npu_data_ptr(t) for t in indices]
+    index_shapes = [t.shape for t in indices]
+    index_strides = [t.stride for t in indices]
+    index_dtypes = [t.dtype for t in indices]
+    val_ptr = _npu_data_ptr(values)
+    aclnn.index_put_impl(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        index_ptrs, index_shapes, index_strides, index_dtypes,
+        val_ptr, values.shape, values.stride, values.dtype,
+        accumulate, False, runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_put(a, indices, values, accumulate=False):
+    """Non-inplace index_put — returns a copy."""
+    result = a.clone()
+    index_put_(result, indices, values, accumulate)
+    return result
+
+
+def index_copy_(a, dim, index, source):
+    """In-place index_copy_ using aclnnInplaceIndexCopy."""
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_index_copy(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        _npu_data_ptr(source), source.shape, source.stride, source.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_fill_(a, dim, index, value):
+    """In-place index_fill_ using aclnnInplaceIndexFill."""
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_index_fill(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        value, runtime, stream=stream.stream,
+    )
+    return a
+
+
+def index_add_(a, dim, index, source, alpha=1.0):
+    """In-place index_add_ using aclnnIndexAdd (writes to self as out)."""
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.index_add(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        _npu_data_ptr(source), source.shape, source.stride, source.dtype,
+        float(alpha),
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def scatter_(a, dim, index, src):
+    """In-place scatter_ — delegates to existing scatter with self as out."""
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if isinstance(src, Tensor):
+        src_ptr = _npu_data_ptr(src)
+        src_shape = src.shape
+        src_stride = src.stride
+        src_dtype = src.dtype
+    else:
+        # Scalar src — create a filled tensor
+        from .creation import tensor_create
+        import numpy as np
+        src_arr = np.full(a.shape, src, dtype=npu_runtime._dtype_to_numpy(a.dtype))
+        src_t = tensor_create(src_arr, dtype=a.dtype, device=a.device)
+        src_ptr = _npu_data_ptr(src_t)
+        src_shape = src_t.shape
+        src_stride = src_t.stride
+        src_dtype = src_t.dtype
+    aclnn.scatter(
+        _npu_data_ptr(a),
+        _npu_data_ptr(a),
+        a.shape, a.stride, a.dtype,
+        index.shape, index.stride, index.dtype,
+        src_shape, src_stride, src_dtype,
+        d, 0, runtime, stream=stream.stream,
+    )
+    return a
+
+
+def scatter_add_(a, dim, index, src):
+    """In-place scatter_add_ using aclnnScatterAdd."""
+    d = dim if dim >= 0 else dim + a.dim()
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.scatter_add_op(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        d,
+        _npu_data_ptr(index), index.shape, index.stride, index.dtype,
+        _npu_data_ptr(src), src.shape, src.stride, src.dtype,
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def masked_scatter_(a, mask, source):
+    """In-place masked_scatter_ using aclnnInplaceMaskedScatter."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    aclnn.inplace_masked_scatter(
+        _npu_data_ptr(a), a.shape, a.stride, a.dtype,
+        _npu_data_ptr(mask), mask.shape, mask.stride, mask.dtype,
+        _npu_data_ptr(source), source.shape, source.stride, source.dtype,
+        runtime, stream=stream.stream,
+    )
+    return a
+
+
+def unfold(a, dimension, size, step):
+    """Unfold along a dimension — returns a higher-dimensional view/copy."""
+    d = dimension if dimension >= 0 else dimension + a.dim()
+    dim_size = a.shape[d]
+    n_windows = max(0, (dim_size - size) // step + 1)
+    if n_windows == 0:
+        new_shape = list(a.shape)
+        new_shape[d] = 0
+        new_shape.append(size)
+        out_shape = tuple(new_shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_numel = 0
+        itemsize = _dtype_itemsize(a.dtype)
+        runtime = npu_runtime.get_runtime((a.device.index or 0))
+        out_ptr = npu_runtime._alloc_device(max(itemsize, 1), runtime=runtime)
+        storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+        return _wrap_tensor(storage, out_shape, out_stride)
+    # Build result by gathering slices
+    # Each window is a[..., i*step:i*step+size, ...] along dim d
+    # Output shape: a.shape with a.shape[d] replaced by n_windows, plus trailing `size`
+    slices = []
+    for i in range(n_windows):
+        start = i * step
+        # Use the existing view-based slice
+        sliced = _npu_slice_view(a, d, start, start + size)
+        slices.append(sliced)
+    # Stack slices along dim d, then the window elements are along d+1
+    # Actually, unfold should have shape [..., n_windows, ..., size] with size at end
+    # The simplest correct approach: use contiguous + D2D copies
+    out_shape = list(a.shape)
+    out_shape[d] = n_windows
+    out_shape.append(size)
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_ptr = npu_runtime._alloc_device(max(out_numel * itemsize, 1), runtime=runtime)
+    storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+    result = _wrap_tensor(storage, out_shape, out_stride)
+    # Fill each window slot
+    for i in range(n_windows):
+        start = i * step
+        sliced = _npu_slice_view(a, d, start, start + size)
+        # sliced has shape [..., size, ...] with size at dim d
+        # We need to copy this into result[..., i, ..., :] where i is at dim d and : is at the end
+        # Build destination view
+        dst = _npu_select_view(result, d, i)
+        # dst has shape [..., ...rest..., size] — the original dims except d, plus trailing size
+        # sliced needs to be transposed: move dim d to the end
+        # Use contiguous copy approach
+        sliced_contig = sliced.contiguous()
+        dst_shape_flat = _numel(dst.shape)
+        src_ptr = _npu_data_ptr(sliced_contig)
+        dst_ptr_val = _npu_data_ptr(dst)
+        copy_bytes = dst_shape_flat * itemsize
+        if copy_bytes > 0:
+            npu_runtime.acl.rt.memcpy(dst_ptr_val, copy_bytes, src_ptr, copy_bytes, 3)
+    return result

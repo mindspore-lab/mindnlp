@@ -167,6 +167,20 @@ from .ops import (
     pad,
     pad_sequence,
     linalg_qr,
+    narrow,
+    select,
+    expand,
+    masked_fill,
+    masked_fill_,
+    index_put_,
+    index_put,
+    index_copy_,
+    index_fill_,
+    index_add_,
+    scatter_,
+    scatter_add_,
+    masked_scatter_,
+    unfold,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -356,6 +370,22 @@ registry.register("dropout", "npu", dropout, meta=meta_infer.infer_unary)
 
 # Linalg operations
 registry.register("linalg_qr", "npu", linalg_qr)
+
+# Tensor indexing / selection ops
+registry.register("narrow", "npu", narrow)
+registry.register("select", "npu", select)
+registry.register("expand", "npu", expand)
+registry.register("masked_fill", "npu", masked_fill, meta=meta_infer.infer_unary)
+registry.register("masked_fill_", "npu", masked_fill_, meta=meta_infer.infer_unary)
+registry.register("index_put_", "npu", index_put_)
+registry.register("index_put", "npu", index_put)
+registry.register("index_copy_", "npu", index_copy_)
+registry.register("index_fill_", "npu", index_fill_)
+registry.register("index_add_", "npu", index_add_)
+registry.register("scatter_", "npu", scatter_)
+registry.register("scatter_add_", "npu", scatter_add_)
+registry.register("masked_scatter_", "npu", masked_scatter_)
+registry.register("unfold", "npu", unfold)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

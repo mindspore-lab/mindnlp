@@ -166,6 +166,20 @@ from .ops import (
     softmax,
     log_softmax,
     linalg_qr,
+    narrow,
+    select,
+    expand,
+    masked_fill,
+    masked_fill_,
+    index_put_,
+    index_put,
+    index_copy_,
+    index_fill_,
+    index_add_,
+    scatter_,
+    scatter_add_,
+    masked_scatter_,
+    unfold,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -335,3 +349,19 @@ registry.register("range", "cpu", range_create)
 registry.register("randn", "cpu", randn_create)
 registry.register("rand", "cpu", rand_create)
 registry.register("linalg_qr", "cpu", linalg_qr)
+
+# Tensor indexing / selection ops
+registry.register("narrow", "cpu", narrow)
+registry.register("select", "cpu", select)
+registry.register("expand", "cpu", expand)
+registry.register("masked_fill", "cpu", masked_fill, meta=meta_infer.infer_unary)
+registry.register("masked_fill_", "cpu", masked_fill_, meta=meta_infer.infer_unary)
+registry.register("index_put_", "cpu", index_put_)
+registry.register("index_put", "cpu", index_put)
+registry.register("index_copy_", "cpu", index_copy_)
+registry.register("index_fill_", "cpu", index_fill_)
+registry.register("index_add_", "cpu", index_add_)
+registry.register("scatter_", "cpu", scatter_)
+registry.register("scatter_add_", "cpu", scatter_add_)
+registry.register("masked_scatter_", "cpu", masked_scatter_)
+registry.register("unfold", "cpu", unfold)
