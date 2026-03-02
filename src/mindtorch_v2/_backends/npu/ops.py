@@ -4702,24 +4702,37 @@ def _require_int64_indices(indices, name):
 def _validate_index_bounds(indices, dim_size, allow_negative, name):
     if indices.numel() == 0:
         return
+
+    # NOTE:
+    # Some CANN stacks can enter an unstable state after specific kernels
+    # (observed after layer_norm) where bool reduction path via any_ -> aclnn.cast
+    # fails with aclnnCastGetWorkspaceSize error 561103. To keep gather/take family
+    # stable and torch-aligned for index errors, do scalar bound checks on host.
+    host_idx = indices.to("cpu").numpy()
+
     if allow_negative:
-        min_ok = _scalar_to_npu_tensor(-int(dim_size), indices)
-        max_ok = _scalar_to_npu_tensor(int(dim_size - 1), indices)
+        lower = -int(dim_size)
     else:
-        min_ok = _scalar_to_npu_tensor(0, indices)
-        max_ok = _scalar_to_npu_tensor(int(dim_size - 1), indices)
-    below_min = lt(indices, min_ok)
-    above_max = gt(indices, max_ok)
-    if _read_bool_scalar(any_(below_min)) or _read_bool_scalar(any_(above_max)):
+        lower = 0
+    upper = int(dim_size - 1)
+
+    if host_idx.size == 0:
+        return
+
+    if (host_idx < lower).any() or (host_idx > upper).any():
         raise IndexError(f"{name} indices out of range")
 
 def _normalize_negative_indices(indices, dim_size):
-    neg_mask = lt(indices, _scalar_to_npu_tensor(0, indices))
-    if not _read_bool_scalar(any_(neg_mask)):
+    host_idx = indices.to("cpu").numpy()
+    if host_idx.size == 0:
         return indices
 
-    # 310B static path: avoid SWhere by converting mask to int64 and blending arithmetically.
+    if not (host_idx < 0).any():
+        return indices
+
+    # Keep 310B-specific device-side workaround to avoid s_where path on 310B.
     if _is_310b_profile():
+        neg_mask = lt(indices, _scalar_to_npu_tensor(0, indices))
         if not aclnn.cast_symbols_ok():
             raise RuntimeError("aclnnCast symbols not available")
         runtime = npu_runtime.get_runtime((indices.device.index or 0))
@@ -4746,7 +4759,17 @@ def _normalize_negative_indices(indices, dim_size):
         offset = _scalar_to_npu_tensor(int(dim_size), indices)
         return add(indices, mul(mask_i64, offset))
 
-    return where(neg_mask, add(indices, _scalar_to_npu_tensor(int(dim_size), indices)), indices)
+    host_norm = host_idx.copy()
+    host_norm[host_norm < 0] += int(dim_size)
+
+    from .creation import tensor_create
+
+    return tensor_create(
+        host_norm,
+        dtype=int64_dtype,
+        device=indices.device,
+        requires_grad=False,
+    )
 
 def _move_dim_to_last(a, dim):
     dim = _normalize_dim(dim, a.dim())
