@@ -2,10 +2,16 @@ import numpy as np
 import torch
 import io
 import builtins
+import pickle
 from collections import OrderedDict
 
 import mindtorch_v2 as mt
 import mindtorch_v2.nn as nn
+
+
+class _CustomPayload:
+    def __init__(self, value):
+        self.value = value
 
 
 def test_serialization_does_not_import_torch_runtime(monkeypatch):
@@ -142,6 +148,40 @@ def test_torch_save_optimizer_state_then_mindtorch_load(tmp_path):
     assert "param_groups" in loaded
     assert isinstance(loaded["state"], dict)
     assert isinstance(loaded["param_groups"], list)
+
+
+def test_weights_only_allows_torch_zip_state_dict(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_weights_only_zip.pth"
+    torch.save(model.state_dict(), path)
+
+    loaded = mt.load(path, weights_only=True)
+
+    assert isinstance(loaded, OrderedDict)
+    assert set(loaded.keys()) == {"weight", "bias"}
+
+
+def test_weights_only_allows_torch_legacy_state_dict(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_weights_only_legacy.pth"
+    torch.save(model.state_dict(), path, _use_new_zipfile_serialization=False)
+
+    loaded = mt.load(path, weights_only=True)
+
+    assert isinstance(loaded, OrderedDict)
+    assert set(loaded.keys()) == {"weight", "bias"}
+
+
+def test_weights_only_rejects_custom_global(tmp_path):
+    obj = {
+        "weight": mt.tensor([1.0]),
+        "meta": _CustomPayload(7),
+    }
+    path = tmp_path / "weights_only_reject_custom.pth"
+    mt.save(obj, path)
+
+    with pytest.raises(pickle.UnpicklingError, match="weights_only"):
+        mt.load(path, weights_only=True)
 
 
 def test_torch_load_with_map_location_dict(tmp_path):
