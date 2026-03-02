@@ -12,6 +12,24 @@ def test_get_device_capability_from_soc(monkeypatch):
     assert torch.npu.get_device_capability("npu:0") == (9, 1)
 
 
+
+
+def test_get_device_capability_910_variants(monkeypatch):
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910")
+    assert torch.npu.get_device_capability("npu:0") == (9, 0)
+
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910A")
+    assert torch.npu.get_device_capability("npu:0") == (9, 0)
+
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B")
+    assert torch.npu.get_device_capability("npu:0") == (9, 1)
+
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910B2")
+    assert torch.npu.get_device_capability("npu:0") == (9, 1)
+
+    monkeypatch.setattr(torch.npu, "_get_soc_name", lambda: "Ascend910C")
+    assert torch.npu.get_device_capability("npu:0") == (9, 2)
+
 def test_peer_access_unsupported():
     assert torch.npu.can_device_access_peer(0, 1) is False
     with pytest.raises(RuntimeError):
