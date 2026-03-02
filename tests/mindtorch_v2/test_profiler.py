@@ -810,3 +810,45 @@ def test_key_averages_export_chrome_trace_contains_row_entries(tmp_path):
     assert all("count" in event.get("args", {}) for event in events)
     assert all("self_cpu_time_total" in event.get("args", {}) for event in events)
 
+
+
+def test_profile_exposes_scheduler_state_attributes():
+    prof = torch.profiler.profile()
+
+    assert hasattr(prof, "schedule")
+    assert hasattr(prof, "on_trace_ready")
+    assert hasattr(prof, "step_num")
+    assert hasattr(prof, "current_action")
+    assert hasattr(prof, "record_steps")
+    assert hasattr(prof, "action_map")
+    assert hasattr(prof, "profiler")
+    assert hasattr(prof, "mem_tl")
+
+
+def test_profile_scheduler_state_updates_step_num_and_current_action():
+    sched = torch.profiler.schedule(wait=1, warmup=1, active=1, repeat=1, skip_first=0)
+
+    with torch.profiler.profile(schedule=sched) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+        assert prof.step_num == 0
+        first_action = prof.current_action
+        prof.step()
+        _ = x + x
+        second_action = prof.current_action
+
+    assert first_action != second_action
+    assert prof.step_num >= 1
+
+
+def test_profile_export_stacks_delegates_to_key_averages(tmp_path):
+    out = tmp_path / "profile_stacks.txt"
+
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_stacks(str(out), "self_cpu_time_total")
+
+    assert out.exists()
+    assert isinstance(out.read_text(encoding="utf-8"), str)
