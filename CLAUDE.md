@@ -240,6 +240,30 @@ For GPU/NPU devices, NEVER use numpy for computation. Follow this priority order
 2. **Composite of existing kernels** - Build complex ops from simpler dispatched ops
 3. **NumPy fallback** - ONLY for CPU backend
 
+### CRITICAL: NPU Must Prefer Large ACLNN Kernels Over Composite Small Ops
+
+**MANDATORY**: When an ACLNN large kernel exists for an operation, you **MUST** use it directly instead of compositing multiple small ops via dispatch.
+
+- **Check `_backends/npu/aclnn.py` FIRST** before implementing any NPU op as a composite
+- If `aclnn<OpName>` bindings exist (or can be added from the ACLNN C library headers), use them
+- Composite small-op implementations are **only acceptable** when no ACLNN large kernel is available
+- After merging any PR that adds composite NPU ops, a **follow-up PR must be created** to replace them with ACLNN large kernels wherever possible
+- This rule exists because compositing small ops on NPU incurs significant kernel launch overhead and prevents hardware-level fusion
+
+**Example — DO this:**
+```python
+# Use the single ACLNN large kernel
+aclnn.mean(input_ptr, out_ptr, shape, stride, dtype, dims, keepdim, ...)
+```
+
+**Example — Do NOT do this (when large kernel exists):**
+```python
+# BAD: compositing small ops when aclnnMean is available
+sum_result = dispatch("sum", "npu", a, dim=dim, keepdim=keepdim)
+count = tensor(float(n), device=a.device)
+result = dispatch("div", "npu", sum_result, count)
+```
+
 ### Ascend NPU Backend Migration Guide
 
 When adding support for a new device (e.g., migrating from CPU to Ascend):
