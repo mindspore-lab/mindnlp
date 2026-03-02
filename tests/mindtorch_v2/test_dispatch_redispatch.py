@@ -3,6 +3,10 @@ from mindtorch_v2._dispatch.keys import DispatchKey
 from mindtorch_v2._dispatch.registry import registry
 
 
+def _register_schema(op_name):
+    registry.register_schema(op_name, f"{op_name}(Tensor input) -> Tensor")
+
+
 def test_redispatch_drops_autograd_key():
     def cpu_impl(a):
         return f"cpu:{a}"
@@ -11,6 +15,7 @@ def test_redispatch_drops_autograd_key():
         keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
         return redispatch("test_redispatch", keyset, a)
 
+    _register_schema("test_redispatch")
     registry.register_kernel("test_redispatch", DispatchKey.CPU, cpu_impl)
     registry.register_kernel("test_redispatch", DispatchKey.Autograd, autograd_impl)
     out = dispatch("test_redispatch", "cpu", "x")
@@ -26,6 +31,7 @@ def test_redispatch_drops_backend_specific_autograd_key():
         keyset = current_dispatch_keyset().without({DispatchKey.Autograd, DispatchKey.AutogradCPU})
         return redispatch("test_redispatch_backend", keyset, a)
 
+    _register_schema("test_redispatch_backend")
     registry.register_kernel("test_redispatch_backend", DispatchKey.CPU, cpu_impl)
     registry.register_kernel("test_redispatch_backend", DispatchKey.AutogradCPU, autograd_cpu_impl)
 
@@ -53,6 +59,7 @@ def test_dispatch_prefers_backend_specific_autograd_key_over_generic():
         keyset = current_dispatch_keyset().without({DispatchKey.Autograd, DispatchKey.AutogradCPU})
         return redispatch("test_autograd_key_priority", keyset, a)
 
+    _register_schema("test_autograd_key_priority")
     registry.register_kernel("test_autograd_key_priority", DispatchKey.CPU, cpu_impl)
     registry.register_kernel("test_autograd_key_priority", DispatchKey.Autograd, autograd_impl)
     registry.register_kernel("test_autograd_key_priority", DispatchKey.AutogradCPU, autograd_cpu_impl)
@@ -78,6 +85,7 @@ def test_dispatch_falls_back_to_generic_autograd_when_backend_missing():
         keyset = current_dispatch_keyset().without(DispatchKey.Autograd)
         return redispatch("test_autograd_key_fallback", keyset, a)
 
+    _register_schema("test_autograd_key_fallback")
     registry.register_kernel("test_autograd_key_fallback", DispatchKey.CPU, cpu_impl)
     registry.register_kernel("test_autograd_key_fallback", DispatchKey.Autograd, autograd_impl)
 
