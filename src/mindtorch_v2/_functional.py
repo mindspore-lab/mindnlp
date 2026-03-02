@@ -665,7 +665,9 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     return dispatch("tensor", dev, data, dtype=dtype, requires_grad=requires_grad)
 
 
-def zeros(shape, *, dtype=None, device=None, memory_format=None):
+def zeros(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
     dev = _as_device(device)
     return dispatch("zeros", dev, shape, dtype=dtype, memory_format=memory_format)
 
@@ -678,12 +680,16 @@ def zeros_like(input, *, dtype=None, device=None, memory_format=None):
     return zeros(input.shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def ones(shape, *, dtype=None, device=None, memory_format=None):
+def ones(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
     dev = _as_device(device)
     return dispatch("ones", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
-def empty(shape, *, dtype=None, device=None, memory_format=None):
+def empty(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
     dev = _as_device(device)
     return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
@@ -714,7 +720,18 @@ def linspace(start, end, steps, dtype=None, device=None):
     return dispatch("linspace", dev, start, end, steps, dtype=dtype)
 
 
-def full(shape, fill_value, dtype=None, device=None):
+def full(*args, dtype=None, device=None):
+    if len(args) >= 2 and not isinstance(args[-1], (tuple, list, int)):
+        # full(shape, fill_value) or full(d1, d2, ..., fill_value)
+        *shape_args, fill_value = args
+    elif len(args) >= 2:
+        *shape_args, fill_value = args
+    else:
+        raise TypeError("full() requires at least a shape and fill_value")
+    if len(shape_args) == 1 and isinstance(shape_args[0], (tuple, list)):
+        shape = shape_args[0]
+    else:
+        shape = tuple(shape_args)
     dev = _as_device(device)
     return dispatch("full", dev, shape, fill_value, dtype=dtype)
 
@@ -735,6 +752,68 @@ def to(a, device=None, dtype=None, non_blocking=False, copy=False, memory_format
 
 def linalg_qr(a, mode='reduced'):
     return dispatch("linalg_qr", a.device.type, a, mode)
+
+
+# ---------------------------------------------------------------------------
+# Tensor indexing methods
+# ---------------------------------------------------------------------------
+
+def narrow(a, dim, start, length):
+    return dispatch("narrow", a.device.type, a, dim, start, length)
+
+
+def select(a, dim, index):
+    return dispatch("select", a.device.type, a, dim, index)
+
+
+def expand(a, *sizes):
+    if len(sizes) == 1 and isinstance(sizes[0], (tuple, list)):
+        sizes = tuple(sizes[0])
+    return dispatch("expand", a.device.type, a, sizes)
+
+
+def masked_fill(a, mask, value):
+    return dispatch("masked_fill", a.device.type, a, mask, value)
+
+
+def masked_fill_(a, mask, value):
+    return dispatch("masked_fill_", a.device.type, a, mask, value)
+
+
+def index_put_(a, indices, values, accumulate=False):
+    return dispatch("index_put_", a.device.type, a, indices, values, accumulate)
+
+
+def index_put(a, indices, values, accumulate=False):
+    return dispatch("index_put", a.device.type, a, indices, values, accumulate)
+
+
+def index_copy_(a, dim, index, source):
+    return dispatch("index_copy_", a.device.type, a, dim, index, source)
+
+
+def index_fill_(a, dim, index, value):
+    return dispatch("index_fill_", a.device.type, a, dim, index, value)
+
+
+def index_add_(a, dim, index, source, alpha=1.0):
+    return dispatch("index_add_", a.device.type, a, dim, index, source, alpha)
+
+
+def scatter_(a, dim, index, src):
+    return dispatch("scatter_", a.device.type, a, dim, index, src)
+
+
+def scatter_add_(a, dim, index, src):
+    return dispatch("scatter_add_", a.device.type, a, dim, index, src)
+
+
+def masked_scatter_(a, mask, source):
+    return dispatch("masked_scatter_", a.device.type, a, mask, source)
+
+
+def unfold(a, dimension, size, step):
+    return dispatch("unfold", a.device.type, a, dimension, size, step)
 
 
 def _as_device(dev):

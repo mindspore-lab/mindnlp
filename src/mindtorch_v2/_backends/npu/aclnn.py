@@ -598,6 +598,133 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnInplaceMaskedFillScalar
+        self.aclnn_inplace_masked_fill_scalar_get_workspace = _optional_symbol(
+            libs,
+            "aclnnInplaceMaskedFillScalarGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,      # aclTensor* selfRef
+                ctypes.c_void_p,      # const aclTensor* mask
+                ctypes.c_void_p,      # const aclScalar* value
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_inplace_masked_fill_scalar = _optional_symbol(
+            libs,
+            "aclnnInplaceMaskedFillScalar",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnInplaceIndexCopy
+        self.aclnn_inplace_index_copy_get_workspace = _optional_symbol(
+            libs,
+            "aclnnInplaceIndexCopyGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,      # aclTensor* selfRef
+                ctypes.c_int64,       # int64_t dim
+                ctypes.c_void_p,      # const aclTensor* index
+                ctypes.c_void_p,      # const aclTensor* source
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_inplace_index_copy = _optional_symbol(
+            libs,
+            "aclnnInplaceIndexCopy",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnInplaceIndexFill (scalar value variant)
+        self.aclnn_inplace_index_fill_get_workspace = _optional_symbol(
+            libs,
+            "aclnnInplaceIndexFillGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,      # aclTensor* selfRef
+                ctypes.c_int64,       # int64_t dim
+                ctypes.c_void_p,      # const aclTensor* index
+                ctypes.c_void_p,      # const aclScalar* value
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_inplace_index_fill = _optional_symbol(
+            libs,
+            "aclnnInplaceIndexFill",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnIndexAdd
+        self.aclnn_index_add_get_workspace = _optional_symbol(
+            libs,
+            "aclnnIndexAddGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,      # const aclTensor* self
+                ctypes.c_int64,       # int64_t dim
+                ctypes.c_void_p,      # const aclTensor* index
+                ctypes.c_void_p,      # const aclTensor* source
+                ctypes.c_void_p,      # const aclScalar* alpha
+                ctypes.c_void_p,      # aclTensor* out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_index_add = _optional_symbol(
+            libs,
+            "aclnnIndexAdd",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnScatterAdd
+        self.aclnn_scatter_add_get_workspace = _optional_symbol(
+            libs,
+            "aclnnScatterAddGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,      # const aclTensor* self
+                ctypes.c_int64,       # int64_t dim
+                ctypes.c_void_p,      # const aclTensor* index
+                ctypes.c_void_p,      # const aclTensor* src
+                ctypes.c_void_p,      # aclTensor* out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_scatter_add = _optional_symbol(
+            libs,
+            "aclnnScatterAdd",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnInplaceMaskedScatter
+        self.aclnn_inplace_masked_scatter_get_workspace = _optional_symbol(
+            libs,
+            "aclnnInplaceMaskedScatterGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,      # aclTensor* selfRef
+                ctypes.c_void_p,      # const aclTensor* mask
+                ctypes.c_void_p,      # const aclTensor* source
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_inplace_masked_scatter = _optional_symbol(
+            libs,
+            "aclnnInplaceMaskedScatter",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
         self.aclnn_sub_get_workspace = _optional_symbol(
             libs,
             "aclnnSubGetWorkspaceSize",
@@ -8103,3 +8230,369 @@ def linalg_qr(self_ptr, q_ptr, r_ptr, self_shape, self_stride, q_shape, q_stride
         if workspace is not None:
             runtime.defer_raw_free(workspace)
         _ = (self_keep, q_keep, r_keep)
+
+
+# ---------------------------------------------------------------------------
+# Symbol checkers for new indexing ops
+# ---------------------------------------------------------------------------
+
+def masked_fill_scalar_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_inplace_masked_fill_scalar_get_workspace,
+            bindings.aclnn_inplace_masked_fill_scalar,
+        ])
+    except Exception:
+        return False
+
+
+def index_copy_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_inplace_index_copy_get_workspace,
+            bindings.aclnn_inplace_index_copy,
+        ])
+    except Exception:
+        return False
+
+
+def index_fill_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_inplace_index_fill_get_workspace,
+            bindings.aclnn_inplace_index_fill,
+        ])
+    except Exception:
+        return False
+
+
+def index_add_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_index_add_get_workspace,
+            bindings.aclnn_index_add,
+        ])
+    except Exception:
+        return False
+
+
+def scatter_add_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_scatter_add_get_workspace,
+            bindings.aclnn_scatter_add,
+        ])
+    except Exception:
+        return False
+
+
+def masked_scatter_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([
+            bindings.aclnn_inplace_masked_scatter_get_workspace,
+            bindings.aclnn_inplace_masked_scatter,
+        ])
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Wrapper functions for new indexing ops
+# ---------------------------------------------------------------------------
+
+def inplace_masked_fill_scalar(self_ptr, self_shape, self_stride, self_dtype,
+                               mask_ptr, mask_shape, mask_stride, mask_dtype,
+                               value, runtime, stream=None):
+    """aclnnInplaceMaskedFillScalar — in-place masked fill with scalar."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not masked_fill_scalar_symbols_ok():
+        raise RuntimeError("aclnnInplaceMaskedFillScalar symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    mask_tensor, mask_keep = _create_tensor(bindings, mask_shape, mask_stride, mask_dtype, mask_ptr)
+    scalar, scalar_keep = _create_scalar(bindings, value, self_dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_inplace_masked_fill_scalar_get_workspace(
+            self_tensor, mask_tensor, scalar,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceMaskedFillScalarGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_inplace_masked_fill_scalar(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceMaskedFillScalar failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(mask_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, mask_keep, scalar_keep)
+
+
+def inplace_index_copy(self_ptr, self_shape, self_stride, self_dtype,
+                       dim, index_ptr, index_shape, index_stride, index_dtype,
+                       source_ptr, source_shape, source_stride, source_dtype,
+                       runtime, stream=None):
+    """aclnnInplaceIndexCopy — in-place index copy along dim."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not index_copy_symbols_ok():
+        raise RuntimeError("aclnnInplaceIndexCopy symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, index_shape, index_stride, index_dtype, index_ptr)
+    source_tensor, source_keep = _create_tensor(bindings, source_shape, source_stride, source_dtype, source_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_inplace_index_copy_get_workspace(
+            self_tensor, ctypes.c_int64(dim), index_tensor, source_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceIndexCopyGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_inplace_index_copy(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceIndexCopy failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        bindings.acl_destroy_tensor(source_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, index_keep, source_keep)
+
+
+def inplace_index_fill(self_ptr, self_shape, self_stride, self_dtype,
+                       dim, index_ptr, index_shape, index_stride, index_dtype,
+                       value, runtime, stream=None):
+    """aclnnInplaceIndexFill — in-place index fill with scalar."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not index_fill_symbols_ok():
+        raise RuntimeError("aclnnInplaceIndexFill symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, index_shape, index_stride, index_dtype, index_ptr)
+    scalar, scalar_keep = _create_scalar(bindings, value, self_dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_inplace_index_fill_get_workspace(
+            self_tensor, ctypes.c_int64(dim), index_tensor, scalar,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceIndexFillGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_inplace_index_fill(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceIndexFill failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, index_keep, scalar_keep)
+
+
+def index_add(self_ptr, self_shape, self_stride, self_dtype,
+              dim, index_ptr, index_shape, index_stride, index_dtype,
+              source_ptr, source_shape, source_stride, source_dtype,
+              alpha, out_ptr, out_shape, out_stride, out_dtype,
+              runtime, stream=None):
+    """aclnnIndexAdd — index add along dim with alpha."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not index_add_symbols_ok():
+        raise RuntimeError("aclnnIndexAdd symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, index_shape, index_stride, index_dtype, index_ptr)
+    source_tensor, source_keep = _create_tensor(bindings, source_shape, source_stride, source_dtype, source_ptr)
+    alpha_scalar, alpha_keep = _create_scalar(bindings, alpha, self_dtype)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_index_add_get_workspace(
+            self_tensor, ctypes.c_int64(dim), index_tensor, source_tensor,
+            alpha_scalar, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnIndexAddGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_index_add(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnIndexAdd failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        bindings.acl_destroy_tensor(source_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, index_keep, source_keep, alpha_keep, out_keep)
+
+
+def scatter_add_op(self_ptr, self_shape, self_stride, self_dtype,
+                   dim, index_ptr, index_shape, index_stride, index_dtype,
+                   src_ptr, src_shape, src_stride, src_dtype,
+                   out_ptr, out_shape, out_stride, out_dtype,
+                   runtime, stream=None):
+    """aclnnScatterAdd — scatter add along dim."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not scatter_add_symbols_ok():
+        raise RuntimeError("aclnnScatterAdd symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    index_tensor, index_keep = _create_tensor(bindings, index_shape, index_stride, index_dtype, index_ptr)
+    src_tensor, src_keep = _create_tensor(bindings, src_shape, src_stride, src_dtype, src_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_scatter_add_get_workspace(
+            self_tensor, ctypes.c_int64(dim), index_tensor, src_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnScatterAddGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_scatter_add(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnScatterAdd failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(index_tensor)
+        bindings.acl_destroy_tensor(src_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, index_keep, src_keep, out_keep)
+
+
+def inplace_masked_scatter(self_ptr, self_shape, self_stride, self_dtype,
+                           mask_ptr, mask_shape, mask_stride, mask_dtype,
+                           source_ptr, source_shape, source_stride, source_dtype,
+                           runtime, stream=None):
+    """aclnnInplaceMaskedScatter — in-place masked scatter."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not masked_scatter_symbols_ok():
+        raise RuntimeError("aclnnInplaceMaskedScatter symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    mask_tensor, mask_keep = _create_tensor(bindings, mask_shape, mask_stride, mask_dtype, mask_ptr)
+    source_tensor, source_keep = _create_tensor(bindings, source_shape, source_stride, source_dtype, source_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_inplace_masked_scatter_get_workspace(
+            self_tensor, mask_tensor, source_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceMaskedScatterGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_inplace_masked_scatter(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInplaceMaskedScatter failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(mask_tensor)
+        bindings.acl_destroy_tensor(source_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, mask_keep, source_keep)

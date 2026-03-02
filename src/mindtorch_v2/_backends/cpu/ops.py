@@ -1391,3 +1391,200 @@ def linalg_qr(a, mode='reduced'):
     np_mode = mode
     q, r = np.linalg.qr(arr, mode=np_mode)
     return _from_numpy(q, a.dtype, a.device), _from_numpy(r, a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Tensor indexing / selection ops
+# ---------------------------------------------------------------------------
+
+def narrow(a, dim, start, length):
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    new_shape = list(a.shape)
+    new_shape[d] = int(length)
+    new_offset = a.offset + int(start) * a.stride[d]
+    return Tensor(a.storage(), tuple(new_shape), a.stride, new_offset)
+
+
+def select(a, dim, index):
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    idx = int(index)
+    if idx < 0:
+        idx += a.shape[d]
+    new_shape = list(a.shape)
+    del new_shape[d]
+    new_stride = list(a.stride)
+    new_offset = a.offset + idx * a.stride[d]
+    del new_stride[d]
+    return Tensor(a.storage(), tuple(new_shape), tuple(new_stride), new_offset)
+
+
+def expand(a, sizes):
+    from ..._tensor import Tensor
+    sizes = tuple(sizes)
+    ndiff = len(sizes) - a.dim()
+    if ndiff < 0:
+        raise RuntimeError("expand: number of sizes must be >= tensor dim")
+    src_shape = (1,) * ndiff + a.shape
+    src_stride = (0,) * ndiff + a.stride
+    out_shape = []
+    out_stride = []
+    for i, sz in enumerate(sizes):
+        if sz == -1:
+            out_shape.append(src_shape[i])
+            out_stride.append(src_stride[i])
+        elif src_shape[i] == 1:
+            out_shape.append(sz)
+            out_stride.append(0)
+        elif src_shape[i] == sz:
+            out_shape.append(sz)
+            out_stride.append(src_stride[i])
+        else:
+            raise RuntimeError(
+                f"expand: size {sz} not compatible with dim size {src_shape[i]}"
+            )
+    return Tensor(a.storage(), tuple(out_shape), tuple(out_stride), a.offset)
+
+
+def masked_fill(a, mask, value):
+    arr = _to_numpy(a).copy()
+    m = _to_numpy(mask).astype(bool)
+    arr[m] = value
+    return _from_numpy(arr, a.dtype, a.device)
+
+
+def masked_fill_(a, mask, value):
+    arr = _to_numpy(a)
+    m = _to_numpy(mask).astype(bool)
+    arr[m] = value
+    return a
+
+
+def index_put_(a, indices, values, accumulate=False):
+    arr = _to_numpy(a)
+    idx = tuple(_to_numpy(t) if hasattr(t, '_numpy_view') else t for t in indices)
+    vals = _to_numpy(values) if hasattr(values, '_numpy_view') else values
+    if accumulate:
+        np.add.at(arr, idx, vals)
+    else:
+        arr[idx] = vals
+    return a
+
+
+def index_put(a, indices, values, accumulate=False):
+    arr = _to_numpy(a).copy()
+    idx = tuple(_to_numpy(t) if hasattr(t, '_numpy_view') else t for t in indices)
+    vals = _to_numpy(values) if hasattr(values, '_numpy_view') else values
+    if accumulate:
+        np.add.at(arr, idx, vals)
+    else:
+        arr[idx] = vals
+    return _from_numpy(arr, a.dtype, a.device)
+
+
+def index_copy_(a, dim, index, source):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).ravel().astype(np.intp)
+    src = _to_numpy(source)
+    d = dim if dim >= 0 else dim + a.dim()
+    for j, i in enumerate(idx):
+        slices_dst = [slice(None)] * arr.ndim
+        slices_dst[d] = int(i)
+        slices_src = [slice(None)] * arr.ndim
+        slices_src[d] = j
+        arr[tuple(slices_dst)] = src[tuple(slices_src)]
+    return a
+
+
+def index_fill_(a, dim, index, value):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).ravel().astype(np.intp)
+    d = dim if dim >= 0 else dim + a.dim()
+    for i in idx:
+        slices = [slice(None)] * arr.ndim
+        slices[d] = int(i)
+        arr[tuple(slices)] = value
+    return a
+
+
+def index_add_(a, dim, index, source, alpha=1.0):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).ravel().astype(np.intp)
+    src = _to_numpy(source)
+    d = dim if dim >= 0 else dim + a.dim()
+    for j, i in enumerate(idx):
+        slices_dst = [slice(None)] * arr.ndim
+        slices_dst[d] = int(i)
+        slices_src = [slice(None)] * arr.ndim
+        slices_src[d] = j
+        arr[tuple(slices_dst)] += float(alpha) * src[tuple(slices_src)]
+    return a
+
+
+def scatter_(a, dim, index, src):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).astype(np.intp)
+    d = dim if dim >= 0 else dim + a.dim()
+    if hasattr(src, '_numpy_view'):
+        src_arr = _to_numpy(src)
+    else:
+        src_arr = src
+    it = np.nditer(idx, flags=['multi_index'])
+    while not it.finished:
+        mi = it.multi_index
+        dst_idx = list(mi)
+        dst_idx[d] = int(it[0])
+        if hasattr(src, '_numpy_view'):
+            arr[tuple(dst_idx)] = src_arr[mi]
+        else:
+            arr[tuple(dst_idx)] = src_arr
+        it.iternext()
+    return a
+
+
+def scatter_add_(a, dim, index, src):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).astype(np.intp)
+    src_arr = _to_numpy(src)
+    d = dim if dim >= 0 else dim + a.dim()
+    it = np.nditer(idx, flags=['multi_index'])
+    while not it.finished:
+        mi = it.multi_index
+        dst_idx = list(mi)
+        dst_idx[d] = int(it[0])
+        arr[tuple(dst_idx)] += src_arr[mi]
+        it.iternext()
+    return a
+
+
+def masked_scatter_(a, mask, source):
+    arr = _to_numpy(a)
+    m = _to_numpy(mask).astype(bool)
+    src = _to_numpy(source)
+    arr[m] = src.ravel()[:m.sum()]
+    return a
+
+
+def unfold(a, dimension, size, step):
+    arr = _to_numpy(a)
+    d = dimension if dimension >= 0 else dimension + arr.ndim
+    dim_size = arr.shape[d]
+    n_windows = max(0, (dim_size - size) // step + 1)
+    if n_windows == 0:
+        new_shape = list(arr.shape)
+        new_shape[d] = 0
+        new_shape.append(size)
+        return _from_numpy(np.empty(new_shape, dtype=arr.dtype), a.dtype, a.device)
+    out_shape = list(arr.shape)
+    out_shape[d] = n_windows
+    out_shape.append(size)
+    out = np.empty(out_shape, dtype=arr.dtype)
+    for i in range(n_windows):
+        src_s = [slice(None)] * arr.ndim
+        src_s[d] = slice(i * step, i * step + size)
+        chunk = np.moveaxis(arr[tuple(src_s)], d, -1)
+        dst_s = [slice(None)] * (arr.ndim + 1)
+        dst_s[d] = i
+        out[tuple(dst_s)] = chunk
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)

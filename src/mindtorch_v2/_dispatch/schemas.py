@@ -297,3 +297,27 @@ def register_schemas():
     registry.register_schema("max_", "max_(Tensor input, Tensor other) -> Tensor")
     registry.register_schema("min_", "min_(Tensor input, Tensor other) -> Tensor")
     registry.register_schema("linalg_qr", "linalg_qr(Tensor input, str mode=reduced) -> (Tensor, Tensor)")
+
+    # View / selection ops
+    registry.register_schema("narrow", "narrow(Tensor(a) input, int dim, int start, int length) -> Tensor(a)")
+    registry.register_schema("select", "select(Tensor(a) input, int dim, int index) -> Tensor(a)")
+    registry.register_schema("expand", "expand(Tensor(a) input, int[] sizes) -> Tensor(a)")
+    registry.register_schema("unfold", "unfold(Tensor(a) input, int dimension, int size, int step) -> Tensor(a)")
+
+    # Masked ops
+    registry.register_schema("masked_fill", "masked_fill(Tensor input, Tensor mask, Scalar value) -> Tensor")
+    registry.register_schema("masked_fill_", "masked_fill_(Tensor(a!) self, Tensor mask, Scalar value) -> Tensor")
+    registry.register_schema("masked_scatter_", "masked_scatter_(Tensor(a!) self, Tensor mask, Tensor source) -> Tensor")
+
+    # Index ops (in-place)
+    registry.register_schema("index_put_", "index_put_(Tensor(a!) self, Tensor[] indices, Tensor values, bool accumulate=False) -> Tensor")
+    registry.register_schema("index_copy_", "index_copy_(Tensor(a!) self, int dim, Tensor index, Tensor source) -> Tensor")
+    registry.register_schema("index_fill_", "index_fill_(Tensor(a!) self, int dim, Tensor index, Scalar value) -> Tensor")
+    registry.register_schema("index_add_", "index_add_(Tensor(a!) self, int dim, Tensor index, Tensor source, Scalar alpha=1.0) -> Tensor")
+
+    # Index ops (out-of-place)
+    registry.register_schema("index_put", "index_put(Tensor input, Tensor[] indices, Tensor values, bool accumulate=False) -> Tensor")
+
+    # Scatter ops (in-place)
+    registry.register_schema("scatter_", "scatter_(Tensor(a!) self, int dim, Tensor index, Any src) -> Tensor")
+    registry.register_schema("scatter_add_", "scatter_add_(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor")

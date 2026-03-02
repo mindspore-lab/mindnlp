@@ -46,6 +46,19 @@ from ._functional import argsort as argsort_dispatch, sort as sort_dispatch, top
 from ._functional import tril as tril_dispatch, triu as triu_dispatch, diag as diag_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
+from ._functional import nonzero as nonzero_dispatch, masked_select as masked_select_dispatch
+from ._functional import gather as gather_dispatch, scatter as scatter_dispatch
+from ._functional import index_select as index_select_dispatch, take as take_dispatch
+from ._functional import narrow as narrow_dispatch, select as select_dispatch
+from ._functional import expand as expand_dispatch
+from ._functional import masked_fill_ as masked_fill__dispatch, masked_fill as masked_fill_dispatch
+from ._functional import index_put_ as index_put__dispatch, index_put as index_put_dispatch
+from ._functional import index_copy_ as index_copy__dispatch
+from ._functional import index_fill_ as index_fill__dispatch
+from ._functional import index_add_ as index_add__dispatch
+from ._functional import scatter_ as scatter__dispatch, scatter_add_ as scatter_add__dispatch
+from ._functional import masked_scatter_ as masked_scatter__dispatch
+from ._functional import unfold as unfold_dispatch
 from ._autograd.engine import backward as _backward
 from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
@@ -954,6 +967,81 @@ class Tensor:
         if len(repeats) == 1 and isinstance(repeats[0], (tuple, list)):
             repeats = tuple(repeats[0])
         return repeat_dispatch(self, repeats)
+
+    # -----------------------------------------------------------------------
+    # Indexing / selection methods
+    # -----------------------------------------------------------------------
+
+    def narrow(self, dim, start, length):
+        return narrow_dispatch(self, dim, start, length)
+
+    def select(self, dim, index):
+        return select_dispatch(self, dim, index)
+
+    def expand(self, *sizes):
+        return expand_dispatch(self, *sizes)
+
+    def expand_as(self, other):
+        return expand_dispatch(self, *other.shape)
+
+    def nonzero(self, as_tuple=False):
+        return nonzero_dispatch(self, as_tuple=as_tuple)
+
+    def masked_select(self, mask):
+        return masked_select_dispatch(self, mask)
+
+    def gather(self, dim, index):
+        return gather_dispatch(self, dim, index)
+
+    def scatter(self, dim, index, src):
+        return scatter_dispatch(self, dim, index, src)
+
+    def scatter_(self, dim, index, src):
+        self._check_inplace()
+        return scatter__dispatch(self, dim, index, src)
+
+    def scatter_add_(self, dim, index, src):
+        self._check_inplace()
+        return scatter_add__dispatch(self, dim, index, src)
+
+    def index_select(self, dim, index):
+        return index_select_dispatch(self, dim, index)
+
+    def take(self, index):
+        return take_dispatch(self, index)
+
+    def masked_fill(self, mask, value):
+        return masked_fill_dispatch(self, mask, value)
+
+    def masked_fill_(self, mask, value):
+        self._check_inplace()
+        return masked_fill__dispatch(self, mask, value)
+
+    def masked_scatter_(self, mask, source):
+        self._check_inplace()
+        return masked_scatter__dispatch(self, mask, source)
+
+    def index_put_(self, indices, values, accumulate=False):
+        self._check_inplace()
+        return index_put__dispatch(self, indices, values, accumulate)
+
+    def index_put(self, indices, values, accumulate=False):
+        return index_put_dispatch(self, indices, values, accumulate)
+
+    def index_copy_(self, dim, index, source):
+        self._check_inplace()
+        return index_copy__dispatch(self, dim, index, source)
+
+    def index_fill_(self, dim, index, value):
+        self._check_inplace()
+        return index_fill__dispatch(self, dim, index, value)
+
+    def index_add_(self, dim, index, source, alpha=1.0):
+        self._check_inplace()
+        return index_add__dispatch(self, dim, index, source, alpha)
+
+    def unfold(self, dimension, size, step):
+        return unfold_dispatch(self, dimension, size, step)
 
     def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
         return allclose_dispatch(self, other, rtol=rtol, atol=atol, equal_nan=equal_nan)

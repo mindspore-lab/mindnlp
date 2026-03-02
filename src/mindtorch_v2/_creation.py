@@ -17,16 +17,16 @@ def tensor(data, *, dtype=float32, device=None, requires_grad=False):
     return tensor_dispatch(data, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
-def zeros(shape, *, dtype=float32, device=None, memory_format=None):
-    return zeros_dispatch(shape, dtype=dtype, device=device, memory_format=memory_format)
+def zeros(*shape, dtype=float32, device=None, memory_format=None):
+    return zeros_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def ones(shape, *, dtype=float32, device=None, memory_format=None):
-    return ones_dispatch(shape, dtype=dtype, device=device, memory_format=memory_format)
+def ones(*shape, dtype=float32, device=None, memory_format=None):
+    return ones_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def empty(shape, *, dtype=float32, device=None, memory_format=None):
-    return empty_dispatch(shape, dtype=dtype, device=device, memory_format=memory_format)
+def empty(*shape, dtype=float32, device=None, memory_format=None):
+    return empty_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
 def arange(start, end=None, step=1, dtype=float32, device=None):
@@ -37,8 +37,8 @@ def linspace(start, end, steps, dtype=float32, device=None):
     return linspace_dispatch(start, end, steps, dtype=dtype, device=device)
 
 
-def full(shape, fill_value, dtype=float32, device=None):
-    return full_dispatch(shape, fill_value, dtype=dtype, device=device)
+def full(*args, dtype=float32, device=None):
+    return full_dispatch(*args, dtype=dtype, device=device)
 
 
 def logspace(start, end, steps, dtype=float32, device=None):
