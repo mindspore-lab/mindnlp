@@ -117,6 +117,66 @@ def test_npu_default_stream_is_device_global(monkeypatch):
     assert runtime._stream_id == 101
 
 
+def test_npu_default_stream_recreates_when_runtime_changes(monkeypatch):
+    import mindtorch_v2._backends.npu.state as npu_state
+
+    runtime = _stub_runtime(monkeypatch)
+    runtime._stream_id = 100
+
+    def _create_stream(priority=0):
+        runtime._stream_id += 1
+        return runtime._stream_id
+
+    runtime.create_stream = _create_stream
+
+    s0 = torch.npu.default_stream()
+    assert s0.stream == 101
+
+    # Simulate runtime refresh (for example monkeypatch/new runtime object in tests)
+    # and ensure cached default stream is recreated against the active runtime.
+    class FreshRuntime:
+        def __init__(self):
+            self.device_id = 0
+            self._stream_id = 200
+
+        def create_stream(self, priority=0):
+            self._stream_id += 1
+            return self._stream_id
+
+        def synchronize_stream(self, stream):
+            return None
+
+        def create_event(self, enable_timing, blocking, interprocess):
+            return (bool(enable_timing), bool(blocking), bool(interprocess))
+
+        def record_event(self, event, stream):
+            return None
+
+        def synchronize_event(self, event):
+            return None
+
+        def query_event(self, event):
+            return True
+
+        def event_elapsed_time(self, start, end):
+            return 0.0
+
+        def stream_wait_event(self, stream, event):
+            return None
+
+    fresh_runtime = FreshRuntime()
+
+    monkeypatch.setattr(npu_state, "get_runtime", lambda device_id=0: fresh_runtime)
+
+    import mindtorch_v2._backends.npu.streams as npu_streams
+
+    monkeypatch.setattr(npu_streams.npu_runtime, "get_runtime", lambda device_id=0: fresh_runtime)
+
+    s1 = torch.npu.default_stream()
+    assert s1.stream == 201
+    assert s1.stream != s0.stream
+
+
 def test_npu_stream_context_switches_device_and_stream(monkeypatch):
     _stub_runtime(monkeypatch)
     s = torch.npu.Stream()
