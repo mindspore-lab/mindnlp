@@ -62,6 +62,57 @@ def _maybe_decode_ascii(value):
     return value
 
 
+
+
+_ALLOWED_WEIGHTS_GLOBALS = {
+    ("collections", "OrderedDict"),
+    ("torch._utils", "_rebuild_tensor_v2"),
+    ("torch._utils", "_rebuild_tensor"),
+    ("torch", "FloatStorage"),
+    ("torch", "DoubleStorage"),
+    ("torch", "HalfStorage"),
+    ("torch", "BFloat16Storage"),
+    ("torch", "LongStorage"),
+    ("torch", "IntStorage"),
+    ("torch", "ShortStorage"),
+    ("torch", "CharStorage"),
+    ("torch", "ByteStorage"),
+    ("torch", "BoolStorage"),
+    ("torch", "ComplexFloatStorage"),
+    ("torch", "ComplexDoubleStorage"),
+}
+
+
+class _WeightsOnlyUnpickler(pickle.Unpickler):
+    def find_class(self, mod_name, name):
+        key = (mod_name, name)
+        if key not in _ALLOWED_WEIGHTS_GLOBALS:
+            raise pickle.UnpicklingError(
+                f"weights_only reject global {mod_name}.{name}"
+            )
+        if mod_name == "collections" and name == "OrderedDict":
+            return OrderedDict
+        if mod_name == "torch._utils" and name in {"_rebuild_tensor_v2", "_rebuild_tensor"}:
+            return _rebuild_tensor_v2
+        if mod_name == "torch" and name in _STORAGE_NAME_TO_DTYPE:
+            return globals()[name]
+        raise pickle.UnpicklingError(f"weights_only unsupported global {mod_name}.{name}")
+
+
+class _LegacyBridgeUnpickler(pickle.Unpickler):
+    def find_class(self, mod_name, name):
+        if mod_name == "torch._utils" and name in {"_rebuild_tensor_v2", "_rebuild_tensor"}:
+            return _rebuild_tensor_v2
+        if mod_name == "torch" and name in _STORAGE_NAME_TO_DTYPE:
+            return globals()[name]
+        if mod_name == "collections" and name == "OrderedDict":
+            return OrderedDict
+        return super().find_class(mod_name, name)
+
+
+def _build_zip_unpickler(data, *, weights_only=False, **pickle_load_args):
+    cls = _WeightsOnlyUnpickler if weights_only else _TorchCompatUnpickler
+    return cls(io.BytesIO(data), **pickle_load_args)
 # Storage type proxies that get rewritten to torch globals in data.pkl.
 class FloatStorage:  # pragma: no cover - marker type used by pickle
     pass
@@ -391,7 +442,7 @@ def _validate_map_location(map_location):
     )
 
 
-def _load_zip_checkpoint(file_obj, map_location=None, **pickle_load_args):
+def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pickle_load_args):
     _validate_map_location(map_location)
 
     loaded_storages = {}
@@ -427,7 +478,7 @@ def _load_zip_checkpoint(file_obj, map_location=None, **pickle_load_args):
             loaded_storages[key] = storage
             return storage
 
-        unpickler = _TorchCompatUnpickler(io.BytesIO(data_pkl), **pickle_load_args)
+        unpickler = _build_zip_unpickler(data_pkl, weights_only=weights_only, **pickle_load_args)
         unpickler.persistent_load = persistent_load
         return unpickler.load()
 
@@ -438,23 +489,13 @@ def _legacy_element_size(dtype):
     return int(np.dtype(to_numpy_dtype(dtype)).itemsize)
 
 
-def _load_legacy_checkpoint(file_obj, map_location=None, **pickle_load_args):
+def _load_legacy_checkpoint(file_obj, map_location=None, weights_only=False, **pickle_load_args):
     if map_location not in (None, "cpu"):
         raise NotImplementedError(
             "mindtorch_v2.load currently supports map_location=None or 'cpu' for legacy checkpoints"
         )
 
     deserialized_objects = {}
-
-    class _LegacyUnpickler(pickle.Unpickler):
-        def find_class(self, mod_name, name):
-            if mod_name == "torch._utils" and name in {"_rebuild_tensor_v2", "_rebuild_tensor"}:
-                return _rebuild_tensor_v2
-            if mod_name == "torch" and name in _STORAGE_NAME_TO_DTYPE:
-                return globals()[name]
-            if mod_name == "collections" and name == "OrderedDict":
-                return OrderedDict
-            return super().find_class(mod_name, name)
 
     def persistent_load(saved_id):
         assert isinstance(saved_id, tuple)
@@ -499,7 +540,8 @@ def _load_legacy_checkpoint(file_obj, map_location=None, **pickle_load_args):
 
     _ = pickle.load(file_obj, **pickle_load_args)
 
-    unpickler = _LegacyUnpickler(file_obj, **pickle_load_args)
+    unpickler_cls = _WeightsOnlyUnpickler if weights_only else _LegacyBridgeUnpickler
+    unpickler = unpickler_cls(file_obj, **pickle_load_args)
     unpickler.persistent_load = persistent_load
     result = unpickler.load()
 
@@ -568,9 +610,13 @@ def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, **kw
     if _is_pathlike(f):
         with open(f, "rb") as fh:
             if _is_zip_checkpoint(fh):
-                return _load_zip_checkpoint(fh, map_location=map_location, encoding="utf-8")
-            return _load_legacy_checkpoint(fh, map_location=map_location, encoding="utf-8")
+                return _load_zip_checkpoint(
+                    fh, map_location=map_location, weights_only=weights_only, encoding="utf-8"
+                )
+            return _load_legacy_checkpoint(
+                fh, map_location=map_location, weights_only=weights_only, encoding="utf-8"
+            )
 
     if _is_zip_checkpoint(f):
-        return _load_zip_checkpoint(f, map_location=map_location, encoding="utf-8")
-    return _load_legacy_checkpoint(f, map_location=map_location, encoding="utf-8")
+        return _load_zip_checkpoint(f, map_location=map_location, weights_only=weights_only, encoding="utf-8")
+    return _load_legacy_checkpoint(f, map_location=map_location, weights_only=weights_only, encoding="utf-8")
