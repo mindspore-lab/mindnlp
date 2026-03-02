@@ -3,6 +3,7 @@ import torch
 import io
 import builtins
 import pickle
+import zipfile
 from collections import OrderedDict
 
 import mindtorch_v2 as mt
@@ -211,6 +212,60 @@ def test_torch_load_with_map_location_callable(tmp_path):
     assert isinstance(loaded, OrderedDict)
     assert set(loaded.keys()) == {"weight", "bias"}
     assert calls and set(calls) == {"cpu"}
+
+
+def test_torch_load_with_map_location_torch_device_cpu(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_state_dict_map_loc_device_cpu.pth"
+    torch.save(model.state_dict(), path)
+
+    loaded = mt.load(path, map_location=torch.device("cpu"))
+
+    assert isinstance(loaded, OrderedDict)
+    assert set(loaded.keys()) == {"weight", "bias"}
+
+
+def _patch_checkpoint_location_tag(src_path, dst_path, old, new):
+    assert len(old) == len(new)
+    with zipfile.ZipFile(src_path, "r") as zin, zipfile.ZipFile(dst_path, "w", compression=zipfile.ZIP_STORED) as zout:
+        for name in zin.namelist():
+            data = zin.read(name)
+            if name.endswith("/data.pkl"):
+                data = data.replace(old, new)
+            zout.writestr(name, data)
+
+
+def test_load_zip_non_cpu_location_with_dict_remap_to_cpu(tmp_path):
+    src = tmp_path / "src_non_cpu_remap.pth"
+    patched = tmp_path / "patched_non_cpu_remap.pth"
+    torch.save({"x": torch.tensor([1.0, 2.0])}, src)
+    _patch_checkpoint_location_tag(src, patched, old=b"cpu", new=b"npu")
+
+    loaded = mt.load(patched, map_location={"npu": "cpu"})
+
+    assert loaded["x"].tolist() == [1.0, 2.0]
+
+
+def test_load_zip_non_cpu_location_without_remap_raises(tmp_path):
+    src = tmp_path / "src_non_cpu_no_remap.pth"
+    patched = tmp_path / "patched_non_cpu_no_remap.pth"
+    torch.save({"x": torch.tensor([3.0])}, src)
+    _patch_checkpoint_location_tag(src, patched, old=b"cpu", new=b"npu")
+
+    with pytest.raises(NotImplementedError):
+        mt.load(patched)
+
+
+def test_save_legacy_flag_false_is_explicitly_rejected(tmp_path):
+    path = tmp_path / "legacy_flag_false.pth"
+    with pytest.raises(NotImplementedError):
+        mt.save({"x": mt.tensor([1.0])}, path, _use_new_zipfile_serialization=False)
+
+
+def test_save_legacy_flag_true_still_writes_zip(tmp_path):
+    path = tmp_path / "legacy_flag_true.pth"
+    mt.save({"x": mt.tensor([1.0])}, path, _use_new_zipfile_serialization=True)
+    assert zipfile.is_zipfile(path)
 
 
 def test_mindtorch_roundtrip_preserves_storage_aliasing():
