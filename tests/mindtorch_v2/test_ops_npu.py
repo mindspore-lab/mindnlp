@@ -1095,6 +1095,20 @@ def test_npu_embedding_2d_indices(dtype):
     assert np.allclose(out.to("cpu").numpy().astype(np.float32), expected, atol=1e-3, rtol=1e-3)
 
 
+
+
+def test_npu_layer_norm_does_not_break_bool_any_cast_path():
+    if not torch.npu.is_available():
+        pytest.skip("NPU not available")
+
+    from mindtorch_v2.nn import functional as F
+
+    x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="npu", dtype=torch.float16)
+    _ = F.layer_norm(x, (3,))
+
+    mask = torch.tensor([True, False, True], dtype=torch.bool, device="npu")
+    assert bool(torch.any(mask).to("cpu").item()) is True
+
 def test_npu_take():
     if not torch.npu.is_available():
         pytest.skip("NPU not available")
