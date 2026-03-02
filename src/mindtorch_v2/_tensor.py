@@ -59,6 +59,10 @@ from ._functional import index_add_ as index_add__dispatch
 from ._functional import scatter_ as scatter__dispatch, scatter_add_ as scatter_add__dispatch
 from ._functional import masked_scatter_ as masked_scatter__dispatch
 from ._functional import unfold as unfold_dispatch
+from ._functional import squeeze as squeeze_dispatch, unsqueeze as unsqueeze_dispatch, permute as permute_dispatch
+from ._functional import var as var_dispatch, norm as norm_dispatch, prod as prod_dispatch
+from ._functional import mm as mm_dispatch, bmm as bmm_dispatch
+from ._functional import floor_divide as floor_divide_dispatch
 from ._autograd.engine import backward as _backward
 from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
@@ -707,6 +711,48 @@ class Tensor:
     def __rtruediv__(self, other):
         return true_divide_dispatch(other, self)
 
+    def __pow__(self, exponent):
+        return pow_dispatch(self, exponent)
+
+    def __rpow__(self, base):
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("pow", self.device.type, base, self)
+
+    def __floordiv__(self, other):
+        return floor_divide_dispatch(self, other)
+
+    def __rfloordiv__(self, other):
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("floor_divide", self.device.type, other, self)
+
+    def __mod__(self, other):
+        return remainder_dispatch(self, other)
+
+    def __rmod__(self, other):
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("remainder", self.device.type, other, self)
+
+    def __iadd__(self, other):
+        self._check_inplace()
+        self.add_(other)
+        return self
+
+    def __isub__(self, other):
+        self._check_inplace()
+        self.sub_(other)
+        return self
+
+    def __imul__(self, other):
+        self._check_inplace()
+        self.mul_(other)
+        return self
+
+    def __itruediv__(self, other):
+        self._check_inplace()
+        from ._dispatch.dispatcher import dispatch
+        dispatch("copy_", self.device.type, self, true_divide_dispatch(self, other))
+        return self
+
     def __neg__(self):
         return neg_dispatch(self)
 
@@ -911,6 +957,32 @@ class Tensor:
 
     def fmod(self, other):
         return fmod_dispatch(self, other)
+
+    def squeeze(self, dim=None):
+        return squeeze_dispatch(self, dim)
+
+    def unsqueeze(self, dim):
+        return unsqueeze_dispatch(self, dim)
+
+    def permute(self, *dims):
+        if len(dims) == 1 and isinstance(dims[0], (tuple, list)):
+            dims = tuple(dims[0])
+        return permute_dispatch(self, dims)
+
+    def var(self, dim=None, keepdim=False, unbiased=True):
+        return var_dispatch(self, dim=dim, keepdim=keepdim, unbiased=unbiased)
+
+    def norm(self, p=2, dim=None, keepdim=False):
+        return norm_dispatch(self, p=p, dim=dim, keepdim=keepdim)
+
+    def prod(self, dim=None, keepdim=False):
+        return prod_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def mm(self, mat2):
+        return mm_dispatch(self, mat2)
+
+    def bmm(self, batch2):
+        return bmm_dispatch(self, batch2)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
 

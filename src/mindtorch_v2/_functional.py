@@ -816,6 +816,94 @@ def unfold(a, dimension, size, step):
     return dispatch("unfold", a.device.type, a, dimension, size, step)
 
 
+def squeeze(a, dim=None):
+    return dispatch("squeeze", a.device.type, a, dim)
+
+
+def unsqueeze(a, dim):
+    return dispatch("unsqueeze", a.device.type, a, dim)
+
+
+def permute(a, dims):
+    return dispatch("permute", a.device.type, a, dims)
+
+
+def var(a, dim=None, keepdim=False, unbiased=True):
+    return dispatch("var", a.device.type, a, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def norm(a, p=2, dim=None, keepdim=False):
+    return dispatch("norm", a.device.type, a, p=p, dim=dim, keepdim=keepdim)
+
+
+def prod(a, dim=None, keepdim=False):
+    return dispatch("prod", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def mm(a, b):
+    if len(a.shape) != 2 or len(b.shape) != 2:
+        raise RuntimeError(
+            f"mm: Expected 2-D tensors, got {len(a.shape)}-D and {len(b.shape)}-D"
+        )
+    return dispatch("matmul", a.device.type, a, b)
+
+
+def bmm(a, b):
+    if len(a.shape) != 3 or len(b.shape) != 3:
+        raise RuntimeError(
+            f"bmm: Expected 3-D tensors, got {len(a.shape)}-D and {len(b.shape)}-D"
+        )
+    return dispatch("matmul", a.device.type, a, b)
+
+
+def floor_divide(a, b):
+    return dispatch("floor_divide", a.device.type, a, b)
+
+
+def ones_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return ones(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def empty_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return empty(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def full_like(input, fill_value, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return full(input.shape, fill_value, dtype=dtype, device=device)
+
+
+def randn_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return randn(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def rand_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
+    return dispatch("rms_norm", input.device.type, input, normalized_shape, weight, eps)
+
+
 def _as_device(dev):
     if dev is None:
         return get_default_device()

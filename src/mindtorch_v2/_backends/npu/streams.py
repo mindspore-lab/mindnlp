@@ -8,7 +8,6 @@ class Stream:
         self.device = dev
         self.priority = int(priority)
         runtime = npu_runtime.get_runtime(self.device.index or 0)
-        self._runtime_id = id(runtime)
         self._stream = runtime.create_stream(self.priority)
 
     @property

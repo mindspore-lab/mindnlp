@@ -101,7 +101,7 @@ class RMSNorm(Module):
             self.register_parameter('weight', None)
 
     def forward(self, input):
-        raise NotImplementedError("RMSNorm forward is not yet implemented")
+        return F.rms_norm(input, self.normalized_shape, self.weight, self.eps)
 
     def extra_repr(self):
         return f'{self.normalized_shape}, eps={self.eps}, elementwise_affine={self.elementwise_affine}'

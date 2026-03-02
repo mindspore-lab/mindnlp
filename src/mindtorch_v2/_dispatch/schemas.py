@@ -133,6 +133,14 @@ CORE_SCHEMA_OPS = (
     "hypot",
     "remainder",
     "fmod",
+    "squeeze",
+    "unsqueeze",
+    "permute",
+    "var",
+    "norm",
+    "prod",
+    "floor_divide",
+    "rms_norm",
 )
 
 
@@ -180,6 +188,9 @@ def register_schemas():
             "missing": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim0, int dim1)\n * (Tensor input, name dim0, name dim1)\n",
         },
     )
+    registry.register_schema("squeeze", "squeeze(Tensor(a) input, int? dim=None) -> Tensor(a)")
+    registry.register_schema("unsqueeze", "unsqueeze(Tensor(a) input, int dim) -> Tensor(a)")
+    registry.register_schema("permute", "permute(Tensor(a) input, int[] dims) -> Tensor(a)")
 
     registry.register_schema("to", "to(Tensor input, Device? device=None, Dtype? dtype=None, bool non_blocking=False, bool copy=False, MemoryFormat? memory_format=None) -> Tensor")
     registry.register_schema("tensor", "tensor(Tensor data, *, Dtype? dtype=None, Device? device=None, bool requires_grad=False) -> Tensor")
@@ -321,3 +332,9 @@ def register_schemas():
     # Scatter ops (in-place)
     registry.register_schema("scatter_", "scatter_(Tensor(a!) self, int dim, Tensor index, Any src) -> Tensor")
     registry.register_schema("scatter_add_", "scatter_add_(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor")
+
+    registry.register_schema("var", "var(Tensor input, int[]? dim=None, bool unbiased=True, bool keepdim=False) -> Tensor")
+    registry.register_schema("norm", "norm(Tensor input, Any p=2, int[]? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("prod", "prod(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("floor_divide", "floor_divide(Tensor input, Any other) -> Tensor")
+    registry.register_schema("rms_norm", "rms_norm(Tensor input, int[] normalized_shape, Any weight=None, float eps=1e-6) -> Tensor")
