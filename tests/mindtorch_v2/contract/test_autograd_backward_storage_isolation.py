@@ -1,4 +1,10 @@
+import re
 from pathlib import Path
+
+import mindtorch_v2  # noqa: F401
+
+from mindtorch_v2._dispatch.keys import DispatchKey
+from mindtorch_v2._dispatch.registry import registry
 
 
 def _autograd_backend_source() -> str:
@@ -11,7 +17,7 @@ def test_backward_formulas_do_not_access_storage_payload_directly():
     assert "storage()._data" not in src
 
 
-def test_target_autograd_npu_kernels_are_not_cpu_only_gated():
+def test_target_autograd_npu_kernels_are_registered_and_not_cpu_only_config():
     src = _autograd_backend_source()
     target_ops = (
         "relu",
@@ -26,11 +32,14 @@ def test_target_autograd_npu_kernels_are_not_cpu_only_gated():
     )
 
     for op in target_ops:
-        marker = f'registry.register_kernel("{op}", DispatchKey.AutogradNPU,'
-        section_start = src.find(marker)
-        assert section_start != -1, f"missing AutogradNPU registration for {op}"
-        section_end = src.find("\nregistry.register_kernel", section_start + 1)
-        if section_end == -1:
-            section_end = len(src)
-        section = src[section_start:section_end]
-        assert "cpu_only=True" not in section, f"{op} AutogradNPU should not be cpu_only gated"
+        cpu_only_pattern = (
+            rf'_autograd_(?:unary|unary_args|inplace)\("{re.escape(op)}"[^\n]*cpu_only=True'
+        )
+        assert re.search(cpu_only_pattern, src) is None, (
+            f"{op} should not use cpu_only=True in autograd wrapper config"
+        )
+
+        entry = registry.get(f"aten::{op}")
+        assert DispatchKey.AutogradNPU in entry.kernels, (
+            f"missing AutogradNPU registration for {op}"
+        )
