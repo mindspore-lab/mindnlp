@@ -290,4 +290,44 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest',
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
                                  is_causal=False, scale=None):
-    raise NotImplementedError("scaled_dot_product_attention is not yet implemented")
+    import math
+    from .._functional import matmul, mul, add, neg
+    from .._creation import ones, tensor as _tensor
+    from .._dtype import bool as bool_dtype
+
+    L, S = query.size(-2), key.size(-2)
+    scale_factor = 1.0 / math.sqrt(query.size(-1)) if scale is None else scale
+
+    # query @ key^T
+    key_t = key.transpose(-2, -1)
+    attn_weight = matmul(query, key_t)
+    scale_t = _tensor(scale_factor, device=query.device)
+    attn_weight = mul(attn_weight, scale_t)
+
+    if is_causal:
+        causal_mask = ones((L, S), dtype=bool_dtype, device=query.device).tril()
+        neg_inf = _tensor(float('-inf'), device=query.device)
+        from .._dispatch import dispatch
+        inv_mask = dispatch("eq", query.device.type, causal_mask, False)
+        from .._functional import where as _where
+        attn_weight = _where(inv_mask, neg_inf, attn_weight)
+
+    if attn_mask is not None:
+        if attn_mask.dtype == bool_dtype:
+            neg_inf = _tensor(float('-inf'), device=query.device)
+            from .._dispatch import dispatch as _dispatch
+            inv_mask = _dispatch("eq", query.device.type, attn_mask, False)
+            from .._functional import where as _where
+            attn_weight = _where(inv_mask, neg_inf, attn_weight)
+        else:
+            attn_weight = add(attn_weight, attn_mask)
+
+    attn_weight = softmax(attn_weight, dim=-1)
+    if dropout_p > 0.0:
+        attn_weight = dropout(attn_weight, p=dropout_p)
+    return matmul(attn_weight, value)
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
+    from .._functional import rms_norm as _rms_norm
+    return _rms_norm(input, normalized_shape, weight, eps)

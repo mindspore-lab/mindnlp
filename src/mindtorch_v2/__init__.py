@@ -34,6 +34,7 @@ ComplexDoubleTensor = Tensor
 Size = tuple
 from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand
 from ._functional import zeros_like
+from ._functional import ones_like, empty_like, full_like, randn_like, rand_like
 from ._storage import UntypedStorage, TypedStorage
 from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, masked_select, flip, roll, rot90, repeat, repeat_interleave, tile, nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, concatenate, hstack, vstack, row_stack, dstack, column_stack, pad_sequence, block_diag, tril, triu, diag, cartesian_prod, chunk, split, vsplit, hsplit, dsplit, unbind, tril_indices, triu_indices, take, take_along_dim, index_select, gather, scatter, abs, neg, exp, log, sqrt, div, true_divide, mean, std
 from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac
@@ -45,6 +46,10 @@ from ._functional import min, max, amin, amax, fmin, fmax, where
 from ._functional import atan, atan2, asin, acos, lerp, addcmul, addcdiv
 from ._functional import reshape, transpose
 from ._functional import logaddexp, logaddexp2, hypot, remainder, fmod
+from ._functional import squeeze, unsqueeze, permute
+from ._functional import var, norm, prod
+from ._functional import mm, bmm
+from ._functional import floor_divide
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context, functionalize_context
 from ._backends import cpu
@@ -121,6 +126,12 @@ __all__ = [
     "logspace",
     "eye",
     "range",
+    "zeros_like",
+    "ones_like",
+    "empty_like",
+    "full_like",
+    "randn_like",
+    "rand_like",
     # ops
     "add",
     "mul",
@@ -237,6 +248,15 @@ __all__ = [
     "std",
     "reshape",
     "transpose",
+    "squeeze",
+    "unsqueeze",
+    "permute",
+    "var",
+    "norm",
+    "prod",
+    "mm",
+    "bmm",
+    "floor_divide",
     # printing
     "set_printoptions",
     "get_printoptions",

@@ -44,18 +44,13 @@ def device_guard(device_id):
         set_device(prev)
 
 
-def _runtime_id(device_id):
-    return id(get_runtime(device_id))
-
-
 def default_stream(device_id=None):
     from .streams import Stream
 
     dev = current_device() if device_id is None else int(device_id)
-    expected_runtime_id = _runtime_id(dev)
     with _default_streams_lock:
         stream = _default_streams.get(dev)
-        if stream is None or getattr(stream, "_runtime_id", None) != expected_runtime_id:
+        if stream is None:
             stream = Stream(device=f"npu:{dev}")
             _default_streams[dev] = stream
     return stream
@@ -65,7 +60,7 @@ def current_stream(device_id=None):
     state = _state()
     dev = current_device() if device_id is None else int(device_id)
     stream = state.current_streams.get(dev)
-    if stream is None or getattr(stream, "_runtime_id", None) != _runtime_id(dev):
+    if stream is None:
         stream = default_stream(dev)
         state.current_streams[dev] = stream
     return stream

@@ -181,6 +181,11 @@ from .ops import (
     scatter_add_,
     masked_scatter_,
     unfold,
+    var_,
+    norm_,
+    prod_,
+    floor_divide,
+    rms_norm,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -304,6 +309,9 @@ registry.register("ge", "npu", ge, meta=meta_infer.infer_binary_bool)
 registry.register("reshape", "npu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "npu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "npu", view_backend.transpose, meta=meta_infer.infer_transpose)
+registry.register("squeeze", "npu", view_backend.squeeze, meta=meta_infer.infer_view)
+registry.register("unsqueeze", "npu", view_backend.unsqueeze, meta=meta_infer.infer_view)
+registry.register("permute", "npu", view_backend.permute, meta=meta_infer.infer_view)
 registry.register("to", "npu", convert_backend.to_device)
 
 registry.register("tensor", "npu", tensor_create)
@@ -386,6 +394,13 @@ registry.register("scatter_", "npu", scatter_)
 registry.register("scatter_add_", "npu", scatter_add_)
 registry.register("masked_scatter_", "npu", masked_scatter_)
 registry.register("unfold", "npu", unfold)
+
+# Reduction ops (composite)
+registry.register("var", "npu", var_, meta=meta_infer.infer_sum)
+registry.register("norm", "npu", norm_, meta=meta_infer.infer_sum)
+registry.register("prod", "npu", prod_, meta=meta_infer.infer_sum)
+registry.register("floor_divide", "npu", floor_divide, meta=meta_infer.infer_binary)
+registry.register("rms_norm", "npu", rms_norm, meta=meta_infer.infer_unary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

@@ -830,12 +830,17 @@ def frac(a):
 
 
 def pow(a, b):
-    arr_a = _to_numpy(a)
+    if isinstance(a, Tensor):
+        arr_a = _to_numpy(a)
+        ref = a
+    else:
+        arr_a = a
+        ref = b
     if isinstance(b, Tensor):
         arr_b = _to_numpy(b)
     else:
         arr_b = b
-    return _from_numpy(np.power(arr_a, arr_b), a.dtype, a.device)
+    return _from_numpy(np.power(arr_a, arr_b), ref.dtype, ref.device)
 
 
 def log2(a):
@@ -1074,7 +1079,10 @@ def hypot(a, b):
 
 
 def remainder(a, b):
-    return _from_numpy(np.remainder(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+    a_np = _to_numpy(a) if isinstance(a, Tensor) else a
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    ref = a if isinstance(a, Tensor) else b
+    return _from_numpy(np.remainder(a_np, b_np), ref.dtype, ref.device)
 
 
 def fmod(a, b):
@@ -1393,6 +1401,7 @@ def linalg_qr(a, mode='reduced'):
     return _from_numpy(q, a.dtype, a.device), _from_numpy(r, a.dtype, a.device)
 
 
+
 # ---------------------------------------------------------------------------
 # Tensor indexing / selection ops
 # ---------------------------------------------------------------------------
@@ -1588,3 +1597,61 @@ def unfold(a, dimension, size, step):
         dst_s[d] = i
         out[tuple(dst_s)] = chunk
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def var_(a, dim=None, unbiased=True, keepdim=False):
+    arr = _to_numpy(a)
+    ddof = 1 if unbiased else 0
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            dim = tuple(dim)
+        out = np.var(arr, axis=dim, keepdims=keepdim, ddof=ddof)
+    else:
+        out = np.var(arr, ddof=ddof)
+        if keepdim:
+            out = np.full([1] * arr.ndim, out)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(arr.dtype, copy=False)), a.dtype, a.device)
+
+
+def norm_(a, p=2, dim=None, keepdim=False):
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            dim = tuple(dim)
+        out = np.linalg.norm(arr, ord=p, axis=dim, keepdims=keepdim)
+    else:
+        out = np.linalg.norm(arr.ravel(), ord=p)
+        if keepdim:
+            out = np.full([1] * arr.ndim, out)
+    from ..._dtype import float32 as f32
+    out_dtype = a.dtype if a.dtype.is_floating_point else f32
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(out_dtype), copy=False)), out_dtype, a.device)
+
+
+def prod_(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is not None:
+        out = np.prod(arr, axis=dim, keepdims=keepdim)
+    else:
+        out = np.prod(arr)
+        if keepdim:
+            out = np.full([1] * arr.ndim, out)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(arr.dtype, copy=False)), a.dtype, a.device)
+
+
+def floor_divide(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    out = np.floor_divide(a_np, b_np)
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype), copy=False), a.dtype, a.device)
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
+    arr = _to_numpy(input)
+    norm_shape = tuple(normalized_shape)
+    axis = tuple(range(arr.ndim - len(norm_shape), arr.ndim))
+    variance = np.mean(arr ** 2, axis=axis, keepdims=True)
+    out = arr / np.sqrt(variance + eps)
+    if weight is not None:
+        out = out * _to_numpy(weight).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)

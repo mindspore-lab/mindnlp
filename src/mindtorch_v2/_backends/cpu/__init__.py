@@ -180,6 +180,11 @@ from .ops import (
     scatter_add_,
     masked_scatter_,
     unfold,
+    var_,
+    norm_,
+    prod_,
+    floor_divide,
+    rms_norm,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -334,6 +339,9 @@ registry.register("sub_", "cpu", sub_, meta=meta_infer.infer_binary)
 registry.register("reshape", "cpu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "cpu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "cpu", view_backend.transpose, meta=meta_infer.infer_transpose)
+registry.register("squeeze", "cpu", view_backend.squeeze, meta=meta_infer.infer_view)
+registry.register("unsqueeze", "cpu", view_backend.unsqueeze, meta=meta_infer.infer_view)
+registry.register("permute", "cpu", view_backend.permute, meta=meta_infer.infer_view)
 registry.register("to", "cpu", convert_backend.to_device)
 
 registry.register("tensor", "cpu", tensor_create)
@@ -365,3 +373,9 @@ registry.register("scatter_", "cpu", scatter_)
 registry.register("scatter_add_", "cpu", scatter_add_)
 registry.register("masked_scatter_", "cpu", masked_scatter_)
 registry.register("unfold", "cpu", unfold)
+
+registry.register("var", "cpu", var_, meta=meta_infer.infer_sum)
+registry.register("norm", "cpu", norm_, meta=meta_infer.infer_sum)
+registry.register("prod", "cpu", prod_, meta=meta_infer.infer_sum)
+registry.register("floor_divide", "cpu", floor_divide, meta=meta_infer.infer_binary)
+registry.register("rms_norm", "cpu", rms_norm, meta=meta_infer.infer_unary)

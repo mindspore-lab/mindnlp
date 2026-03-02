@@ -4956,6 +4956,7 @@ def linalg_qr(a, mode='reduced'):
     return Q, R
 
 
+
 # ---------------------------------------------------------------------------
 # Tensor indexing / selection ops
 # ---------------------------------------------------------------------------
@@ -5480,3 +5481,82 @@ def unfold(a, dimension, size, step):
         if copy_bytes > 0:
             npu_runtime.acl.rt.memcpy(dst_ptr_val, copy_bytes, src_ptr, copy_bytes, 3)
     return result
+
+
+def var_(a, dim=None, unbiased=True, keepdim=False):
+    """Variance via composite ops: mean((x - mean(x))^2) with Bessel correction."""
+    from ..._dispatch.dispatcher import dispatch
+    m = dispatch("mean", a.device.type, a, dim=dim, keepdim=True)
+    neg_m = dispatch("neg", a.device.type, m)
+    diff = dispatch("add", a.device.type, a, neg_m)
+    sq = dispatch("mul", a.device.type, diff, diff)
+    result = dispatch("mean", a.device.type, sq, dim=dim, keepdim=keepdim)
+    if unbiased:
+        if dim is None:
+            n = 1
+            for s in a.shape:
+                n *= s
+        elif isinstance(dim, (int,)):
+            d = dim if dim >= 0 else dim + len(a.shape)
+            n = a.shape[d]
+        else:
+            n = 1
+            for d in dim:
+                dd = d if d >= 0 else d + len(a.shape)
+                n *= a.shape[dd]
+        if n > 1:
+            correction = n / (n - 1)
+            from ..._creation import tensor as _tensor
+            corr_t = _tensor(correction, device=a.device)
+            result = dispatch("mul", a.device.type, result, corr_t)
+    return result
+
+
+def norm_(a, p=2, dim=None, keepdim=False):
+    """Norm via composite ops: pow(sum(pow(abs(x), p), dim), 1/p)."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..._creation import tensor as _tensor
+    abs_a = dispatch("abs", a.device.type, a)
+    p_t = _tensor(float(p), device=a.device)
+    powered = dispatch("pow", a.device.type, abs_a, p_t)
+    summed = dispatch("sum", a.device.type, powered, dim=dim, keepdim=keepdim)
+    inv_p = _tensor(1.0 / float(p), device=a.device)
+    return dispatch("pow", a.device.type, summed, inv_p)
+
+
+def prod_(a, dim=None, keepdim=False):
+    """Product reduction via composite: exp(sum(log(x)))."""
+    from ..._dispatch.dispatcher import dispatch
+    log_a = dispatch("log", a.device.type, a)
+    log_sum = dispatch("sum", a.device.type, log_a, dim=dim, keepdim=keepdim)
+    return dispatch("exp", a.device.type, log_sum)
+
+
+def floor_divide(a, b):
+    """Floor division via composite: floor(div(a, b))."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..._tensor import Tensor
+    if not isinstance(b, Tensor):
+        from ..._creation import tensor as _tensor
+        b = _tensor(float(b), device=a.device)
+    d = dispatch("div", a.device.type, a, b)
+    return dispatch("floor", a.device.type, d)
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
+    """RMS normalization via composite ops."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..._creation import tensor as _tensor
+    norm_shape = tuple(normalized_shape)
+    dims = tuple(range(-len(norm_shape), 0))
+    # variance = mean(input^2, dims, keepdim=True)
+    sq = dispatch("pow", input.device.type, input, _tensor(2.0, device=input.device))
+    variance = dispatch("mean", input.device.type, sq, dim=list(dims), keepdim=True)
+    # rsqrt(variance + eps)
+    eps_t = _tensor(eps, device=input.device)
+    var_eps = dispatch("add", input.device.type, variance, eps_t)
+    inv = dispatch("rsqrt", input.device.type, var_eps)
+    out = dispatch("mul", input.device.type, input, inv)
+    if weight is not None:
+        out = dispatch("mul", input.device.type, out, weight)
+    return out
