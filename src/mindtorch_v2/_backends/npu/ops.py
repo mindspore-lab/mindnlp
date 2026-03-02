@@ -5507,79 +5507,182 @@ def unfold(a, dimension, size, step):
 
 
 def var_(a, dim=None, unbiased=True, keepdim=False):
-    """Variance via composite ops: mean((x - mean(x))^2) with Bessel correction."""
-    from ..._dispatch.dispatcher import dispatch
-    m = dispatch("mean", a.device.type, a, dim=dim, keepdim=True)
-    neg_m = dispatch("neg", a.device.type, m)
-    diff = dispatch("add", a.device.type, a, neg_m)
-    sq = dispatch("mul", a.device.type, diff, diff)
-    result = dispatch("mean", a.device.type, sq, dim=dim, keepdim=keepdim)
-    if unbiased:
-        if dim is None:
-            n = 1
-            for s in a.shape:
-                n *= s
-        elif isinstance(dim, (int,)):
-            d = dim if dim >= 0 else dim + len(a.shape)
-            n = a.shape[d]
+    """Compute variance using aclnnVar."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if dim is None:
+        dims = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        dims = [dim if dim >= 0 else dim + len(a.shape)]
+    else:
+        dims = [d if d >= 0 else d + len(a.shape) for d in dim]
+
+    out_shape = list(a.shape)
+    for d in sorted(dims, reverse=True):
+        if keepdim:
+            out_shape[d] = 1
         else:
-            n = 1
-            for d in dim:
-                dd = d if d >= 0 else d + len(a.shape)
-                n *= a.shape[dd]
-        if n > 1:
-            correction = n / (n - 1)
-            from ..._creation import tensor as _tensor
-            corr_t = _tensor(correction, device=a.device)
-            result = dispatch("mul", a.device.type, result, corr_t)
-    return result
+            out_shape.pop(d)
+    out_shape = tuple(out_shape) if out_shape else (1,)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.var(
+        _unwrap_storage(a).data_ptr(), out_ptr,
+        a.shape, a.stride, a.dtype,
+        dims, unbiased, keepdim,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def norm_(a, p=2, dim=None, keepdim=False):
-    """Norm via composite ops: pow(sum(pow(abs(x), p), dim), 1/p)."""
-    from ..._dispatch.dispatcher import dispatch
-    from ..._creation import tensor as _tensor
-    abs_a = dispatch("abs", a.device.type, a)
-    p_t = _tensor(float(p), device=a.device)
-    powered = dispatch("pow", a.device.type, abs_a, p_t)
-    summed = dispatch("sum", a.device.type, powered, dim=dim, keepdim=keepdim)
-    inv_p = _tensor(1.0 / float(p), device=a.device)
-    return dispatch("pow", a.device.type, summed, inv_p)
+    """Compute tensor norm using aclnnNorm."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    from ..._dtype import float32 as f32
+    out_dtype = a.dtype if getattr(a.dtype, 'is_floating_point', True) else f32
+
+    if dim is None:
+        norm_dims = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        norm_dims = [dim if dim >= 0 else dim + len(a.shape)]
+    else:
+        norm_dims = [d if d >= 0 else d + len(a.shape) for d in dim]
+
+    out_shape = list(a.shape)
+    for d in sorted(norm_dims, reverse=True):
+        if keepdim:
+            out_shape[d] = 1
+        else:
+            out_shape.pop(d)
+    out_shape = tuple(out_shape) if out_shape else (1,)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(out_dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.norm(
+        _unwrap_storage(a).data_ptr(), out_ptr,
+        a.shape, a.stride, a.dtype,
+        p, norm_dims, keepdim,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), out_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def prod_(a, dim=None, keepdim=False):
-    """Product reduction via composite: exp(sum(log(x)))."""
-    from ..._dispatch.dispatcher import dispatch
-    log_a = dispatch("log", a.device.type, a)
-    log_sum = dispatch("sum", a.device.type, log_a, dim=dim, keepdim=keepdim)
-    return dispatch("exp", a.device.type, log_sum)
+    """Compute product reduction using aclnnProd / aclnnProdDim."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if dim is not None:
+        d = dim if dim >= 0 else dim + len(a.shape)
+        out_shape = list(a.shape)
+        if keepdim:
+            out_shape[d] = 1
+        else:
+            out_shape.pop(d)
+        out_shape = tuple(out_shape) if out_shape else (1,)
+    else:
+        out_shape = (1,) if keepdim else (1,)
+
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.prod(
+        _unwrap_storage(a).data_ptr(), out_ptr,
+        a.shape, a.stride, a.dtype,
+        dim, keepdim,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def floor_divide(a, b):
-    """Floor division via composite: floor(div(a, b))."""
-    from ..._dispatch.dispatcher import dispatch
+    """Compute floor division using aclnnFloorDivide."""
     from ..._tensor import Tensor
     if not isinstance(b, Tensor):
         from ..._creation import tensor as _tensor
         b = _tensor(float(b), device=a.device)
-    d = dispatch("div", a.device.type, a, b)
-    return dispatch("floor", a.device.type, d)
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    out_shape = tuple(_broadcast_shape_checked(a.shape, b.shape, "floor_divide"))
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.floor_divide(
+        _unwrap_storage(a).data_ptr(), _unwrap_storage(b).data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
-    """RMS normalization via composite ops."""
-    from ..._dispatch.dispatcher import dispatch
-    from ..._creation import tensor as _tensor
+    """Compute RMS normalization using aclnnRmsNorm."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
     norm_shape = tuple(normalized_shape)
-    dims = tuple(range(-len(norm_shape), 0))
-    # variance = mean(input^2, dims, keepdim=True)
-    sq = dispatch("pow", input.device.type, input, _tensor(2.0, device=input.device))
-    variance = dispatch("mean", input.device.type, sq, dim=list(dims), keepdim=True)
-    # rsqrt(variance + eps)
-    eps_t = _tensor(eps, device=input.device)
-    var_eps = dispatch("add", input.device.type, variance, eps_t)
-    inv = dispatch("rsqrt", input.device.type, var_eps)
-    out = dispatch("mul", input.device.type, input, inv)
-    if weight is not None:
-        out = dispatch("mul", input.device.type, out, weight)
-    return out
+    y_shape = input.shape
+    y_stride = npu_runtime._contiguous_stride(y_shape)
+    y_numel = _numel(y_shape)
+
+    # rstd shape: input shape with normalized dims reduced to 1
+    rstd_shape = list(input.shape)
+    for i in range(len(norm_shape)):
+        rstd_shape[-(i + 1)] = 1
+    rstd_shape = tuple(rstd_shape)
+    rstd_stride = npu_runtime._contiguous_stride(rstd_shape)
+    rstd_numel = _numel(rstd_shape)
+
+    itemsize = _dtype_itemsize(input.dtype)
+    y_ptr = npu_runtime._alloc_device(max(y_numel, 1) * itemsize, runtime=runtime)
+    rstd_ptr = npu_runtime._alloc_device(max(rstd_numel, 1) * itemsize, runtime=runtime)
+
+    gamma_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
+    gamma_shape = weight.shape if weight is not None else ()
+    gamma_stride = weight.stride if weight is not None else ()
+
+    if gamma_ptr is None:
+        # aclnnRmsNorm requires gamma; create ones tensor
+        from ..._creation import ones as _ones
+        w = _ones(norm_shape, dtype=input.dtype, device=input.device)
+        gamma_ptr = _unwrap_storage(w).data_ptr()
+        gamma_shape = w.shape
+        gamma_stride = w.stride
+
+    aclnn.rms_norm(
+        _unwrap_storage(input).data_ptr(), gamma_ptr, eps, y_ptr, rstd_ptr,
+        input.shape, input.stride, gamma_shape, gamma_stride,
+        y_shape, y_stride, rstd_shape, rstd_stride,
+        input.dtype,
+        runtime, stream=stream.stream,
+    )
+
+    y_storage = npu_typed_storage_from_ptr(y_ptr, max(y_numel, 1), input.dtype, device=input.device)
+    # rstd not returned (only y needed by caller), but memory is managed by allocator
+    return _wrap_tensor(y_storage, y_shape, y_stride)
