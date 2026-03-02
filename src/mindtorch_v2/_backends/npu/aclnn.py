@@ -6889,9 +6889,18 @@ def layer_norm(input_ptr, weight_ptr, bias_ptr, out_ptr, mean_ptr, rstd_ptr,
     input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr)
     out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
 
-    # Mean and rstd are always float32
-    mean_tensor, mean_keep = _create_tensor(bindings, stats_shape, stats_stride, "float32", mean_ptr)
-    rstd_tensor, rstd_keep = _create_tensor(bindings, stats_shape, stats_stride, "float32", rstd_ptr)
+    # Mean and rstd outputs are optional for this integration path.
+    if mean_ptr is not None:
+        mean_tensor, mean_keep = _create_tensor(bindings, stats_shape, stats_stride, "float32", mean_ptr)
+    else:
+        mean_tensor = None
+        mean_keep = None
+
+    if rstd_ptr is not None:
+        rstd_tensor, rstd_keep = _create_tensor(bindings, stats_shape, stats_stride, "float32", rstd_ptr)
+    else:
+        rstd_tensor = None
+        rstd_keep = None
 
     # Weight and bias are optional
     if weight_ptr is not None:
@@ -6922,8 +6931,8 @@ def layer_norm(input_ptr, weight_ptr, bias_ptr, out_ptr, mean_ptr, rstd_ptr,
             ctypes.c_void_p(0) if bias_tensor is None else bias_tensor,
             ctypes.c_double(eps),
             out_tensor,
-            mean_tensor,
-            rstd_tensor,
+            ctypes.c_void_p(0) if mean_tensor is None else mean_tensor,
+            ctypes.c_void_p(0) if rstd_tensor is None else rstd_tensor,
             ctypes.byref(workspace_size),
             ctypes.byref(executor),
         )
@@ -6950,8 +6959,10 @@ def layer_norm(input_ptr, weight_ptr, bias_ptr, out_ptr, mean_ptr, rstd_ptr,
         bindings.acl_destroy_int_array(norm_shape_handle)
         bindings.acl_destroy_tensor(input_tensor)
         bindings.acl_destroy_tensor(out_tensor)
-        bindings.acl_destroy_tensor(mean_tensor)
-        bindings.acl_destroy_tensor(rstd_tensor)
+        if mean_tensor is not None:
+            bindings.acl_destroy_tensor(mean_tensor)
+        if rstd_tensor is not None:
+            bindings.acl_destroy_tensor(rstd_tensor)
         if weight_tensor is not None:
             bindings.acl_destroy_tensor(weight_tensor)
         if bias_tensor is not None:

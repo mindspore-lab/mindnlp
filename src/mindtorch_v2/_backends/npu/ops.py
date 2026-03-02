@@ -4024,9 +4024,10 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     itemsize = _dtype_itemsize(input.dtype)
 
     out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
-    # Mean and rstd are always float32
-    mean_ptr = npu_runtime._alloc_device(stats_numel * 4, runtime=runtime)  # float32 = 4 bytes
-    rstd_ptr = npu_runtime._alloc_device(stats_numel * 4, runtime=runtime)  # float32 = 4 bytes
+    # Mean/rstd outputs are not consumed by current forward path; pass null to avoid
+    # backend instability observed on some stacks when allocating/using extra stats outputs.
+    mean_ptr = None
+    rstd_ptr = None
 
     weight_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
     bias_ptr = _unwrap_storage(bias).data_ptr() if bias is not None else None
@@ -4050,9 +4051,6 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
         input.dtype,
         runtime, stream=stream.stream
     )
-
-    runtime.defer_free(mean_ptr)
-    runtime.defer_free(rstd_ptr)
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
@@ -4702,37 +4700,25 @@ def _require_int64_indices(indices, name):
 def _validate_index_bounds(indices, dim_size, allow_negative, name):
     if indices.numel() == 0:
         return
-
-    # NOTE:
-    # Some CANN stacks can enter an unstable state after specific kernels
-    # (observed after layer_norm) where bool reduction path via any_ -> aclnn.cast
-    # fails with aclnnCastGetWorkspaceSize error 561103. To keep gather/take family
-    # stable and torch-aligned for index errors, do scalar bound checks on host.
-    host_idx = indices.to("cpu").numpy()
-
     if allow_negative:
-        lower = -int(dim_size)
+        min_ok = _scalar_to_npu_tensor(-int(dim_size), indices)
+        max_ok = _scalar_to_npu_tensor(int(dim_size - 1), indices)
     else:
-        lower = 0
-    upper = int(dim_size - 1)
-
-    if host_idx.size == 0:
-        return
-
-    if (host_idx < lower).any() or (host_idx > upper).any():
+        min_ok = _scalar_to_npu_tensor(0, indices)
+        max_ok = _scalar_to_npu_tensor(int(dim_size - 1), indices)
+    below_min = lt(indices, min_ok)
+    above_max = gt(indices, max_ok)
+    if _read_bool_scalar(any_(below_min)) or _read_bool_scalar(any_(above_max)):
         raise IndexError(f"{name} indices out of range")
 
+
 def _normalize_negative_indices(indices, dim_size):
-    host_idx = indices.to("cpu").numpy()
-    if host_idx.size == 0:
+    neg_mask = lt(indices, _scalar_to_npu_tensor(0, indices))
+    if not _read_bool_scalar(any_(neg_mask)):
         return indices
 
-    if not (host_idx < 0).any():
-        return indices
-
-    # Keep 310B-specific device-side workaround to avoid s_where path on 310B.
+    # 310B static path: avoid SWhere by converting mask to int64 and blending arithmetically.
     if _is_310b_profile():
-        neg_mask = lt(indices, _scalar_to_npu_tensor(0, indices))
         if not aclnn.cast_symbols_ok():
             raise RuntimeError("aclnnCast symbols not available")
         runtime = npu_runtime.get_runtime((indices.device.index or 0))
@@ -4759,17 +4745,8 @@ def _normalize_negative_indices(indices, dim_size):
         offset = _scalar_to_npu_tensor(int(dim_size), indices)
         return add(indices, mul(mask_i64, offset))
 
-    host_norm = host_idx.copy()
-    host_norm[host_norm < 0] += int(dim_size)
+    return where(neg_mask, add(indices, _scalar_to_npu_tensor(int(dim_size), indices)), indices)
 
-    from .creation import tensor_create
-
-    return tensor_create(
-        host_norm,
-        dtype=int64_dtype,
-        device=indices.device,
-        requires_grad=False,
-    )
 
 def _move_dim_to_last(a, dim):
     dim = _normalize_dim(dim, a.dim())
