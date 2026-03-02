@@ -6,6 +6,7 @@ import time
 import tempfile
 import traceback
 import tracemalloc
+import uuid
 from dataclasses import dataclass
 
 from .common import ProfilerActivity, ProfilerAction
@@ -827,7 +828,7 @@ class profile:
         use_cuda=None,
         custom_trace_id_callback=None,
     ):
-        del execution_trace_observer, use_cuda
+        del use_cuda
 
         self.activities = _resolve_activities(activities)
         self._session = _ProfilerSession(
@@ -867,7 +868,9 @@ class profile:
         self.experimental_config = experimental_config
         self.use_device = None
         self.custom_trace_id_callback = custom_trace_id_callback
-        self.execution_trace_observer = None
+        self.execution_trace_observer = execution_trace_observer
+        self.has_cudagraphs = False
+        self._trace_started = False
 
         self._schedule = schedule
         self._current_action = ProfilerAction.RECORD if schedule is None else ProfilerAction.NONE
@@ -921,6 +924,53 @@ class profile:
             ProfilerAction.RECORD_AND_SAVE,
         )
 
+    def _new_trace_id(self):
+        if callable(self.custom_trace_id_callback):
+            return str(self.custom_trace_id_callback())
+        return uuid.uuid4().hex.upper()
+
+    def prepare_trace(self):
+        if (self.profiler is None) or (not self.acc_events):
+            self.profiler = self._session
+        self.profiler.trace_id = self._new_trace_id()
+        self.has_cudagraphs = False
+
+    def start_trace(self):
+        if self.profiler is None:
+            raise AssertionError("Profiler must be initialized before starting trace")
+        if self.execution_trace_observer and not self._trace_started:
+            self.execution_trace_observer.start()
+        self._trace_started = True
+
+        if self.profile_memory:
+            self.add_metadata_json("profile_memory", "1")
+        if self.with_stack:
+            self.add_metadata_json("with_stack", "1")
+        if self.record_shapes:
+            self.add_metadata_json("record_shapes", "1")
+        if self.with_modules:
+            self.add_metadata_json("with_modules", "1")
+        if self.with_flops:
+            self.add_metadata_json("with_flops", "1")
+
+        for key, value in self._preset_metadata.items():
+            self.add_metadata_json(key, value)
+
+    def stop_trace(self):
+        if self.profiler is None:
+            raise AssertionError("Profiler must be initialized before stopping trace")
+        if self.execution_trace_observer and self._trace_started:
+            self.execution_trace_observer.stop()
+        self._trace_started = False
+
+    def get_trace_id(self):
+        if self.profiler is None:
+            return None
+        return getattr(self.profiler, "trace_id", None)
+
+    def set_custom_trace_id_callback(self, callback):
+        self.custom_trace_id_callback = callback
+
     def start(self):
         global _ACTIVE_SESSION
         if self._started and not self._stopped:
@@ -933,9 +983,12 @@ class profile:
 
         self._started = True
         self._stopped = False
-        self.profiler = self._session
         self._maybe_start_cpu_memory_tracer()
         self._set_action_for_step(self._session.current_step)
+
+        if self._current_action != ProfilerAction.NONE:
+            self.prepare_trace()
+            self.start_trace()
 
     def stop(self):
         global _ACTIVE_SESSION
@@ -943,6 +996,9 @@ class profile:
             return
 
         self._maybe_sync_npu()
+        if self._trace_started:
+            self.stop_trace()
+
         with _ACTIVE_LOCK:
             if _ACTIVE_SESSION is self._session:
                 _ACTIVE_SESSION = None
@@ -956,13 +1012,19 @@ class profile:
         if _active_session() is not self._session:
             raise RuntimeError("profiler session is not active")
 
-        action = self._current_action
+        prev_action = self._current_action
         self._maybe_sync_npu()
-        if action == ProfilerAction.RECORD_AND_SAVE and callable(self._trace_ready):
+        if prev_action == ProfilerAction.RECORD_AND_SAVE and callable(self._trace_ready):
             self._trace_ready(self)
 
         self._session.current_step += 1
         self._set_action_for_step(self._session.current_step)
+
+        if prev_action == ProfilerAction.NONE and self._current_action != ProfilerAction.NONE:
+            self.prepare_trace()
+            self.start_trace()
+        elif prev_action != ProfilerAction.NONE and self._current_action == ProfilerAction.NONE and self._trace_started:
+            self.stop_trace()
 
     def add_metadata(self, key, value):
         wrapped_value = '"' + value.replace('"', '\\"') + '"'

@@ -852,3 +852,56 @@ def test_profile_export_stacks_delegates_to_key_averages(tmp_path):
 
     assert out.exists()
     assert isinstance(out.read_text(encoding="utf-8"), str)
+
+
+def test_profile_exposes_trace_control_methods_and_has_cudagraphs_attr():
+    prof = torch.profiler.profile()
+
+    assert hasattr(prof, "prepare_trace")
+    assert hasattr(prof, "start_trace")
+    assert hasattr(prof, "stop_trace")
+    assert hasattr(prof, "get_trace_id")
+    assert hasattr(prof, "set_custom_trace_id_callback")
+    assert hasattr(prof, "has_cudagraphs")
+    assert prof.has_cudagraphs is False
+
+
+def test_profile_prepare_trace_sets_trace_id_and_honors_custom_callback():
+    prof = torch.profiler.profile()
+    assert prof.get_trace_id() is None
+
+    seen = []
+
+    def custom_trace_id():
+        seen.append("called")
+        return "TRACE_ID_CUSTOM"
+
+    prof.set_custom_trace_id_callback(custom_trace_id)
+    prof.prepare_trace()
+
+    assert seen == ["called"]
+    assert prof.profiler is not None
+    assert prof.get_trace_id() == "TRACE_ID_CUSTOM"
+
+
+def test_profile_start_stop_trace_requires_prepare_and_notifies_observer():
+    class _Observer:
+        def __init__(self):
+            self.events = []
+
+        def start(self):
+            self.events.append("start")
+
+        def stop(self):
+            self.events.append("stop")
+
+    prof = torch.profiler.profile(execution_trace_observer=_Observer())
+
+    with pytest.raises(AssertionError, match="Profiler must be initialized before starting trace"):
+        prof.start_trace()
+
+    prof.prepare_trace()
+    prof.start_trace()
+    prof.stop_trace()
+
+    assert prof.execution_trace_observer.events == ["start", "stop"]
