@@ -274,20 +274,22 @@ def _get_device_name(device=None):
     return f"Ascend {soc}"
 
 
-def _is_910b(soc_lower):
-    """Ascend910B1/B2/B3/B4 are 910b; Ascend910/910A/910B (no digit) are 910a."""
-    import re
-    return bool(re.search(r"910b\d", soc_lower))
-
-
 def _get_device_capability(device=None):
+    import re
+
     soc = _get_soc_name().lower()
-    if _is_910b(soc):
+    # Capability is a coarse architecture bucket (major/minor), while exact
+    # model selection should use get_device_name/get_device_properties().name.
+    # 910 generation mapping (project convention):
+    # - 910 / 910A / 910B (no numeric suffix): first generation -> (9, 1)
+    # - 910B with numeric suffix (for example 910B1/B2/B3/B4): second generation -> (9, 2)
+    # - 910C (with or without numeric suffix): third generation -> (9, 3)
+    if re.search(r"910c(?:\d+)?", soc):
+        return (9, 3)
+    if re.search(r"910b\d+", soc):
+        return (9, 2)
+    if "910a" in soc or "910b" in soc or "910" in soc:
         return (9, 1)
-    if "910a" in soc or "910b" in soc or soc.endswith("910"):
-        return (9, 0)
-    if "910" in soc:
-        return (9, 0)
     if "310p" in soc:
         return (3, 1)
     if "310" in soc:
