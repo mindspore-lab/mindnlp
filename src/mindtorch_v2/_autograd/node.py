@@ -1,91 +1,57 @@
-# src/mindtorch_v2/_autograd/node.py
-"""Autograd Node - base class for gradient functions."""
+from .graph import current_saved_tensors_hooks
 
-from typing import Tuple, Optional, Any
-import weakref
+
+class SavedTensor:
+    def __init__(self, tensor):
+        self._tensor_ref = tensor
+        self._saved_version = tensor._version_counter.value
+        self._released = False
+        hooks = current_saved_tensors_hooks()
+        self._hooks = hooks
+        if hooks is None:
+            self._packed = None
+        else:
+            pack, _ = hooks
+            self._packed = pack(tensor)
+
+    def release(self):
+        self._released = True
+
+    def materialize(self):
+        if self._released:
+            raise RuntimeError(
+                "Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed). "
+                "Saved intermediate values of the graph are freed when you call .backward() or autograd.grad(). "
+                "Specify retain_graph=True if you need to backward through the graph a second time or if you need to access saved tensors after calling backward."
+            )
+        if self._tensor_ref._version_counter.value != self._saved_version:
+            shape = "x".join(str(d) for d in getattr(self._tensor_ref, "shape", ()))
+            tensor_type = "torch.Tensor"
+            op = "AsStridedBackward0"
+            raise RuntimeError(
+                "one of the variables needed for gradient computation has been modified by an inplace operation: "
+                f"[{tensor_type} [{shape}]], which is output 0 of {op}, is at version {self._tensor_ref._version_counter.value}; "
+                f"expected version {self._saved_version} instead. Hint: enable anomaly detection to find the operation that failed to compute its gradient, "
+                "with torch.autograd.set_detect_anomaly(True)."
+            )
+        if self._hooks is None:
+            return self._tensor_ref
+        _, unpack = self._hooks
+        return unpack(self._packed)
 
 
 class Node:
-    """Base class for all autograd graph nodes (grad_fn).
-
-    Each node represents an operation in the computational graph.
-    During backward, nodes compute gradients for their inputs.
-
-    Attributes:
-        _next_functions: Tuple of (Node, output_idx) pairs linking to input nodes
-        _saved_tensors: Tensors saved for backward computation
-        _needs_input_grad: Tuple of bools indicating which inputs need gradients
-        _output_tensor_ref: Weak reference to output tensor (for retain_grad support)
-    """
-
-    __slots__ = ('_next_functions', '_saved_tensors', '_needs_input_grad', '_name', '_output_tensor_ref')
-
-    def __init__(self):
-        self._next_functions: Tuple[Tuple[Optional['Node'], int], ...] = ()
-        self._saved_tensors: Tuple[Any, ...] = ()
-        self._needs_input_grad: Tuple[bool, ...] = ()
-        self._name: str = self.__class__.__name__
-        self._output_tensor_ref: Optional[weakref.ref] = None
-
-    @property
-    def next_functions(self) -> Tuple[Tuple[Optional['Node'], int], ...]:
-        """Return the next functions in the graph (inputs to this op)."""
-        return self._next_functions
-
-    @property
-    def name(self) -> str:
-        """Return the name of this node."""
-        return self._name
+    def __init__(self, backward, inputs):
+        self.backward = backward
+        self.inputs = inputs
+        self._saved_tensors = []
 
     def save_for_backward(self, *tensors):
-        """Save tensors for use in backward pass."""
-        self._saved_tensors = tensors
+        self._saved_tensors = [SavedTensor(t) for t in tensors]
 
-    @property
-    def saved_tensors(self) -> Tuple[Any, ...]:
-        """Return tensors saved for backward."""
-        return self._saved_tensors
+    def saved_tensors(self):
+        return tuple(saved.materialize() for saved in self._saved_tensors)
 
-    def register_output_tensor(self, tensor):
-        """Register the output tensor for retain_grad support."""
-        self._output_tensor_ref = weakref.ref(tensor)
-
-    def get_output_tensor(self):
-        """Get the output tensor if registered and still alive."""
-        if self._output_tensor_ref is not None:
-            return self._output_tensor_ref()
-        return None
-
-    def backward(self, grad_outputs: Tuple[Any, ...]) -> Tuple[Any, ...]:
-        """Compute gradients for inputs given gradients of outputs.
-
-        Must be overridden by subclasses.
-        """
-        raise NotImplementedError(
-            f"{self.__class__.__name__}.backward is not implemented"
-        )
-
-    def __repr__(self):
-        return f"<{self._name}>"
-
-
-class AccumulateGrad(Node):
-    """Special node for leaf tensors that accumulates gradients.
-
-    This node doesn't have a backward() - instead, the backward engine
-    directly accumulates gradients into the tensor's .grad attribute.
-    """
-
-    __slots__ = ('_variable',)
-
-    def __init__(self, variable):
-        super().__init__()
-        self._variable = variable
-        self._name = "AccumulateGrad"
-
-    @property
-    def variable(self):
-        return self._variable
-
-    def backward(self, grad_outputs):
-        raise RuntimeError("AccumulateGrad.backward should not be called directly")
+    def release_saved_tensors(self):
+        for saved in self._saved_tensors:
+            saved.release()

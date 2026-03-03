@@ -1,233 +1,266 @@
-"""mindtorch v2 - PyTorch-compatible API on MindSpore backend."""
-
 __version__ = "0.1.0"
 
-from ._device import device, _get_default_device
-from ._storage import TypedStorage, UntypedStorage
 from ._dtype import (
-    # Core dtypes
-    float16, float32, float64, bfloat16,
-    # Float8 dtypes
-    float8_e4m3fn, float8_e4m3fnuz, float8_e5m2, float8_e5m2fnuz,
-    int8, int16, int32, int64,
-    uint8, uint16, uint32, uint64,
-    bool, complex64, complex128,
-    # Aliases
-    half, float, double, long, int, short,
-    cfloat, cdouble,
-    # Conversion functions
-    dtype_to_numpy, numpy_to_dtype, from_mindspore_dtype,
-    # DType class
     DType,
+    float8_e4m3fn, float8_e5m2, float8_e8m0fnu,
+    float16, float32, float64, bfloat16,
+    int8, int16, int32, int64, uint8, uint16, uint32, uint64,
+    bool,
+    complex64, complex128,
+    # aliases
+    half, double, short, long, byte, cfloat, cdouble,
 )
-# Alias for PyTorch compatibility: torch.dtype is the dtype class
-dtype = DType
+from ._dtype import float as float  # noqa: F811
+from ._dtype import int as int  # noqa: F811
+from ._dtype import DType as dtype  # torch.dtype compatibility
+from ._dtype import DType as Dtype  # schema/type alias compatibility
+from ._device import device as Device, _default_device, get_default_device, set_default_device
+from ._device import device
 from ._tensor import Tensor
-from ._creation import (
-    tensor, zeros, ones, empty, full, full_like,
-    arange, linspace, eye,
-    randn, rand, randint, rand_like,
-    zeros_like, ones_like, empty_like,
-    from_numpy, as_tensor, frombuffer, asarray,
-)
-from ._functional import (
-    add, sub, mul, div, neg, abs, pow,
-    exp, log, sqrt, square, sin, cos, tanh,
-    matmul,
-    sum, mean, max, min, prod, argmax, argmin,
-    eq, ne, gt, lt, ge, le,
-    # Tensor manipulation
-    cat, stack, split, chunk, clone, where,
-    # Additional math ops
-    var, std, clamp, rsqrt, reciprocal, bmm, baddbmm,
-    # Boolean reductions
-    all, any,
-    # Element testing
-    isin,
-    # Top-k and sampling
-    topk, multinomial,
-    # Cumulative ops
-    cumsum, cumprod,
-    # Rounding ops
-    floor, trunc, ceil, round, sign,
-    # Modular arithmetic
-    fmod, remainder,
-    # Log variants
-    log10, log2, log1p, expm1,
-    # Trigonometric
-    acos, asin, atan, atan2,
-    # Hyperbolic
-    cosh, sinh, acosh, asinh, atanh,
-    # Activation functions
-    relu, sigmoid,
-    # Tensor manipulation
-    squeeze, unsqueeze, flip, roll, gather, index_select,
-    repeat_interleave, unique_consecutive, einsum,
-    sort, reshape, permute, transpose, narrow, masked_fill,
-    # Math utilities
-    norm, isnan, isinf, isfinite,
-    # Logical ops
-    logical_not, logical_and, logical_or,
-    # Comparison
-    equal,
-    # Linear algebra
-    svd_lowrank,
-    # Difference operations
-    diff, maximum, minimum, take_along_dim,
-    # Complex number operations
-    conj, conj_physical,
-    # Binning and histogram
-    bucketize, histc,
-    # Index operations
-    nonzero, argsort,
-)
-from ._autograd import (
-    is_grad_enabled,
-    set_grad_enabled,
-    no_grad,
-    enable_grad,
-)
 
-# Import backends to register ops
+# Tensor type aliases for torch API compatibility
+FloatTensor = Tensor
+DoubleTensor = Tensor
+HalfTensor = Tensor
+BFloat16Tensor = Tensor
+ByteTensor = Tensor
+CharTensor = Tensor
+ShortTensor = Tensor
+IntTensor = Tensor
+LongTensor = Tensor
+BoolTensor = Tensor
+ComplexFloatTensor = Tensor
+ComplexDoubleTensor = Tensor
+Size = tuple
+from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand
+from ._functional import zeros_like
+from ._storage import UntypedStorage, TypedStorage
+from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, masked_select, flip, roll, rot90, repeat, repeat_interleave, tile, nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, concatenate, hstack, vstack, row_stack, dstack, column_stack, pad_sequence, block_diag, tril, triu, diag, cartesian_prod, chunk, split, vsplit, hsplit, dsplit, unbind, tril_indices, triu_indices, take, take_along_dim, index_select, gather, scatter, abs, neg, exp, log, sqrt, div, true_divide, mean
+from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac
+from ._functional import pow, log2, log10, exp2, rsqrt
+from ._functional import sign, signbit, isnan, isinf, isfinite
+from ._functional import sinh, cosh, asinh, acosh, atanh, erf, erfc, softplus
+from ._functional import clamp, clamp_min, clamp_max, relu6, hardtanh
+from ._functional import min, max, amin, amax, fmin, fmax, where
+from ._functional import atan, atan2, asin, acos, lerp, addcmul, addcdiv
+from ._functional import reshape, transpose
+from ._functional import logaddexp, logaddexp2, hypot, remainder, fmod
+from ._printing import set_printoptions, get_printoptions
+from ._dispatch import pipeline_context, functionalize_context
 from ._backends import cpu
-
-# Import submodules
-from . import nn
-from . import optim
+from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad, inference_mode
 from . import _autograd as autograd
-
-# Aliases for API compatibility
-concat = cat  # torch.concat is an alias for torch.cat
-
-# Memory format constants (for PyTorch API compatibility)
-class memory_format:
-    """Memory format enumeration."""
-    pass
-
-contiguous_format = memory_format()
-preserve_format = memory_format()
-channels_last = memory_format()
-channels_last_3d = memory_format()
-
-
-# Layout constants (for PyTorch API compatibility)
-class layout:
-    """Tensor layout enumeration."""
-    def __eq__(self, other):
-        return type(self) == type(other)
-
-    def __repr__(self):
-        return 'torch.strided'
-
-strided = layout()
-sparse_coo = layout()
-sparse_csr = layout()
-sparse_csc = layout()
-sparse_bsr = layout()
-sparse_bsc = layout()
-
-# Default dtype management
-_default_dtype = float32
-
-def get_default_dtype():
-    """Get the current default floating point dtype."""
-    return _default_dtype
-
-def set_default_dtype(dtype):
-    """Set the default floating point dtype."""
-    global _default_dtype
-    _default_dtype = dtype
+from . import npu
+from . import _C
+from . import distributed
+from . import onnx
+from . import futures
+from . import amp
+from . import compiler
+from .ops import ops
+from . import library
+from . import optim
+from . import jit
+from ._random import (
+    manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
+    Generator, default_generator,
+)
+from . import _random as random
 
 
-# Default device management
-def get_default_device():
-    """Get the current default device.
-
-    Returns the device from the device context manager if active,
-    otherwise returns cpu. Matches PyTorch 2.3+ API.
-    """
-    ctx_device = _get_default_device()
-    if ctx_device is not None:
-        return ctx_device
-    return device("cpu")
+def pipeline():
+    return pipeline_context()
 
 
-# Tensor type classes (for isinstance checks and type creation)
-class _TensorTypeMeta(type):
-    """Metaclass for tensor type classes that enables isinstance checks."""
-    def __instancecheck__(cls, instance):
-        if not isinstance(instance, Tensor):
-            return False
-        return instance.dtype == cls._dtype
+def functionalize():
+    return functionalize_context()
 
 
-class BoolTensor(metaclass=_TensorTypeMeta):
-    """Boolean tensor type."""
-    _dtype = bool
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=bool, *args, **kwargs)
-
-
-class FloatTensor(metaclass=_TensorTypeMeta):
-    """32-bit floating point tensor type."""
-    _dtype = float32
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=float32, *args, **kwargs)
+def compile(model=None, *args, **kwargs):
+    if callable(model):
+        return model
+    def decorator(fn):
+        return fn
+    return decorator
 
 
-class DoubleTensor(metaclass=_TensorTypeMeta):
-    """64-bit floating point tensor type."""
-    _dtype = float64
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=float64, *args, **kwargs)
-
-
-class HalfTensor(metaclass=_TensorTypeMeta):
-    """16-bit floating point tensor type."""
-    _dtype = float16
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=float16, *args, **kwargs)
-
-
-class LongTensor(metaclass=_TensorTypeMeta):
-    """64-bit integer tensor type."""
-    _dtype = int64
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=int64, *args, **kwargs)
-
-
-class IntTensor(metaclass=_TensorTypeMeta):
-    """32-bit integer tensor type."""
-    _dtype = int32
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=int32, *args, **kwargs)
-
-
-class ShortTensor(metaclass=_TensorTypeMeta):
-    """16-bit integer tensor type."""
-    _dtype = int16
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=int16, *args, **kwargs)
-
-
-class ByteTensor(metaclass=_TensorTypeMeta):
-    """8-bit unsigned integer tensor type."""
-    _dtype = uint8
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=uint8, *args, **kwargs)
-
-
-class CharTensor(metaclass=_TensorTypeMeta):
-    """8-bit signed integer tensor type."""
-    _dtype = int8
-
-    def __new__(cls, data=None, *args, **kwargs):
-        return Tensor(data, dtype=int8, *args, **kwargs)
+__all__ = [
+    "Device",
+    "device",
+    "Tensor",
+    "Size",
+    "FloatTensor", "DoubleTensor", "HalfTensor", "BFloat16Tensor",
+    "ByteTensor", "CharTensor", "ShortTensor", "IntTensor", "LongTensor",
+    "BoolTensor", "ComplexFloatTensor", "ComplexDoubleTensor",
+    "DType",
+    "dtype",
+    "Dtype",
+    # dtypes
+    "float8_e4m3fn", "float8_e5m2", "float8_e8m0fnu",
+    "float16", "float32", "float64", "bfloat16",
+    "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64",
+    "bool",
+    "complex64", "complex128",
+    # dtype aliases
+    "half", "float", "double",
+    "short", "int", "long", "byte",
+    "cfloat", "cdouble",
+    # creation
+    "tensor",
+    "zeros",
+    "ones",
+    "empty",
+    "randn",
+    "rand",
+    "arange",
+    "linspace",
+    "full",
+    "logspace",
+    "eye",
+    "range",
+    # ops
+    "add",
+    "mul",
+    "matmul",
+    "relu",
+    "abs",
+    "neg",
+    "exp",
+    "log",
+    "sqrt",
+    "all",
+    "any",
+    "argmax",
+    "argmin",
+    "count_nonzero",
+    "masked_select",
+    "flip",
+    "roll",
+    "rot90",
+    "repeat",
+    "repeat_interleave",
+    "tile",
+    "nonzero",
+    "cumsum",
+    "cumprod",
+    "cummax",
+    "argsort",
+    "sort",
+    "topk",
+    "stack",
+    "cat",
+    "concat",
+    "concatenate",
+    "hstack",
+    "vstack",
+    "row_stack",
+    "dstack",
+    "column_stack",
+    "pad_sequence",
+    "block_diag",
+    "tril",
+    "triu",
+    "diag",
+    "cartesian_prod",
+    "chunk",
+    "split",
+    "vsplit",
+    "hsplit",
+    "dsplit",
+    "unbind",
+    "tril_indices",
+    "triu_indices",
+    "take",
+    "take_along_dim",
+    "index_select",
+    "gather",
+    "scatter",
+    "allclose",
+    "isclose",
+    "equal",
+    "sin",
+    "cos",
+    "tan",
+    "tanh",
+    "sigmoid",
+    "floor",
+    "ceil",
+    "round",
+    "trunc",
+    "frac",
+    "pow",
+    "log2",
+    "log10",
+    "exp2",
+    "rsqrt",
+    "sign",
+    "signbit",
+    "isnan",
+    "isinf",
+    "isfinite",
+    "sinh",
+    "cosh",
+    "asinh",
+    "acosh",
+    "atanh",
+    "erf",
+    "erfc",
+    "softplus",
+    "clamp",
+    "clamp_min",
+    "clamp_max",
+    "relu6",
+    "hardtanh",
+    "min",
+    "max",
+    "amin",
+    "amax",
+    "fmin",
+    "fmax",
+    "where",
+    "atan",
+    "atan2",
+    "asin",
+    "acos",
+    "lerp",
+    "addcmul",
+    "addcdiv",
+    "logaddexp",
+    "logaddexp2",
+    "hypot",
+    "remainder",
+    "fmod",
+    "sum",
+    "reshape",
+    "transpose",
+    # printing
+    "set_printoptions",
+    "get_printoptions",
+    # pipeline
+    "pipeline",
+    "pipeline_context",
+    "functionalize",
+    "functionalize_context",
+    # device
+    "get_default_device",
+    "set_default_device",
+    "npu",
+    # autograd
+    "autograd",
+    "is_grad_enabled",
+    "set_grad_enabled",
+    "no_grad",
+    "enable_grad",
+    "inference_mode",
+    # distributed
+    "distributed",
+    "onnx",
+    # amp
+    "amp",
+    "ops",
+    "library",
+    "compiler",
+    "optim",
+    "jit",
+    "compile",
+]

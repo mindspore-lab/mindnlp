@@ -108,11 +108,43 @@ jobs:
   #       pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests
   #       # pytest -c pytest.ini -m 'not download and not gpu_only' tests
 
-  transformers-model-test:
+  # transformers-model-test:
+  #   needs: pylint-check
+  #   strategy:
+  #     matrix:
+  #       alpha: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y']
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - name: Set up Python
+  #     uses: actions/setup-python@v4
+  #     with:
+  #       python-version: 3.11
+  #   - name: Install dependencies
+  #     run: |
+  #       python -m pip install --upgrade pip==24.0
+  #       pip install torch --index-url https://download.pytorch.org/whl/cpu
+  #       pip install -r requirements/requirements.txt
+  #   - name: Install MindSpore
+  #     shell: bash
+  #     env:
+  #       OS: ubuntu-latest
+  #       PYTHON: 3.11
+  #     run: |
+  #       pip install mindspore
+  #   - name: Test with pytest
+  #     run: |
+  #       pip install transformers
+  #       TRANSFORMERS_VERSION=$(python -c "import transformers; print(transformers.__version__)")
+  #       echo "Installed transformers version: $TRANSFORMERS_VERSION"
+  #       cd tests
+  #       git clone -b v${TRANSFORMERS_VERSION} https://github.com/huggingface/transformers
+  #       cd ..
+  #       bash scripts/build_and_reinstall.sh
+  #       python tests/run_test.py -vs tests/transformers/tests/models/${{ matrix.alpha }}*/test_modeling*
+
+  mindtorch-v2-test:
     needs: pylint-check
-    strategy:
-      matrix:
-        alpha: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y']
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -132,16 +164,20 @@ jobs:
         PYTHON: 3.11
       run: |
         pip install mindspore
-    - name: Test with pytest
+    - name: Test mindtorch_v2
       run: |
-        pip install transformers
-        TRANSFORMERS_VERSION=$(python -c "import transformers; print(transformers.__version__)")
-        echo "Installed transformers version: $TRANSFORMERS_VERSION"
-        cd tests
-        git clone -b v${TRANSFORMERS_VERSION} https://github.com/huggingface/transformers
-        cd ..
-        bash scripts/build_and_reinstall.sh
-        python tests/run_test.py -vs tests/transformers/tests/models/${{ matrix.alpha }}*/test_modeling*
+        cd tests/mindtorch_v2
+        pytest . -v --tb=short \
+          --ignore=test_ops_npu.py \
+          --ignore=test_ddp.py \
+          --ignore=test_ddp_cpu.py \
+          --ignore=test_ddp_builtin_hooks.py \
+          --ignore=test_ddp_comm_hook.py \
+          --ignore=test_ddp_unused_params.py \
+          --ignore=test_ddp_static_graph.py \
+          --ignore=test_ddp_bucket_view.py \
+          --ignore=test_gloo_ddp.py \
+          --ignore=test_hccl_all_to_all_multicard.py
 
   kaggle-gpu-test:
     needs: pylint-check

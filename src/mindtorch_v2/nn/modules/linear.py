@@ -1,59 +1,58 @@
-"""Linear layer module."""
-
-import math
-import numpy as np
 from ..module import Module
 from ..parameter import Parameter
+from ..._creation import empty, randn
 from .. import functional as F
-import mindtorch_v2 as torch
-
-
-class Identity(Module):
-    """A placeholder identity operator."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    def forward(self, input):
-        return input
 
 
 class Linear(Module):
-    """Applies a linear transformation: y = xW^T + b.
-
-    Args:
-        in_features: size of each input sample
-        out_features: size of each output sample
-        bias: If False, layer will not learn an additive bias. Default: True
-    """
-
-    __constants__ = ['in_features', 'out_features']
-    in_features: int
-    out_features: int
-
-    def __init__(self, in_features: int, out_features: int, bias: bool = True,
-                 device=None, dtype=None):
+    def __init__(self, in_features, out_features, bias=True, device=None, dtype=None):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-
-        # Initialize weight with Kaiming uniform
-        k = 1.0 / in_features
-        bound = math.sqrt(k)
-        weight_np = np.random.uniform(-bound, bound, (out_features, in_features)).astype(np.float32)
-        self.weight = Parameter(torch.tensor(weight_np))
-
+        # PyTorch uses (out_features, in_features) shape for weight
+        # Initialize with uniform distribution U(-1/sqrt(in_features), 1/sqrt(in_features))
+        # Using randn as approximation (normal distribution with similar std)
+        import math
+        k = math.sqrt(1.0 / in_features)
+        w = randn(out_features, in_features, device=device, dtype=dtype) * k
+        self.weight = Parameter(w)
         if bias:
-            bias_np = np.random.uniform(-bound, bound, (out_features,)).astype(np.float32)
-            self.bias = Parameter(torch.tensor(bias_np))
+            b = randn(out_features, device=device, dtype=dtype) * k
+            self.bias = Parameter(b)
         else:
             self.register_parameter('bias', None)
 
     def forward(self, input):
         return F.linear(input, self.weight, self.bias)
 
-    def extra_repr(self) -> str:
+    def extra_repr(self):
         return f'in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None}'
 
-    def __repr__(self):
-        return f'Linear({self.extra_repr()})'
+
+class Bilinear(Module):
+    def __init__(self, in1_features, in2_features, out_features, bias=True, device=None, dtype=None):
+        super().__init__()
+        self.in1_features = in1_features
+        self.in2_features = in2_features
+        self.out_features = out_features
+        w = tensor([[[0.0] * in2_features for _ in range(in1_features)] for _ in range(out_features)])
+        self.weight = Parameter(w)
+        if bias:
+            self.bias = Parameter(tensor([0.0] * out_features))
+        else:
+            self.register_parameter('bias', None)
+
+    def forward(self, input1, input2):
+        raise NotImplementedError("Bilinear forward is not yet implemented")
+
+    def extra_repr(self):
+        return (f'in1_features={self.in1_features}, in2_features={self.in2_features}, '
+                f'out_features={self.out_features}, bias={self.bias is not None}')
+
+
+class Identity(Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+    def forward(self, input):
+        return input

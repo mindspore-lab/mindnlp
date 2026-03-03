@@ -1,25 +1,90 @@
-"""Test runner for mindtorch_v2.
+"""Test runner for mindtorch_v2 with NPU (Ascend) support.
 
 Simple test runner that:
 1. Installs mindtorch_v2 as torch replacement
-2. Patches safetensors to use Python-level loading
-3. Runs pytest
+2. Provides torch_npu compatibility
+3. Patches safetensors to use Python-level loading
+4. Runs pytest with TRANSFORMERS_TEST_DEVICE support
 
 Usage:
-    python tests/run_test_v2.py -vs tests/transformers/tests/models/bert/test_modeling_bert.py
+    # Run on NPU (Ascend)
+    TRANSFORMERS_TEST_DEVICE=npu python tests/run_test_v2.py -vs tests/transformers/tests/models/albert/test_modeling_albert.py
+
+    # Run on CPU
+    python tests/run_test_v2.py -vs tests/transformers/tests/models/albert/test_modeling_albert.py
 """
 import os
 import sys
 
-# Add src directory to Python path
+# Add src directory to Python path - MUST be first to avoid shadowing by tests/mindtorch_v2
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_path = os.path.join(project_root, 'src')
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
+tests_path = os.path.join(project_root, 'tests')
+
+# Remove tests directory from sys.path to avoid shadowing (tests/mindtorch_v2 would shadow src/mindtorch_v2)
+while tests_path in sys.path:
+    sys.path.remove(tests_path)
+
+# Insert src_path at position 0
+if src_path in sys.path:
+    sys.path.remove(src_path)
+sys.path.insert(0, src_path)
 
 # Install mindtorch_v2 torch proxy
 from mindtorch_v2._torch_proxy import install
 install()
+
+
+def create_torch_npu_module():
+    """Create a fake torch_npu module that delegates to mindtorch_v2.npu.
+
+    This is needed because transformers checks for torch_npu package availability.
+    """
+    import types
+    import importlib.util
+    import torch  # This is mindtorch_v2 thanks to the proxy
+
+    torch_npu = types.ModuleType('torch_npu')
+    torch_npu.__version__ = '2.1.0'
+
+    # Set proper module spec to avoid "torch_npu.__spec__ is None" errors
+    # This is required by accelerate's is_npu_available() check
+    torch_npu.__spec__ = importlib.util.spec_from_loader('torch_npu', loader=None)
+    torch_npu.__file__ = __file__
+    torch_npu.__path__ = []
+
+    # Copy all functions from torch.npu to torch_npu
+    for attr in dir(torch.npu):
+        if not attr.startswith('_'):
+            setattr(torch_npu, attr, getattr(torch.npu, attr))
+
+    # Add NPU-specific functions needed by transformers
+    def npu_fusion_attention(query, key, value, head_num, input_layout,
+                              pse=None, padding_mask=None, atten_mask=None,
+                              scale=1.0, keep_prob=1.0, pre_tockens=2147483647,
+                              next_tockens=0, inner_precise=1, prefix=None,
+                              sparse_mode=0, actual_seq_qlen=None,
+                              actual_seq_kvlen=None, gen_mask_parallel=True,
+                              sync=False):
+        """Stub for NPU fusion attention - falls back to standard attention."""
+        # This is a stub - transformers will detect it's available and try to use it
+        # We'll raise NotImplementedError to fall back to standard attention
+        raise NotImplementedError("NPU fusion attention not available in mindtorch_v2")
+
+    torch_npu.npu_fusion_attention = npu_fusion_attention
+
+    # Add other commonly needed NPU functions
+    torch_npu.npu_format_cast = lambda x, format: x  # No-op
+    torch_npu.get_npu_format = lambda x: 0  # Return default format
+
+    # Add torch_npu to sys.modules
+    sys.modules['torch_npu'] = torch_npu
+
+    return torch_npu
+
+
+# Create torch_npu module for compatibility
+create_torch_npu_module()
 
 
 def patch_safetensors_for_mindtorch_v2():
@@ -188,9 +253,46 @@ def patch_safetensors_for_mindtorch_v2():
     st.load_file = safe_load_file
 
 
-# Apply safetensors patch
-patch_safetensors_for_mindtorch_v2()
+def setup_test_skips():
+    """Set up test skipping for unsupported features."""
+    import torch
 
-# Run pytest
+    # torch._dynamo is already a stub module with no-op decorators
+    # torch.compile is already a no-op in the loader
+
+    # Set up CUDA-like attributes for compatibility
+    if not hasattr(torch, 'cuda'):
+        import types
+        torch.cuda = types.ModuleType('cuda')
+        torch.cuda.is_available = lambda: False
+        torch.cuda.device_count = lambda: 0
+
+    # Mark SDPA as not available - mindtorch_v2 doesn't have optimized SDPA kernels
+    # This will cause transformers to skip SDPA-related tests
+    torch._sdpa_available = False
+    if hasattr(torch.nn.functional, 'scaled_dot_product_attention'):
+        # Keep the function but mark it as not the optimized version
+        original_sdpa = torch.nn.functional.scaled_dot_product_attention
+        def sdpa_with_warning(*args, **kwargs):
+            return original_sdpa(*args, **kwargs)
+        sdpa_with_warning._is_optimized = False
+        torch.nn.functional.scaled_dot_product_attention = sdpa_with_warning
+
+
+# Apply patches
+patch_safetensors_for_mindtorch_v2()
+setup_test_skips()
+
+# Print device info
+import torch
+print(f"[mindtorch_v2] Default device: {torch.get_default_device()}")
+print(f"[mindtorch_v2] NPU available: {torch.npu.is_available()}")
+if os.environ.get('TRANSFORMERS_TEST_DEVICE'):
+    print(f"[mindtorch_v2] TRANSFORMERS_TEST_DEVICE={os.environ['TRANSFORMERS_TEST_DEVICE']}")
+
+# Run pytest (with --noconftest to avoid transformers conftest.py import issues)
 import pytest
-sys.exit(pytest.main(sys.argv[1:]))
+args = sys.argv[1:]
+if '--noconftest' not in args:
+    args.insert(0, '--noconftest')
+sys.exit(pytest.main(args))
