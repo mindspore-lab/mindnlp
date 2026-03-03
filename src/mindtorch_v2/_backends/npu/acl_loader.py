@@ -113,7 +113,7 @@ def _preload_libs(paths):
 
 
 def _import_acl():
-    import acl
+    import acl  # pylint: disable=import-error
 
     return acl
 
