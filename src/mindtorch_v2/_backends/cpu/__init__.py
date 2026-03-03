@@ -180,6 +180,7 @@ from .ops import (
     scatter_add_,
     masked_scatter_,
     unfold,
+    embedding,
     var_,
     norm_,
     prod_,
@@ -397,3 +398,5 @@ registry.register("conv_transpose1d", "cpu", conv_transpose1d)
 registry.register("max_pool2d", "cpu", max_pool2d)
 registry.register("avg_pool2d", "cpu", avg_pool2d)
 registry.register("adaptive_avg_pool2d", "cpu", adaptive_avg_pool2d)
+
+registry.register("embedding", "cpu", embedding)
