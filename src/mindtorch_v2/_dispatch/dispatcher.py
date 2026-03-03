@@ -241,6 +241,10 @@ def _extract_tensors(args, kwargs):
     for value in list(args) + list(kwargs.values()):
         if hasattr(value, "device"):
             tensors.append(value)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                if hasattr(item, "device"):
+                    tensors.append(item)
     return tensors
 
 
