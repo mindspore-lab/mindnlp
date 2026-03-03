@@ -44,8 +44,7 @@ jobs:
     #     pip install -r download.txt
     - name: Analysing the mindtorch_v2 code with pylint
       run: |
-        NUM_CORES=$(nproc)
-        pylint --jobs=$NUM_CORES src/mindtorch_v2 --rcfile=.github/pylint.conf
+        pylint --jobs=1 src/mindtorch_v2 --rcfile=.github/pylint.conf
 
   # ut-test:
   #   needs: pylint-check
