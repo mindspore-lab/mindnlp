@@ -552,3 +552,21 @@ def test_mindtorch_save_unsupported_unsigned_dtypes_raise(tmp_path, dtype):
 
     with pytest.raises(TypeError, match="unsupported dtype for serialization"):
         mt.save({"x": t}, path)
+
+
+def test_load_with_mmap_pathlike_zip_checkpoint(tmp_path):
+    path = tmp_path / "mmap_zip_roundtrip.pth"
+    mt.save({"x": mt.tensor([1.0, 2.0, 3.0])}, path)
+
+    loaded = mt.load(path, mmap=True)
+
+    assert loaded["x"].tolist() == [1.0, 2.0, 3.0]
+
+
+def test_load_with_mmap_filelike_raises_value_error(tmp_path):
+    path = tmp_path / "mmap_filelike.pth"
+    mt.save({"x": mt.tensor([1.0])}, path)
+
+    with open(path, "rb") as fh:
+        with pytest.raises(ValueError, match="f must be a string filename"):
+            mt.load(fh, mmap=True)
