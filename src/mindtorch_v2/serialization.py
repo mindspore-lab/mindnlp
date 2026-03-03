@@ -655,7 +655,7 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=2, **kwargs):
     _write_zip_checkpoint(obj, f, pickle_module, pickle_protocol)
 
 
-def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, **kwargs):
+def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, mmap=None, **kwargs):
     """Load checkpoint without torch runtime dependency.
 
     Supports torch zip checkpoints and the zip checkpoints produced by
@@ -663,14 +663,23 @@ def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, **kw
     files if needed.
     """
     _check_filelike_for_read(f)
+    if mmap is None:
+        mmap = False
     map_location = _coerce_map_location_arg(map_location)
     _ = pickle_module, weights_only, kwargs
+
+    if mmap and not _is_pathlike(f):
+        raise ValueError("f must be a string filename in order to use mmap argument")
 
     if _is_pathlike(f):
         with open(f, "rb") as fh:
             if _is_zip_checkpoint(fh):
                 return _load_zip_checkpoint(
                     fh, map_location=map_location, weights_only=weights_only, encoding="utf-8"
+                )
+            if mmap:
+                raise RuntimeError(
+                    "mmap can only be used with files saved with torch zip serialization"
                 )
             return _load_legacy_checkpoint(
                 fh, map_location=map_location, weights_only=weights_only, encoding="utf-8"
