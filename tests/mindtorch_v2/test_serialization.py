@@ -621,6 +621,22 @@ def test_weights_only_rejects_defaultdict_global(tmp_path):
         mt.load(path, weights_only=True)
 
 
+def test_weights_only_allows_safe_builtin_containers(tmp_path):
+    path = tmp_path / "weights_only_safe_builtin_containers.pth"
+    payload = {
+        "x": torch.tensor([1.0]),
+        "s": {1, 2, 3},
+        "t": ("a", 1, 2.0),
+    }
+    torch.save(payload, path)
+
+    loaded = mt.load(path, weights_only=True)
+
+    assert loaded["x"].tolist() == [1.0]
+    assert loaded["s"] == {1, 2, 3}
+    assert loaded["t"] == ("a", 1, 2.0)
+
+
 def test_weights_only_false_allows_defaultdict_global(tmp_path):
     path = tmp_path / "weights_only_false_defaultdict.pth"
     payload = {"x": torch.tensor([1.0]), "d": collections.defaultdict(int, a=1)}
