@@ -119,6 +119,34 @@ def test_mindtorch_save_then_torch_load_state_dict(tmp_path):
         assert torch.allclose(expected[k], loaded[k])
 
 
+def test_torch_save_then_mindtorch_load_bytesio_roundtrip():
+    model = torch.nn.Linear(4, 3)
+    obj = {"model": model.state_dict(), "step": 123}
+
+    buf = io.BytesIO()
+    torch.save(obj, buf)
+    buf.seek(0)
+
+    loaded = mt.load(buf)
+
+    assert loaded["step"] == 123
+    assert set(loaded["model"].keys()) == {"weight", "bias"}
+
+
+def test_mindtorch_save_then_torch_load_bytesio_roundtrip():
+    model = nn.Linear(4, 3)
+    obj = {"model": model.state_dict(), "step": 77}
+
+    buf = io.BytesIO()
+    mt.save(obj, buf)
+    buf.seek(0)
+
+    loaded = torch.load(buf, map_location="cpu")
+
+    assert loaded["step"] == 77
+    assert set(loaded["model"].keys()) == {"weight", "bias"}
+
+
 def test_mindtorch_save_load_nested_common_checkpoint(tmp_path):
     model = nn.Linear(4, 3)
     ckpt = {
