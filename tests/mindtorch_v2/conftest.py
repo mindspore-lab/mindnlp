@@ -1,7 +1,17 @@
+import multiprocessing
 import os
+import sys
 
 import pytest
 
+# macOS defaults to "spawn" which cannot pickle locally-defined classes used in
+# multi-process DataLoader tests.  Switch to "fork" so that worker processes
+# inherit the parent address space (PyTorch's own test suite does the same).
+if sys.platform == "darwin":
+    try:
+        multiprocessing.set_start_method("fork", force=True)
+    except RuntimeError:
+        pass
 
 _FORCE_CPU_ONLY_ENV = "MINDTORCH_TEST_FORCE_CPU_ONLY"
 
@@ -22,7 +32,7 @@ def _npu_available() -> bool:
 def _requires_npu(item: pytest.Item) -> bool:
     nodeid = item.nodeid.lower()
     # Match file/function names that are NPU/HCCL/ACL specific.
-    return any(token in nodeid for token in ("npu", "hccl", "acl"))
+    return any(token in nodeid for token in ("npu", "hccl", "acl", "ddp", "pin_memory", "pinned"))
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
