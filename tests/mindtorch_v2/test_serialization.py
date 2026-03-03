@@ -323,6 +323,88 @@ def test_strict_save_cpu_source_location_stays_cpu():
     assert proxy.storage_ref.location == "cpu"
 
 
+def test_torch_load_with_map_location_callable_returning_none(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_state_dict_map_loc_callable_none.pth"
+    torch.save(model.state_dict(), path)
+
+    calls = []
+
+    def mapper(storage, loc):
+        calls.append((storage, loc))
+        return None
+
+    loaded = mt.load(path, map_location=mapper)
+
+    assert isinstance(loaded, OrderedDict)
+    assert set(loaded.keys()) == {"weight", "bias"}
+    assert calls and {loc for _, loc in calls} == {"cpu"}
+
+
+def test_torch_load_rejects_unsupported_map_location_target(tmp_path):
+    model = torch.nn.Linear(4, 3)
+    path = tmp_path / "torch_state_dict_map_loc_bad_target.pth"
+    torch.save(model.state_dict(), path)
+
+    with pytest.raises(RuntimeError, match="unsupported checkpoint storage location"):
+        mt.load(path, map_location={"cpu": "cuda:0"})
+
+
+def test_save_unsupported_dtype_uint16_raises(tmp_path):
+    x = mt.tensor([1, 2, 3], dtype=mt.uint16)
+    path = tmp_path / "mindtorch_uint16.pth"
+
+    with pytest.raises(TypeError, match="unsupported dtype for serialization"):
+        mt.save({"x": x}, path)
+
+
+def test_load_zip_checkpoint_missing_data_pkl_raises(tmp_path):
+    path = tmp_path / "bad_missing_data_pkl.pth"
+    with zipfile.ZipFile(path, mode="w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("archive/version", b"3")
+        zf.writestr("archive/byteorder", b"little")
+
+    with pytest.raises(RuntimeError, match="checkpoint missing data.pkl record"):
+        mt.load(path)
+
+
+def test_load_zip_checkpoint_unknown_typename_raises(tmp_path):
+    seed_path = tmp_path / "good_unknown_typename_seed.pth"
+    mt.save({"x": mt.tensor([1.0])}, seed_path)
+
+    path = tmp_path / "bad_unknown_typename.pth"
+    with zipfile.ZipFile(seed_path, mode="r") as src, zipfile.ZipFile(
+        path, mode="w", compression=zipfile.ZIP_STORED
+    ) as dst:
+        for name in src.namelist():
+            payload = src.read(name)
+            if name.endswith("data.pkl"):
+                assert b"storage" in payload
+                payload = payload.replace(b"storage", b"notstor", 1)
+            dst.writestr(name, payload)
+
+    with pytest.raises(RuntimeError, match="Unknown typename for persistent_load"):
+        mt.load(path)
+
+
+def test_load_legacy_truncated_storage_payload_raises(tmp_path):
+    tensor = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
+    src_path = tmp_path / "legacy_ok.pth"
+    torch.save({"x": tensor}, src_path, _use_new_zipfile_serialization=False)
+
+    with open(src_path, "rb") as fh:
+        original = fh.read()
+
+    bad = original[:-1]
+
+    bad_path = tmp_path / "legacy_truncated.pth"
+    with open(bad_path, "wb") as fh:
+        fh.write(bad)
+
+    with pytest.raises(RuntimeError, match="truncated storage payload"):
+        mt.load(bad_path)
+
+
 def test_mindtorch_roundtrip_preserves_storage_aliasing():
     base = mt.tensor([0.0, 1.0, 2.0, 3.0])
     view1 = base[:3]
@@ -390,11 +472,26 @@ import pytest
 
 @pytest.mark.parametrize(
     "dtype",
-    [torch.float16, torch.float32, torch.float64, torch.int64, torch.bool],
+    [
+        torch.float16,
+        torch.float32,
+        torch.float64,
+        torch.int8,
+        torch.int16,
+        torch.int32,
+        torch.int64,
+        torch.uint8,
+        torch.bool,
+        torch.complex64,
+        torch.complex128,
+    ],
 )
 def test_torch_to_mindtorch_dtype_matrix(tmp_path, dtype):
     if dtype is torch.bool:
         t = torch.tensor([[True, False], [False, True]], dtype=dtype)
+    elif dtype in (torch.complex64, torch.complex128):
+        base = torch.arange(4, dtype=torch.float32).reshape(2, 2)
+        t = torch.complex(base, base + 1).to(dtype)
     else:
         t = torch.arange(4, dtype=torch.float32).reshape(2, 2).to(dtype)
     path = tmp_path / f"torch_dtype_{str(dtype).split('.')[-1]}.pth"
@@ -410,11 +507,28 @@ def test_torch_to_mindtorch_dtype_matrix(tmp_path, dtype):
 
 @pytest.mark.parametrize(
     "dtype",
-    [mt.float16, mt.float32, mt.float64, mt.int64, mt.bool],
+    [
+        mt.float16,
+        mt.float32,
+        mt.float64,
+        mt.int8,
+        mt.int16,
+        mt.int32,
+        mt.int64,
+        mt.uint8,
+        mt.bool,
+        mt.bfloat16,
+        mt.complex64,
+        mt.complex128,
+    ],
 )
 def test_mindtorch_to_torch_dtype_matrix(tmp_path, dtype):
     if dtype == mt.bool:
         t = mt.tensor([[True, False], [False, True]], dtype=dtype)
+    elif dtype in (mt.complex64, mt.complex128):
+        real = mt.arange(0, 4, dtype=mt.float32).reshape((2, 2)).to(dtype=mt.float32)
+        imag = mt.arange(10, 14, dtype=mt.float32).reshape((2, 2)).to(dtype=mt.float32)
+        t = mt.tensor(real.numpy() + 1j * imag.numpy(), dtype=dtype)
     else:
         t = mt.arange(0, 4, dtype=mt.float32).reshape((2, 2)).to(dtype=dtype)
     path = tmp_path / f"mindtorch_dtype_{dtype.name}.pth"
@@ -425,4 +539,16 @@ def test_mindtorch_to_torch_dtype_matrix(tmp_path, dtype):
 
     assert tuple(x.shape) == tuple(t.shape)
     assert str(x.dtype).split(".")[-1] == dtype.name
-    assert x.tolist() == t.tolist()
+    if dtype == mt.bfloat16:
+        assert x.to(torch.float32).tolist() == t.to(dtype=mt.float32).tolist()
+    else:
+        assert x.tolist() == t.tolist()
+
+
+@pytest.mark.parametrize("dtype", [mt.uint16, mt.uint32, mt.uint64])
+def test_mindtorch_save_unsupported_unsigned_dtypes_raise(tmp_path, dtype):
+    t = mt.tensor([1, 2, 3], dtype=dtype)
+    path = tmp_path / f"mindtorch_{dtype.name}_unsupported.pth"
+
+    with pytest.raises(TypeError, match="unsupported dtype for serialization"):
+        mt.save({"x": t}, path)
