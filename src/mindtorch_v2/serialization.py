@@ -66,6 +66,8 @@ def _maybe_decode_ascii(value):
 
 _ALLOWED_WEIGHTS_GLOBALS = {
     ("collections", "OrderedDict"),
+    ("__builtin__", "set"),
+    ("builtins", "set"),
     ("torch._utils", "_rebuild_tensor_v2"),
     ("torch._utils", "_rebuild_tensor"),
     ("torch", "FloatStorage"),
@@ -92,6 +94,8 @@ class _WeightsOnlyUnpickler(pickle.Unpickler):
             )
         if mod_name == "collections" and name == "OrderedDict":
             return OrderedDict
+        if name == "set" and mod_name in {"__builtin__", "builtins"}:
+            return set
         if mod_name == "torch._utils" and name in {"_rebuild_tensor_v2", "_rebuild_tensor"}:
             return _rebuild_tensor_v2
         if mod_name == "torch" and name in _STORAGE_NAME_TO_DTYPE:
