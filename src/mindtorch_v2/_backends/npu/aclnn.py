@@ -2570,6 +2570,57 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnMaxPool2dWithIndices — supports fp32/fp16/bf16, preferred over aclnnMaxPool
+        self.aclnn_max_pool2d_with_indices_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMaxPool2dWithIndicesGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,                   # const aclTensor* self
+                ctypes.c_void_p,                   # const aclIntArray* kernelSize
+                ctypes.c_void_p,                   # const aclIntArray* stride
+                ctypes.c_void_p,                   # const aclIntArray* padding
+                ctypes.c_void_p,                   # const aclIntArray* dilation
+                ctypes.c_bool,                     # bool ceilMode
+                ctypes.c_void_p,                   # aclTensor* out
+                ctypes.c_void_p,                   # aclTensor* indices
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_max_pool2d_with_indices = _optional_symbol(
+            libs,
+            "aclnnMaxPool2dWithIndices",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnMaxPool2dWithMask — used on Ascend910B (pre-910C), supports fp32/fp16
+        # indices are int8 mask tensors (not actual position indices)
+        self.aclnn_max_pool2d_with_mask_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMaxPool2dWithMaskGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,                   # const aclTensor* self
+                ctypes.c_void_p,                   # const aclIntArray* kernelSize
+                ctypes.c_void_p,                   # const aclIntArray* stride
+                ctypes.c_void_p,                   # const aclIntArray* padding
+                ctypes.c_void_p,                   # const aclIntArray* dilation
+                ctypes.c_bool,                     # bool ceilMode
+                ctypes.c_void_p,                   # aclTensor* out
+                ctypes.c_void_p,                   # aclTensor* indices (mask)
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_max_pool2d_with_mask = _optional_symbol(
+            libs,
+            "aclnnMaxPool2dWithMask",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
         # aclnnAvgPool2d
         self.aclnn_avg_pool2d_get_workspace = _optional_symbol(
             libs,
@@ -9235,14 +9286,16 @@ def convolution(input_ptr, weight_ptr, bias_ptr,
     if not convolution_symbols_ok():
         raise RuntimeError("aclnnConvolution symbols not available")
 
-    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr)
-    weight_tensor, weight_keep = _create_tensor(bindings, weight_shape, weight_stride, dtype, weight_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    # aclnnConvolution requires NCHW format (not ND) for input/weight/output tensors.
+    # cubeMathType=1 (ALLOW_FP32_DOWN_PRECISION) is required for fp32 on Ascend910B.
+    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr, _ACL_FORMAT_NCHW)
+    weight_tensor, weight_keep = _create_tensor(bindings, weight_shape, weight_stride, dtype, weight_ptr, _ACL_FORMAT_NCHW)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
 
     bias_tensor = None
     bias_keep = None
     if bias_ptr is not None:
-        bias_tensor, bias_keep = _create_tensor(bindings, bias_shape, bias_stride, dtype, bias_ptr)
+        bias_tensor, bias_keep = _create_tensor(bindings, bias_shape, bias_stride, dtype, bias_ptr, _ACL_FORMAT_NCHW)
 
     stride_arr = _make_int64_array(list(stride))
     stride_handle = bindings.acl_create_int_array(stride_arr, ctypes.c_uint64(len(stride)))
@@ -9268,7 +9321,7 @@ def convolution(input_ptr, weight_ptr, bias_ptr,
             output_padding_handle,
             ctypes.c_int64(groups),
             out_tensor,
-            ctypes.c_int8(0),  # cubeMathType = default
+            ctypes.c_int8(1),  # cubeMathType=1 (ALLOW_FP32_DOWN_PRECISION) required for fp32 on Ascend910B
             ctypes.byref(workspace_size),
             ctypes.byref(executor),
         )
@@ -9326,8 +9379,10 @@ def max_pool(self_ptr, out_ptr, shape, stride_t, dtype,
     if not max_pool_symbols_ok():
         raise RuntimeError("aclnnMaxPool symbols not available")
 
-    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    # aclnnMaxPool requires NCHW format. Note: only fp16 dtype is supported on Ascend910B.
+    # Callers must cast fp32 input to fp16 before calling this function.
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr, _ACL_FORMAT_NCHW)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
 
     ks_arr = _make_int64_array(list(kernel_shape))
     ks_handle = bindings.acl_create_int_array(ks_arr, ctypes.c_uint64(len(kernel_shape)))
@@ -9385,6 +9440,95 @@ def max_pool(self_ptr, out_ptr, shape, stride_t, dtype,
 
 
 # ---------------------------------------------------------------------------
+# aclnnMaxPool2dWithMask — fp32/fp16-capable, used on Ascend910B
+# ---------------------------------------------------------------------------
+def max_pool2d_with_mask_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_max_pool2d_with_mask_get_workspace,
+                    bindings.aclnn_max_pool2d_with_mask])
+    except Exception:
+        return False
+
+
+def max_pool2d_with_mask(self_ptr, out_ptr, mask_ptr,
+                         shape, stride_t, dtype,
+                         kernel_size, strides, padding, dilations, ceil_mode,
+                         out_shape, out_stride, mask_shape, mask_stride,
+                         runtime, stream=None):
+    """MaxPool2d via aclnnMaxPool2dWithMask, which supports fp32/fp16 on Ascend910B.
+
+    The mask output is an int8 tensor used internally for backward; callers
+    typically discard it for forward-only use.
+    """
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not max_pool2d_with_mask_symbols_ok():
+        raise RuntimeError("aclnnMaxPool2dWithMask symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr, _ACL_FORMAT_NCHW)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
+    # mask indices are int8
+    mask_tensor, mask_keep = _create_tensor(bindings, mask_shape, mask_stride, "int8", mask_ptr, _ACL_FORMAT_NCHW)
+
+    ks_arr = _make_int64_array(list(kernel_size))
+    ks_handle = bindings.acl_create_int_array(ks_arr, ctypes.c_uint64(len(kernel_size)))
+    st_arr = _make_int64_array(list(strides))
+    st_handle = bindings.acl_create_int_array(st_arr, ctypes.c_uint64(len(strides)))
+    pd_arr = _make_int64_array(list(padding))
+    pd_handle = bindings.acl_create_int_array(pd_arr, ctypes.c_uint64(len(padding)))
+    dl_arr = _make_int64_array(list(dilations))
+    dl_handle = bindings.acl_create_int_array(dl_arr, ctypes.c_uint64(len(dilations)))
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_max_pool2d_with_mask_get_workspace(
+            self_tensor,
+            ks_handle,
+            st_handle,
+            pd_handle,
+            dl_handle,
+            ctypes.c_bool(ceil_mode),
+            out_tensor,
+            mask_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaxPool2dWithMaskGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_max_pool2d_with_mask(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaxPool2dWithMask failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_int_array(ks_handle)
+        bindings.acl_destroy_int_array(st_handle)
+        bindings.acl_destroy_int_array(pd_handle)
+        bindings.acl_destroy_int_array(dl_handle)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_tensor(mask_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, mask_keep, ks_arr, st_arr, pd_arr, dl_arr)
+
+
+# ---------------------------------------------------------------------------
 # aclnnAvgPool2d
 # ---------------------------------------------------------------------------
 def avg_pool2d_symbols_ok():
@@ -9405,8 +9549,9 @@ def avg_pool2d(self_ptr, out_ptr, shape, stride_t, dtype,
     if not avg_pool2d_symbols_ok():
         raise RuntimeError("aclnnAvgPool2d symbols not available")
 
-    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    # aclnnAvgPool2d requires NCHW format; cubeMathType=1 needed for fp32 on Ascend910B.
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr, _ACL_FORMAT_NCHW)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
 
     ks_arr = _make_int64_array(list(kernel_size))
     ks_handle = bindings.acl_create_int_array(ks_arr, ctypes.c_uint64(len(kernel_size)))
@@ -9427,7 +9572,7 @@ def avg_pool2d(self_ptr, out_ptr, shape, stride_t, dtype,
             ctypes.c_bool(ceil_mode),
             ctypes.c_bool(count_include_pad),
             ctypes.c_int64(divisor_override if divisor_override is not None else 0),
-            ctypes.c_int8(0),  # cubeMathType = default
+            ctypes.c_int8(1),  # cubeMathType=1 (ALLOW_FP32_DOWN_PRECISION) required for fp32 on Ascend910B
             out_tensor,
             ctypes.byref(workspace_size),
             ctypes.byref(executor),
@@ -9480,8 +9625,9 @@ def adaptive_avg_pool2d(self_ptr, out_ptr, shape, stride_t, dtype,
     if not adaptive_avg_pool2d_symbols_ok():
         raise RuntimeError("aclnnAdaptiveAvgPool2d symbols not available")
 
-    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    # aclnnAdaptiveAvgPool2d requires NCHW format.
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr, _ACL_FORMAT_NCHW)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
 
     os_arr = _make_int64_array(list(output_size))
     os_handle = bindings.acl_create_int_array(os_arr, ctypes.c_uint64(len(output_size)))
