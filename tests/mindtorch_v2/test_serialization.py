@@ -4,6 +4,7 @@ import io
 import builtins
 import pickle
 import zipfile
+import collections
 from collections import OrderedDict
 
 import mindtorch_v2 as mt
@@ -14,6 +15,26 @@ import mindtorch_v2.nn as nn
 class _CustomPayload:
     def __init__(self, value):
         self.value = value
+
+
+class _TorchUnsafeGlobal:
+    def __init__(self, value):
+        self.value = value
+
+
+class _CountingPickleModule:
+    load_calls = 0
+    unpickler_inits = 0
+
+    @staticmethod
+    def load(*args, **kwargs):
+        _CountingPickleModule.load_calls += 1
+        return pickle.load(*args, **kwargs)
+
+    class Unpickler(pickle.Unpickler):
+        def __init__(self, *args, **kwargs):
+            _CountingPickleModule.unpickler_inits += 1
+            super().__init__(*args, **kwargs)
 
 
 def test_serialization_does_not_import_torch_runtime(monkeypatch):
@@ -570,3 +591,86 @@ def test_load_with_mmap_filelike_raises_value_error(tmp_path):
     with open(path, "rb") as fh:
         with pytest.raises(ValueError, match="f must be a string filename"):
             mt.load(fh, mmap=True)
+
+
+def test_load_with_mmap_pathlike_uses_memmap_backing(tmp_path):
+    path = tmp_path / "mmap_backing_check.pth"
+    mt.save({"x": mt.tensor([10.0, 20.0, 30.0])}, path)
+
+    loaded = mt.load(path, mmap=True)
+    arr = loaded["x"].storage().data
+
+    assert isinstance(arr.base, np.memmap)
+    assert loaded["x"].tolist() == [10.0, 20.0, 30.0]
+
+
+def test_weights_only_rejects_torch_custom_global(tmp_path):
+    path = tmp_path / "weights_only_reject_torch_custom.pth"
+    torch.save({"x": torch.tensor([1.0]), "unsafe": _TorchUnsafeGlobal(1)}, path)
+
+    with pytest.raises(pickle.UnpicklingError, match="weights_only"):
+        mt.load(path, weights_only=True)
+
+
+def test_weights_only_rejects_defaultdict_global(tmp_path):
+    path = tmp_path / "weights_only_reject_defaultdict.pth"
+    payload = {"x": torch.tensor([1.0]), "d": collections.defaultdict(int, a=1)}
+    torch.save(payload, path)
+
+    with pytest.raises(pickle.UnpicklingError, match="weights_only"):
+        mt.load(path, weights_only=True)
+
+
+def test_weights_only_false_allows_defaultdict_global(tmp_path):
+    path = tmp_path / "weights_only_false_defaultdict.pth"
+    payload = {"x": torch.tensor([1.0]), "d": collections.defaultdict(int, a=1)}
+    torch.save(payload, path)
+
+    loaded = mt.load(path, weights_only=False)
+
+    assert loaded["x"].tolist() == [1.0]
+    assert isinstance(loaded["d"], collections.defaultdict)
+    assert loaded["d"]["a"] == 1
+
+
+def test_weights_only_none_allows_defaultdict_global(tmp_path):
+    path = tmp_path / "weights_only_none_defaultdict.pth"
+    payload = {"x": torch.tensor([1.0]), "d": collections.defaultdict(int, a=2)}
+    torch.save(payload, path)
+
+    loaded = mt.load(path, weights_only=None)
+
+    assert loaded["x"].tolist() == [1.0]
+    assert isinstance(loaded["d"], collections.defaultdict)
+    assert loaded["d"]["a"] == 2
+
+
+def test_load_honors_custom_pickle_module_on_zip_path(tmp_path):
+    _CountingPickleModule.load_calls = 0
+    _CountingPickleModule.unpickler_inits = 0
+
+    path = tmp_path / "custom_pickle_zip.pth"
+    mt.save({"x": mt.tensor([1.0])}, path)
+
+    loaded = mt.load(path, pickle_module=_CountingPickleModule)
+
+    assert loaded["x"].tolist() == [1.0]
+    assert _CountingPickleModule.unpickler_inits >= 1
+
+
+def test_load_honors_custom_pickle_module_on_legacy_path(tmp_path):
+    _CountingPickleModule.load_calls = 0
+    _CountingPickleModule.unpickler_inits = 0
+
+    path = tmp_path / "custom_pickle_legacy.pth"
+    torch.save(
+        {"x": torch.tensor([1.0])},
+        path,
+        _use_new_zipfile_serialization=False,
+    )
+
+    loaded = mt.load(path, pickle_module=_CountingPickleModule)
+
+    assert loaded["x"].tolist() == [1.0]
+    assert _CountingPickleModule.load_calls >= 1
+    assert _CountingPickleModule.unpickler_inits >= 1
