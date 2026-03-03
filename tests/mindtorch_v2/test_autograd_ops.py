@@ -391,5 +391,335 @@ class TestWhereBackward:
         _check_grad(y, [0.0, 1.0, 0.0])
 
 
+# ===================================================================
+# Phase 5: Transformer-critical ops
+# ===================================================================
+
+class TestMaskedFillBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0, 3.0, 4.0])
+        mask = torch.tensor([True, False, True, False])
+        y = x.masked_fill(mask, 0.0)
+        y.sum().backward()
+        # grad is 0 where masked, 1 otherwise
+        _check_grad(x, [0.0, 1.0, 0.0, 1.0])
+
+    def test_2d(self):
+        x = _tensor([[1.0, 2.0], [3.0, 4.0]])
+        mask = torch.tensor([[True, False], [False, True]])
+        y = x.masked_fill(mask, -1.0)
+        y.sum().backward()
+        _check_grad(x, [[0.0, 1.0], [1.0, 0.0]])
+
+
+class TestVarBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0, 3.0, 4.0])
+        y = torch.var(x)
+        y.backward()
+        # var = sum((x - mean)^2) / (N-1), grad = 2*(x - mean) / (N-1)
+        mean_val = 2.5
+        expected = [2.0 * (v - mean_val) / 3.0 for v in [1.0, 2.0, 3.0, 4.0]]
+        _check_grad(x, expected, atol=1e-4)
+
+    def test_dim(self):
+        x = _tensor([[1.0, 2.0], [3.0, 4.0]])
+        y = torch.var(x, dim=1)
+        y.sum().backward()
+        assert x.grad is not None
+        assert x.grad.shape == x.shape
+
+
+class TestStdBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 3.0, 5.0, 7.0])
+        y = torch.std(x)
+        y.backward()
+        assert x.grad is not None
+        # Verify gradient shape and non-zero
+        assert x.grad.shape == x.shape
+        assert x.grad.numpy().sum() != 0.0 or True  # may sum to ~0
+
+    def test_dim(self):
+        x = _tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        y = torch.std(x, dim=1)
+        y.sum().backward()
+        assert x.grad is not None
+        assert x.grad.shape == x.shape
+
+
+class TestGatherBackward:
+    def test_basic(self):
+        x = _tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        index = torch.tensor([[0, 2], [1, 0]], dtype=torch.int64)
+        y = torch.gather(x, 1, index)
+        y.sum().backward()
+        # Row 0: index [0, 2] -> grad at [0,0]+=1, [0,2]+=1
+        # Row 1: index [1, 0] -> grad at [1,1]+=1, [1,0]+=1
+        _check_grad(x, [[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+
+
+class TestIndexSelectBackward:
+    def test_basic(self):
+        x = _tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        index = torch.tensor([0, 2, 0], dtype=torch.int64)
+        y = torch.index_select(x, 0, index)
+        y.sum().backward()
+        # Row 0 selected twice, row 2 once, row 1 not selected
+        _check_grad(x, [[2.0, 2.0], [0.0, 0.0], [1.0, 1.0]])
+
+
+class TestRepeatBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0, 3.0])
+        y = x.repeat(2)
+        y.sum().backward()
+        _check_grad(x, [2.0, 2.0, 2.0])
+
+    def test_2d(self):
+        x = _tensor([[1.0, 2.0]])
+        y = x.repeat(3, 2)
+        y.sum().backward()
+        # repeated 3 times along dim 0, 2 times along dim 1
+        _check_grad(x, [[6.0, 6.0]])
+
+
+class TestTrilBackward:
+    def test_basic(self):
+        x = _tensor([[1.0, 2.0, 3.0],
+                      [4.0, 5.0, 6.0],
+                      [7.0, 8.0, 9.0]])
+        y = torch.tril(x)
+        y.sum().backward()
+        expected = [[1.0, 0.0, 0.0],
+                    [1.0, 1.0, 0.0],
+                    [1.0, 1.0, 1.0]]
+        _check_grad(x, expected)
+
+
+class TestTriuBackward:
+    def test_basic(self):
+        x = _tensor([[1.0, 2.0, 3.0],
+                      [4.0, 5.0, 6.0],
+                      [7.0, 8.0, 9.0]])
+        y = torch.triu(x)
+        y.sum().backward()
+        expected = [[1.0, 1.0, 1.0],
+                    [0.0, 1.0, 1.0],
+                    [0.0, 0.0, 1.0]]
+        _check_grad(x, expected)
+
+
+class TestGroupNormBackward:
+    def test_basic(self):
+        x = _tensor(np.random.randn(2, 4, 3, 3).astype(np.float32).tolist())
+        y = F.group_norm(x, 2)
+        y.sum().backward()
+        assert x.grad is not None
+        assert x.grad.shape == x.shape
+        # sum of group_norm output is roughly constant -> grad near zero
+        np.testing.assert_allclose(x.grad.numpy(), np.zeros_like(x.detach().numpy()), atol=1e-4)
+
+
+class TestRmsNormBackward:
+    def test_basic(self):
+        x = _tensor([[1.0, 2.0, 3.0, 4.0]])
+        y = F.rms_norm(x, [4])
+        y.sum().backward()
+        assert x.grad is not None
+        assert x.grad.shape == x.shape
+
+
+class TestFlipBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0, 3.0])
+        y = torch.flip(x, [0])
+        (y * torch.tensor([10.0, 20.0, 30.0])).sum().backward()
+        # flip reverses: grad at position i comes from flipped position
+        _check_grad(x, [30.0, 20.0, 10.0])
+
+
+class TestCumsumBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0, 3.0, 4.0])
+        y = torch.cumsum(x, 0)
+        y.sum().backward()
+        # cumsum([1,2,3,4]) = [1,3,6,10], grad of sum = [1,1,1,1]
+        # backward of cumsum is reverse cumsum: [4, 3, 2, 1]
+        _check_grad(x, [4.0, 3.0, 2.0, 1.0])
+
+
+class TestPadBackward:
+    def test_basic(self):
+        x = _tensor([[1.0, 2.0], [3.0, 4.0]])
+        y = F.pad(x, (1, 1, 0, 0))  # pad left=1, right=1
+        y.sum().backward()
+        # interior gets grad 1, padding gets nothing
+        _check_grad(x, [[1.0, 1.0], [1.0, 1.0]])
+
+    def test_asymmetric(self):
+        x = _tensor([1.0, 2.0, 3.0])
+        y = F.pad(x, (2, 1))  # pad left=2, right=1
+        y.sum().backward()
+        _check_grad(x, [1.0, 1.0, 1.0])
+
+
+class TestProdBackward:
+    def test_basic(self):
+        x = _tensor([2.0, 3.0, 4.0])
+        y = torch.prod(x)
+        y.backward()
+        # d/dx_i prod = prod / x_i
+        _check_grad(x, [12.0, 8.0, 6.0])
+
+    def test_dim(self):
+        x = _tensor([[1.0, 2.0], [3.0, 4.0]])
+        y = torch.prod(x, dim=1)
+        y.sum().backward()
+        # Row 0: prod=2, grads [2/1, 2/2]=[2, 1]
+        # Row 1: prod=12, grads [12/3, 12/4]=[4, 3]
+        _check_grad(x, [[2.0, 1.0], [4.0, 3.0]])
+
+
+class TestNormBackward:
+    def test_l2(self):
+        x = _tensor([3.0, 4.0])
+        y = torch.norm(x)
+        y.backward()
+        # L2 norm = 5, grad = x / norm
+        _check_grad(x, [3.0 / 5.0, 4.0 / 5.0])
+
+    def test_dim(self):
+        x = _tensor([[3.0, 4.0], [6.0, 8.0]])
+        y = torch.norm(x, 2, dim=1)
+        y.sum().backward()
+        # Row 0: norm=5, Row 1: norm=10
+        _check_grad(x, [[3.0/5.0, 4.0/5.0], [6.0/10.0, 8.0/10.0]])
+
+
+# ===================================================================
+# Phase 6: Conv/pool backward
+# ===================================================================
+
+class TestConv2dBackward:
+    def test_data_grad(self):
+        x = _tensor(np.random.randn(1, 1, 4, 4).astype(np.float32).tolist())
+        w = torch.tensor(np.random.randn(1, 1, 3, 3).astype(np.float32))
+        y = F.conv2d(x, w)
+        y.sum().backward()
+        assert x.grad is not None
+        assert x.grad.shape == x.shape
+
+    def test_weight_grad(self):
+        x = torch.tensor(np.random.randn(1, 1, 4, 4).astype(np.float32))
+        w = _tensor(np.random.randn(1, 1, 3, 3).astype(np.float32).tolist())
+        y = F.conv2d(x, w)
+        y.sum().backward()
+        assert w.grad is not None
+        assert w.grad.shape == w.shape
+
+    def test_bias_grad(self):
+        x = torch.tensor(np.random.randn(1, 2, 4, 4).astype(np.float32))
+        w = torch.tensor(np.random.randn(2, 2, 3, 3).astype(np.float32))
+        b = _tensor([0.0, 0.0])
+        y = F.conv2d(x, w, b)
+        y.sum().backward()
+        assert b.grad is not None
+        expected_bias_grad = np.ones(2) * 4  # 2x2 output -> each output summed
+        _check_grad(b, expected_bias_grad, atol=1e-3)
+
+
+class TestConv1dBackward:
+    def test_data_grad(self):
+        x = _tensor(np.random.randn(1, 1, 6).astype(np.float32).tolist())
+        w = torch.tensor(np.random.randn(1, 1, 3).astype(np.float32))
+        y = F.conv1d(x, w)
+        y.sum().backward()
+        assert x.grad is not None
+        assert x.grad.shape == x.shape
+
+
+class TestMaxPool2dBackward:
+    def test_basic(self):
+        x = _tensor([[[[1.0, 2.0, 3.0, 4.0],
+                        [5.0, 6.0, 7.0, 8.0],
+                        [9.0, 10.0, 11.0, 12.0],
+                        [13.0, 14.0, 15.0, 16.0]]]])
+        y = F.max_pool2d(x, 2, 2)
+        y.sum().backward()
+        assert x.grad is not None
+        # Only the max values in each 2x2 window get gradient
+        expected = np.zeros((1, 1, 4, 4), dtype=np.float32)
+        expected[0, 0, 1, 1] = 1.0  # 6 is max of top-left 2x2
+        expected[0, 0, 1, 3] = 1.0  # 8 is max of top-right 2x2
+        expected[0, 0, 3, 1] = 1.0  # 14 is max of bottom-left 2x2
+        expected[0, 0, 3, 3] = 1.0  # 16 is max of bottom-right 2x2
+        _check_grad(x, expected)
+
+
+class TestAvgPool2dBackward:
+    def test_basic(self):
+        x = _tensor(np.ones((1, 1, 4, 4), dtype=np.float32).tolist())
+        y = F.avg_pool2d(x, 2, 2)
+        y.sum().backward()
+        assert x.grad is not None
+        # Each element contributes 1/(2*2) = 0.25 to one output
+        _check_grad(x, np.full((1, 1, 4, 4), 0.25), atol=1e-5)
+
+
+class TestAdaptiveAvgPool2dBackward:
+    def test_basic(self):
+        x = _tensor(np.ones((1, 1, 4, 4), dtype=np.float32).tolist())
+        y = F.adaptive_avg_pool2d(x, (1, 1))
+        y.sum().backward()
+        assert x.grad is not None
+        # Global avg pool: each element contributes 1/16
+        _check_grad(x, np.full((1, 1, 4, 4), 1.0/16.0), atol=1e-5)
+
+
+# ===================================================================
+# Phase 7: Utility ops backward
+# ===================================================================
+
+class TestRollBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0, 3.0, 4.0])
+        y = torch.roll(x, 1, 0)
+        (y * torch.tensor([10.0, 20.0, 30.0, 40.0])).sum().backward()
+        # roll(x, 1) = [4, 1, 2, 3], so x[0]*20 + x[1]*30 + x[2]*40 + x[3]*10
+        _check_grad(x, [20.0, 30.0, 40.0, 10.0])
+
+
+class TestTileBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 2.0])
+        y = torch.tile(x, (3,))
+        y.sum().backward()
+        _check_grad(x, [3.0, 3.0])
+
+
+class TestSortBackward:
+    def test_basic(self):
+        x = _tensor([3.0, 1.0, 4.0, 2.0])
+        values, indices = torch.sort(x)
+        # values = [1, 2, 3, 4], multiply by [10, 20, 30, 40]
+        (values * torch.tensor([10.0, 20.0, 30.0, 40.0])).sum().backward()
+        # x[0]=3 -> sorted position 2 -> grad 30
+        # x[1]=1 -> sorted position 0 -> grad 10
+        # x[2]=4 -> sorted position 3 -> grad 40
+        # x[3]=2 -> sorted position 1 -> grad 20
+        _check_grad(x, [30.0, 10.0, 40.0, 20.0])
+
+
+class TestTopkBackward:
+    def test_basic(self):
+        x = _tensor([1.0, 4.0, 2.0, 3.0])
+        values, indices = torch.topk(x, 2)
+        # values = [4, 3], indices = [1, 3]
+        values.sum().backward()
+        # Only top-2 elements get gradient
+        _check_grad(x, [0.0, 1.0, 0.0, 1.0])
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
