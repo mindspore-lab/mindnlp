@@ -1655,3 +1655,230 @@ def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     if weight is not None:
         out = out * _to_numpy(weight).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
     return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def conv2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1):
+    """Conv2d forward using numpy. Input: (N,C,H,W), Weight: (O,C/g,kH,kW)."""
+    inp = _to_numpy(input)
+    w = _to_numpy(weight)
+    N, C_in, H, W = inp.shape
+    C_out, C_in_g, kH, kW = w.shape
+    sH, sW = stride
+    pH, pW = padding
+    dH, dW = dilation
+
+    # Effective kernel size with dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+
+    # Pad input
+    if pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pH, pH), (pW, pW)), mode='constant')
+
+    out = np.zeros((N, C_out, H_out, W_out), dtype=inp.dtype)
+
+    for g in range(groups):
+        c_out_per_g = C_out // groups
+        c_out_s = g * c_out_per_g
+        c_in_s = g * C_in_g
+        for co_local in range(c_out_per_g):
+            co = c_out_s + co_local
+            for ci_local in range(C_in_g):
+                ci = c_in_s + ci_local
+                kernel = w[co, ci_local]
+                # For dilated kernels, use the dilated positions
+                for oh in range(H_out):
+                    for ow in range(W_out):
+                        val = 0.0
+                        for kh in range(kH):
+                            for kw in range(kW):
+                                ih = oh * sH + kh * dH
+                                iw = ow * sW + kw * dW
+                                # Broadcasting over batch dimension
+                                out[:, co, oh, ow] += inp[:, ci, ih, iw] * kernel[kh, kw]
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out += b[np.newaxis, :, np.newaxis, np.newaxis]
+
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def conv1d(input, weight, bias=None, stride=(1,), padding=(0,), dilation=(1,), groups=1):
+    """Conv1d via conv2d: unsqueeze spatial dim."""
+    inp = _to_numpy(input)   # (N, C, L)
+    w = _to_numpy(weight)    # (O, C/g, kL)
+    # Add H=1 dimension
+    inp4d = inp[:, :, np.newaxis, :]  # (N, C, 1, L)
+    w4d = w[:, :, np.newaxis, :]      # (O, C/g, 1, kL)
+    inp_t = _from_numpy(np.ascontiguousarray(inp4d), input.dtype, input.device)
+    w_t = _from_numpy(np.ascontiguousarray(w4d), weight.dtype, weight.device)
+    out = conv2d(inp_t, w_t, bias, stride=(1, stride[0]),
+                 padding=(0, padding[0]), dilation=(1, dilation[0]), groups=groups)
+    out_np = _to_numpy(out)[:, :, 0, :]  # (N, C_out, L_out)
+    return _from_numpy(np.ascontiguousarray(out_np), input.dtype, input.device)
+
+
+def conv_transpose2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0),
+                     output_padding=(0, 0), groups=1, dilation=(1, 1)):
+    """Transposed conv2d using numpy."""
+    inp = _to_numpy(input)
+    w = _to_numpy(weight)   # (C_in, C_out/g, kH, kW) — note: transposed weight layout
+    N, C_in, H_in, W_in = inp.shape
+    C_in_w, C_out_g, kH, kW = w.shape
+    sH, sW = stride
+    pH, pW = padding
+    opH, opW = output_padding
+    dH, dW = dilation
+
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    H_out = (H_in - 1) * sH - 2 * pH + ekH + opH
+    W_out = (W_in - 1) * sW - 2 * pW + ekW + opW
+    C_out = C_out_g * groups
+
+    # We compute in a padded buffer and then slice
+    H_buf = (H_in - 1) * sH + ekH
+    W_buf = (W_in - 1) * sW + ekW
+    buf = np.zeros((N, C_out, H_buf, W_buf), dtype=inp.dtype)
+
+    for g in range(groups):
+        c_in_per_g = C_in // groups
+        c_in_s = g * c_in_per_g
+        c_out_s = g * C_out_g
+        for ci_local in range(c_in_per_g):
+            ci = c_in_s + ci_local
+            for co_local in range(C_out_g):
+                co = c_out_s + co_local
+                kernel = w[ci_local, co_local]
+                for ih in range(H_in):
+                    for iw in range(W_in):
+                        oh_start = ih * sH
+                        ow_start = iw * sW
+                        for kh in range(kH):
+                            for kw in range(kW):
+                                oh = oh_start + kh * dH
+                                ow = ow_start + kw * dW
+                                buf[:, co, oh, ow] += inp[:, ci, ih, iw] * kernel[kh, kw]
+
+    # Slice to remove padding and apply output_padding
+    out = buf[:, :, pH:pH + H_out, pW:pW + W_out]
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out = out + b[np.newaxis, :, np.newaxis, np.newaxis]
+
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def conv_transpose1d(input, weight, bias=None, stride=(1,), padding=(0,),
+                     output_padding=(0,), groups=1, dilation=(1,)):
+    """Conv_transpose1d via conv_transpose2d: unsqueeze spatial dim."""
+    inp = _to_numpy(input)   # (N, C, L)
+    w = _to_numpy(weight)    # (C_in, C_out/g, kL)
+    inp4d = inp[:, :, np.newaxis, :]
+    w4d = w[:, :, np.newaxis, :]
+    inp_t = _from_numpy(np.ascontiguousarray(inp4d), input.dtype, input.device)
+    w_t = _from_numpy(np.ascontiguousarray(w4d), weight.dtype, weight.device)
+    out = conv_transpose2d(inp_t, w_t, bias, stride=(1, stride[0]),
+                           padding=(0, padding[0]), output_padding=(0, output_padding[0]),
+                           groups=groups, dilation=(1, dilation[0]))
+    out_np = _to_numpy(out)[:, :, 0, :]
+    return _from_numpy(np.ascontiguousarray(out_np), input.dtype, input.device)
+
+
+def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+    """MaxPool2d using numpy."""
+    inp = _to_numpy(input)  # (N, C, H, W)
+    kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    dH, dW = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    N, C, H, W = inp.shape
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    if ceil_mode:
+        H_out = math.ceil((H + 2 * pH - ekH) / sH) + 1
+        W_out = math.ceil((W + 2 * pW - ekW) / sW) + 1
+    else:
+        H_out = (H + 2 * pH - ekH) // sH + 1
+        W_out = (W + 2 * pW - ekW) // sW + 1
+
+    if pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pH, pH), (pW, pW)),
+                     mode='constant', constant_values=-np.inf)
+
+    out = np.full((N, C, H_out, W_out), -np.inf, dtype=inp.dtype)
+    for oh in range(H_out):
+        for ow in range(W_out):
+            for kh in range(kH):
+                for kw in range(kW):
+                    ih = oh * sH + kh * dH
+                    iw = ow * sW + kw * dW
+                    if ih < inp.shape[2] and iw < inp.shape[3]:
+                        out[:, :, oh, ow] = np.maximum(out[:, :, oh, ow], inp[:, :, ih, iw])
+
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False,
+               count_include_pad=True, divisor_override=None):
+    """AvgPool2d using numpy."""
+    inp = _to_numpy(input)  # (N, C, H, W)
+    kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    N, C, H, W = inp.shape
+    if ceil_mode:
+        H_out = math.ceil((H + 2 * pH - kH) / sH) + 1
+        W_out = math.ceil((W + 2 * pW - kW) / sW) + 1
+    else:
+        H_out = (H + 2 * pH - kH) // sH + 1
+        W_out = (W + 2 * pW - kW) // sW + 1
+
+    if pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pH, pH), (pW, pW)), mode='constant')
+
+    out = np.zeros((N, C, H_out, W_out), dtype=inp.dtype)
+    for oh in range(H_out):
+        for ow in range(W_out):
+            h_start = oh * sH
+            w_start = ow * sW
+            h_end = min(h_start + kH, inp.shape[2])
+            w_end = min(w_start + kW, inp.shape[3])
+            window = inp[:, :, h_start:h_end, w_start:w_end]
+            if divisor_override is not None:
+                out[:, :, oh, ow] = window.sum(axis=(-2, -1)) / divisor_override
+            elif count_include_pad:
+                out[:, :, oh, ow] = window.sum(axis=(-2, -1)) / (kH * kW)
+            else:
+                # Only count non-padded elements
+                actual_h = min(h_end, H + pH) - max(h_start, pH)
+                actual_w = min(w_end, W + pW) - max(w_start, pW)
+                count = max(actual_h * actual_w, 1)
+                out[:, :, oh, ow] = window.sum(axis=(-2, -1)) / count
+
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def adaptive_avg_pool2d(input, output_size):
+    """AdaptiveAvgPool2d using numpy."""
+    inp = _to_numpy(input)  # (N, C, H, W)
+    N, C, H, W = inp.shape
+    if isinstance(output_size, int):
+        oH = oW = output_size
+    else:
+        oH, oW = output_size
+    out = np.zeros((N, C, oH, oW), dtype=inp.dtype)
+    for oh in range(oH):
+        h_start = oh * H // oH
+        h_end = (oh + 1) * H // oH
+        for ow in range(oW):
+            w_start = ow * W // oW
+            w_end = (ow + 1) * W // oW
+            out[:, :, oh, ow] = inp[:, :, h_start:h_end, w_start:w_end].mean(axis=(-2, -1))
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)

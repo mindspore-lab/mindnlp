@@ -99,21 +99,43 @@ def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0,
 
 
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    raise NotImplementedError("conv1d is not yet implemented")
+    from .._dispatch import dispatch
+    _stride = (stride,) if isinstance(stride, int) else tuple(stride)
+    _padding = (padding,) if isinstance(padding, int) else tuple(padding)
+    _dilation = (dilation,) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("conv1d", input.device.type, input, weight, bias,
+                    _stride, _padding, _dilation, groups)
 
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    raise NotImplementedError("conv2d is not yet implemented")
+    from .._dispatch import dispatch
+    _stride = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    _padding = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    _dilation = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("conv2d", input.device.type, input, weight, bias,
+                    _stride, _padding, _dilation, groups)
 
 
 def conv_transpose1d(input, weight, bias=None, stride=1, padding=0,
                      output_padding=0, groups=1, dilation=1):
-    raise NotImplementedError("conv_transpose1d is not yet implemented")
+    from .._dispatch import dispatch
+    _stride = (stride,) if isinstance(stride, int) else tuple(stride)
+    _padding = (padding,) if isinstance(padding, int) else tuple(padding)
+    _output_padding = (output_padding,) if isinstance(output_padding, int) else tuple(output_padding)
+    _dilation = (dilation,) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("conv_transpose1d", input.device.type, input, weight, bias,
+                    _stride, _padding, _output_padding, groups, _dilation)
 
 
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0,
                      output_padding=0, groups=1, dilation=1):
-    raise NotImplementedError("conv_transpose2d is not yet implemented")
+    from .._dispatch import dispatch
+    _stride = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    _padding = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    _output_padding = (output_padding, output_padding) if isinstance(output_padding, int) else tuple(output_padding)
+    _dilation = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("conv_transpose2d", input.device.type, input, weight, bias,
+                    _stride, _padding, _output_padding, groups, _dilation)
 
 
 def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1,
@@ -123,7 +145,13 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1,
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1,
                ceil_mode=False, return_indices=False):
-    raise NotImplementedError("max_pool2d is not yet implemented")
+    from .._dispatch import dispatch
+    _kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    _stride = _kernel_size if stride is None else ((stride, stride) if isinstance(stride, int) else tuple(stride))
+    _padding = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    _dilation = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("max_pool2d", input.device.type, input, _kernel_size, _stride,
+                    _padding, _dilation, ceil_mode, return_indices)
 
 
 def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False,
@@ -133,7 +161,12 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False,
 
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False,
                count_include_pad=True, divisor_override=None):
-    raise NotImplementedError("avg_pool2d is not yet implemented")
+    from .._dispatch import dispatch
+    _kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    _stride = _kernel_size if stride is None else ((stride, stride) if isinstance(stride, int) else tuple(stride))
+    _padding = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    return dispatch("avg_pool2d", input.device.type, input, _kernel_size, _stride,
+                    _padding, ceil_mode, count_include_pad, divisor_override)
 
 
 def adaptive_avg_pool1d(input, output_size):
@@ -141,7 +174,12 @@ def adaptive_avg_pool1d(input, output_size):
 
 
 def adaptive_avg_pool2d(input, output_size):
-    raise NotImplementedError("adaptive_avg_pool2d is not yet implemented")
+    from .._dispatch import dispatch
+    if isinstance(output_size, int):
+        _output_size = (output_size, output_size)
+    else:
+        _output_size = tuple(output_size)
+    return dispatch("adaptive_avg_pool2d", input.device.type, input, _output_size)
 
 
 def cross_entropy(input, target, weight=None, size_average=None, ignore_index=-100,

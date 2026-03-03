@@ -2517,6 +2517,105 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnConvolution
+        self.aclnn_convolution_get_workspace = _optional_symbol(
+            libs,
+            "aclnnConvolutionGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,                   # const aclTensor* input
+                ctypes.c_void_p,                   # const aclTensor* weight
+                ctypes.c_void_p,                   # const aclTensor* bias (nullable)
+                ctypes.c_void_p,                   # const aclIntArray* stride
+                ctypes.c_void_p,                   # const aclIntArray* padding
+                ctypes.c_void_p,                   # const aclIntArray* dilation
+                ctypes.c_bool,                     # bool transposed
+                ctypes.c_void_p,                   # const aclIntArray* outputPadding
+                ctypes.c_int64,                    # int64_t groups
+                ctypes.c_void_p,                   # aclTensor* output
+                ctypes.c_int8,                     # int8_t cubeMathType
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_convolution = _optional_symbol(
+            libs,
+            "aclnnConvolution",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnMaxPool
+        self.aclnn_max_pool_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMaxPoolGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,                   # const aclTensor* self
+                ctypes.c_void_p,                   # const aclIntArray* kernelShape
+                ctypes.c_void_p,                   # const aclIntArray* strides
+                ctypes.c_int64,                    # int64_t autoPad
+                ctypes.c_void_p,                   # const aclIntArray* pads
+                ctypes.c_void_p,                   # const aclIntArray* dilations
+                ctypes.c_int64,                    # int64_t ceilMode
+                ctypes.c_void_p,                   # aclTensor* out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_max_pool = _optional_symbol(
+            libs,
+            "aclnnMaxPool",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnAvgPool2d
+        self.aclnn_avg_pool2d_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAvgPool2dGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,                   # const aclTensor* self
+                ctypes.c_void_p,                   # const aclIntArray* kernelSize
+                ctypes.c_void_p,                   # const aclIntArray* strides
+                ctypes.c_void_p,                   # const aclIntArray* paddings
+                ctypes.c_bool,                     # bool ceilMode
+                ctypes.c_bool,                     # bool countIncludePad
+                ctypes.c_int64,                    # int64_t divisorOverride
+                ctypes.c_int8,                     # int8_t cubeMathType
+                ctypes.c_void_p,                   # aclTensor* out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_avg_pool2d = _optional_symbol(
+            libs,
+            "aclnnAvgPool2d",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnAdaptiveAvgPool2d
+        self.aclnn_adaptive_avg_pool2d_get_workspace = _optional_symbol(
+            libs,
+            "aclnnAdaptiveAvgPool2dGetWorkspaceSize",
+            ctypes.c_int32,
+            [
+                ctypes.c_void_p,                   # const aclTensor* self
+                ctypes.c_void_p,                   # const aclIntArray* outputSize
+                ctypes.c_void_p,                   # aclTensor* out
+                ctypes.POINTER(ctypes.c_uint64),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+        )
+        self.aclnn_adaptive_avg_pool2d = _optional_symbol(
+            libs,
+            "aclnnAdaptiveAvgPool2d",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -9110,3 +9209,315 @@ def rms_norm(x_ptr, gamma_ptr, eps, y_ptr, rstd_ptr,
         if workspace is not None:
             runtime.defer_free(workspace)
         _ = (x_keep, gamma_keep, y_keep, rstd_keep)
+
+
+# ---------------------------------------------------------------------------
+# aclnnConvolution
+# ---------------------------------------------------------------------------
+def convolution_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_convolution_get_workspace, bindings.aclnn_convolution])
+    except Exception:
+        return False
+
+
+def convolution(input_ptr, weight_ptr, bias_ptr,
+                input_shape, input_stride, weight_shape, weight_stride,
+                bias_shape, bias_stride, dtype,
+                stride, padding, dilation, transposed, output_padding, groups,
+                out_ptr, out_shape, out_stride,
+                runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not convolution_symbols_ok():
+        raise RuntimeError("aclnnConvolution symbols not available")
+
+    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr)
+    weight_tensor, weight_keep = _create_tensor(bindings, weight_shape, weight_stride, dtype, weight_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+
+    bias_tensor = None
+    bias_keep = None
+    if bias_ptr is not None:
+        bias_tensor, bias_keep = _create_tensor(bindings, bias_shape, bias_stride, dtype, bias_ptr)
+
+    stride_arr = _make_int64_array(list(stride))
+    stride_handle = bindings.acl_create_int_array(stride_arr, ctypes.c_uint64(len(stride)))
+    padding_arr = _make_int64_array(list(padding))
+    padding_handle = bindings.acl_create_int_array(padding_arr, ctypes.c_uint64(len(padding)))
+    dilation_arr = _make_int64_array(list(dilation))
+    dilation_handle = bindings.acl_create_int_array(dilation_arr, ctypes.c_uint64(len(dilation)))
+    output_padding_arr = _make_int64_array(list(output_padding))
+    output_padding_handle = bindings.acl_create_int_array(output_padding_arr, ctypes.c_uint64(len(output_padding)))
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_convolution_get_workspace(
+            input_tensor,
+            weight_tensor,
+            ctypes.c_void_p(0) if bias_tensor is None else bias_tensor,
+            stride_handle,
+            padding_handle,
+            dilation_handle,
+            ctypes.c_bool(transposed),
+            output_padding_handle,
+            ctypes.c_int64(groups),
+            out_tensor,
+            ctypes.c_int8(0),  # cubeMathType = default
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnConvolutionGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_convolution(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnConvolution failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_int_array(stride_handle)
+        bindings.acl_destroy_int_array(padding_handle)
+        bindings.acl_destroy_int_array(dilation_handle)
+        bindings.acl_destroy_int_array(output_padding_handle)
+        bindings.acl_destroy_tensor(input_tensor)
+        bindings.acl_destroy_tensor(weight_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if bias_tensor is not None:
+            bindings.acl_destroy_tensor(bias_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (input_keep, weight_keep, out_keep, bias_keep,
+             stride_arr, padding_arr, dilation_arr, output_padding_arr)
+
+
+# ---------------------------------------------------------------------------
+# aclnnMaxPool
+# ---------------------------------------------------------------------------
+def max_pool_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_max_pool_get_workspace, bindings.aclnn_max_pool])
+    except Exception:
+        return False
+
+
+def max_pool(self_ptr, out_ptr, shape, stride_t, dtype,
+             kernel_shape, strides, pads, dilations, ceil_mode,
+             out_shape, out_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not max_pool_symbols_ok():
+        raise RuntimeError("aclnnMaxPool symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+
+    ks_arr = _make_int64_array(list(kernel_shape))
+    ks_handle = bindings.acl_create_int_array(ks_arr, ctypes.c_uint64(len(kernel_shape)))
+    st_arr = _make_int64_array(list(strides))
+    st_handle = bindings.acl_create_int_array(st_arr, ctypes.c_uint64(len(strides)))
+    # pads for MaxPool is [pH, pW, pH, pW] (4 elements for 2D)
+    pads_arr = _make_int64_array(list(pads))
+    pads_handle = bindings.acl_create_int_array(pads_arr, ctypes.c_uint64(len(pads)))
+    dl_arr = _make_int64_array(list(dilations))
+    dl_handle = bindings.acl_create_int_array(dl_arr, ctypes.c_uint64(len(dilations)))
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_max_pool_get_workspace(
+            self_tensor,
+            ks_handle,
+            st_handle,
+            ctypes.c_int64(0),  # autoPad = explicit
+            pads_handle,
+            dl_handle,
+            ctypes.c_int64(1 if ceil_mode else 0),
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaxPoolGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_max_pool(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMaxPool failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_int_array(ks_handle)
+        bindings.acl_destroy_int_array(st_handle)
+        bindings.acl_destroy_int_array(pads_handle)
+        bindings.acl_destroy_int_array(dl_handle)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, ks_arr, st_arr, pads_arr, dl_arr)
+
+
+# ---------------------------------------------------------------------------
+# aclnnAvgPool2d
+# ---------------------------------------------------------------------------
+def avg_pool2d_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_avg_pool2d_get_workspace, bindings.aclnn_avg_pool2d])
+    except Exception:
+        return False
+
+
+def avg_pool2d(self_ptr, out_ptr, shape, stride_t, dtype,
+               kernel_size, strides, paddings, ceil_mode, count_include_pad,
+               divisor_override, out_shape, out_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not avg_pool2d_symbols_ok():
+        raise RuntimeError("aclnnAvgPool2d symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+
+    ks_arr = _make_int64_array(list(kernel_size))
+    ks_handle = bindings.acl_create_int_array(ks_arr, ctypes.c_uint64(len(kernel_size)))
+    st_arr = _make_int64_array(list(strides))
+    st_handle = bindings.acl_create_int_array(st_arr, ctypes.c_uint64(len(strides)))
+    pd_arr = _make_int64_array(list(paddings))
+    pd_handle = bindings.acl_create_int_array(pd_arr, ctypes.c_uint64(len(paddings)))
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_avg_pool2d_get_workspace(
+            self_tensor,
+            ks_handle,
+            st_handle,
+            pd_handle,
+            ctypes.c_bool(ceil_mode),
+            ctypes.c_bool(count_include_pad),
+            ctypes.c_int64(divisor_override if divisor_override is not None else 0),
+            ctypes.c_int8(0),  # cubeMathType = default
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAvgPool2dGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_avg_pool2d(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAvgPool2d failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_int_array(ks_handle)
+        bindings.acl_destroy_int_array(st_handle)
+        bindings.acl_destroy_int_array(pd_handle)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, ks_arr, st_arr, pd_arr)
+
+
+# ---------------------------------------------------------------------------
+# aclnnAdaptiveAvgPool2d
+# ---------------------------------------------------------------------------
+def adaptive_avg_pool2d_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_adaptive_avg_pool2d_get_workspace, bindings.aclnn_adaptive_avg_pool2d])
+    except Exception:
+        return False
+
+
+def adaptive_avg_pool2d(self_ptr, out_ptr, shape, stride_t, dtype,
+                        output_size, out_shape, out_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not adaptive_avg_pool2d_symbols_ok():
+        raise RuntimeError("aclnnAdaptiveAvgPool2d symbols not available")
+
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride_t, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+
+    os_arr = _make_int64_array(list(output_size))
+    os_handle = bindings.acl_create_int_array(os_arr, ctypes.c_uint64(len(output_size)))
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_adaptive_avg_pool2d_get_workspace(
+            self_tensor,
+            os_handle,
+            out_tensor,
+            ctypes.byref(workspace_size),
+            ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAdaptiveAvgPool2dGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_adaptive_avg_pool2d(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value),
+            executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAdaptiveAvgPool2d failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_int_array(os_handle)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_free(workspace)
+        _ = (self_keep, out_keep, os_arr)

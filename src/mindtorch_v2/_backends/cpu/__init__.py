@@ -185,6 +185,13 @@ from .ops import (
     prod_,
     floor_divide,
     rms_norm,
+    conv2d,
+    conv1d,
+    conv_transpose2d,
+    conv_transpose1d,
+    max_pool2d,
+    avg_pool2d,
+    adaptive_avg_pool2d,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -379,3 +386,14 @@ registry.register("norm", "cpu", norm_, meta=meta_infer.infer_sum)
 registry.register("prod", "cpu", prod_, meta=meta_infer.infer_sum)
 registry.register("floor_divide", "cpu", floor_divide, meta=meta_infer.infer_binary)
 registry.register("rms_norm", "cpu", rms_norm, meta=meta_infer.infer_unary)
+
+# Conv operations
+registry.register("conv2d", "cpu", conv2d)
+registry.register("conv1d", "cpu", conv1d)
+registry.register("conv_transpose2d", "cpu", conv_transpose2d)
+registry.register("conv_transpose1d", "cpu", conv_transpose1d)
+
+# Pooling operations
+registry.register("max_pool2d", "cpu", max_pool2d)
+registry.register("avg_pool2d", "cpu", avg_pool2d)
+registry.register("adaptive_avg_pool2d", "cpu", adaptive_avg_pool2d)
