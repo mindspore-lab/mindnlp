@@ -970,6 +970,743 @@ def _where_backward(grad, cond, x, y, saved_cond, keyset):
     return None, grad_x, grad_y
 
 
+# ---------------------------------------------------------------------------
+# Phase 5: Transformer-critical ops backward
+# ---------------------------------------------------------------------------
+
+def _masked_fill_backward(grad, _a, saved_a, keyset, args, kwargs):
+    mask = args[0]
+    with _grad_context(keyset):
+        zeros = redispatch("zeros", keyset, grad.shape, dtype=grad.dtype, device=grad.device)
+        from .._creation import tensor
+        mask_bool = mask
+        grad_input = redispatch("where", keyset, mask_bool, zeros, grad)
+        return (grad_input,)
+
+
+def _var_backward(grad, _a, saved_a, keyset, args, kwargs):
+    dim = kwargs.get("dim", None)
+    unbiased = kwargs.get("unbiased", True)
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        if dim is not None:
+            mean_val = redispatch("mean", keyset, saved_a, dim=dim, keepdim=True)
+        else:
+            mean_val = redispatch("mean", keyset, saved_a)
+        diff = redispatch("add", keyset, saved_a, redispatch("neg", keyset, mean_val))
+        two = _scalar_tensor_like(saved_a, 2.0)
+        if dim is not None:
+            if isinstance(dim, (list, tuple)):
+                n = 1
+                for d in dim:
+                    n *= saved_a.shape[d if d >= 0 else d + len(saved_a.shape)]
+            else:
+                n = saved_a.shape[dim if dim >= 0 else dim + len(saved_a.shape)]
+        else:
+            n = saved_a.numel()
+        correction = 1 if unbiased else 0
+        denom = _scalar_tensor_like(saved_a, float(n - correction))
+        factor = redispatch("div", keyset, redispatch("mul", keyset, two, diff), denom)
+        if not keepdim and dim is not None:
+            if isinstance(dim, int):
+                grad = redispatch("unsqueeze", keyset, grad, dim)
+            else:
+                for d in sorted(dim if isinstance(dim, (list, tuple)) else [dim]):
+                    grad = redispatch("unsqueeze", keyset, grad, d)
+        ones = saved_a._ones_like()
+        grad_expanded = redispatch("mul", keyset, grad, ones)
+        return (redispatch("mul", keyset, grad_expanded, factor),)
+
+
+def _std_backward(grad, _a, saved_a, keyset, args, kwargs):
+    dim = kwargs.get("dim", None)
+    keepdim = kwargs.get("keepdim", False)
+    unbiased = kwargs.get("unbiased", True)
+    with _grad_context(keyset):
+        if dim is not None:
+            mean_val = redispatch("mean", keyset, saved_a, dim=dim, keepdim=True)
+            std_val = redispatch("std", keyset, saved_a, dim=dim, keepdim=True, unbiased=unbiased)
+        else:
+            mean_val = redispatch("mean", keyset, saved_a)
+            std_val = redispatch("std", keyset, saved_a, unbiased=unbiased)
+        diff = redispatch("add", keyset, saved_a, redispatch("neg", keyset, mean_val))
+        if dim is not None:
+            if isinstance(dim, (list, tuple)):
+                n = 1
+                for d in dim:
+                    n *= saved_a.shape[d if d >= 0 else d + len(saved_a.shape)]
+            else:
+                n = saved_a.shape[dim if dim >= 0 else dim + len(saved_a.shape)]
+        else:
+            n = saved_a.numel()
+        correction = 1 if unbiased else 0
+        n_corr = _scalar_tensor_like(saved_a, float(n - correction))
+        factor = redispatch("div", keyset, diff, redispatch("mul", keyset, n_corr, std_val))
+        if not keepdim and dim is not None:
+            if isinstance(dim, int):
+                grad = redispatch("unsqueeze", keyset, grad, dim)
+            else:
+                for d in sorted(dim if isinstance(dim, (list, tuple)) else [dim]):
+                    grad = redispatch("unsqueeze", keyset, grad, d)
+        ones = saved_a._ones_like()
+        grad_expanded = redispatch("mul", keyset, grad, ones)
+        return (redispatch("mul", keyset, grad_expanded, factor),)
+
+
+def _gather_backward(grad, _a, saved_a, keyset, args, kwargs):
+    dim = args[0]
+    index = args[1]
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, saved_a.shape, dtype=saved_a.dtype, device=saved_a.device)
+        redispatch("scatter_add_", keyset, grad_input, dim, index, grad)
+        return (grad_input,)
+
+
+def _index_select_backward(grad, _a, saved_a, keyset, args, kwargs):
+    dim = args[0]
+    index = args[1]
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, saved_a.shape, dtype=saved_a.dtype, device=saved_a.device)
+        redispatch("index_add_", keyset, grad_input, dim, index, grad)
+        return (grad_input,)
+
+
+def _repeat_backward(grad, _a, saved_a, keyset, args, kwargs):
+    repeats = args[0]
+    with _grad_context(keyset):
+        input_shape = saved_a.shape
+        ndim_input = len(input_shape)
+        ndim_repeat = len(repeats)
+        ndim = max(ndim_input, ndim_repeat)
+        padded_shape = [1] * (ndim - ndim_input) + list(input_shape)
+        padded_repeats = [1] * (ndim - ndim_repeat) + list(repeats)
+        reshape_dims = []
+        for s, r in zip(padded_shape, padded_repeats):
+            reshape_dims.extend([r, s])
+        grad_reshaped = redispatch("reshape", keyset, grad, tuple(reshape_dims))
+        sum_dims = tuple(range(0, 2 * ndim, 2))
+        for d in sum_dims:
+            grad_reshaped = redispatch("sum", keyset, grad_reshaped, dim=d, keepdim=True)
+        grad_out = redispatch("reshape", keyset, grad_reshaped, input_shape)
+        return (grad_out,)
+
+
+def _tril_backward(grad, _a, _saved_a, keyset, args, kwargs):
+    with _grad_context(keyset):
+        return (redispatch("tril", keyset, grad),)
+
+
+def _triu_backward(grad, _a, _saved_a, keyset, args, kwargs):
+    with _grad_context(keyset):
+        return (redispatch("triu", keyset, grad),)
+
+
+def _group_norm_backward(grad, _a, saved_a, keyset, args, kwargs):
+    num_groups = args[0] if args else kwargs.get("num_groups")
+    weight = args[1] if len(args) > 1 else kwargs.get("weight", None)
+    bias = args[2] if len(args) > 2 else kwargs.get("bias", None)
+    eps = args[3] if len(args) > 3 else kwargs.get("eps", 1e-5)
+
+    with _grad_context(keyset):
+        N = saved_a.shape[0]
+        C = saved_a.shape[1]
+        spatial = saved_a.shape[2:]
+        channels_per_group = C // num_groups
+        group_size = channels_per_group
+        for s in spatial:
+            group_size *= s
+
+        reshaped = redispatch("reshape", keyset, saved_a, (N, num_groups, channels_per_group, *spatial))
+        axes = tuple(range(2, len(reshaped.shape)))
+        mean = redispatch("mean", keyset, reshaped, dim=axes, keepdim=True)
+        diff = redispatch("add", keyset, reshaped, redispatch("neg", keyset, mean))
+        var = redispatch("mean", keyset, redispatch("mul", keyset, diff, diff), dim=axes, keepdim=True)
+        eps_t = _scalar_tensor_like(saved_a, eps)
+        inv_std = redispatch("rsqrt", keyset, redispatch("add", keyset, var, eps_t))
+        x_hat = redispatch("mul", keyset, diff, inv_std)
+
+        grad_reshaped = redispatch("reshape", keyset, grad, (N, num_groups, channels_per_group, *spatial))
+        if weight is not None:
+            w_shape = [1, num_groups, channels_per_group] + [1] * len(spatial)
+            w_reshaped = redispatch("reshape", keyset, weight, tuple(w_shape))
+            dl_dxhat = redispatch("mul", keyset, grad_reshaped, w_reshaped)
+        else:
+            dl_dxhat = grad_reshaped
+
+        n_t = _scalar_tensor_like(saved_a, float(group_size))
+        mean_dl_dxhat = redispatch("div", keyset, redispatch("sum", keyset, dl_dxhat, dim=axes, keepdim=True), n_t)
+        mean_dl_dxhat_xhat = redispatch("div", keyset, redispatch("sum", keyset, redispatch("mul", keyset, dl_dxhat, x_hat), dim=axes, keepdim=True), n_t)
+
+        grad_reshaped_out = redispatch("mul", keyset, inv_std,
+            redispatch("add", keyset,
+                redispatch("add", keyset, dl_dxhat, redispatch("neg", keyset, mean_dl_dxhat)),
+                redispatch("neg", keyset, redispatch("mul", keyset, x_hat, mean_dl_dxhat_xhat))))
+
+        grad_input = redispatch("reshape", keyset, grad_reshaped_out, saved_a.shape)
+        return (grad_input,)
+
+
+def _rms_norm_backward(grad, _a, saved_a, keyset, args, kwargs):
+    normalized_shape = args[0] if args else kwargs.get("normalized_shape")
+    weight = args[1] if len(args) > 1 else kwargs.get("weight", None)
+    eps = args[2] if len(args) > 2 else kwargs.get("eps", 1e-6)
+
+    with _grad_context(keyset):
+        norm_shape = tuple(normalized_shape)
+        ndim = len(saved_a.shape)
+        n_norm = len(norm_shape)
+        axis_dims = tuple(range(ndim - n_norm, ndim))
+
+        x_sq = redispatch("mul", keyset, saved_a, saved_a)
+        variance = redispatch("mean", keyset, x_sq, dim=axis_dims, keepdim=True)
+        eps_t = _scalar_tensor_like(saved_a, eps)
+        rms = redispatch("sqrt", keyset, redispatch("add", keyset, variance, eps_t))
+        x_hat = redispatch("div", keyset, saved_a, rms)
+
+        if weight is not None:
+            dl_dxhat = redispatch("mul", keyset, grad, weight)
+        else:
+            dl_dxhat = grad
+
+        n = 1
+        for d in axis_dims:
+            n *= saved_a.shape[d]
+        n_t = _scalar_tensor_like(saved_a, float(n))
+
+        dot = redispatch("sum", keyset, redispatch("mul", keyset, dl_dxhat, x_hat), dim=axis_dims, keepdim=True)
+        grad_input = redispatch("div", keyset,
+            redispatch("add", keyset, dl_dxhat,
+                redispatch("neg", keyset, redispatch("mul", keyset, x_hat,
+                    redispatch("div", keyset, dot, n_t)))),
+            rms)
+        return (grad_input,)
+
+
+def _flip_backward(grad, _a, _saved_a, keyset, args, kwargs):
+    dims = args[0]
+    with _grad_context(keyset):
+        return (redispatch("flip", keyset, grad, dims),)
+
+
+def _cumsum_backward(grad, _a, saved_a, keyset, args, kwargs):
+    dim = args[0] if args else kwargs.get("dim", 0)
+    with _grad_context(keyset):
+        flipped = redispatch("flip", keyset, grad, [dim])
+        cum = redispatch("cumsum", keyset, flipped, dim)
+        return (redispatch("flip", keyset, cum, [dim]),)
+
+
+def _pad_backward(grad, _a, saved_a, keyset, args, kwargs):
+    pad_widths = args[0]
+    with _grad_context(keyset):
+        ndim = len(saved_a.shape)
+        n_pairs = len(pad_widths) // 2
+        slices = [slice(None)] * ndim
+        for i in range(n_pairs):
+            dim = ndim - 1 - i
+            left = int(pad_widths[2 * i])
+            right = int(pad_widths[2 * i + 1])
+            dim_size = grad.shape[dim]
+            start = max(left, 0)
+            end = dim_size - max(right, 0)
+            slices[dim] = slice(start, end)
+        grad_input = redispatch("getitem", keyset, grad, tuple(slices))
+        return (grad_input,)
+
+
+def _prod_backward(grad, _a, saved_a, keyset, args, kwargs):
+    with _grad_context(keyset):
+        dim = kwargs.get("dim", None)
+        keepdim = kwargs.get("keepdim", False)
+        # Compute prod with keepdim=True for proper broadcasting
+        if dim is not None:
+            prod_val = redispatch("prod", keyset, saved_a, dim=dim, keepdim=True)
+        else:
+            prod_val = redispatch("prod", keyset, saved_a)
+        factor = redispatch("div", keyset, prod_val, saved_a)
+        if not keepdim and dim is not None:
+            if isinstance(dim, int):
+                grad = redispatch("unsqueeze", keyset, grad, dim)
+        ones = saved_a._ones_like()
+        grad_expanded = redispatch("mul", keyset, grad, ones)
+        return (redispatch("mul", keyset, grad_expanded, factor),)
+
+
+def _norm_backward(grad, _a, saved_a, keyset, args, kwargs):
+    p = args[0] if args else kwargs.get("p", 2)
+    dim = kwargs.get("dim", None)
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        norm_val = redispatch("norm", keyset, saved_a, p, dim=dim, keepdim=True)
+        eps_t = _scalar_tensor_like(saved_a, 1e-12)
+        safe_norm = redispatch("add", keyset, norm_val, eps_t)
+        if p == 2 or p == 2.0:
+            factor = redispatch("div", keyset, saved_a, safe_norm)
+        else:
+            p_t = _scalar_tensor_like(saved_a, float(p))
+            ones = saved_a._ones_like()
+            p_minus_1 = _scalar_tensor_like(saved_a, float(p - 1))
+            abs_x = redispatch("abs", keyset, saved_a)
+            sign_x = redispatch("sign", keyset, saved_a)
+            abs_pow = redispatch("pow", keyset, abs_x, p_minus_1)
+            norm_pow_p_minus_1 = redispatch("pow", keyset, safe_norm, p_minus_1)
+            factor = redispatch("div", keyset, redispatch("mul", keyset, sign_x, abs_pow), norm_pow_p_minus_1)
+        if not keepdim and dim is not None:
+            if isinstance(dim, int):
+                grad = redispatch("unsqueeze", keyset, grad, dim)
+            elif isinstance(dim, (list, tuple)):
+                for d in sorted(dim):
+                    grad = redispatch("unsqueeze", keyset, grad, d)
+        ones = saved_a._ones_like()
+        grad_expanded = redispatch("mul", keyset, grad, ones)
+        return (redispatch("mul", keyset, grad_expanded, factor),)
+
+
+# ---------------------------------------------------------------------------
+# Phase 6: Conv/pool backward ops
+# ---------------------------------------------------------------------------
+
+def _autograd_conv(name, *, has_bias=True):
+    """Autograd wrapper for convolution ops that need weight + optional bias gradients."""
+    def wrapper(input, weight, bias=None, *args, **kwargs):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, input, weight, bias, *args, **kwargs)
+        any_rg = (getattr(input, "requires_grad", False) or
+                  getattr(weight, "requires_grad", False) or
+                  (bias is not None and getattr(bias, "requires_grad", False)))
+        if GradMode.enabled and any_rg:
+            node_holder = {}
+
+            def _backward(grad):
+                saved = node_holder["node"].saved_tensors()
+                saved_input, saved_weight = saved[0], saved[1]
+                saved_bias = saved[2] if len(saved) > 2 else None
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _conv_backward(name, grad, input, weight, bias,
+                                     saved_input, saved_weight, saved_bias,
+                                     backward_keyset, args, kwargs)
+
+            inputs = (input, weight) if bias is None else (input, weight, bias)
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            node.save_for_backward(*inputs)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _conv_backward(name, grad, input, weight, bias, saved_input, saved_weight, saved_bias, keyset, args, kwargs):
+    with _grad_context(keyset):
+        # Use numpy for backward — simpler and always correct on CPU
+        import numpy as np
+        from .cpu.ops import _to_numpy, _from_numpy
+
+        grad_np = _to_numpy(grad)
+        input_np = _to_numpy(saved_input)
+        weight_np = _to_numpy(saved_weight)
+
+        is_1d = name in ("conv1d", "conv_transpose1d")
+        is_transpose = name in ("conv_transpose2d", "conv_transpose1d")
+
+        stride = kwargs.get("stride", args[0] if args else (1, 1))
+        padding = kwargs.get("padding", args[1] if len(args) > 1 else (0, 0))
+        dilation = kwargs.get("dilation", args[2] if len(args) > 2 else (1, 1))
+        groups = kwargs.get("groups", args[3] if len(args) > 3 else 1)
+
+        if is_1d:
+            # Unsqueeze to 2D
+            grad_np = grad_np[:, :, np.newaxis, :]
+            input_np = input_np[:, :, np.newaxis, :]
+            weight_np = weight_np[:, :, np.newaxis, :]
+            stride = (1, stride[0]) if isinstance(stride, tuple) else (1, stride)
+            padding = (0, padding[0]) if isinstance(padding, tuple) else (0, padding)
+            dilation = (1, dilation[0]) if isinstance(dilation, tuple) else (1, dilation)
+
+        if isinstance(stride, int):
+            stride = (stride, stride)
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        if isinstance(dilation, int):
+            dilation = (dilation, dilation)
+
+        sH, sW = stride
+        pH, pW = padding
+        dH, dW = dilation
+
+        grad_input_np = None
+        grad_weight_np = None
+        grad_bias_np = None
+
+        if is_transpose:
+            # conv_transpose forward: output = conv_transpose(input, weight)
+            # conv_transpose backward for input: grad_input = conv2d(grad, weight)
+            # conv_transpose backward for weight: grad_weight = conv2d(input.T, grad)
+            N, C_in, H_in, W_in = input_np.shape
+            C_in_w, C_out_g, kH, kW = weight_np.shape
+            C_out = C_out_g * groups
+
+            if getattr(input, "requires_grad", False):
+                # grad_input = conv2d(grad_output, weight, stride, padding, dilation, groups)
+                # This is just the forward conv with the grad as input
+                grad_input_np = np.zeros_like(input_np)
+                if pH > 0 or pW > 0:
+                    grad_padded = np.pad(grad_np, ((0,0),(0,0),(pH,pH),(pW,pW)), mode='constant')
+                else:
+                    grad_padded = grad_np
+                for g in range(groups):
+                    c_in_per_g = C_in // groups
+                    c_out_per_g = C_out_g
+                    for ci_local in range(c_in_per_g):
+                        ci = g * c_in_per_g + ci_local
+                        for co_local in range(c_out_per_g):
+                            co = g * c_out_per_g + co_local
+                            kernel = weight_np[ci_local, co_local]
+                            for ih in range(H_in):
+                                for iw in range(W_in):
+                                    val = 0.0
+                                    for kh in range(kH):
+                                        for kw in range(kW):
+                                            oh = ih * sH + kh * dH
+                                            ow = iw * sW + kw * dW
+                                            if oh < grad_padded.shape[2] and ow < grad_padded.shape[3]:
+                                                val += grad_padded[:, co, oh, ow] * kernel[kh, kw]
+                                    grad_input_np[:, ci, ih, iw] += val
+
+            if getattr(weight, "requires_grad", False):
+                grad_weight_np = np.zeros_like(weight_np)
+                if pH > 0 or pW > 0:
+                    grad_padded = np.pad(grad_np, ((0,0),(0,0),(pH,pH),(pW,pW)), mode='constant')
+                else:
+                    grad_padded = grad_np
+                for g in range(groups):
+                    c_in_per_g = C_in // groups
+                    c_out_per_g = C_out_g
+                    for ci_local in range(c_in_per_g):
+                        ci = g * c_in_per_g + ci_local
+                        for co_local in range(c_out_per_g):
+                            co = g * c_out_per_g + co_local
+                            for kh in range(kH):
+                                for kw in range(kW):
+                                    val = 0.0
+                                    for ih in range(H_in):
+                                        for iw in range(W_in):
+                                            oh = ih * sH + kh * dH
+                                            ow = iw * sW + kw * dW
+                                            if oh < grad_padded.shape[2] and ow < grad_padded.shape[3]:
+                                                val += (input_np[:, ci, ih, iw] * grad_padded[:, co, oh, ow]).sum()
+                                    grad_weight_np[ci_local, co_local, kh, kw] = val
+        else:
+            # Standard conv2d backward
+            N, C_in, H_in, W_in = input_np.shape
+            C_out, C_in_g, kH, kW = weight_np.shape
+            _, _, H_out, W_out = grad_np.shape
+
+            if pH > 0 or pW > 0:
+                input_padded = np.pad(input_np, ((0,0),(0,0),(pH,pH),(pW,pW)), mode='constant')
+            else:
+                input_padded = input_np
+
+            if getattr(input, "requires_grad", False):
+                grad_input_padded = np.zeros_like(input_padded)
+                for g in range(groups):
+                    c_out_per_g = C_out // groups
+                    for co_local in range(c_out_per_g):
+                        co = g * c_out_per_g + co_local
+                        for ci_local in range(C_in_g):
+                            ci = g * C_in_g + ci_local
+                            kernel = weight_np[co, ci_local]
+                            for oh in range(H_out):
+                                for ow in range(W_out):
+                                    for kh in range(kH):
+                                        for kw in range(kW):
+                                            ih = oh * sH + kh * dH
+                                            iw = ow * sW + kw * dW
+                                            grad_input_padded[:, ci, ih, iw] += grad_np[:, co, oh, ow] * kernel[kh, kw]
+                if pH > 0 or pW > 0:
+                    grad_input_np = grad_input_padded[:, :, pH:pH+H_in, pW:pW+W_in]
+                else:
+                    grad_input_np = grad_input_padded
+
+            if getattr(weight, "requires_grad", False):
+                grad_weight_np = np.zeros_like(weight_np)
+                for g in range(groups):
+                    c_out_per_g = C_out // groups
+                    for co_local in range(c_out_per_g):
+                        co = g * c_out_per_g + co_local
+                        for ci_local in range(C_in_g):
+                            ci = g * C_in_g + ci_local
+                            for kh in range(kH):
+                                for kw in range(kW):
+                                    val = 0.0
+                                    for oh in range(H_out):
+                                        for ow in range(W_out):
+                                            ih = oh * sH + kh * dH
+                                            iw = ow * sW + kw * dW
+                                            val += (input_padded[:, ci, ih, iw] * grad_np[:, co, oh, ow]).sum()
+                                    grad_weight_np[co, ci_local, kh, kw] = val
+
+        if bias is not None and getattr(bias, "requires_grad", False):
+            if is_1d:
+                grad_bias_np = grad_np[:, :, 0, :].sum(axis=(0, 2))
+            else:
+                grad_bias_np = grad_np.sum(axis=(0, 2, 3))
+
+        # Convert back
+        grad_input_t = None
+        if grad_input_np is not None:
+            if is_1d:
+                grad_input_np = grad_input_np[:, :, 0, :]
+            grad_input_t = _from_numpy(np.ascontiguousarray(grad_input_np.astype(input_np.dtype)), input.dtype, input.device)
+
+        grad_weight_t = None
+        if grad_weight_np is not None:
+            if is_1d:
+                grad_weight_np = grad_weight_np[:, :, 0, :]
+            grad_weight_t = _from_numpy(np.ascontiguousarray(grad_weight_np.astype(weight_np.dtype)), weight.dtype, weight.device)
+
+        grad_bias_t = None
+        if grad_bias_np is not None:
+            grad_bias_t = _from_numpy(np.ascontiguousarray(grad_bias_np.astype(input_np.dtype)), bias.dtype, bias.device)
+
+        if bias is not None:
+            return grad_input_t, grad_weight_t, grad_bias_t
+        return grad_input_t, grad_weight_t
+
+
+def _autograd_pool(name, backward_impl):
+    """Autograd wrapper for pooling ops."""
+    def wrapper(input, *args, **kwargs):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, input, *args, **kwargs)
+        if GradMode.enabled and getattr(input, "requires_grad", False):
+            node_holder = {}
+
+            def _backward(grad):
+                saved_input = node_holder["node"].saved_tensors()[0]
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, input, saved_input, out, backward_keyset, args, kwargs)
+
+            node = Node(_backward, (input,))
+            node_holder["node"] = node
+            node.save_for_backward(input)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _max_pool2d_backward(grad, input, saved_input, out, keyset, args, kwargs):
+    with _grad_context(keyset):
+        import numpy as np
+        from .cpu.ops import _to_numpy, _from_numpy
+        import math
+
+        grad_np = _to_numpy(grad)
+        input_np = _to_numpy(saved_input)
+        out_np = _to_numpy(out)
+
+        kernel_size = args[0]
+        stride = args[1]
+        padding = args[2] if len(args) > 2 else kwargs.get("padding", 0)
+        dilation = args[3] if len(args) > 3 else kwargs.get("dilation", 1)
+
+        kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+        sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+        pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+        dH, dW = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+
+        N, C, H, W = input_np.shape
+        _, _, H_out, W_out = grad_np.shape
+
+        if pH > 0 or pW > 0:
+            input_padded = np.pad(input_np, ((0,0),(0,0),(pH,pH),(pW,pW)),
+                                  mode='constant', constant_values=-np.inf)
+        else:
+            input_padded = input_np
+
+        grad_input_padded = np.zeros_like(input_padded)
+        for oh in range(H_out):
+            for ow in range(W_out):
+                for kh in range(kH):
+                    for kw in range(kW):
+                        ih = oh * sH + kh * dH
+                        iw = ow * sW + kw * dW
+                        if ih < input_padded.shape[2] and iw < input_padded.shape[3]:
+                            mask = (input_padded[:, :, ih, iw] == out_np[:, :, oh, ow])
+                            grad_input_padded[:, :, ih, iw] += grad_np[:, :, oh, ow] * mask
+
+        if pH > 0 or pW > 0:
+            grad_input_np = grad_input_padded[:, :, pH:pH+H, pW:pW+W]
+        else:
+            grad_input_np = grad_input_padded
+
+        grad_input = _from_numpy(np.ascontiguousarray(grad_input_np.astype(input_np.dtype)),
+                                 input.dtype, input.device)
+        return (grad_input,)
+
+
+def _avg_pool2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    with _grad_context(keyset):
+        import numpy as np
+        from .cpu.ops import _to_numpy, _from_numpy
+
+        grad_np = _to_numpy(grad)
+        input_np = _to_numpy(saved_input)
+
+        kernel_size = args[0]
+        stride = args[1]
+        padding = args[2] if len(args) > 2 else kwargs.get("padding", 0)
+        count_include_pad = args[4] if len(args) > 4 else kwargs.get("count_include_pad", True)
+        divisor_override = args[5] if len(args) > 5 else kwargs.get("divisor_override", None)
+
+        kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+        sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+        pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+
+        N, C, H, W = input_np.shape
+        _, _, H_out, W_out = grad_np.shape
+
+        if pH > 0 or pW > 0:
+            grad_input_padded = np.zeros((N, C, H + 2*pH, W + 2*pW), dtype=input_np.dtype)
+        else:
+            grad_input_padded = np.zeros_like(input_np)
+
+        for oh in range(H_out):
+            for ow in range(W_out):
+                h_start = oh * sH
+                w_start = ow * sW
+                h_end = min(h_start + kH, grad_input_padded.shape[2])
+                w_end = min(w_start + kW, grad_input_padded.shape[3])
+                if divisor_override is not None:
+                    count = divisor_override
+                elif count_include_pad:
+                    count = kH * kW
+                else:
+                    actual_h = min(h_end, H + pH) - max(h_start, pH)
+                    actual_w = min(w_end, W + pW) - max(w_start, pW)
+                    count = max(actual_h * actual_w, 1)
+                grad_input_padded[:, :, h_start:h_end, w_start:w_end] += grad_np[:, :, oh:oh+1, ow:ow+1] / count
+
+        if pH > 0 or pW > 0:
+            grad_input_np = grad_input_padded[:, :, pH:pH+H, pW:pW+W]
+        else:
+            grad_input_np = grad_input_padded
+
+        grad_input = _from_numpy(np.ascontiguousarray(grad_input_np.astype(input_np.dtype)),
+                                 input.dtype, input.device)
+        return (grad_input,)
+
+
+def _adaptive_avg_pool2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    with _grad_context(keyset):
+        import numpy as np
+        from .cpu.ops import _to_numpy, _from_numpy
+
+        grad_np = _to_numpy(grad)
+        input_np = _to_numpy(saved_input)
+        N, C, H, W = input_np.shape
+        output_size = args[0]
+        if isinstance(output_size, int):
+            oH = oW = output_size
+        else:
+            oH, oW = output_size
+
+        grad_input_np = np.zeros_like(input_np)
+        for oh in range(oH):
+            h_start = oh * H // oH
+            h_end = (oh + 1) * H // oH
+            for ow in range(oW):
+                w_start = ow * W // oW
+                w_end = (ow + 1) * W // oW
+                count = (h_end - h_start) * (w_end - w_start)
+                grad_input_np[:, :, h_start:h_end, w_start:w_end] += grad_np[:, :, oh:oh+1, ow:ow+1] / count
+
+        grad_input = _from_numpy(np.ascontiguousarray(grad_input_np.astype(input_np.dtype)),
+                                 input.dtype, input.device)
+        return (grad_input,)
+
+
+# ---------------------------------------------------------------------------
+# Phase 7: Utility ops backward
+# ---------------------------------------------------------------------------
+
+def _roll_backward(grad, _a, _saved_a, keyset, args, kwargs):
+    shifts = args[0]
+    dims = args[1] if len(args) > 1 else kwargs.get("dims", None)
+    with _grad_context(keyset):
+        if isinstance(shifts, int):
+            neg_shifts = -shifts
+        else:
+            neg_shifts = tuple(-s for s in shifts)
+        return (redispatch("roll", keyset, grad, neg_shifts, dims),)
+
+
+def _tile_backward(grad, _a, saved_a, keyset, args, kwargs):
+    dims = args[0]
+    with _grad_context(keyset):
+        input_shape = saved_a.shape
+        ndim_input = len(input_shape)
+        ndim_tile = len(dims) if isinstance(dims, (list, tuple)) else 1
+        if not isinstance(dims, (list, tuple)):
+            dims = [dims]
+        ndim = max(ndim_input, ndim_tile)
+        padded_shape = [1] * (ndim - ndim_input) + list(input_shape)
+        padded_dims = [1] * (ndim - ndim_tile) + list(dims)
+        reshape_dims = []
+        for s, r in zip(padded_shape, padded_dims):
+            reshape_dims.extend([r, s])
+        grad_reshaped = redispatch("reshape", keyset, grad, tuple(reshape_dims))
+        sum_dims = tuple(range(0, 2 * ndim, 2))
+        for d in sum_dims:
+            grad_reshaped = redispatch("sum", keyset, grad_reshaped, dim=d, keepdim=True)
+        grad_out = redispatch("reshape", keyset, grad_reshaped, input_shape)
+        return (grad_out,)
+
+
+def _autograd_sort_like(name, backward_impl):
+    """Autograd wrapper for sort/topk that returns (values, indices)."""
+    def wrapper(a, *args, **kwargs):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        outs = redispatch(name, raw_keyset, a, *args, **kwargs)
+        values, indices = outs
+        if GradMode.enabled and getattr(a, "requires_grad", False):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return backward_impl(grad, a, indices, backward_keyset, args, kwargs)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            values.grad_fn = node
+            values.requires_grad = True
+        return values, indices
+
+    return wrapper
+
+
+def _sort_backward(grad, a, indices, keyset, args, kwargs):
+    dim = args[0] if args else kwargs.get("dim", -1)
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        redispatch("scatter_", keyset, grad_input, dim, indices, grad)
+        return (grad_input,)
+
+
+def _topk_backward(grad, a, indices, keyset, args, kwargs):
+    dim = args[1] if len(args) > 1 else kwargs.get("dim", -1)
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        redispatch("scatter_", keyset, grad_input, dim, indices, grad)
+        return (grad_input,)
+
+
 def _register_autograd_op(name, factory, *, include_meta=True):
     kwargs = {
         "default": factory(),
@@ -1041,6 +1778,35 @@ for _entry in (
     ("where", lambda: _autograd_where("where", _where_backward)),
     ("split", lambda: _autograd_multi_output("split", _split_backward, save_input=False)),
     ("unbind", lambda: _autograd_multi_output("unbind", _unbind_backward, save_input=False)),
+    # Phase 5: Transformer-critical ops
+    ("masked_fill", lambda: _autograd_unary_args("masked_fill", _masked_fill_backward, save_input=False)),
+    ("var", lambda: _autograd_unary_args("var", _var_backward)),
+    ("std", lambda: _autograd_unary_args("std", _std_backward)),
+    ("gather", lambda: _autograd_unary_args("gather", _gather_backward, save_input=False)),
+    ("index_select", lambda: _autograd_unary_args("index_select", _index_select_backward, save_input=False)),
+    ("repeat", lambda: _autograd_unary_args("repeat", _repeat_backward, save_input=False)),
+    ("tril", lambda: _autograd_unary_args("tril", _tril_backward, save_input=False)),
+    ("triu", lambda: _autograd_unary_args("triu", _triu_backward, save_input=False)),
+    ("group_norm", lambda: _autograd_unary_args("group_norm", _group_norm_backward)),
+    ("rms_norm", lambda: _autograd_unary_args("rms_norm", _rms_norm_backward)),
+    ("flip", lambda: _autograd_unary_args("flip", _flip_backward, save_input=False)),
+    ("cumsum", lambda: _autograd_unary_args("cumsum", _cumsum_backward, save_input=False)),
+    ("pad", lambda: _autograd_unary_args("pad", _pad_backward, save_input=False)),
+    ("prod", lambda: _autograd_unary_args("prod", _prod_backward)),
+    ("norm", lambda: _autograd_unary_args("norm", _norm_backward)),
+    # Phase 6: Conv/pool ops
+    ("conv2d", lambda: _autograd_conv("conv2d")),
+    ("conv1d", lambda: _autograd_conv("conv1d")),
+    ("conv_transpose2d", lambda: _autograd_conv("conv_transpose2d")),
+    ("conv_transpose1d", lambda: _autograd_conv("conv_transpose1d")),
+    ("max_pool2d", lambda: _autograd_pool("max_pool2d", _max_pool2d_backward)),
+    ("avg_pool2d", lambda: _autograd_pool("avg_pool2d", _avg_pool2d_backward)),
+    ("adaptive_avg_pool2d", lambda: _autograd_pool("adaptive_avg_pool2d", _adaptive_avg_pool2d_backward)),
+    # Phase 7: Utility ops
+    ("roll", lambda: _autograd_unary_args("roll", _roll_backward, save_input=False)),
+    ("tile", lambda: _autograd_unary_args("tile", _tile_backward, save_input=False)),
+    ("sort", lambda: _autograd_sort_like("sort", _sort_backward)),
+    ("topk", lambda: _autograd_sort_like("topk", _topk_backward)),
 ):
     if len(_entry) == 2:
         _name, _factory = _entry

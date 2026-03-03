@@ -8,7 +8,8 @@ from mindtorch_v2._dispatch.registry import registry
 
 
 def _autograd_backend_source() -> str:
-    return Path("src/mindtorch_v2/_backends/autograd.py").read_text(encoding="utf-8")
+    pkg_dir = Path(mindtorch_v2.__file__).resolve().parent
+    return (pkg_dir / "_backends" / "autograd.py").read_text(encoding="utf-8")
 
 
 def test_backward_formulas_do_not_access_storage_payload_directly():
