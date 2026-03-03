@@ -5888,7 +5888,7 @@ def conv_transpose1d(input, weight, bias=None, stride=(1,), padding=(0,),
 
 
 def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=False, return_indices=False):
-    """MaxPool2d forward using aclnnMaxPool."""
+    """MaxPool2d forward using aclnnMaxPool2dWithMask (supports fp32/fp16 on Ascend910B)."""
     import math as _math
     runtime = npu_runtime.get_runtime((input.device.index or 0))
     stream = npu_state.current_stream((input.device.index or 0))
@@ -5914,14 +5914,21 @@ def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=Fals
     itemsize = _dtype_itemsize(input.dtype)
     out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
 
-    # MaxPool expects pads as [pH, pW, pH, pW]
-    pads = [pH, pW, pH, pW]
+    # aclnnMaxPool2dWithMask returns a mask tensor (int8) used for backward.
+    # mask shape: (N, C, kH*kW, (ceil(outH*outW/16)+1)*32)
+    BLOCKSIZE = 16
+    mask_H = kH * kW
+    mask_W = (_math.ceil(H_out * W_out / BLOCKSIZE) + 1) * 32
+    mask_shape = (N, C, mask_H, mask_W)
+    mask_stride = npu_runtime._contiguous_stride(mask_shape)
+    mask_numel = _numel(mask_shape)
+    mask_ptr = npu_runtime._alloc_device(max(mask_numel, 1), runtime=runtime)  # int8 = 1 byte each
 
-    aclnn.max_pool(
-        _unwrap_storage(input).data_ptr(), out_ptr,
+    aclnn.max_pool2d_with_mask(
+        _unwrap_storage(input).data_ptr(), out_ptr, mask_ptr,
         input.shape, input.stride, input.dtype,
-        [kH, kW], [sH, sW], pads, [dH, dW], ceil_mode,
-        out_shape, out_stride,
+        [kH, kW], [sH, sW], [pH, pW], [dH, dW], ceil_mode,
+        out_shape, out_stride, mask_shape, mask_stride,
         runtime, stream=stream.stream,
     )
 
@@ -5968,9 +5975,13 @@ def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False,
 
 
 def adaptive_avg_pool2d(input, output_size):
-    """AdaptiveAvgPool2d forward using aclnnAdaptiveAvgPool2d."""
-    runtime = npu_runtime.get_runtime((input.device.index or 0))
-    stream = npu_state.current_stream((input.device.index or 0))
+    """AdaptiveAvgPool2d forward — composite implementation via avg_pool2d.
+
+    Uses avg_pool2d with computed kernel_size/stride/padding to avoid
+    aclnnAdaptiveAvgPool2d cross-op contamination issues on Ascend910B
+    (CANN 8.3.RC2 bug where cubeMathType=1 ops corrupt AdaptiveAvgPool2d state).
+    """
+    import math as _math
 
     if isinstance(output_size, int):
         oH = oW = output_size
@@ -5978,6 +5989,40 @@ def adaptive_avg_pool2d(input, output_size):
         oH, oW = output_size
 
     N, C, H, W = input.shape
+
+    # Compute avg_pool2d parameters that produce the desired adaptive output.
+    # PyTorch's adaptive pooling algorithm (from ATen/native/AdaptiveAveragePooling.cpp):
+    #   start_index(i) = floor(i * input_size / output_size)
+    #   end_index(i)   = ceil((i+1) * input_size / output_size)
+    # When input_size is evenly divisible by output_size, this simplifies to
+    # a regular avg_pool2d with stride = input_size // output_size and
+    # kernel_size = input_size - (output_size - 1) * stride.
+
+    def _can_use_regular_pool(in_sz, out_sz):
+        """Check if adaptive pool can be expressed as regular avg_pool2d."""
+        if out_sz == 0:
+            return False
+        if in_sz % out_sz == 0:
+            return True
+        # Also works when all windows have the same size
+        stride = in_sz // out_sz
+        kernel = in_sz - (out_sz - 1) * stride
+        # Verify all windows produce valid output
+        return stride > 0 and kernel > 0 and (out_sz - 1) * stride + kernel == in_sz
+
+    if _can_use_regular_pool(H, oH) and _can_use_regular_pool(W, oW):
+        sH = H // oH
+        sW = W // oW
+        kH = H - (oH - 1) * sH
+        kW = W - (oW - 1) * sW
+        return avg_pool2d(input, kernel_size=(kH, kW), stride=(sH, sW),
+                          padding=0, ceil_mode=False,
+                          count_include_pad=True, divisor_override=None)
+
+    # Fallback: try the native ACLNN kernel for non-uniform window sizes
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
     out_shape = (N, C, oH, oW)
     out_stride = npu_runtime._contiguous_stride(out_shape)
     out_numel = _numel(out_shape)
