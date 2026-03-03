@@ -186,6 +186,13 @@ from .ops import (
     prod_,
     floor_divide,
     rms_norm,
+    conv2d,
+    conv1d,
+    conv_transpose2d,
+    conv_transpose1d,
+    max_pool2d,
+    avg_pool2d,
+    adaptive_avg_pool2d,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -401,6 +408,17 @@ registry.register("norm", "npu", norm_, meta=meta_infer.infer_sum)
 registry.register("prod", "npu", prod_, meta=meta_infer.infer_sum)
 registry.register("floor_divide", "npu", floor_divide, meta=meta_infer.infer_binary)
 registry.register("rms_norm", "npu", rms_norm, meta=meta_infer.infer_unary)
+
+# Conv operations (ACLNN large kernels)
+registry.register("conv2d", "npu", conv2d)
+registry.register("conv1d", "npu", conv1d)
+registry.register("conv_transpose2d", "npu", conv_transpose2d)
+registry.register("conv_transpose1d", "npu", conv_transpose1d)
+
+# Pooling operations (ACLNN large kernels)
+registry.register("max_pool2d", "npu", max_pool2d)
+registry.register("avg_pool2d", "npu", avg_pool2d)
+registry.register("adaptive_avg_pool2d", "npu", adaptive_avg_pool2d)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

@@ -141,6 +141,13 @@ CORE_SCHEMA_OPS = (
     "prod",
     "floor_divide",
     "rms_norm",
+    "conv2d",
+    "conv1d",
+    "conv_transpose2d",
+    "conv_transpose1d",
+    "max_pool2d",
+    "avg_pool2d",
+    "adaptive_avg_pool2d",
 )
 
 
@@ -338,3 +345,14 @@ def register_schemas():
     registry.register_schema("prod", "prod(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
     registry.register_schema("floor_divide", "floor_divide(Tensor input, Any other) -> Tensor")
     registry.register_schema("rms_norm", "rms_norm(Tensor input, int[] normalized_shape, Any weight=None, float eps=1e-6) -> Tensor")
+
+    # Conv operations
+    registry.register_schema("conv2d", "conv2d(Tensor input, Tensor weight, Tensor? bias=None, Any stride=None, Any padding=None, Any dilation=None, int groups=1) -> Tensor")
+    registry.register_schema("conv1d", "conv1d(Tensor input, Tensor weight, Tensor? bias=None, Any stride=None, Any padding=None, Any dilation=None, int groups=1) -> Tensor")
+    registry.register_schema("conv_transpose2d", "conv_transpose2d(Tensor input, Tensor weight, Tensor? bias=None, Any stride=None, Any padding=None, Any output_padding=None, int groups=1, Any dilation=None) -> Tensor")
+    registry.register_schema("conv_transpose1d", "conv_transpose1d(Tensor input, Tensor weight, Tensor? bias=None, Any stride=None, Any padding=None, Any output_padding=None, int groups=1, Any dilation=None) -> Tensor")
+
+    # Pooling operations
+    registry.register_schema("max_pool2d", "max_pool2d(Tensor input, Any kernel_size, Any stride, Any padding=None, Any dilation=None, bool ceil_mode=False, bool return_indices=False) -> Tensor")
+    registry.register_schema("avg_pool2d", "avg_pool2d(Tensor input, Any kernel_size, Any stride, Any padding=None, bool ceil_mode=False, bool count_include_pad=True, Any divisor_override=None) -> Tensor")
+    registry.register_schema("adaptive_avg_pool2d", "adaptive_avg_pool2d(Tensor input, Any output_size) -> Tensor")

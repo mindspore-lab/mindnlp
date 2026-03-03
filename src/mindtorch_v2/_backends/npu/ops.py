@@ -5756,3 +5756,240 @@ def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     y_storage = npu_typed_storage_from_ptr(y_ptr, max(y_numel, 1), input.dtype, device=input.device)
     # rstd not returned (only y needed by caller), but memory is managed by allocator
     return _wrap_tensor(y_storage, y_shape, y_stride)
+
+
+def conv2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1):
+    """Conv2d forward using aclnnConvolution."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    N, C_in, H, W = input.shape
+    C_out, C_in_g, kH, kW = weight.shape
+    sH, sW = stride
+    pH, pW = padding
+    dH, dW = dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+    out_shape = (N, C_out, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    bias_ptr = None
+    bias_shape = None
+    bias_stride = None
+    if bias is not None:
+        bias_ptr = _unwrap_storage(bias).data_ptr()
+        bias_shape = bias.shape
+        bias_stride = bias.stride
+
+    aclnn.convolution(
+        _unwrap_storage(input).data_ptr(),
+        _unwrap_storage(weight).data_ptr(),
+        bias_ptr,
+        input.shape, input.stride,
+        weight.shape, weight.stride,
+        bias_shape, bias_stride,
+        input.dtype,
+        stride, padding, dilation,
+        False,  # transposed
+        (0, 0),  # output_padding
+        groups,
+        out_ptr, out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def conv1d(input, weight, bias=None, stride=(1,), padding=(0,), dilation=(1,), groups=1):
+    """Conv1d forward via conv2d with unsqueezed spatial dim."""
+    from ..common import view as view_backend
+    # Unsqueeze: (N, C, L) -> (N, C, 1, L)
+    input_4d = view_backend.unsqueeze(input, 2)
+    weight_4d = view_backend.unsqueeze(weight, 2)
+    out_4d = conv2d(input_4d, weight_4d, bias,
+                    stride=(1, stride[0]),
+                    padding=(0, padding[0]),
+                    dilation=(1, dilation[0]),
+                    groups=groups)
+    # Squeeze: (N, C_out, 1, L_out) -> (N, C_out, L_out)
+    return view_backend.squeeze(out_4d, 2)
+
+
+def conv_transpose2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0),
+                     output_padding=(0, 0), groups=1, dilation=(1, 1)):
+    """ConvTranspose2d forward using aclnnConvolution with transposed=True."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    N, C_in, H_in, W_in = input.shape
+    C_in_w, C_out_g, kH, kW = weight.shape
+    sH, sW = stride
+    pH, pW = padding
+    opH, opW = output_padding
+    dH, dW = dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    H_out = (H_in - 1) * sH - 2 * pH + ekH + opH
+    W_out = (W_in - 1) * sW - 2 * pW + ekW + opW
+    C_out = C_out_g * groups
+    out_shape = (N, C_out, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    bias_ptr = None
+    bias_shape = None
+    bias_stride = None
+    if bias is not None:
+        bias_ptr = _unwrap_storage(bias).data_ptr()
+        bias_shape = bias.shape
+        bias_stride = bias.stride
+
+    aclnn.convolution(
+        _unwrap_storage(input).data_ptr(),
+        _unwrap_storage(weight).data_ptr(),
+        bias_ptr,
+        input.shape, input.stride,
+        weight.shape, weight.stride,
+        bias_shape, bias_stride,
+        input.dtype,
+        stride, padding, dilation,
+        True,  # transposed
+        output_padding,
+        groups,
+        out_ptr, out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def conv_transpose1d(input, weight, bias=None, stride=(1,), padding=(0,),
+                     output_padding=(0,), groups=1, dilation=(1,)):
+    """ConvTranspose1d forward via conv_transpose2d with unsqueezed spatial dim."""
+    from ..common import view as view_backend
+    input_4d = view_backend.unsqueeze(input, 2)
+    weight_4d = view_backend.unsqueeze(weight, 2)
+    out_4d = conv_transpose2d(input_4d, weight_4d, bias,
+                              stride=(1, stride[0]),
+                              padding=(0, padding[0]),
+                              output_padding=(0, output_padding[0]),
+                              groups=groups,
+                              dilation=(1, dilation[0]))
+    return view_backend.squeeze(out_4d, 2)
+
+
+def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+    """MaxPool2d forward using aclnnMaxPool."""
+    import math as _math
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    dH, dW = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+
+    N, C, H, W = input.shape
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    if ceil_mode:
+        H_out = _math.ceil((H + 2 * pH - ekH) / sH) + 1
+        W_out = _math.ceil((W + 2 * pW - ekW) / sW) + 1
+    else:
+        H_out = (H + 2 * pH - ekH) // sH + 1
+        W_out = (W + 2 * pW - ekW) // sW + 1
+
+    out_shape = (N, C, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    # MaxPool expects pads as [pH, pW, pH, pW]
+    pads = [pH, pW, pH, pW]
+
+    aclnn.max_pool(
+        _unwrap_storage(input).data_ptr(), out_ptr,
+        input.shape, input.stride, input.dtype,
+        [kH, kW], [sH, sW], pads, [dH, dW], ceil_mode,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False,
+               count_include_pad=True, divisor_override=None):
+    """AvgPool2d forward using aclnnAvgPool2d."""
+    import math as _math
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+
+    N, C, H, W = input.shape
+    if ceil_mode:
+        H_out = _math.ceil((H + 2 * pH - kH) / sH) + 1
+        W_out = _math.ceil((W + 2 * pW - kW) / sW) + 1
+    else:
+        H_out = (H + 2 * pH - kH) // sH + 1
+        W_out = (W + 2 * pW - kW) // sW + 1
+
+    out_shape = (N, C, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.avg_pool2d(
+        _unwrap_storage(input).data_ptr(), out_ptr,
+        input.shape, input.stride, input.dtype,
+        [kH, kW], [sH, sW], [pH, pW],
+        ceil_mode, count_include_pad, divisor_override,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def adaptive_avg_pool2d(input, output_size):
+    """AdaptiveAvgPool2d forward using aclnnAdaptiveAvgPool2d."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    if isinstance(output_size, int):
+        oH = oW = output_size
+    else:
+        oH, oW = output_size
+
+    N, C, H, W = input.shape
+    out_shape = (N, C, oH, oW)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.adaptive_avg_pool2d(
+        _unwrap_storage(input).data_ptr(), out_ptr,
+        input.shape, input.stride, input.dtype,
+        [oH, oW], out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
