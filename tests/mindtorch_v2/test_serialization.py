@@ -346,7 +346,7 @@ def test_torch_load_rejects_unsupported_map_location_target(tmp_path):
     path = tmp_path / "torch_state_dict_map_loc_bad_target.pth"
     torch.save(model.state_dict(), path)
 
-    with pytest.raises(RuntimeError, match="unsupported remapped location"):
+    with pytest.raises(RuntimeError, match="unsupported checkpoint storage location"):
         mt.load(path, map_location={"cpu": "cuda:0"})
 
 
