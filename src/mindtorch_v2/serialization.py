@@ -30,7 +30,7 @@ from ._dtype import (
     uint8,
     to_numpy_dtype,
 )
-from ._storage import typed_storage_from_numpy
+from ._storage import TypedStorage, _CPUUntypedStorage, typed_storage_from_numpy
 from ._tensor import Tensor as MindTensor
 
 
@@ -110,8 +110,17 @@ class _LegacyBridgeUnpickler(pickle.Unpickler):
         return super().find_class(mod_name, name)
 
 
-def _build_zip_unpickler(data, *, weights_only=False, **pickle_load_args):
-    cls = _WeightsOnlyUnpickler if weights_only else _TorchCompatUnpickler
+def _make_unpickler_class(base_cls, pickle_module):
+    # Build a dynamic subclass so custom pickle_module.Unpickler is honored.
+    class _Unpickler(base_cls, pickle_module.Unpickler):
+        pass
+
+    return _Unpickler
+
+
+def _build_zip_unpickler(data, *, pickle_module=pickle, weights_only=False, **pickle_load_args):
+    base_cls = _WeightsOnlyUnpickler if weights_only else _TorchCompatUnpickler
+    cls = _make_unpickler_class(base_cls, pickle_module)
     return cls(io.BytesIO(data), **pickle_load_args)
 # Storage type proxies that get rewritten to torch globals in data.pkl.
 class FloatStorage:  # pragma: no cover - marker type used by pickle
@@ -483,7 +492,15 @@ def _validate_map_location(map_location):
 
 
 
-def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pickle_load_args):
+def _load_zip_checkpoint(
+    file_obj,
+    map_location=None,
+    pickle_module=pickle,
+    weights_only=False,
+    mmap=False,
+    mmap_path=None,
+    **pickle_load_args,
+):
     _validate_map_location(map_location)
 
     loaded_storages = {}
@@ -507,10 +524,31 @@ def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pick
                 return loaded_storages[key]
 
             dtype = _storage_dtype_from_type(storage_type)
-            payload = zf.read(_record_name(prefix, f"data/{key}"))
             np_dtype = to_numpy_dtype(dtype)
-            arr = np.frombuffer(payload, dtype=np_dtype, count=int(numel)).copy()
-            storage = typed_storage_from_numpy(arr, dtype=dtype, device="cpu")
+            record_name = _record_name(prefix, f"data/{key}")
+            if mmap and mmap_path is not None:
+                info = zf.getinfo(record_name)
+                if info.compress_type != zipfile.ZIP_STORED:
+                    raise RuntimeError(
+                        "mmap requires uncompressed zip storage records"
+                    )
+                with zf.open(record_name) as rec:
+                    byte_offset = rec._fileobj.tell()  # zipfile exposes payload offset here
+                nbytes = int(numel) * np.dtype(np_dtype).itemsize
+                raw = np.memmap(
+                    mmap_path,
+                    mode="r",
+                    dtype=np.uint8,
+                    offset=int(byte_offset),
+                    shape=(nbytes,),
+                )
+                arr = raw.view(np_dtype)
+                untyped = _CPUUntypedStorage(raw, device="cpu")
+                storage = TypedStorage(untyped, dtype=dtype, size=int(numel), data=arr)
+            else:
+                payload = zf.read(record_name)
+                arr = np.frombuffer(payload, dtype=np_dtype, count=int(numel)).copy()
+                storage = typed_storage_from_numpy(arr, dtype=dtype, device="cpu")
 
             resolved_location = _resolve_storage_location(location, map_location)
             _validate_resolved_location(resolved_location)
@@ -519,7 +557,12 @@ def _load_zip_checkpoint(file_obj, map_location=None, weights_only=False, **pick
             loaded_storages[key] = storage
             return storage
 
-        unpickler = _build_zip_unpickler(data_pkl, weights_only=weights_only, **pickle_load_args)
+        unpickler = _build_zip_unpickler(
+            data_pkl,
+            pickle_module=pickle_module,
+            weights_only=weights_only,
+            **pickle_load_args,
+        )
         unpickler.persistent_load = persistent_load
         return unpickler.load()
 
@@ -530,7 +573,13 @@ def _legacy_element_size(dtype):
     return int(np.dtype(to_numpy_dtype(dtype)).itemsize)
 
 
-def _load_legacy_checkpoint(file_obj, map_location=None, weights_only=False, **pickle_load_args):
+def _load_legacy_checkpoint(
+    file_obj,
+    map_location=None,
+    pickle_module=pickle,
+    weights_only=False,
+    **pickle_load_args,
+):
     if map_location not in (None, "cpu"):
         raise NotImplementedError(
             "mindtorch_v2.load currently supports map_location=None or 'cpu' for legacy checkpoints"
@@ -569,22 +618,23 @@ def _load_legacy_checkpoint(file_obj, map_location=None, weights_only=False, **p
 
         raise RuntimeError(f"Unknown saved id type: {saved_id[0]}")
 
-    magic_number = pickle.load(file_obj, **pickle_load_args)
+    magic_number = pickle_module.load(file_obj, **pickle_load_args)
     if magic_number != 0x1950A86A20F9469CFC6C:
         raise RuntimeError("Invalid magic number; corrupt file?")
 
-    protocol_version = pickle.load(file_obj, **pickle_load_args)
+    protocol_version = pickle_module.load(file_obj, **pickle_load_args)
     if protocol_version != 1001:
         raise RuntimeError(f"Invalid protocol version: {protocol_version}")
 
-    _ = pickle.load(file_obj, **pickle_load_args)
+    _ = pickle_module.load(file_obj, **pickle_load_args)
 
-    unpickler_cls = _WeightsOnlyUnpickler if weights_only else _LegacyBridgeUnpickler
+    base_unpickler_cls = _WeightsOnlyUnpickler if weights_only else _LegacyBridgeUnpickler
+    unpickler_cls = _make_unpickler_class(base_unpickler_cls, pickle_module)
     unpickler = unpickler_cls(file_obj, **pickle_load_args)
     unpickler.persistent_load = persistent_load
     result = unpickler.load()
 
-    deserialized_storage_keys = pickle.load(file_obj, **pickle_load_args)
+    deserialized_storage_keys = pickle_module.load(file_obj, **pickle_load_args)
 
     for key in deserialized_storage_keys:
         key = _maybe_decode_ascii(key)
@@ -663,6 +713,8 @@ def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, mmap
     files if needed.
     """
     _check_filelike_for_read(f)
+    if pickle_module is None:
+        pickle_module = pickle
     if mmap is None:
         mmap = False
     map_location = _coerce_map_location_arg(map_location)
@@ -675,16 +727,39 @@ def load(f, map_location=None, pickle_module=pickle, *, weights_only=False, mmap
         with open(f, "rb") as fh:
             if _is_zip_checkpoint(fh):
                 return _load_zip_checkpoint(
-                    fh, map_location=map_location, weights_only=weights_only, encoding="utf-8"
+                    fh,
+                    map_location=map_location,
+                    pickle_module=pickle_module,
+                    weights_only=weights_only,
+                    mmap=bool(mmap),
+                    mmap_path=str(f),
+                    encoding="utf-8",
                 )
             if mmap:
                 raise RuntimeError(
                     "mmap can only be used with files saved with torch zip serialization"
                 )
             return _load_legacy_checkpoint(
-                fh, map_location=map_location, weights_only=weights_only, encoding="utf-8"
+                fh,
+                map_location=map_location,
+                pickle_module=pickle_module,
+                weights_only=weights_only,
+                encoding="utf-8",
             )
 
     if _is_zip_checkpoint(f):
-        return _load_zip_checkpoint(f, map_location=map_location, weights_only=weights_only, encoding="utf-8")
-    return _load_legacy_checkpoint(f, map_location=map_location, weights_only=weights_only, encoding="utf-8")
+        return _load_zip_checkpoint(
+            f,
+            map_location=map_location,
+            pickle_module=pickle_module,
+            weights_only=weights_only,
+            mmap=bool(mmap),
+            encoding="utf-8",
+        )
+    return _load_legacy_checkpoint(
+        f,
+        map_location=map_location,
+        pickle_module=pickle_module,
+        weights_only=weights_only,
+        encoding="utf-8",
+    )
