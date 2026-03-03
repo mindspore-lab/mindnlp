@@ -7,18 +7,15 @@ on:
   pull_request:
     branches: [ "master" ]
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - '!src/mindnlp/dataset/**'
-      - '!tests/dataset/**'
-      - '!docs/**'
+      - 'src/mindtorch_v2/**'
+      - 'tests/mindtorch_v2/**'
       - '.github/workflows/**'
   push:
     branches: [ "master" ]
     paths:
-      - 'src/**'
-      - '!src/mindnlp/dataset/**'
-      - '!docs/**'
+      - 'src/mindtorch_v2/**'
+      - 'tests/mindtorch_v2/**'
+      - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -45,10 +42,10 @@ jobs:
     #   run: |
     #     python .github/install_mindspore.py
     #     pip install -r download.txt
-    - name: Analysing the mindnlp code with pylint
+    - name: Analysing the mindtorch_v2 code with pylint
       run: |
         NUM_CORES=$(nproc)
-        pylint --jobs=$NUM_CORES src/mindnlp --rcfile=.github/pylint.conf
+        pylint --jobs=$NUM_CORES src/mindtorch_v2 --rcfile=.github/pylint.conf
 
   # ut-test:
   #   needs: pylint-check
