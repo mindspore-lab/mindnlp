@@ -904,6 +904,21 @@ def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     return dispatch("rms_norm", input.device.type, input, normalized_shape, weight, eps)
 
 
+def reciprocal(a):
+    return dispatch("reciprocal", a.device.type, a)
+
+
+def addmm(input, mat1, mat2, *, beta=1, alpha=1):
+    return dispatch("addmm", input.device.type, input, mat1, mat2, beta=beta, alpha=alpha)
+
+
+def einsum(equation, *operands):
+    if len(operands) == 1 and isinstance(operands[0], (list, tuple)):
+        operands = operands[0]
+    first = operands[0]
+    return dispatch("einsum", first.device.type, equation, list(operands))
+
+
 def _as_device(dev):
     if dev is None:
         return get_default_device()

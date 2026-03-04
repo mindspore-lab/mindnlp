@@ -193,6 +193,14 @@ from .ops import (
     max_pool2d,
     avg_pool2d,
     adaptive_avg_pool2d,
+    # P1 ops
+    std_,
+    reciprocal_,
+    addmm,
+    einsum_,
+    upsample_nearest2d,
+    upsample_bilinear2d,
+    one_hot,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -419,6 +427,15 @@ registry.register("conv_transpose1d", "npu", conv_transpose1d)
 registry.register("max_pool2d", "npu", max_pool2d)
 registry.register("avg_pool2d", "npu", avg_pool2d)
 registry.register("adaptive_avg_pool2d", "npu", adaptive_avg_pool2d)
+
+# P1 ops
+registry.register("std", "npu", std_, meta=meta_infer.infer_sum)
+registry.register("reciprocal", "npu", reciprocal_, meta=meta_infer.infer_unary)
+registry.register("addmm", "npu", addmm)
+registry.register("einsum", "npu", einsum_)
+registry.register("upsample_nearest2d", "npu", upsample_nearest2d)
+registry.register("upsample_bilinear2d", "npu", upsample_bilinear2d)
+registry.register("one_hot", "npu", one_hot)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 
