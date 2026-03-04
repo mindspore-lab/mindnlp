@@ -64,3 +64,9 @@ def test_autocast_invalid_device_type_raises():
     with pytest.raises(RuntimeError):
         with autocast("invalid_device"):
             pass
+
+
+def test_register_autocast_api_exists():
+    import mindtorch_v2.library as library
+
+    assert hasattr(library, "register_autocast")
