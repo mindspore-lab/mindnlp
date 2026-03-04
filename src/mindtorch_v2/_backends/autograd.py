@@ -831,6 +831,72 @@ def _hardtanh_backward(grad, _a, saved_a, keyset, args, _kwargs):
         return (redispatch("mul", keyset, grad, mask),)
 
 
+# ---- Dropout backward (uses saved mask from forward) ----
+
+def _autograd_dropout():
+    """Proper dropout backward using the mask saved during forward."""
+    def wrapper(a, *args, **kwargs):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch("dropout", raw_keyset, a, *args, **kwargs)
+        if GradMode.enabled and getattr(a, "requires_grad", False):
+            backward_data = getattr(out, "_backward_data", None)
+            node_holder = {}
+
+            def _backward(grad):
+                if backward_data is not None and grad.device.type == "npu":
+                    # NPU path: use aclnnDropoutDoMask with saved mask
+                    from .npu import aclnn, runtime as npu_runtime, state as npu_state
+                    runtime = npu_runtime.get_runtime((grad.device.index or 0))
+                    stream = npu_state.current_stream((grad.device.index or 0))
+                    out_shape = grad.shape
+                    out_stride = npu_runtime._contiguous_stride(out_shape)
+                    out_numel = 1
+                    for d in out_shape:
+                        out_numel *= d
+                    from .npu.ops import _dtype_itemsize, _unwrap_storage
+                    itemsize = _dtype_itemsize(grad.dtype)
+                    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+                    grad_ptr = _unwrap_storage(grad).data_ptr()
+                    aclnn.dropout_do_mask(
+                        grad_ptr,
+                        backward_data["mask_ptr"],
+                        out_ptr,
+                        out_shape, grad.stride, grad.dtype,
+                        backward_data["mask_numel"],
+                        backward_data["p"],
+                        runtime, stream=stream.stream,
+                    )
+                    from .npu.ops import npu_typed_storage_from_ptr, _wrap_tensor
+                    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1),
+                                                            grad.dtype, device=grad.device)
+                    return (_wrap_tensor(out_storage, out_shape, out_stride),)
+                # CPU fallback: apply mask * scale
+                from .cpu.ops import _to_numpy, _from_numpy
+                import numpy as _np
+                g_np = _to_numpy(grad)
+                p = args[0] if args else kwargs.get("p", 0.5)
+                training = args[1] if len(args) > 1 else kwargs.get("training", True)
+                if not training or p == 0:
+                    return (grad,)
+                # Without the mask we cannot compute the exact backward;
+                # use the output to infer which elements were zeroed
+                out_np = _to_numpy(out)
+                a_np = _to_numpy(a)
+                mask_np = _np.where(_np.abs(a_np) > 0, (out_np != 0).astype(g_np.dtype), 1.0)
+                scale = 1.0 / (1.0 - p) if p < 1.0 else 0.0
+                grad_np = g_np * mask_np * scale
+                return (_from_numpy(grad_np, grad.dtype, grad.device),)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
 def _relu6_backward(grad, _a, saved_a, keyset):
     with _grad_context(keyset):
         six = _scalar_tensor_like(saved_a, 6.0)
@@ -1771,7 +1837,7 @@ for _entry in (
     ("batch_norm", lambda: _autograd_unary_args("batch_norm", _batch_norm_backward)),
     ("clamp", lambda: _autograd_unary_args("clamp", _clamp_backward)),
     ("hardtanh", lambda: _autograd_unary_args("hardtanh", _hardtanh_backward)),
-    ("dropout", lambda: _autograd_unary_passthrough("dropout")),
+    ("dropout", _autograd_dropout),
     ("cat", lambda: _autograd_multi_input("cat", _cat_backward, save_inputs=False)),
     ("stack", lambda: _autograd_multi_input("stack", _stack_backward, save_inputs=False)),
     ("embedding", lambda: _autograd_embedding("embedding", _embedding_backward)),
