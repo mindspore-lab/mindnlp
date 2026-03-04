@@ -1258,6 +1258,28 @@ def acos(a):
 
 
 def atan2(a, b):
+    if _is_310b_profile():
+        z = div(a, b)
+        out = atan(z)
+
+        zero = _scalar_to_npu_tensor(0, out)
+        pi = _scalar_to_npu_tensor(3.141592653589793, out)
+        pi_half = _scalar_to_npu_tensor(1.5707963267948966, out)
+
+        x_lt0 = lt(b, zero)
+        x_eq0 = eq(b, zero)
+        y_ge0 = ge(a, zero)
+        y_gt0 = gt(a, zero)
+        y_lt0 = lt(a, zero)
+        y_eq0 = eq(a, zero)
+
+        out = where(logical_and(x_lt0, y_ge0), add(out, pi), out)
+        out = where(logical_and(x_lt0, y_lt0), sub(out, pi), out)
+        out = where(logical_and(x_eq0, y_gt0), pi_half, out)
+        out = where(logical_and(x_eq0, y_lt0), neg(pi_half), out)
+        out = where(logical_and(x_eq0, y_eq0), zero, out)
+        return out
+
     return _binary_op(a, b, aclnn.atan2, "atan2")
 
 
@@ -1298,8 +1320,6 @@ def where(cond, x, y):
         raise ValueError("NPU where requires matching dtypes")
     if cond.dtype != bool_dtype:
         cond = ne(cond, _scalar_to_npu_tensor(0, cond))
-    if not aclnn.s_where_symbols_ok():
-        raise RuntimeError("aclnnSWhere symbols not available")
 
     out_shape = _broadcast_shape(cond.shape, x.shape)
     out_shape = _broadcast_shape(out_shape, y.shape)
@@ -1309,6 +1329,17 @@ def where(cond, x, y):
         y = _npu_broadcast_to(y, out_shape)
     if out_shape != cond.shape:
         cond = _npu_broadcast_to(cond, out_shape)
+
+    if _is_310b_profile():
+        out = contiguous(y)
+        idx = nonzero(cond, as_tuple=True)
+        if len(idx) == 0 or idx[0].numel() == 0:
+            return out
+        vals = masked_select(x, cond)
+        return index_put_(out, idx, vals, accumulate=False)
+
+    if not aclnn.s_where_symbols_ok():
+        raise RuntimeError("aclnnSWhere symbols not available")
 
     runtime = npu_runtime.get_runtime((x.device.index or 0))
     stream = npu_state.current_stream((x.device.index or 0))
@@ -2073,11 +2104,59 @@ def triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
     return tensor_create([rows, cols], dtype=dtype, device=dev)
 
 
+def _diag_310b_fallback(a, diagonal=0):
+    from .creation import empty_create, zeros_create
+
+    diagonal = int(diagonal)
+
+    if a.dim() == 1:
+        n = int(a.shape[0])
+        size = n + (diagonal if diagonal >= 0 else -diagonal)
+        out = zeros_create((size, size), dtype=a.dtype, device=a.device)
+        if n == 0:
+            return out
+
+        idx = _npu_arange_1d(n, a.device)
+        if diagonal >= 0:
+            rows = idx
+            cols = idx if diagonal == 0 else add(idx, diagonal)
+        else:
+            rows = add(idx, -diagonal)
+            cols = idx
+        return index_put_(out, (rows, cols), a, accumulate=False)
+
+    m = int(a.shape[0])
+    n = int(a.shape[1])
+    if diagonal >= 0:
+        length = max(0, min(m, n - diagonal))
+    else:
+        length = max(0, min(m + diagonal, n))
+
+    if length == 0:
+        return empty_create((0,), dtype=a.dtype, device=a.device)
+
+    idx = _npu_arange_1d(length, a.device)
+    if diagonal >= 0:
+        rows = idx
+        cols = idx if diagonal == 0 else add(idx, diagonal)
+    else:
+        rows = add(idx, -diagonal)
+        cols = idx
+
+    linear = add(mul(rows, n), cols)
+    flat = view_backend.reshape(a, (a.numel(),))
+    return take(flat, linear)
+
+
 def diag(a, diagonal=0):
     if a.device.type != "npu":
         raise ValueError("NPU diag expects NPU tensors")
     if a.dim() not in (1, 2):
         raise ValueError("diag expects 1D or 2D tensor")
+
+    if _is_310b_profile():
+        return _diag_310b_fallback(a, diagonal=diagonal)
+
     if not aclnn.diag_symbols_ok():
         raise RuntimeError("aclnnDiag symbols not available")
 
@@ -2299,6 +2378,19 @@ def softplus(a, beta=1.0, threshold=20.0):
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError("NPU softplus expects NPU tensors")
+
+    if _is_310b_profile():
+        beta = float(beta)
+        threshold = float(threshold)
+        bx = mul(a, beta)
+        base = add(relu(bx), log(add(exp(neg(abs(bx))), 1)))
+        out = div(base, beta)
+        if threshold > 0:
+            thr = _scalar_to_npu_tensor(threshold, bx)
+            mask = gt(bx, thr)
+            out = where(mask, a, out)
+        return out
+
     out_size = _numel(a.shape) * _dtype_itemsize(a.dtype)
     out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
     storage = _unwrap_storage(a)
