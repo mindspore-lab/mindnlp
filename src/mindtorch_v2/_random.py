@@ -207,6 +207,75 @@ class Generator:
 default_generator = Generator('cpu')
 
 
+def bernoulli(input, *, generator=None):
+    """Sample Bernoulli distribution given probabilities tensor.
+
+    Args:
+        input (Tensor): Probability values in [0, 1].
+        generator (Generator, optional): RNG generator.
+
+    Returns:
+        Tensor: Binary tensor of same shape as input.
+    """
+    from ._creation import tensor
+    from ._dtype import float32
+
+    rng = _get_cpu_rng()
+    # input is a Tensor of probabilities
+    if hasattr(input, '_numpy_view'):
+        probs = input._numpy_view().copy()
+    else:
+        probs = np.array(input, dtype=np.float32)
+    uniform = rng.uniform(0.0, 1.0, size=probs.shape)
+    out = (uniform < probs).astype(probs.dtype)
+    return tensor(out, dtype=input.dtype if hasattr(input, 'dtype') else float32)
+
+
+def multinomial(input, num_samples, replacement=False, *, generator=None):
+    """Sample indices from a multinomial distribution.
+
+    Args:
+        input (Tensor): 1D or 2D tensor of weights (unnormalized probabilities).
+        num_samples (int): Number of samples to draw per row.
+        replacement (bool): Whether to sample with replacement. Default: False.
+        generator (Generator, optional): RNG generator.
+
+    Returns:
+        Tensor: LongTensor of sampled indices.
+    """
+    from ._creation import tensor
+    from ._dtype import int64
+
+    rng = _get_cpu_rng()
+    if hasattr(input, '_numpy_view'):
+        weights = input._numpy_view().copy().astype(np.float64)
+    else:
+        weights = np.array(input, dtype=np.float64)
+
+    if weights.ndim == 1:
+        total = weights.sum()
+        if total == 0:
+            probs = np.ones_like(weights) / len(weights)
+        else:
+            probs = weights / total
+        indices = rng.choice(len(probs), size=num_samples, replace=replacement, p=probs)
+        return tensor(indices.astype(np.int64), dtype=int64)
+    elif weights.ndim == 2:
+        rows = weights.shape[0]
+        out = np.zeros((rows, num_samples), dtype=np.int64)
+        for i in range(rows):
+            row = weights[i]
+            total = row.sum()
+            if total == 0:
+                probs = np.ones_like(row) / len(row)
+            else:
+                probs = row / total
+            out[i] = rng.choice(len(probs), size=num_samples, replace=replacement, p=probs)
+        return tensor(out, dtype=int64)
+    else:
+        raise ValueError("multinomial expects 1D or 2D input")
+
+
 __all__ = [
     'manual_seed',
     'seed',
@@ -215,4 +284,6 @@ __all__ = [
     'set_rng_state',
     'Generator',
     'default_generator',
+    'bernoulli',
+    'multinomial',
 ]

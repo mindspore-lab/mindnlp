@@ -13,6 +13,8 @@ from .creation import (
     range_create,
     randn_create,
     rand_create,
+    randint_create,
+    randperm_create,
     tensor_create,
     zeros_create,
 )
@@ -197,6 +199,40 @@ from .ops import (
     logical_and,
     logical_or,
     logical_not,
+    # New math ops
+    sub,
+    log1p,
+    expm1,
+    reciprocal,
+    maximum,
+    minimum,
+    dot,
+    outer,
+    inner,
+    mv,
+    cross,
+    tensordot,
+    einsum,
+    # New logical ops
+    logical_xor,
+    # New bitwise ops
+    bitwise_and,
+    bitwise_or,
+    bitwise_xor,
+    bitwise_not,
+    # New random in-place op
+    randint_,
+    # New shape ops
+    flatten,
+    unflatten,
+    broadcast_to,
+    movedim,
+    diagonal,
+    # New search ops
+    unique,
+    searchsorted,
+    kthvalue,
+    median,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -368,6 +404,8 @@ registry.register("eye", "cpu", eye_create)
 registry.register("range", "cpu", range_create)
 registry.register("randn", "cpu", randn_create)
 registry.register("rand", "cpu", rand_create)
+registry.register("randint", "cpu", randint_create)
+registry.register("randperm", "cpu", randperm_create)
 registry.register("linalg_qr", "cpu", linalg_qr)
 
 # Tensor indexing / selection ops
@@ -405,6 +443,25 @@ registry.register("adaptive_avg_pool2d", "cpu", adaptive_avg_pool2d)
 
 registry.register("embedding", "cpu", embedding)
 
+# ---------------------------------------------------------------------------
+# Registrations for new ops
+# ---------------------------------------------------------------------------
+
+# Math ops
+registry.register("sub", "cpu", sub, meta=meta_infer.infer_binary)
+registry.register("log1p", "cpu", log1p, meta=meta_infer.infer_unary)
+registry.register("expm1", "cpu", expm1, meta=meta_infer.infer_unary)
+registry.register("reciprocal", "cpu", reciprocal, meta=meta_infer.infer_unary)
+registry.register("maximum", "cpu", maximum, meta=meta_infer.infer_binary)
+registry.register("minimum", "cpu", minimum, meta=meta_infer.infer_binary)
+registry.register("dot", "cpu", dot, meta=meta_infer.infer_dot)
+registry.register("outer", "cpu", outer, meta=meta_infer.infer_outer)
+registry.register("inner", "cpu", inner, meta=meta_infer.infer_binary)
+registry.register("mv", "cpu", mv, meta=meta_infer.infer_binary)
+registry.register("cross", "cpu", cross, meta=meta_infer.infer_binary)
+registry.register("tensordot", "cpu", tensordot)
+registry.register("einsum", "cpu", einsum)
+
 # Logical ops
 registry.register("logical_and", "cpu", logical_and, meta=meta_infer.infer_binary_bool)
 registry.register("logical_or", "cpu", logical_or, meta=meta_infer.infer_binary_bool)
@@ -412,3 +469,27 @@ registry.register("logical_not", "cpu", logical_not, meta=meta_infer.infer_unary
 
 # In-place ops
 registry.register("div_", "cpu", div_, meta=meta_infer.infer_binary)
+
+registry.register("logical_xor", "cpu", logical_xor, meta=meta_infer.infer_binary_bool)
+
+# Bitwise ops
+registry.register("bitwise_and", "cpu", bitwise_and, meta=meta_infer.infer_binary)
+registry.register("bitwise_or", "cpu", bitwise_or, meta=meta_infer.infer_binary)
+registry.register("bitwise_xor", "cpu", bitwise_xor, meta=meta_infer.infer_binary)
+registry.register("bitwise_not", "cpu", bitwise_not, meta=meta_infer.infer_unary)
+
+# Random in-place op
+registry.register("randint_", "cpu", randint_, meta=meta_infer.infer_unary)
+
+# Shape ops
+registry.register("flatten", "cpu", flatten, meta=meta_infer.infer_flatten)
+registry.register("unflatten", "cpu", unflatten, meta=meta_infer.infer_unflatten)
+registry.register("broadcast_to", "cpu", broadcast_to, meta=meta_infer.infer_broadcast_to)
+registry.register("movedim", "cpu", movedim, meta=meta_infer.infer_movedim)
+registry.register("diagonal", "cpu", diagonal, meta=meta_infer.infer_diagonal)
+
+# Search ops (no meta — output shape is data-dependent or returns tuples)
+registry.register("unique", "cpu", unique)
+registry.register("searchsorted", "cpu", searchsorted)
+registry.register("kthvalue", "cpu", kthvalue)
+registry.register("median", "cpu", median)

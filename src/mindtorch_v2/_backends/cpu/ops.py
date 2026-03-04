@@ -1892,6 +1892,86 @@ def adaptive_avg_pool2d(input, output_size):
     return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
 
 
+# ---------------------------------------------------------------------------
+# Group 1: Math ops
+# ---------------------------------------------------------------------------
+
+def sub(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(a_np - b_np, a.dtype, a.device)
+
+
+def log1p(a):
+    return _from_numpy(np.log1p(_to_numpy(a)), a.dtype, a.device)
+
+
+def expm1(a):
+    return _from_numpy(np.expm1(_to_numpy(a)), a.dtype, a.device)
+
+
+def reciprocal(a):
+    return _from_numpy(1.0 / _to_numpy(a), a.dtype, a.device)
+
+
+def maximum(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.maximum(a_np, b_np), a.dtype, a.device)
+
+
+def minimum(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.minimum(a_np, b_np), a.dtype, a.device)
+
+
+def dot(a, b):
+    return _from_numpy(np.dot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def outer(a, b):
+    return _from_numpy(np.outer(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def inner(a, b):
+    return _from_numpy(np.inner(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def mv(a, b):
+    return _from_numpy(np.dot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def cross(a, b, dim=-1):
+    a_np = np.moveaxis(_to_numpy(a), dim, -1)
+    b_np = np.moveaxis(_to_numpy(b), dim, -1)
+    out = np.cross(a_np, b_np)
+    out = np.moveaxis(out, -1, dim)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def tensordot(a, b, dims=2):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b)
+    if isinstance(dims, int):
+        out = np.tensordot(a_np, b_np, axes=dims)
+    elif isinstance(dims, (list, tuple)) and len(dims) == 2:
+        out = np.tensordot(a_np, b_np, axes=dims)
+    else:
+        out = np.tensordot(a_np, b_np, axes=dims)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def einsum(equation, *operands):
+    ops_np = [_to_numpy(op) for op in operands]
+    out = np.einsum(equation, *ops_np)
+    return _from_numpy(np.ascontiguousarray(out), operands[0].dtype, operands[0].device)
+
+
+# ---------------------------------------------------------------------------
+# Group 2: Logical ops
+# ---------------------------------------------------------------------------
+
 def logical_and(a, b):
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
@@ -1906,3 +1986,168 @@ def logical_or(a, b):
 
 def logical_not(a):
     return _from_numpy(np.logical_not(_to_numpy(a)), bool_dtype, a.device)
+
+
+def logical_xor(a, b):
+    a_np = _to_numpy(a).astype(bool)
+    b_np = (_to_numpy(b) if isinstance(b, Tensor) else np.array(b)).astype(bool)
+    return _from_numpy(np.logical_xor(a_np, b_np), bool_dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 3: Bitwise ops
+# ---------------------------------------------------------------------------
+
+def bitwise_and(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.bitwise_and(a_np, b_np), a.dtype, a.device)
+
+
+def bitwise_or(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.bitwise_or(a_np, b_np), a.dtype, a.device)
+
+
+def bitwise_xor(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.bitwise_xor(a_np, b_np), a.dtype, a.device)
+
+
+def bitwise_not(a):
+    return _from_numpy(np.bitwise_not(_to_numpy(a)), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 4: Random in-place op
+# ---------------------------------------------------------------------------
+
+def randint_(a, low, high=None):
+    """In-place randint — fills tensor a with random integers from [low, high)."""
+    if high is None:
+        low, high = 0, low
+    arr = _to_numpy(a)
+    arr[...] = np.random.randint(low, high, size=arr.shape)
+    return a
+
+
+# ---------------------------------------------------------------------------
+# Group 5: Shape ops
+# ---------------------------------------------------------------------------
+
+def flatten(a, start_dim=0, end_dim=-1):
+    arr = _to_numpy(a)
+    ndim = arr.ndim
+    start = start_dim if start_dim >= 0 else start_dim + ndim
+    end = end_dim if end_dim >= 0 else end_dim + ndim
+    new_shape = arr.shape[:start] + (-1,) + arr.shape[end + 1:]
+    out = arr.reshape(new_shape)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def unflatten(a, dim, sizes):
+    arr = _to_numpy(a)
+    ndim = arr.ndim
+    d = dim if dim >= 0 else dim + ndim
+    new_shape = arr.shape[:d] + tuple(sizes) + arr.shape[d + 1:]
+    out = arr.reshape(new_shape)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def broadcast_to(a, shape):
+    arr = _to_numpy(a)
+    out = np.broadcast_to(arr, shape)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def movedim(a, source, destination):
+    arr = _to_numpy(a)
+    out = np.moveaxis(arr, source, destination)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def diagonal(a, offset=0, dim1=0, dim2=1):
+    arr = _to_numpy(a)
+    out = np.diagonal(arr, offset=offset, axis1=dim1, axis2=dim2)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 6: Search ops
+# ---------------------------------------------------------------------------
+
+def unique(a, sorted=True, return_inverse=False, return_counts=False, dim=None):
+    arr = _to_numpy(a)
+    if dim is None:
+        flat = arr.flatten()
+        result = np.unique(flat, return_inverse=return_inverse, return_counts=return_counts)
+    else:
+        result = np.unique(arr, return_inverse=return_inverse, return_counts=return_counts, axis=dim)
+    if isinstance(result, tuple):
+        out = []
+        for i, r in enumerate(result):
+            r_cont = np.ascontiguousarray(r)
+            if i == 0:
+                out.append(_from_numpy(r_cont, a.dtype, a.device))
+            else:
+                out.append(_from_numpy(r_cont.astype(np.int64), int64_dtype, a.device))
+        return tuple(out)
+    return _from_numpy(np.ascontiguousarray(result), a.dtype, a.device)
+
+
+def searchsorted(sorted_seq, values, out_int32=False, right=False, side=None, sorter=None):
+    seq_np = _to_numpy(sorted_seq)
+    val_np = _to_numpy(values) if isinstance(values, Tensor) else np.array(values)
+    side_str = side if side is not None else ('right' if right else 'left')
+    if sorter is not None:
+        sorter_np = _to_numpy(sorter).astype(np.int64)
+        out = np.searchsorted(seq_np.flatten(), val_np.flatten(), side=side_str, sorter=sorter_np)
+    else:
+        if seq_np.ndim == 1:
+            out = np.searchsorted(seq_np, val_np, side=side_str)
+        else:
+            out = np.zeros_like(val_np, dtype=np.int64)
+            for i in range(seq_np.shape[0]):
+                out[i] = np.searchsorted(seq_np[i], val_np[i], side=side_str)
+    out_dtype_np = np.int32 if out_int32 else np.int64
+    return _from_numpy(out.astype(out_dtype_np), int64_dtype, sorted_seq.device)
+
+
+def kthvalue(a, k, dim=-1, keepdim=False):
+    arr = _to_numpy(a)
+    if dim < 0:
+        dim = dim + arr.ndim
+    sorted_idx = np.argsort(arr, axis=dim)
+    kth_idx = np.take(sorted_idx, [k - 1], axis=dim)
+    values = np.take_along_axis(arr, kth_idx, axis=dim)
+    if not keepdim:
+        values = np.squeeze(values, axis=dim)
+        kth_idx = np.squeeze(kth_idx, axis=dim)
+    return (
+        _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(kth_idx.astype(np.int64)), int64_dtype, a.device),
+    )
+
+
+def median(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.median(arr.flatten())
+        return _from_numpy(np.array(out, dtype=arr.dtype), a.dtype, a.device)
+    else:
+        if dim < 0:
+            dim = dim + arr.ndim
+        sorted_idx = np.argsort(arr, axis=dim)
+        n = arr.shape[dim]
+        mid = n // 2
+        med_idx = np.take(sorted_idx, [mid], axis=dim)
+        values = np.take_along_axis(arr, med_idx, axis=dim)
+        if not keepdim:
+            values = np.squeeze(values, axis=dim)
+            med_idx = np.squeeze(med_idx, axis=dim)
+        return (
+            _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
+            _from_numpy(np.ascontiguousarray(med_idx.astype(np.int64)), int64_dtype, a.device),
+        )

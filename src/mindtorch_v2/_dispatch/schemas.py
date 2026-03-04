@@ -357,9 +357,8 @@ def register_schemas():
     registry.register_schema("avg_pool2d", "avg_pool2d(Tensor input, Any kernel_size, Any stride, Any padding=None, bool ceil_mode=False, bool count_include_pad=True, Any divisor_override=None) -> Tensor")
     registry.register_schema("adaptive_avg_pool2d", "adaptive_avg_pool2d(Tensor input, Any output_size) -> Tensor")
 
-    # P1 ops
+    # P1 ops from upstream
     registry.register_schema("addmm", "addmm(Tensor input, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor")
-    registry.register_schema("einsum", "einsum(str equation, Tensor[] tensors) -> Tensor")
     registry.register_schema("upsample_nearest2d", "upsample_nearest2d(Tensor input, Any output_size) -> Tensor")
     registry.register_schema("upsample_bilinear2d", "upsample_bilinear2d(Tensor input, Any output_size, bool align_corners=False, Any scales_h=None, Any scales_w=None) -> Tensor")
     registry.register_schema("one_hot", "one_hot(Tensor input, int num_classes=-1) -> Tensor")
@@ -368,3 +367,56 @@ def register_schemas():
     registry.register_schema("div_", "div_(Tensor(a!) self, Tensor other) -> Tensor")
     _register_binary_ops(("logical_and", "logical_or"), other_type="Any")
     _register_unary_ops(("logical_not",))
+
+    # New math ops
+    registry.register_schema("log1p", "log1p(Tensor input) -> Tensor")
+    registry.register_schema("expm1", "expm1(Tensor input) -> Tensor")
+    registry.register_schema("maximum", "maximum(Tensor input, Any other) -> Tensor")
+    registry.register_schema("minimum", "minimum(Tensor input, Any other) -> Tensor")
+    registry.register_schema("dot", "dot(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("outer", "outer(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("inner", "inner(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("mv", "mv(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("cross", "cross(Tensor input, Tensor other, int dim=-1) -> Tensor")
+    registry.register_schema("tensordot", "tensordot(Tensor input, Tensor other, Any dims=2) -> Tensor")
+    registry.register_schema("einsum", "einsum(str equation, Tensor[] tensors) -> Tensor")
+    registry.register_schema("mm", "mm(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("bmm", "bmm(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("moveaxis", "moveaxis(Tensor input, Any source, Any destination) -> Tensor")
+    registry.register_schema("hardswish", "hardswish(Tensor input) -> Tensor")
+    registry.register_schema("hardsigmoid", "hardsigmoid(Tensor input) -> Tensor")
+    registry.register_schema("softsign", "softsign(Tensor input) -> Tensor")
+    registry.register_schema("selu", "selu(Tensor input) -> Tensor")
+    registry.register_schema("celu", "celu(Tensor input, float alpha=1.0) -> Tensor")
+    registry.register_schema("threshold", "threshold(Tensor input, Scalar threshold, Scalar value) -> Tensor")
+    registry.register_schema("instance_norm", "instance_norm(Tensor input, Any weight=None, Any bias=None, Any running_mean=None, Any running_var=None, bool use_input_stats=True, float momentum=0.1, float eps=1e-5, bool cudnn_enabled=False) -> Tensor")
+    registry.register_schema("normalize", "normalize(Tensor input, float p=2.0, int dim=1, float eps=1e-12) -> Tensor")
+
+    # New logical ops
+    registry.register_schema("logical_xor", "logical_xor(Tensor input, Any other) -> Tensor")
+
+    # New bitwise ops
+    registry.register_schema("bitwise_and", "bitwise_and(Tensor input, Any other) -> Tensor")
+    registry.register_schema("bitwise_or", "bitwise_or(Tensor input, Any other) -> Tensor")
+    registry.register_schema("bitwise_xor", "bitwise_xor(Tensor input, Any other) -> Tensor")
+    registry.register_schema("bitwise_not", "bitwise_not(Tensor input) -> Tensor")
+
+    # New random in-place op
+    registry.register_schema("randint_", "randint_(Tensor(a!) self, int low, int? high=None) -> Tensor")
+
+    # New creation ops
+    registry.register_schema("randint", "randint(int low, int? high=None, int[]? size=None, Dtype? dtype=None, bool requires_grad=False) -> Tensor")
+    registry.register_schema("randperm", "randperm(int n, Dtype? dtype=None, bool requires_grad=False) -> Tensor")
+
+    # New shape ops
+    registry.register_schema("flatten", "flatten(Tensor input, int start_dim=0, int end_dim=-1) -> Tensor")
+    registry.register_schema("unflatten", "unflatten(Tensor input, int dim, int[] sizes) -> Tensor")
+    registry.register_schema("broadcast_to", "broadcast_to(Tensor input, int[] shape) -> Tensor")
+    registry.register_schema("movedim", "movedim(Tensor input, Any source, Any destination) -> Tensor")
+    registry.register_schema("diagonal", "diagonal(Tensor input, int offset=0, int dim1=0, int dim2=1) -> Tensor")
+
+    # New search ops
+    registry.register_schema("unique", "unique(Tensor input, bool sorted=True, bool return_inverse=False, bool return_counts=False, int? dim=None) -> Any")
+    registry.register_schema("searchsorted", "searchsorted(Tensor sorted_sequence, Any values, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None) -> Tensor")
+    registry.register_schema("kthvalue", "kthvalue(Tensor input, int k, int dim=-1, bool keepdim=False) -> (Tensor, Tensor)")
+    registry.register_schema("median", "median(Tensor input, int? dim=None, bool keepdim=False) -> Any")
