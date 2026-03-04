@@ -77,6 +77,7 @@ from .ops import (
     copy_,
     erfinv_,
     sub_,
+    div_,
     contiguous,
     abs,
     neg,
@@ -193,6 +194,9 @@ from .ops import (
     max_pool2d,
     avg_pool2d,
     adaptive_avg_pool2d,
+    logical_and,
+    logical_or,
+    logical_not,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -400,3 +404,11 @@ registry.register("avg_pool2d", "cpu", avg_pool2d)
 registry.register("adaptive_avg_pool2d", "cpu", adaptive_avg_pool2d)
 
 registry.register("embedding", "cpu", embedding)
+
+# Logical ops
+registry.register("logical_and", "cpu", logical_and, meta=meta_infer.infer_binary_bool)
+registry.register("logical_or", "cpu", logical_or, meta=meta_infer.infer_binary_bool)
+registry.register("logical_not", "cpu", logical_not, meta=meta_infer.infer_unary_bool)
+
+# In-place ops
+registry.register("div_", "cpu", div_, meta=meta_infer.infer_binary)

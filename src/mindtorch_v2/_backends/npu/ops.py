@@ -3083,6 +3083,32 @@ def sub_(a, b):
     return a
 
 
+def div_(a, b):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if isinstance(b, (int, float)):
+        b = _scalar_to_npu_tensor(b, a)
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU div_ expects NPU tensors")
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    aclnn.div(
+        a_storage.data_ptr(),
+        b_storage.data_ptr(),
+        a_storage.data_ptr(),
+        a.shape,
+        a.stride,
+        b.shape,
+        b.stride,
+        a.shape,
+        a.stride,
+        a.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    return a
+
+
 def contiguous(a):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     if a.device.type != "npu":

@@ -363,3 +363,8 @@ def register_schemas():
     registry.register_schema("upsample_nearest2d", "upsample_nearest2d(Tensor input, Any output_size) -> Tensor")
     registry.register_schema("upsample_bilinear2d", "upsample_bilinear2d(Tensor input, Any output_size, bool align_corners=False, Any scales_h=None, Any scales_w=None) -> Tensor")
     registry.register_schema("one_hot", "one_hot(Tensor input, int num_classes=-1) -> Tensor")
+
+    # Batch 1 ops
+    registry.register_schema("div_", "div_(Tensor(a!) self, Tensor other) -> Tensor")
+    _register_binary_ops(("logical_and", "logical_or"), other_type="Any")
+    _register_unary_ops(("logical_not",))
