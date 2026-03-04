@@ -32,7 +32,7 @@ BoolTensor = Tensor
 ComplexFloatTensor = Tensor
 ComplexDoubleTensor = Tensor
 Size = tuple
-from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand
+from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand, randint, randperm, from_numpy, as_tensor
 from ._functional import zeros_like
 from ._functional import ones_like, empty_like, full_like, randn_like, rand_like
 from ._storage import UntypedStorage, TypedStorage
@@ -48,6 +48,7 @@ from ._functional import reshape, transpose
 from ._functional import logaddexp, logaddexp2, hypot, remainder, fmod
 from ._functional import squeeze, unsqueeze, permute
 from ._functional import var, norm, prod
+from ._functional import reciprocal, addmm, einsum
 from ._functional import mm, bmm
 from ._functional import floor_divide
 from ._printing import set_printoptions, get_printoptions
@@ -257,6 +258,14 @@ __all__ = [
     "mm",
     "bmm",
     "floor_divide",
+    # P1 ops
+    "reciprocal",
+    "addmm",
+    "einsum",
+    "randint",
+    "randperm",
+    "from_numpy",
+    "as_tensor",
     # printing
     "set_printoptions",
     "get_printoptions",

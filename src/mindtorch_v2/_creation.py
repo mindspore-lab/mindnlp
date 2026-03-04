@@ -59,3 +59,49 @@ def randn(*shape, dtype=float32, device=None, memory_format=None):
 
 def rand(*shape, dtype=float32, device=None, memory_format=None):
     return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def randint(low, high=None, size=None, *, dtype=None, device=None):
+    import numpy as np
+    from ._dtype import int64 as default_int
+    if dtype is None:
+        dtype = default_int
+    if high is None:
+        high = low
+        low = 0
+    if size is None:
+        raise TypeError("randint requires size argument")
+    if isinstance(size, int):
+        size = (size,)
+    arr = np.random.randint(low, high, size=size)
+    return tensor_dispatch(arr, dtype=dtype, device=device)
+
+
+def randperm(n, *, dtype=None, device=None):
+    import numpy as np
+    from ._dtype import int64 as default_int
+    if dtype is None:
+        dtype = default_int
+    arr = np.random.permutation(n)
+    return tensor_dispatch(arr, dtype=dtype, device=device)
+
+
+def from_numpy(ndarray):
+    import numpy as np
+    from ._dtype import (
+        float16, float32, float64, int8, int16, int32, int64,
+        uint8, bool as bool_dtype, bfloat16,
+    )
+    _numpy_to_dtype = {
+        np.float16: float16, np.float32: float32, np.float64: float64,
+        np.int8: int8, np.int16: int16, np.int32: int32, np.int64: int64,
+        np.uint8: uint8, np.bool_: bool_dtype,
+    }
+    dt = _numpy_to_dtype.get(ndarray.dtype.type, float32)
+    return tensor_dispatch(ndarray, dtype=dt)
+
+
+def as_tensor(data, dtype=None, device=None):
+    if dtype is None:
+        dtype = float32
+    return tensor_dispatch(data, dtype=dtype, device=device)

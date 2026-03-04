@@ -288,7 +288,7 @@ def register_schemas():
     _register_unary_ops((
         "abs", "neg", "exp", "log", "sqrt", "atan", "asin", "acos",
         "sin", "cos", "tan", "tanh", "sigmoid", "floor", "ceil", "round", "trunc", "frac",
-        "log2", "log10", "exp2", "rsqrt", "sign", "signbit", "isnan", "isinf", "isfinite",
+        "log2", "log10", "exp2", "rsqrt", "reciprocal", "sign", "signbit", "isnan", "isinf", "isfinite",
         "sinh", "cosh", "asinh", "acosh", "atanh", "erf", "erfc", "softplus",
         "relu6", "contiguous", "gelu", "silu", "mish",
     ))
@@ -356,3 +356,10 @@ def register_schemas():
     registry.register_schema("max_pool2d", "max_pool2d(Tensor input, Any kernel_size, Any stride, Any padding=None, Any dilation=None, bool ceil_mode=False, bool return_indices=False) -> Tensor")
     registry.register_schema("avg_pool2d", "avg_pool2d(Tensor input, Any kernel_size, Any stride, Any padding=None, bool ceil_mode=False, bool count_include_pad=True, Any divisor_override=None) -> Tensor")
     registry.register_schema("adaptive_avg_pool2d", "adaptive_avg_pool2d(Tensor input, Any output_size) -> Tensor")
+
+    # P1 ops
+    registry.register_schema("addmm", "addmm(Tensor input, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor")
+    registry.register_schema("einsum", "einsum(str equation, Tensor[] tensors) -> Tensor")
+    registry.register_schema("upsample_nearest2d", "upsample_nearest2d(Tensor input, Any output_size) -> Tensor")
+    registry.register_schema("upsample_bilinear2d", "upsample_bilinear2d(Tensor input, Any output_size, bool align_corners=False, Any scales_h=None, Any scales_w=None) -> Tensor")
+    registry.register_schema("one_hot", "one_hot(Tensor input, int num_classes=-1) -> Tensor")

@@ -4209,10 +4209,14 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     itemsize = _dtype_itemsize(input.dtype)
 
     out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
-    # Mean/rstd outputs are not consumed by current forward path; pass null to avoid
-    # backend instability observed on some stacks when allocating/using extra stats outputs.
-    mean_ptr = None
-    rstd_ptr = None
+    # Allocate mean/rstd for backward pass (layer_norm backward needs them)
+    stats_numel_val = max(stats_numel, 1)
+    float_dtype = input.dtype  # same dtype for stats
+    mean_ptr = npu_runtime._alloc_device(stats_numel_val * 4, runtime=runtime)  # float32
+    rstd_ptr = npu_runtime._alloc_device(stats_numel_val * 4, runtime=runtime)  # float32
+    # Wrap in Storage to prevent early deallocation
+    mean_storage = npu_typed_storage_from_ptr(mean_ptr, stats_numel_val, float_dtype, device=input.device)
+    rstd_storage = npu_typed_storage_from_ptr(rstd_ptr, stats_numel_val, float_dtype, device=input.device)
 
     weight_ptr = _unwrap_storage(weight).data_ptr() if weight is not None else None
     bias_ptr = _unwrap_storage(bias).data_ptr() if bias is not None else None
@@ -4238,7 +4242,15 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     )
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+    # Attach mean/rstd for backward pass
+    out._backward_data = {
+        "mean_ptr": mean_ptr, "rstd_ptr": rstd_ptr,
+        "mean_storage": mean_storage, "rstd_storage": rstd_storage,
+        "stats_shape": stats_shape, "stats_stride": stats_stride,
+        "normalized_shape": tuple(normalized_shape),
+    }
+    return out
 
 
 def embedding(weight, indices, padding_idx=None, scale_grad_by_freq=False, sparse=False):
@@ -4390,6 +4402,14 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None,
     running_mean_ptr = _unwrap_storage(running_mean).data_ptr() if running_mean is not None else None
     running_var_ptr = _unwrap_storage(running_var).data_ptr() if running_var is not None else None
 
+    # Allocate save_mean/save_invstd externally for backward pass
+    C = input.shape[1] if len(input.shape) >= 2 else 1
+    save_mean_ptr = npu_runtime._alloc_device(C * 4, runtime=runtime)
+    save_invstd_ptr = npu_runtime._alloc_device(C * 4, runtime=runtime)
+    # Wrap in Storage to prevent GC
+    save_mean_storage = npu_typed_storage_from_ptr(save_mean_ptr, C, input.dtype, device=input.device)
+    save_invstd_storage = npu_typed_storage_from_ptr(save_invstd_ptr, C, input.dtype, device=input.device)
+
     aclnn.batch_norm(
         _unwrap_storage(input).data_ptr(),
         weight_ptr,
@@ -4409,11 +4429,19 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None,
         out_shape, out_stride,
         training, momentum, eps,
         input.dtype,
-        runtime, stream=stream.stream
+        runtime, stream=stream.stream,
+        ext_save_mean_ptr=save_mean_ptr,
+        ext_save_invstd_ptr=save_invstd_ptr,
     )
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, input.dtype, device=input.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+    out._backward_data = {
+        "save_mean_ptr": save_mean_ptr, "save_invstd_ptr": save_invstd_ptr,
+        "save_mean_storage": save_mean_storage, "save_invstd_storage": save_invstd_storage,
+        "C": C, "training": training, "eps": eps,
+    }
+    return out
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
@@ -4512,11 +4540,11 @@ def dropout(a, p=0.5, training=True):
         runtime, stream=stream.stream
     )
 
-    # Free mask - we don't need it
-    runtime.defer_free(mask_ptr)
-
+    # Save mask for backward (dropout backward reuses the same mask)
     out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+    out._backward_data = {"mask_ptr": mask_ptr, "mask_numel": mask_numel, "p": p}
+    return out
 
 
 def pad(input, pad, mode='constant', value=0):
@@ -5846,8 +5874,14 @@ def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     )
 
     y_storage = npu_typed_storage_from_ptr(y_ptr, max(y_numel, 1), input.dtype, device=input.device)
-    # rstd not returned (only y needed by caller), but memory is managed by allocator
-    return _wrap_tensor(y_storage, y_shape, y_stride)
+    rstd_storage = npu_typed_storage_from_ptr(rstd_ptr, max(rstd_numel, 1), input.dtype, device=input.device)
+    out = _wrap_tensor(y_storage, y_shape, y_stride)
+    out._backward_data = {
+        "rstd_ptr": rstd_ptr, "rstd_storage": rstd_storage,
+        "rstd_shape": rstd_shape, "rstd_stride": rstd_stride,
+        "normalized_shape": tuple(normalized_shape),
+    }
+    return out
 
 
 def conv2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1):
@@ -6025,7 +6059,13 @@ def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=Fals
     )
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
-    return _wrap_tensor(out_storage, out_shape, out_stride)
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+    out._backward_data = {
+        "mask_ptr": mask_ptr, "mask_shape": mask_shape, "mask_stride": mask_stride,
+        "kernel_size": (kH, kW), "strides": (sH, sW), "padding": (pH, pW),
+        "dilation": (dH, dW), "ceil_mode": ceil_mode,
+    }
+    return out
 
 
 def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False,
@@ -6130,3 +6170,245 @@ def adaptive_avg_pool2d(input, output_size):
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+# ---------------------------------------------------------------
+# P1 ops: std, reciprocal, addmm, einsum, upsample_nearest2d,
+#          upsample_bilinear2d, one_hot
+# ---------------------------------------------------------------
+
+def std_(a, dim=None, unbiased=True, keepdim=False):
+    """Compute std as sqrt(var). aclnnStd/aclnnVar all-reduce fails on 910B."""
+    if dim is None:
+        # aclnnVar fails with 161002 for all-reduce; reshape to (1, N) and var(dim=1)
+        n = 1
+        for s in a.shape:
+            n *= s
+        flat = a.contiguous().view((1, n))
+        v = var_(flat, dim=1, unbiased=unbiased, keepdim=False)
+        return _unary_op(v, aclnn.sqrt, "sqrt")
+    v = var_(a, dim=dim, unbiased=unbiased, keepdim=keepdim)
+    return _unary_op(v, aclnn.sqrt, "sqrt")
+
+
+def reciprocal_(a):
+    return _unary_op(a, aclnn.reciprocal, "reciprocal")
+
+
+def addmm(input, mat1, mat2, beta=1, alpha=1):
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    M, K = mat1.shape
+    _, N = mat2.shape
+    out_shape = (M, N)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.addmm(
+        _unwrap_storage(input).data_ptr(),
+        _unwrap_storage(mat1).data_ptr(),
+        _unwrap_storage(mat2).data_ptr(),
+        out_ptr,
+        input.shape, input.stride, input.dtype,
+        mat1.shape, mat1.stride,
+        mat2.shape, mat2.stride,
+        out_shape, out_stride,
+        beta, alpha,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def _einsum_output_shape(equation, operands):
+    """Parse einsum equation to determine output shape."""
+    lhs, rhs = equation.replace(' ', '').split('->')
+    inputs = lhs.split(',')
+
+    label_sizes = {}
+    for inp_labels, operand in zip(inputs, operands):
+        for label, size in zip(inp_labels, operand.shape):
+            label_sizes[label] = size
+
+    return tuple(label_sizes[label] for label in rhs)
+
+
+def _einsum_is_matmul(equation):
+    """Check if einsum is a matmul pattern like ...ij,...jk->...ik"""
+    eq = equation.replace(' ', '')
+    if '->' not in eq:
+        return False
+    lhs, rhs = eq.split('->')
+    inputs = lhs.split(',')
+    if len(inputs) != 2:
+        return False
+    a_labels, b_labels = inputs
+    if len(a_labels) < 2 or len(b_labels) < 2:
+        return False
+    # Check: last dim of A == first non-batch dim of B (contraction)
+    # Patterns: ij,jk->ik  bij,bjk->bik  ...ij,...jk->...ik
+    batch_a = a_labels[:-2]
+    batch_b = b_labels[:-2]
+    if batch_a != batch_b:
+        return False
+    i, j1 = a_labels[-2], a_labels[-1]
+    j2, k = b_labels[-2], b_labels[-1]
+    if j1 != j2:
+        return False
+    expected_rhs = batch_a + i + k
+    return rhs == expected_rhs
+
+
+def einsum_(equation, operands):
+    """Compute einsum as composite (aclnnEinsum has 161002 on CANN 8.3.RC2).
+
+    Supported patterns:
+    - matmul:  ...ij,...jk->...ik
+    - transpose: ij->ji, ...ij->...ji
+    - inner product: i,i-> or ...i,...i->...
+    - batch diagonal sum: ...ii->...i (trace-like)
+    """
+    from ..._dispatch import dispatch as _dispatch
+
+    eq = equation.replace(' ', '')
+
+    if len(operands) == 2 and _einsum_is_matmul(eq):
+        return _dispatch("matmul", operands[0].device.type, operands[0], operands[1])
+
+    # Parse equation
+    if '->' not in eq:
+        raise NotImplementedError(f"einsum implicit output not supported on NPU: {equation}")
+    lhs, rhs = eq.split('->')
+    inputs = lhs.split(',')
+
+    # Single-operand transpose: ij->ji or ...ij->...ji
+    if len(operands) == 1 and len(inputs) == 1:
+        a = operands[0]
+        in_labels = inputs[0]
+        if len(in_labels) == len(rhs) and set(in_labels) == set(rhs):
+            # Pure permutation
+            perm = [in_labels.index(c) for c in rhs]
+            return _dispatch("permute", a.device.type, a, perm)
+        # Trace or reduction patterns
+        label_sizes = {}
+        for label, size in zip(in_labels, a.shape):
+            label_sizes[label] = size
+        # Sum over contracted labels
+        contracted = [i for i, label in enumerate(in_labels) if label not in rhs]
+        if contracted:
+            result = a
+            for dim in sorted(contracted, reverse=True):
+                result = _dispatch("sum", result.device.type, result, dim=dim, keepdim=False)
+            return result
+
+    # Two-operand inner product: i,i-> or ...i,...i->...
+    if len(operands) == 2 and len(inputs) == 2:
+        a, b = operands
+        a_labels, b_labels = inputs
+        # Check if this is element-wise mul + sum pattern
+        contracted = set(a_labels) & set(b_labels) - set(rhs)
+        if contracted:
+            prod = _dispatch("mul", a.device.type, a, b)
+            # Sum over contracted dims (using a_labels ordering)
+            sum_dims = sorted([i for i, label in enumerate(a_labels) if label in contracted], reverse=True)
+            result = prod
+            for dim in sum_dims:
+                result = _dispatch("sum", result.device.type, result, dim=dim, keepdim=False)
+            return result
+
+    raise NotImplementedError(f"einsum pattern not supported on NPU: {equation}")
+
+
+def upsample_nearest2d(input, output_size):
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    N, C = input.shape[0], input.shape[1]
+    oH, oW = output_size
+    out_shape = (N, C, oH, oW)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.upsample_nearest2d(
+        _unwrap_storage(input).data_ptr(), out_ptr,
+        input.shape, input.stride, input.dtype,
+        output_size, out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def upsample_bilinear2d(input, output_size, align_corners, scales_h, scales_w):
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    N, C = input.shape[0], input.shape[1]
+    oH, oW = output_size
+    out_shape = (N, C, oH, oW)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.upsample_bilinear2d(
+        _unwrap_storage(input).data_ptr(), out_ptr,
+        input.shape, input.stride, input.dtype,
+        output_size, align_corners, scales_h, scales_w,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def one_hot(indices, num_classes=-1):
+    runtime = npu_runtime.get_runtime((indices.device.index or 0))
+    stream = npu_state.current_stream((indices.device.index or 0))
+
+    from ..._dtype import float32 as f32, int64 as i64
+
+    if num_classes < 0:
+        max_val = amax(indices)
+        import numpy as np
+        storage = _unwrap_storage(max_val)
+        nbytes = _numel(max_val.shape) * _dtype_itemsize(max_val.dtype)
+        buf = (ctypes.c_uint8 * max(nbytes, 1))()
+        npu_runtime._memcpy_d2h(ctypes.addressof(buf), nbytes, storage.data_ptr(), runtime=runtime)
+        arr = np.frombuffer(buf, dtype=np.int64 if max_val.dtype == i64 else np.int32)
+        num_classes = int(arr[0]) + 1
+
+    import numpy as np
+    on_data = np.array([1.0], dtype=np.float32)
+    off_data = np.array([0.0], dtype=np.float32)
+    on_ptr = npu_runtime._alloc_device(4, runtime=runtime)
+    off_ptr = npu_runtime._alloc_device(4, runtime=runtime)
+    npu_runtime._memcpy_h2d(on_ptr, 4, on_data.ctypes.data, runtime=runtime)
+    npu_runtime._memcpy_h2d(off_ptr, 4, off_data.ctypes.data, runtime=runtime)
+
+    out_shape = tuple(indices.shape) + (num_classes,)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * 4, runtime=runtime)
+
+    aclnn.one_hot(
+        _unwrap_storage(indices).data_ptr(), on_ptr, off_ptr, out_ptr,
+        indices.shape, indices.stride, indices.dtype,
+        (1,), (1,), f32,
+        (1,), (1,), f32,
+        out_shape, out_stride, f32,
+        num_classes, -1,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), f32, device=indices.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+

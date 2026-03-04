@@ -323,7 +323,36 @@ def pad(input, pad, mode='constant', value=0):
 
 def interpolate(input, size=None, scale_factor=None, mode='nearest',
                 align_corners=None, recompute_scale_factor=None, antialias=False):
-    raise NotImplementedError("interpolate is not yet implemented")
+    from .._dispatch import dispatch
+    if size is not None:
+        if isinstance(size, int):
+            output_size = (size, size)
+        else:
+            output_size = tuple(size)
+    elif scale_factor is not None:
+        if isinstance(scale_factor, (int, float)):
+            sf_h = sf_w = float(scale_factor)
+        else:
+            sf_h, sf_w = float(scale_factor[0]), float(scale_factor[1])
+        H, W = input.shape[2], input.shape[3]
+        output_size = (int(H * sf_h), int(W * sf_w))
+    else:
+        raise ValueError("either size or scale_factor must be defined")
+
+    if mode == 'nearest':
+        return dispatch("upsample_nearest2d", input.device.type, input, output_size)
+    elif mode == 'bilinear':
+        ac = align_corners if align_corners is not None else False
+        if scale_factor is not None and not recompute_scale_factor:
+            if isinstance(scale_factor, (int, float)):
+                sh = sw = float(scale_factor)
+            else:
+                sh, sw = float(scale_factor[0]), float(scale_factor[1])
+        else:
+            sh, sw = 0.0, 0.0
+        return dispatch("upsample_bilinear2d", input.device.type, input, output_size, ac, sh, sw)
+    else:
+        raise NotImplementedError(f"interpolate mode '{mode}' is not yet implemented")
 
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
@@ -369,3 +398,16 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
 def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     from .._functional import rms_norm as _rms_norm
     return _rms_norm(input, normalized_shape, weight, eps)
+
+
+def normalize(input, p=2.0, dim=1, eps=1e-12):
+    from .._functional import norm, div
+    from .._dispatch import dispatch
+    norms = norm(input, p=p, dim=dim, keepdim=True)
+    clamped = dispatch("clamp_min", input.device.type, norms, eps)
+    return div(input, clamped)
+
+
+def one_hot(tensor, num_classes=-1):
+    from .._dispatch import dispatch
+    return dispatch("one_hot", tensor.device.type, tensor, num_classes)
