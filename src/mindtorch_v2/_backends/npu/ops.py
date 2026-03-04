@@ -49,6 +49,29 @@ def _dtype_itemsize(dtype):
             "int32": 4, "int64": 8, "uint8": 1, "bool": 1}.get(name, 4)
 
 
+def _cast_tensor_dtype(a, dst_dtype):
+    if a.dtype == dst_dtype:
+        return a
+    if not aclnn.cast_symbols_ok():
+        raise RuntimeError("aclnnCast symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_ptr = npu_runtime._alloc_device(_numel(a.shape) * _dtype_itemsize(dst_dtype), runtime=runtime)
+    aclnn.cast(
+        _unwrap_storage(a).data_ptr(),
+        out_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dst_dtype,
+        runtime,
+        stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), dst_dtype, device=a.device)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+
 def _broadcast_shape(a_shape, b_shape):
     max_len = max(len(a_shape), len(b_shape))
     result = []
@@ -4337,6 +4360,8 @@ def elu(a, alpha=1.0):
 
 def mish(a):
     """Compute Mish activation using aclnnMish."""
+    if _is_310b_profile():
+        return mul(a, tanh(softplus(a)))
     if not aclnn.mish_symbols_ok():
         raise RuntimeError("aclnnMish not available")
     return _unary_op(a, aclnn.mish, "mish")
@@ -4370,9 +4395,54 @@ def prelu(a, weight):
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
+
+
+def _batch_norm_310b_fallback(input, running_mean, running_var, weight=None, bias=None,
+                               training=False, momentum=0.1, eps=1e-5):
+    if input.dim() < 2:
+        raise ValueError("batch_norm expects input with at least 2 dims")
+
+    C = int(input.shape[1])
+    stats_shape = (1, C) + (1,) * (input.dim() - 2)
+
+    if training or running_mean is None or running_var is None:
+        dims = [0] + list(range(2, input.dim()))
+        mean_t = mean(input, dim=dims, keepdim=True)
+        diff = sub(input, mean_t)
+        var_t = mean(mul(diff, diff), dim=dims, keepdim=True)
+
+        if running_mean is not None:
+            mean_reshaped = reshape(mean_t, (C,))
+            new_rm = add(mul(running_mean, (1.0 - float(momentum))), mul(mean_reshaped, float(momentum)))
+            copy_(running_mean, new_rm)
+        if running_var is not None:
+            var_reshaped = reshape(var_t, (C,))
+            new_rv = add(mul(running_var, (1.0 - float(momentum))), mul(var_reshaped, float(momentum)))
+            copy_(running_var, new_rv)
+    else:
+        mean_t = reshape(running_mean, stats_shape)
+        var_t = reshape(running_var, stats_shape)
+
+    eps_t = _scalar_to_npu_tensor(float(eps), mean_t)
+    denom = sqrt(add(var_t, eps_t))
+    out = div(sub(input, mean_t), denom)
+
+    if weight is not None:
+        w = reshape(weight, stats_shape)
+        out = mul(out, w)
+    if bias is not None:
+        b = reshape(bias, stats_shape)
+        out = add(out, b)
+    return out
+
+
 def batch_norm(input, running_mean, running_var, weight=None, bias=None,
                training=False, momentum=0.1, eps=1e-5):
     """Compute batch normalization using aclnnBatchNorm."""
+    if _is_310b_profile():
+        return _batch_norm_310b_fallback(input, running_mean, running_var, weight=weight, bias=bias,
+                                         training=training, momentum=momentum, eps=eps)
+
     runtime = npu_runtime.get_runtime((input.device.index or 0))
     stream = npu_state.current_stream((input.device.index or 0))
 
@@ -4469,10 +4539,46 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     return result
 
 
+def _dropout_310b_mask(a, keep_prob):
+    from .creation import empty_create
+    from ... import npu as npu_mod
+
+    numel = _numel(a.shape)
+    if numel == 0:
+        return empty_create(a.shape, dtype=bool_dtype, device=a.device)
+
+    idx = _npu_arange_1d(numel, a.device)
+    idx_f = _cast_tensor_dtype(idx, float_dtype)
+
+    seed = npu_mod._get_seed()
+    offset = npu_mod._get_and_advance_offset(advance=numel)
+    seed_t = _scalar_to_npu_tensor(float(seed + offset), idx_f)
+
+    val = sin(add(mul(idx_f, 12.9898), mul(seed_t, 78.233)))
+    val = abs(mul(val, 43758.5453))
+    val = frac(val)
+    val = reshape(val, a.shape)
+
+    keep_t = _scalar_to_npu_tensor(float(keep_prob), val)
+    return lt(val, keep_t)
+
+
+
 def dropout(a, p=0.5, training=True):
     """Compute dropout using aclnnDropoutGenMask + aclnnDropoutDoMask."""
     if not training or p == 0:
         return a
+
+    if _is_310b_profile():
+        if p >= 1:
+            from .creation import zeros_create
+            return zeros_create(a.shape, dtype=a.dtype, device=a.device)
+        if not getattr(a.dtype, "is_floating_point", True):
+            raise ValueError("NPU dropout expects floating-point tensors")
+        keep_prob = 1.0 - float(p)
+        keep = _dropout_310b_mask(a, keep_prob)
+        out = where(keep, a, 0)
+        return mul(out, 1.0 / keep_prob)
 
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
