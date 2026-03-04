@@ -11,6 +11,8 @@ from ._functional import eye as eye_dispatch
 from ._functional import range as range_dispatch
 from ._functional import randn as randn_dispatch
 from ._functional import rand as rand_dispatch
+from ._functional import randint as randint_dispatch
+from ._functional import randperm as randperm_dispatch
 
 
 def tensor(data, *, dtype=float32, device=None, requires_grad=False):

@@ -53,6 +53,12 @@ from ._functional import mm, bmm
 from ._functional import floor_divide
 from ._functional import narrow, flatten
 from ._functional import logical_and, logical_or, logical_not
+from ._functional import sub, log1p, expm1, maximum, minimum
+from ._functional import dot, outer, inner, mv, cross, tensordot
+from ._functional import logical_xor
+from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
+from ._functional import unflatten, broadcast_to, movedim, diagonal
+from ._functional import unique, searchsorted, kthvalue, median
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context, functionalize_context
 from ._backends import cpu
@@ -74,6 +80,7 @@ from . import multiprocessing
 from ._random import (
     manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
     Generator, default_generator,
+    bernoulli, multinomial,
 )
 from . import _random as random
 from .serialization import save, load
@@ -308,4 +315,45 @@ __all__ = [
     "compile",
     "save",
     "load",
+    # new creation ops
+    "randint",
+    "randperm",
+    # new math ops
+    "sub",
+    "log1p",
+    "expm1",
+    "reciprocal",
+    "maximum",
+    "minimum",
+    "dot",
+    "outer",
+    "inner",
+    "mv",
+    "cross",
+    "tensordot",
+    "einsum",
+    # new logical ops
+    "logical_and",
+    "logical_or",
+    "logical_not",
+    "logical_xor",
+    # new bitwise ops
+    "bitwise_and",
+    "bitwise_or",
+    "bitwise_xor",
+    "bitwise_not",
+    # new shape ops
+    "flatten",
+    "unflatten",
+    "broadcast_to",
+    "movedim",
+    "diagonal",
+    # new search ops
+    "unique",
+    "searchsorted",
+    "kthvalue",
+    "median",
+    # new random ops
+    "bernoulli",
+    "multinomial",
 ]

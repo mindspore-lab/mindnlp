@@ -1773,6 +1773,589 @@ def _topk_backward(grad, a, indices, keyset, args, kwargs):
         return (grad_input,)
 
 
+# ---------------------------------------------------------------------------
+# Phase 8: Missing backward ops (Part A: existing ops, Part B: new ops)
+# ---------------------------------------------------------------------------
+
+# --- Part A: Missing backward for existing registered ops ---
+
+def _sub_backward(grad, a, b, _saved_a, _saved_b, keyset):
+    with _grad_context(keyset):
+        neg_grad = redispatch("neg", keyset, grad)
+    grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
+    grad_b = reduce_grad(neg_grad, b.shape) if getattr(b, "requires_grad", False) else None
+    return grad_a, grad_b
+
+
+def _mm_backward(grad, a, b, saved_a, saved_b, keyset):
+    with _grad_context(keyset):
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            # grad_a = grad @ saved_b.T  (n,k) @ (m,k).T = (n,m)
+            grad_a = redispatch("mm", keyset, grad, redispatch("transpose", keyset, saved_b, 0, 1))
+        if getattr(b, "requires_grad", False):
+            # grad_b = saved_a.T @ grad  (m,n) @ (n,k) = (m,k)
+            grad_b = redispatch("mm", keyset, redispatch("transpose", keyset, saved_a, 0, 1), grad)
+    return grad_a, grad_b
+
+
+def _bmm_backward(grad, a, b, saved_a, saved_b, keyset):
+    with _grad_context(keyset):
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            # grad_a = grad @ saved_b.transpose(-1,-2)
+            grad_a = redispatch("matmul", keyset, grad, redispatch("transpose", keyset, saved_b, -1, -2))
+        if getattr(b, "requires_grad", False):
+            # grad_b = saved_a.transpose(-1,-2) @ grad
+            grad_b = redispatch("matmul", keyset, redispatch("transpose", keyset, saved_a, -1, -2), grad)
+    return grad_a, grad_b
+
+
+def _lerp_backward(grad, a, b, weight, keyset):
+    """Backward for lerp: out = a + weight * (b - a)."""
+    with _grad_context(keyset):
+        if isinstance(weight, (int, float)):
+            w_t = _scalar_tensor_like(a, float(weight))
+        else:
+            w_t = weight
+        one = _scalar_tensor_like(a, 1.0)
+        one_minus_w = redispatch("add", keyset, one, redispatch("neg", keyset, w_t))
+        grad_a = redispatch("mul", keyset, grad, one_minus_w) if getattr(a, "requires_grad", False) else None
+        grad_b = redispatch("mul", keyset, grad, w_t) if getattr(b, "requires_grad", False) else None
+    if grad_a is not None:
+        grad_a = reduce_grad(grad_a, a.shape)
+    if grad_b is not None:
+        grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
+def _autograd_lerp(name):
+    """Autograd wrapper for lerp (3-input: a, b, weight)."""
+    def wrapper(a, b, weight):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, b, weight)
+        a_rg = getattr(a, "requires_grad", False)
+        b_rg = getattr(b, "requires_grad", False)
+        if GradMode.enabled and (a_rg or b_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _lerp_backward(grad, a, b, weight, backward_keyset)
+
+            inputs = [t for t in (a, b) if hasattr(t, "requires_grad")]
+            node = Node(_backward, tuple(inputs))
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _addcmul_backward(grad, a, b, c, value, keyset):
+    """Backward for addcmul: out = a + value * b * c."""
+    with _grad_context(keyset):
+        val_t = _scalar_tensor_like(a, float(value))
+        grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
+        grad_b = None
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("mul", keyset, grad, redispatch("mul", keyset, c, val_t))
+            grad_b = reduce_grad(grad_b, b.shape)
+        grad_c = None
+        if getattr(c, "requires_grad", False):
+            grad_c = redispatch("mul", keyset, grad, redispatch("mul", keyset, b, val_t))
+            grad_c = reduce_grad(grad_c, c.shape)
+    return grad_a, grad_b, grad_c
+
+
+def _autograd_addcmul(name):
+    """Autograd wrapper for addcmul (input, tensor1, tensor2, value=1)."""
+    def wrapper(a, b, c, value=1):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, b, c, value)
+        any_rg = (getattr(a, "requires_grad", False) or
+                  getattr(b, "requires_grad", False) or
+                  getattr(c, "requires_grad", False))
+        if GradMode.enabled and any_rg:
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _addcmul_backward(grad, a, b, c, value, backward_keyset)
+
+            inputs = tuple(t for t in (a, b, c) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _addcdiv_backward(grad, a, b, c, value, keyset):
+    """Backward for addcdiv: out = a + value * b / c."""
+    with _grad_context(keyset):
+        val_t = _scalar_tensor_like(a, float(value))
+        grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
+        grad_b = None
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("div", keyset, redispatch("mul", keyset, grad, val_t), c)
+            grad_b = reduce_grad(grad_b, b.shape)
+        grad_c = None
+        if getattr(c, "requires_grad", False):
+            c_sq = redispatch("mul", keyset, c, c)
+            neg_grad_val_b = redispatch("neg", keyset,
+                redispatch("mul", keyset, grad,
+                    redispatch("mul", keyset, val_t, b)))
+            grad_c = redispatch("div", keyset, neg_grad_val_b, c_sq)
+            grad_c = reduce_grad(grad_c, c.shape)
+    return grad_a, grad_b, grad_c
+
+
+def _autograd_addcdiv(name):
+    """Autograd wrapper for addcdiv (input, tensor1, tensor2, value=1)."""
+    def wrapper(a, b, c, value=1):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, b, c, value)
+        any_rg = (getattr(a, "requires_grad", False) or
+                  getattr(b, "requires_grad", False) or
+                  getattr(c, "requires_grad", False))
+        if GradMode.enabled and any_rg:
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _addcdiv_backward(grad, a, b, c, value, backward_keyset)
+
+            inputs = tuple(t for t in (a, b, c) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _amax_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for amax: scatter gradient to positions where input == amax."""
+    dim = kwargs.get("dim", None) if not args else args[0] if args else None
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        eps = _scalar_tensor_like(saved_a, 1e-12)
+        if dim is None:
+            max_val = redispatch("amax", keyset, saved_a)
+            mask = redispatch("eq", keyset, saved_a, max_val)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad),)
+        else:
+            if not keepdim:
+                grad_expanded = redispatch("unsqueeze", keyset, grad, dim)
+            else:
+                grad_expanded = grad
+            max_val = redispatch("amax", keyset, saved_a, dim=dim, keepdim=True)
+            mask = redispatch("eq", keyset, saved_a, max_val)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f, dim=dim, keepdim=True)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad_expanded),)
+
+
+def _amin_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for amin: scatter gradient to positions where input == amin."""
+    dim = kwargs.get("dim", None) if not args else args[0] if args else None
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        eps = _scalar_tensor_like(saved_a, 1e-12)
+        if dim is None:
+            min_val = redispatch("amin", keyset, saved_a)
+            mask = redispatch("eq", keyset, saved_a, min_val)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad),)
+        else:
+            if not keepdim:
+                grad_expanded = redispatch("unsqueeze", keyset, grad, dim)
+            else:
+                grad_expanded = grad
+            min_val = redispatch("amin", keyset, saved_a, dim=dim, keepdim=True)
+            mask = redispatch("eq", keyset, saved_a, min_val)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f, dim=dim, keepdim=True)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad_expanded),)
+
+
+# --- Part B: Backward for new ops ---
+
+def _log1p_backward(grad, _a, saved_a, keyset):
+    """Backward for log1p: out = log(1 + x), grad_input = grad / (1 + x)."""
+    with _grad_context(keyset):
+        one = _scalar_tensor_like(saved_a, 1.0)
+        denom = redispatch("add", keyset, one, saved_a)
+        return (redispatch("div", keyset, grad, denom),)
+
+
+def _expm1_backward(grad, _a, saved_a, keyset):
+    """Backward for expm1: out = exp(x) - 1, grad_input = grad * exp(x)."""
+    with _grad_context(keyset):
+        exp_x = redispatch("exp", keyset, saved_a)
+        return (redispatch("mul", keyset, grad, exp_x),)
+
+
+def _reciprocal_backward(grad, _a, saved_a, keyset):
+    """Backward for reciprocal: out = 1/x, grad_input = -grad / x^2."""
+    with _grad_context(keyset):
+        sq = redispatch("mul", keyset, saved_a, saved_a)
+        neg_grad = redispatch("neg", keyset, grad)
+        return (redispatch("div", keyset, neg_grad, sq),)
+
+
+def _maximum_backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for element-wise maximum."""
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        # mask_a is 1 where a >= b, 0 otherwise
+        ge_mask = redispatch("ge", keyset, saved_a, saved_b)
+        mask_a = redispatch("where", keyset, ge_mask, ones, redispatch("mul", keyset, ones, zero))
+        # mask_b = 1 - mask_a (where b > a)
+        mask_b = redispatch("add", keyset, ones, redispatch("neg", keyset, mask_a))
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("mul", keyset, grad, mask_a)
+            grad_a = reduce_grad(grad_a, a.shape)
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("mul", keyset, grad, mask_b)
+            grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
+def _minimum_backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for element-wise minimum."""
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        # mask_a is 1 where a <= b, 0 otherwise
+        le_mask = redispatch("le", keyset, saved_a, saved_b)
+        mask_a = redispatch("where", keyset, le_mask, ones, redispatch("mul", keyset, ones, zero))
+        # mask_b = 1 - mask_a
+        mask_b = redispatch("add", keyset, ones, redispatch("neg", keyset, mask_a))
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("mul", keyset, grad, mask_a)
+            grad_a = reduce_grad(grad_a, a.shape)
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("mul", keyset, grad, mask_b)
+            grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
+def _dot_backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for dot (1D dot product, scalar output)."""
+    with _grad_context(keyset):
+        grad_a = redispatch("mul", keyset, grad, saved_b) if getattr(a, "requires_grad", False) else None
+        grad_b = redispatch("mul", keyset, grad, saved_a) if getattr(b, "requires_grad", False) else None
+    return grad_a, grad_b
+
+
+def _outer_backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for outer product: out[i,j] = a[i]*b[j]."""
+    with _grad_context(keyset):
+        # grad shape: (n, m)
+        # grad_a[i] = sum_j grad[i,j] * b[j]  → (n,) = grad @ b
+        grad_a = redispatch("matmul", keyset, grad, saved_b) if getattr(a, "requires_grad", False) else None
+        # grad_b[j] = sum_i grad[i,j] * a[i]  → (m,) = grad.T @ a
+        grad_b = redispatch("matmul", keyset, redispatch("transpose", keyset, grad, 0, 1), saved_a) if getattr(b, "requires_grad", False) else None
+    return grad_a, grad_b
+
+
+def _mv_backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for mv (matrix-vector product): out = a @ b."""
+    with _grad_context(keyset):
+        # grad shape: (n,)
+        # grad_a[i,j] = grad[i] * b[j]  → outer product  (n,m)
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("outer", keyset, grad, saved_b)
+        if getattr(b, "requires_grad", False):
+            # grad_b = a.T @ grad  → (m,n) @ (n,) = (m,)
+            grad_b = redispatch("matmul", keyset, redispatch("transpose", keyset, saved_a, 0, 1), grad)
+    return grad_a, grad_b
+
+
+def _flatten_backward(grad, a, _saved_a, keyset, args, kwargs):
+    """Backward for flatten: reshape gradient back to original shape."""
+    return (redispatch("reshape", keyset, grad, a.shape),)
+
+
+def _unflatten_backward(grad, a, _saved_a, keyset, args, kwargs):
+    """Backward for unflatten: reshape gradient back to original shape."""
+    return (redispatch("reshape", keyset, grad, a.shape),)
+
+
+def _movedim_backward(grad, _a, _saved_a, keyset, args, kwargs):
+    """Backward for movedim: apply the inverse permutation."""
+    source = args[0]
+    destination = args[1]
+    with _grad_context(keyset):
+        # Inverse: move destination back to source
+        return (redispatch("movedim", keyset, grad, destination, source),)
+
+
+def _diagonal_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for diagonal: scatter grad back along the diagonal using numpy."""
+    offset = args[0] if args else kwargs.get("offset", 0)
+    dim1 = args[1] if len(args) > 1 else kwargs.get("dim1", 0)
+    dim2 = args[2] if len(args) > 2 else kwargs.get("dim2", 1)
+    with _grad_context(keyset):
+        import numpy as np
+        from .cpu.ops import _to_numpy, _from_numpy
+
+        grad_np = _to_numpy(grad)
+        shape = saved_a.shape
+        ndim = len(shape)
+        d1 = dim1 if dim1 >= 0 else dim1 + ndim
+        d2 = dim2 if dim2 >= 0 else dim2 + ndim
+
+        # Move d1 and d2 to the last two positions
+        perm = [i for i in range(ndim) if i not in (d1, d2)] + [d1, d2]
+        inv_perm = [0] * ndim
+        for i, p in enumerate(perm):
+            inv_perm[p] = i
+
+        out_np = np.zeros([shape[i] for i in range(ndim)], dtype=grad_np.dtype)
+        arr_moved = np.transpose(out_np, perm)
+        # grad has batch dims + diagonal dim at the end
+        # The number of diagonal elements
+        n_d1 = shape[d1]
+        n_d2 = shape[d2]
+        if offset >= 0:
+            diag_len = min(n_d1, n_d2 - offset)
+        else:
+            diag_len = min(n_d1 + offset, n_d2)
+        diag_len = max(diag_len, 0)
+
+        for k in range(diag_len):
+            if offset >= 0:
+                i1, i2 = k, k + offset
+            else:
+                i1, i2 = k - offset, k
+            arr_moved[..., i1, i2] = grad_np[..., k]
+
+        out_np = np.transpose(arr_moved, inv_perm)
+        return (_from_numpy(np.ascontiguousarray(out_np), saved_a.dtype, saved_a.device),)
+
+
+def _hardswish_backward(grad, _a, saved_a, keyset):
+    """Backward for hardswish: d/dx[x * hardsigmoid(x)]."""
+    with _grad_context(keyset):
+        three = _scalar_tensor_like(saved_a, 3.0)
+        sixth = _scalar_tensor_like(saved_a, 1.0 / 6.0)
+        two = _scalar_tensor_like(saved_a, 2.0)
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        # Masks using relu+sign trick (no gt/lt ops needed)
+        # gt_neg3: 1 where x > -3, else 0
+        gt_neg3 = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, saved_a, three)))
+        # lt_3: 1 where x < 3, else 0
+        lt_3 = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, three, redispatch("neg", keyset, saved_a))))
+        # inner_mask: 1 where -3 < x < 3
+        inner_mask = redispatch("mul", keyset, gt_neg3, lt_3)
+        # ge_3_mask: 1 where x >= 3
+        ge_3_mask = redispatch("where", keyset,
+            redispatch("ge", keyset, saved_a, three),
+            ones, redispatch("mul", keyset, ones, zero))
+        # Hardswish grad:
+        # x < -3:        0
+        # -3 <= x < 3:   (2x + 3) / 6
+        # x >= 3:        1
+        two_x_plus_3 = redispatch("add", keyset, redispatch("mul", keyset, two, saved_a), three)
+        inner_grad = redispatch("mul", keyset, two_x_plus_3, sixth)
+        dout = redispatch("add", keyset,
+            redispatch("mul", keyset, inner_grad, inner_mask),
+            ge_3_mask)
+        return (redispatch("mul", keyset, grad, dout),)
+
+
+def _hardsigmoid_backward(grad, _a, saved_a, keyset):
+    """Backward for hardsigmoid: max(0, min(1, (x+3)/6))."""
+    with _grad_context(keyset):
+        three = _scalar_tensor_like(saved_a, 3.0)
+        sixth = _scalar_tensor_like(saved_a, 1.0 / 6.0)
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        # 1/6 where -3 < x < 3, else 0
+        gt_neg3 = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, saved_a, three)))
+        lt_3 = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, three, redispatch("neg", keyset, saved_a))))
+        inner_mask = redispatch("mul", keyset, gt_neg3, lt_3)
+        mask_f = redispatch("where", keyset,
+            redispatch("gt", keyset, inner_mask, _scalar_tensor_like(saved_a, 0.0)),
+            ones, redispatch("mul", keyset, ones, zero))
+        return (redispatch("mul", keyset, grad, redispatch("mul", keyset, mask_f, sixth)),)
+
+
+def _softsign_backward(grad, _a, saved_a, keyset):
+    """Backward for softsign: out = x / (1 + |x|), grad = 1 / (1 + |x|)^2."""
+    with _grad_context(keyset):
+        one = _scalar_tensor_like(saved_a, 1.0)
+        denom = redispatch("add", keyset, one, redispatch("abs", keyset, saved_a))
+        denom_sq = redispatch("mul", keyset, denom, denom)
+        return (redispatch("div", keyset, grad, denom_sq),)
+
+
+def _selu_backward(grad, _a, saved_a, keyset):
+    """Backward for selu: scale * (x if x > 0 else alpha*(exp(x)-1))."""
+    SCALE = 1.0507009873554804934193349852946
+    ALPHA = 1.6732631921893986195596513061800
+    with _grad_context(keyset):
+        scale_t = _scalar_tensor_like(saved_a, SCALE)
+        alpha_scale_t = _scalar_tensor_like(saved_a, SCALE * ALPHA)
+        small_eps = _scalar_tensor_like(saved_a, 1e-7)
+        ones = saved_a._ones_like()
+        # pos_mask: 1 where x > 0
+        pos_mask = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, saved_a, small_eps)))
+        # neg_mask: 1 where x <= 0
+        neg_mask = redispatch("add", keyset, ones, redispatch("neg", keyset, pos_mask))
+        exp_x = redispatch("exp", keyset, saved_a)
+        neg_deriv = redispatch("mul", keyset, alpha_scale_t, exp_x)
+        deriv = redispatch("add", keyset,
+            redispatch("mul", keyset, pos_mask, scale_t),
+            redispatch("mul", keyset, neg_mask, neg_deriv))
+        return (redispatch("mul", keyset, grad, deriv),)
+
+
+def _celu_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for celu: max(0,x) + min(0, alpha*(exp(x/alpha)-1))."""
+    alpha = args[0] if args else kwargs.get("alpha", 1.0)
+    with _grad_context(keyset):
+        alpha_t = _scalar_tensor_like(saved_a, float(alpha))
+        small_eps = _scalar_tensor_like(saved_a, 1e-7)
+        ones = saved_a._ones_like()
+        # pos_mask: 1 where x > 0
+        pos_mask = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, saved_a, small_eps)))
+        # neg_mask: 1 where x <= 0
+        neg_mask = redispatch("add", keyset, ones, redispatch("neg", keyset, pos_mask))
+        exp_x_alpha = redispatch("exp", keyset, redispatch("div", keyset, saved_a, alpha_t))
+        deriv = redispatch("add", keyset,
+            pos_mask,
+            redispatch("mul", keyset, neg_mask, exp_x_alpha))
+        return (redispatch("mul", keyset, grad, deriv),)
+
+
+def _threshold_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for threshold: out = x if x > threshold else value."""
+    threshold = args[0] if args else kwargs.get("threshold", 0.0)
+    with _grad_context(keyset):
+        threshold_t = _scalar_tensor_like(saved_a, float(threshold))
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        # mask: 1 where x > threshold, else 0
+        gt_mask = redispatch("sign", keyset, redispatch("relu", keyset,
+            redispatch("add", keyset, saved_a,
+                redispatch("neg", keyset, threshold_t))))
+        # Strictly greater: use relu(x - threshold) sign trick
+        # Note: sign(relu(x - threshold)) = 1 when x > threshold (for float)
+        mask = redispatch("where", keyset,
+            redispatch("gt", keyset, saved_a, threshold_t),
+            ones, redispatch("mul", keyset, ones, zero))
+        return (redispatch("mul", keyset, grad, mask),)
+
+
+def _instance_norm_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for instance_norm: normalize over spatial dims per (N, C)."""
+    weight = args[0] if args else kwargs.get("weight", None)
+    bias = args[1] if len(args) > 1 else kwargs.get("bias", None)
+    eps = args[4] if len(args) > 4 else kwargs.get("eps", 1e-5)
+
+    with _grad_context(keyset):
+        shape = saved_a.shape
+        ndim = len(shape)
+        # Spatial axes: everything except batch (0) and channel (1)
+        spatial_axes = tuple(range(2, ndim))
+
+        # Compute per-(N,C) mean and variance over spatial dims
+        mean = redispatch("mean", keyset, saved_a, dim=spatial_axes, keepdim=True)
+        diff = redispatch("add", keyset, saved_a, redispatch("neg", keyset, mean))
+        var = redispatch("mean", keyset, redispatch("mul", keyset, diff, diff),
+                         dim=spatial_axes, keepdim=True)
+        eps_t = _scalar_tensor_like(saved_a, float(eps))
+        inv_std = redispatch("rsqrt", keyset, redispatch("add", keyset, var, eps_t))
+        x_hat = redispatch("mul", keyset, diff, inv_std)
+
+        if weight is not None:
+            # weight shape: (C,) → reshape to (1, C, 1, ...) for broadcasting
+            w_shape = [1, shape[1]] + [1] * (ndim - 2)
+            dl_dxhat = redispatch("mul", keyset, grad,
+                redispatch("reshape", keyset, weight, tuple(w_shape)))
+        else:
+            dl_dxhat = grad
+
+        # n = number of spatial elements
+        n = 1
+        for d in spatial_axes:
+            n *= shape[d]
+        n_t = _scalar_tensor_like(saved_a, float(n))
+
+        mean_dl_dxhat = redispatch("div", keyset,
+            redispatch("sum", keyset, dl_dxhat, dim=spatial_axes, keepdim=True), n_t)
+        mean_dl_dxhat_xhat = redispatch("div", keyset,
+            redispatch("sum", keyset,
+                redispatch("mul", keyset, dl_dxhat, x_hat),
+                dim=spatial_axes, keepdim=True), n_t)
+
+        grad_input = redispatch("mul", keyset, inv_std,
+            redispatch("add", keyset,
+                redispatch("add", keyset, dl_dxhat,
+                    redispatch("neg", keyset, mean_dl_dxhat)),
+                redispatch("neg", keyset,
+                    redispatch("mul", keyset, x_hat, mean_dl_dxhat_xhat))))
+        return (grad_input,)
+
+
+def _normalize_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for F.normalize: out = x / max(||x||_p, eps)."""
+    p = args[0] if args else kwargs.get("p", 2)
+    dim = args[1] if len(args) > 1 else kwargs.get("dim", 1)
+    eps = args[2] if len(args) > 2 else kwargs.get("eps", 1e-12)
+    with _grad_context(keyset):
+        norm = redispatch("norm", keyset, saved_a, p, dim=dim, keepdim=True)
+        eps_t = _scalar_tensor_like(saved_a, float(eps))
+        safe_norm = redispatch("add", keyset, norm, eps_t)
+        # n = x / safe_norm  (the normalized vector)
+        n = redispatch("div", keyset, saved_a, safe_norm)
+        # grad_input = (grad - (grad·n).sum(dim, keepdim=True) * n) / safe_norm
+        dot = redispatch("sum", keyset,
+            redispatch("mul", keyset, grad, n), dim=dim, keepdim=True)
+        grad_proj = redispatch("mul", keyset, dot, n)
+        return (redispatch("div", keyset,
+            redispatch("add", keyset, grad, redispatch("neg", keyset, grad_proj)),
+            safe_norm),)
+
+
 def _register_autograd_op(name, factory, *, include_meta=True):
     kwargs = {
         "default": factory(),
@@ -1873,6 +2456,38 @@ for _entry in (
     ("tile", lambda: _autograd_unary_args("tile", _tile_backward, save_input=False)),
     ("sort", lambda: _autograd_sort_like("sort", _sort_backward)),
     ("topk", lambda: _autograd_sort_like("topk", _topk_backward)),
+    # Phase 8: Missing backward ops
+    # Part A: Missing backward for existing registered ops
+    ("sub", lambda: _autograd_binary("sub", _sub_backward, save_inputs=False)),
+    ("mm", lambda: _autograd_binary("mm", _mm_backward)),
+    ("bmm", lambda: _autograd_binary("bmm", _bmm_backward)),
+    ("lerp", lambda: _autograd_lerp("lerp")),
+    ("addcmul", lambda: _autograd_addcmul("addcmul")),
+    ("addcdiv", lambda: _autograd_addcdiv("addcdiv")),
+    ("amax", lambda: _autograd_unary_args("amax", _amax_backward)),
+    ("amin", lambda: _autograd_unary_args("amin", _amin_backward)),
+    # Part B: Backward for new ops
+    ("log1p", lambda: _autograd_unary("log1p", _log1p_backward)),
+    ("expm1", lambda: _autograd_unary("expm1", _expm1_backward)),
+    ("reciprocal", lambda: _autograd_unary("reciprocal", _reciprocal_backward)),
+    ("maximum", lambda: _autograd_binary("maximum", _maximum_backward)),
+    ("minimum", lambda: _autograd_binary("minimum", _minimum_backward)),
+    ("dot", lambda: _autograd_binary("dot", _dot_backward)),
+    ("outer", lambda: _autograd_binary("outer", _outer_backward)),
+    ("mv", lambda: _autograd_binary("mv", _mv_backward)),
+    ("flatten", lambda: _autograd_unary_args("flatten", _flatten_backward, save_input=False)),
+    ("unflatten", lambda: _autograd_unary_args("unflatten", _unflatten_backward, save_input=False)),
+    ("movedim", lambda: _autograd_unary_args("movedim", _movedim_backward, save_input=False)),
+    ("moveaxis", lambda: _autograd_unary_args("moveaxis", _movedim_backward, save_input=False)),
+    ("diagonal", lambda: _autograd_unary_args("diagonal", _diagonal_backward, save_input=True)),
+    ("hardswish", lambda: _autograd_unary("hardswish", _hardswish_backward)),
+    ("hardsigmoid", lambda: _autograd_unary("hardsigmoid", _hardsigmoid_backward)),
+    ("softsign", lambda: _autograd_unary("softsign", _softsign_backward)),
+    ("selu", lambda: _autograd_unary("selu", _selu_backward)),
+    ("celu", lambda: _autograd_unary_args("celu", _celu_backward)),
+    ("threshold", lambda: _autograd_unary_args("threshold", _threshold_backward, save_input=True)),
+    ("instance_norm", lambda: _autograd_unary_args("instance_norm", _instance_norm_backward)),
+    ("normalize", lambda: _autograd_unary_args("normalize", _normalize_backward)),
 ):
     if len(_entry) == 2:
         _name, _factory = _entry

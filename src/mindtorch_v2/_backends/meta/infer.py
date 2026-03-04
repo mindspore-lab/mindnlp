@@ -525,3 +525,61 @@ def infer_nonzero(a, as_tuple=False):
         return tuple(spec for _ in range(len(a.shape)))
     shape = (0, len(a.shape))
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=int64_dtype)
+
+
+# ---------------------------------------------------------------------------
+# Meta infer for newly added ops
+# ---------------------------------------------------------------------------
+
+def infer_dot(a, b):
+    # dot of two 1D vectors returns a scalar
+    shape = ()
+    return TensorSpec(shape=shape, stride=(), dtype=a.dtype)
+
+
+def infer_outer(a, b):
+    shape = (a.shape[0], b.shape[0])
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_flatten(a, start_dim=0, end_dim=-1):
+    ndim = len(a.shape)
+    start = start_dim if start_dim >= 0 else start_dim + ndim
+    end = end_dim if end_dim >= 0 else end_dim + ndim
+    flat_size = 1
+    for i in range(start, end + 1):
+        flat_size *= a.shape[i]
+    shape = tuple(a.shape[:start]) + (flat_size,) + tuple(a.shape[end + 1:])
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_unflatten(a, dim, sizes):
+    ndim = len(a.shape)
+    d = dim if dim >= 0 else dim + ndim
+    shape = tuple(a.shape[:d]) + tuple(sizes) + tuple(a.shape[d + 1:])
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_broadcast_to(a, shape):
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_movedim(a, source, destination):
+    # Shape doesn't change, only strides
+    shape = tuple(a.shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_diagonal(a, offset=0, dim1=0, dim2=1):
+    shape = list(a.shape)
+    m = shape[dim1]
+    n = shape[dim2]
+    if offset >= 0:
+        diag_len = max(0, min(m, n - offset))
+    else:
+        diag_len = max(0, min(m + offset, n))
+    # Remove dim1 and dim2, append diag_len
+    remaining = [s for i, s in enumerate(shape) if i not in (dim1, dim2)]
+    out_shape = tuple(remaining) + (diag_len,)
+    return TensorSpec(shape=out_shape, stride=_contiguous_stride(out_shape), dtype=a.dtype)
