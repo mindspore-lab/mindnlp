@@ -1,0 +1,1 @@
+"""Pipeline NPU benchmark helpers."""

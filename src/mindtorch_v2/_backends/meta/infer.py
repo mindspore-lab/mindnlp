@@ -39,11 +39,11 @@ def infer_binary_bool(a, b):
     return TensorSpec(shape=tuple(shape), stride=_contiguous_stride(shape), dtype=bool_dtype)
 
 
-def infer_unary(a):
+def infer_unary(a, *args, **kwargs):
     return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=a.dtype)
 
 
-def infer_unary_bool(a):
+def infer_unary_bool(a, *args, **kwargs):
     return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=bool_dtype)
 
 

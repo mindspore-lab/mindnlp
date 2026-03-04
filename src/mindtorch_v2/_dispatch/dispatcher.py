@@ -132,7 +132,7 @@ def _check_inplace_targets(schema_obj, args, kwargs):
 
 
 class _PendingOp:
-    def __init__(self, impl, args, kwargs, out, keyset, key, schema_obj=None):
+    def __init__(self, impl, args, kwargs, out, keyset, key, schema_obj=None, op_name=None):
         self.impl = impl
         self.args = args
         self.kwargs = kwargs
@@ -140,6 +140,7 @@ class _PendingOp:
         self.keyset = keyset
         self.key = key
         self.schema_obj = schema_obj
+        self.op_name = op_name
 
     def _copy_result(self, pending, result):
         prev_requires_grad = pending.requires_grad
@@ -171,12 +172,16 @@ class _PendingOp:
         _bump_versions(self.schema_obj, self.args, self.kwargs)
 
 class _FunctionalizePendingOp:
-    def __init__(self, target, thunk, keyset, key, finalize=None):
+    def __init__(self, target, thunk, keyset, key, finalize=None, op_name=None, schema_obj=None, args=None, kwargs=None):
         self.target = target
         self.thunk = thunk
         self.keyset = keyset
         self.key = key
         self.finalize = finalize
+        self.op_name = op_name
+        self.schema_obj = schema_obj
+        self.args = args
+        self.kwargs = kwargs
 
     def execute(self):
         _push_dispatch_context(self.keyset, self.key)
@@ -241,10 +246,6 @@ def _extract_tensors(args, kwargs):
     for value in list(args) + list(kwargs.values()):
         if hasattr(value, "device"):
             tensors.append(value)
-        elif isinstance(value, (list, tuple)):
-            for item in value:
-                if hasattr(item, "device"):
-                    tensors.append(item)
     return tensors
 
 
@@ -340,7 +341,19 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         if impl is None:
             raise RuntimeError(f"pipeline requires backend kernel for op {name}")
         impl_kwargs = _prepare_kwargs(impl, kwargs, dispatch_device)
-        pipe.record(_PendingOp(impl, args, impl_kwargs, out, keyset.without(DispatchKey.Pipeline), impl_key, schema_obj=entry.schema_obj), pending=out)
+        pipe.record(
+            _PendingOp(
+                impl,
+                args,
+                impl_kwargs,
+                out,
+                keyset.without(DispatchKey.Pipeline),
+                impl_key,
+                schema_obj=entry.schema_obj,
+                op_name=alias_name,
+            ),
+            pending=out,
+        )
         return out
     if pipe is not None and keyset.has(DispatchKey.Pipeline):
         pipe.flush()
