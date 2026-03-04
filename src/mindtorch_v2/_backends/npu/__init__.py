@@ -72,6 +72,7 @@ from .ops import (
     copy_,
     erfinv_,
     sub_,
+    div_,
     contiguous,
     getitem,
     setitem,
@@ -201,6 +202,10 @@ from .ops import (
     upsample_nearest2d,
     upsample_bilinear2d,
     one_hot,
+    # Logical ops
+    logical_and,
+    logical_or,
+    logical_not,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -436,6 +441,14 @@ registry.register("einsum", "npu", einsum_)
 registry.register("upsample_nearest2d", "npu", upsample_nearest2d)
 registry.register("upsample_bilinear2d", "npu", upsample_bilinear2d)
 registry.register("one_hot", "npu", one_hot)
+
+# Logical ops
+registry.register("logical_and", "npu", logical_and, meta=meta_infer.infer_binary_bool)
+registry.register("logical_or", "npu", logical_or, meta=meta_infer.infer_binary_bool)
+registry.register("logical_not", "npu", logical_not, meta=meta_infer.infer_unary_bool)
+
+# In-place ops (batch 1)
+registry.register("div_", "npu", div_, meta=meta_infer.infer_binary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

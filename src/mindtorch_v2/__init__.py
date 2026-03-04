@@ -51,6 +51,8 @@ from ._functional import var, norm, prod
 from ._functional import reciprocal, addmm, einsum
 from ._functional import mm, bmm
 from ._functional import floor_divide
+from ._functional import narrow, flatten
+from ._functional import logical_and, logical_or, logical_not
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import pipeline_context, functionalize_context
 from ._backends import cpu
@@ -266,6 +268,12 @@ __all__ = [
     "randperm",
     "from_numpy",
     "as_tensor",
+    # Batch 1 ops
+    "narrow",
+    "flatten",
+    "logical_and",
+    "logical_or",
+    "logical_not",
     # printing
     "set_printoptions",
     "get_printoptions",

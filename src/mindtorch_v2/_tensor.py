@@ -63,6 +63,8 @@ from ._functional import squeeze as squeeze_dispatch, unsqueeze as unsqueeze_dis
 from ._functional import var as var_dispatch, norm as norm_dispatch, prod as prod_dispatch
 from ._functional import mm as mm_dispatch, bmm as bmm_dispatch
 from ._functional import floor_divide as floor_divide_dispatch
+from ._functional import tile as tile_dispatch, flip as flip_dispatch, roll as roll_dispatch, rot90 as rot90_dispatch
+from ._functional import reciprocal as reciprocal_dispatch, addmm as addmm_dispatch
 from ._autograd.engine import backward as _backward
 from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
@@ -749,8 +751,7 @@ class Tensor:
 
     def __itruediv__(self, other):
         self._check_inplace()
-        from ._dispatch.dispatcher import dispatch
-        dispatch("copy_", self.device.type, self, true_divide_dispatch(self, other))
+        self.div_(other)
         return self
 
     def __neg__(self):
@@ -1039,6 +1040,53 @@ class Tensor:
         if len(repeats) == 1 and isinstance(repeats[0], (tuple, list)):
             repeats = tuple(repeats[0])
         return repeat_dispatch(self, repeats)
+
+    def tile(self, *dims):
+        if len(dims) == 1 and isinstance(dims[0], (tuple, list)):
+            dims = tuple(dims[0])
+        return tile_dispatch(self, dims)
+
+    def flip(self, dims):
+        if isinstance(dims, int):
+            dims = [dims]
+        return flip_dispatch(self, dims)
+
+    def roll(self, shifts, dims=None):
+        return roll_dispatch(self, shifts, dims)
+
+    def rot90(self, k=1, dims=(0, 1)):
+        return rot90_dispatch(self, k, dims)
+
+    def reciprocal(self):
+        return reciprocal_dispatch(self)
+
+    def addmm(self, mat1, mat2, *, beta=1, alpha=1):
+        return addmm_dispatch(self, mat1, mat2, beta=beta, alpha=alpha)
+
+    def type_as(self, other):
+        return self.to(other.dtype)
+
+    def reshape_as(self, other):
+        return self.reshape(other.shape)
+
+    def new_full(self, size, fill_value, *, dtype=None, device=None, requires_grad=False):
+        from ._creation import full
+        dt = dtype if dtype is not None else self.dtype
+        dev = device if device is not None else self.device
+        return full(size, fill_value, dtype=dt, device=dev)
+
+    def div_(self, other):
+        from ._dispatch.dispatcher import dispatch
+        self._check_inplace()
+        out = dispatch("div_", self.device.type, self, other)
+        return out
+
+    def unflatten(self, dim, sizes):
+        ndim = len(self.shape)
+        if dim < 0:
+            dim += ndim
+        new_shape = self.shape[:dim] + tuple(sizes) + self.shape[dim + 1:]
+        return self.view(new_shape)
 
     # -----------------------------------------------------------------------
     # Indexing / selection methods

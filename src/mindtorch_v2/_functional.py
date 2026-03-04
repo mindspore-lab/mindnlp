@@ -360,6 +360,22 @@ def tile(a, dims):
     return dispatch("tile", a.device.type, a, dims)
 
 
+def flatten(input, start_dim=0, end_dim=-1):
+    return input.flatten(start_dim, end_dim)
+
+
+def logical_and(a, b):
+    return dispatch("logical_and", a.device.type, a, b)
+
+
+def logical_or(a, b):
+    return dispatch("logical_or", a.device.type, a, b)
+
+
+def logical_not(a):
+    return dispatch("logical_not", a.device.type, a)
+
+
 
 
 

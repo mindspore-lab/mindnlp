@@ -411,3 +411,18 @@ def normalize(input, p=2.0, dim=1, eps=1e-12):
 def one_hot(tensor, num_classes=-1):
     from .._dispatch import dispatch
     return dispatch("one_hot", tensor.device.type, tensor, num_classes)
+
+
+def relu6(input, inplace=False):
+    from .._functional import relu6 as _relu6
+    return _relu6(input)
+
+
+def hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
+    from .._functional import hardtanh as _hardtanh
+    return _hardtanh(input, min_val, max_val)
+
+
+def logsigmoid(input):
+    from .._functional import softplus as _softplus, neg as _neg
+    return _neg(_softplus(_neg(input)))

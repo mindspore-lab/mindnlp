@@ -758,6 +758,14 @@ def sub_(a, b):
     arr -= _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
+
+def div_(a, b):
+    arr = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    arr /= b_np
+    return a
+
+
 def contiguous(a):
     if a.device.type != "cpu":
         raise ValueError("CPU contiguous expects CPU tensors")
@@ -1882,3 +1890,19 @@ def adaptive_avg_pool2d(input, output_size):
             w_end = (ow + 1) * W // oW
             out[:, :, oh, ow] = inp[:, :, h_start:h_end, w_start:w_end].mean(axis=(-2, -1))
     return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def logical_and(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.logical_and(a_np, b_np), bool_dtype, a.device)
+
+
+def logical_or(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.logical_or(a_np, b_np), bool_dtype, a.device)
+
+
+def logical_not(a):
+    return _from_numpy(np.logical_not(_to_numpy(a)), bool_dtype, a.device)
