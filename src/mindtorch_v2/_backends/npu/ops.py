@@ -2104,11 +2104,59 @@ def triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
     return tensor_create([rows, cols], dtype=dtype, device=dev)
 
 
+def _diag_310b_fallback(a, diagonal=0):
+    from .creation import empty_create, zeros_create
+
+    diagonal = int(diagonal)
+
+    if a.dim() == 1:
+        n = int(a.shape[0])
+        size = n + (diagonal if diagonal >= 0 else -diagonal)
+        out = zeros_create((size, size), dtype=a.dtype, device=a.device)
+        if n == 0:
+            return out
+
+        idx = _npu_arange_1d(n, a.device)
+        if diagonal >= 0:
+            rows = idx
+            cols = idx if diagonal == 0 else add(idx, diagonal)
+        else:
+            rows = add(idx, -diagonal)
+            cols = idx
+        return index_put_(out, (rows, cols), a, accumulate=False)
+
+    m = int(a.shape[0])
+    n = int(a.shape[1])
+    if diagonal >= 0:
+        length = max(0, min(m, n - diagonal))
+    else:
+        length = max(0, min(m + diagonal, n))
+
+    if length == 0:
+        return empty_create((0,), dtype=a.dtype, device=a.device)
+
+    idx = _npu_arange_1d(length, a.device)
+    if diagonal >= 0:
+        rows = idx
+        cols = idx if diagonal == 0 else add(idx, diagonal)
+    else:
+        rows = add(idx, -diagonal)
+        cols = idx
+
+    linear = add(mul(rows, n), cols)
+    flat = view_backend.reshape(a, (a.numel(),))
+    return take(flat, linear)
+
+
 def diag(a, diagonal=0):
     if a.device.type != "npu":
         raise ValueError("NPU diag expects NPU tensors")
     if a.dim() not in (1, 2):
         raise ValueError("diag expects 1D or 2D tensor")
+
+    if _is_310b_profile():
+        return _diag_310b_fallback(a, diagonal=diagonal)
+
     if not aclnn.diag_symbols_ok():
         raise RuntimeError("aclnnDiag symbols not available")
 
