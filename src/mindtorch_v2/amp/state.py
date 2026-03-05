@@ -65,12 +65,15 @@ def is_autocast_enabled(device_type=None):
     return bool(_state_for(dev)["enabled"])
 
 
-def set_autocast_enabled(device_type, enabled):
+def set_autocast_enabled(device_type, enabled=None):
+    if enabled is None:
+        enabled = device_type
+        device_type = _DEFAULT_DEVICE
     dev = _normalize_device_type(device_type)
     _state_for(dev)["enabled"] = bool(enabled)
 
 
-def get_autocast_dtype(device_type=None):
+def get_autocast_dtype(device_type):
     dev = _normalize_device_type(device_type)
     return _state_for(dev)["dtype"]
 

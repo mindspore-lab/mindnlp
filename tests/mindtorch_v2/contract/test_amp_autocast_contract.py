@@ -103,3 +103,36 @@ def test_register_autocast_api_exists():
     import mindtorch_v2.library as library
 
     assert hasattr(library, "register_autocast")
+
+
+def test_get_autocast_dtype_requires_device_type_like_torch():
+    import pytest
+
+    with pytest.raises(TypeError):
+        torch.get_autocast_dtype()
+
+
+def test_set_autocast_enabled_accepts_single_arg_like_torch():
+    from mindtorch_v2.amp import state as amp_state
+
+    default_device = getattr(amp_state, "_DEFAULT_DEVICE", "cpu")
+    prev_cpu = torch.is_autocast_enabled("cpu")
+    prev_default_device = torch.is_autocast_enabled(default_device)
+    prev_default = torch.is_autocast_enabled()
+
+    # torch accepts one-arg set_autocast_enabled(enabled), affecting default backend state.
+    torch.set_autocast_enabled(True)
+    assert torch.is_autocast_enabled() is True
+    assert torch.is_autocast_enabled(default_device) is True
+    if default_device != "cpu":
+        assert torch.is_autocast_enabled("cpu") == prev_cpu
+
+    torch.set_autocast_enabled(False)
+    assert torch.is_autocast_enabled() is False
+    assert torch.is_autocast_enabled(default_device) is False
+    if default_device != "cpu":
+        assert torch.is_autocast_enabled("cpu") == prev_cpu
+
+    # restore default state for test isolation
+    torch.set_autocast_enabled(prev_default)
+    torch.set_autocast_enabled(default_device, prev_default_device)
