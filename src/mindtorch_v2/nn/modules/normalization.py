@@ -66,6 +66,53 @@ class BatchNorm2d(BatchNorm1d):
     pass
 
 
+class _InstanceNorm(Module):
+    def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=False,
+                 track_running_stats=False, device=None, dtype=None):
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.momentum = momentum
+        self.affine = affine
+        self.track_running_stats = track_running_stats
+        if affine:
+            self.weight = Parameter(tensor([1.0] * num_features))
+            self.bias = Parameter(tensor([0.0] * num_features))
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias', None)
+        if track_running_stats:
+            self.register_buffer('running_mean', tensor([0.0] * num_features))
+            self.register_buffer('running_var', tensor([1.0] * num_features))
+            self.register_buffer('num_batches_tracked', tensor([0.0]))
+        else:
+            self.register_buffer('running_mean', None)
+            self.register_buffer('running_var', None)
+            self.register_buffer('num_batches_tracked', None)
+
+    def forward(self, input):
+        return F.instance_norm(input, self.running_mean, self.running_var,
+                               self.weight, self.bias,
+                               self.training or not self.track_running_stats,
+                               self.momentum, self.eps)
+
+    def extra_repr(self):
+        return (f'{self.num_features}, eps={self.eps}, momentum={self.momentum}, '
+                f'affine={self.affine}, track_running_stats={self.track_running_stats}')
+
+
+class InstanceNorm1d(_InstanceNorm):
+    pass
+
+
+class InstanceNorm2d(_InstanceNorm):
+    pass
+
+
+class InstanceNorm3d(_InstanceNorm):
+    pass
+
+
 class GroupNorm(Module):
     def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, device=None, dtype=None):
         super().__init__()

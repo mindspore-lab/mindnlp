@@ -162,6 +162,7 @@ from .ops import (
     getitem,
     setitem,
     batch_norm,
+    instance_norm,
     group_norm,
     layer_norm,
     dropout,
@@ -338,6 +339,7 @@ registry.register("mean", "cpu", mean_, meta=meta_infer.infer_sum)
 registry.register("std", "cpu", std_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
+registry.register("instance_norm", "cpu", instance_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)
 registry.register("layer_norm", "cpu", layer_norm, meta=meta_infer.infer_unary)
 registry.register("dropout", "cpu", dropout, meta=meta_infer.infer_unary)

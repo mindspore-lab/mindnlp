@@ -16,7 +16,7 @@ from .modules.activation import (
 )
 
 # Normalization
-from .modules.normalization import LayerNorm, BatchNorm1d, BatchNorm2d, GroupNorm, RMSNorm
+from .modules.normalization import LayerNorm, BatchNorm1d, BatchNorm2d, GroupNorm, RMSNorm, InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
 
 # Embedding
 from .modules.sparse import Embedding, EmbeddingBag

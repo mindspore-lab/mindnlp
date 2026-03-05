@@ -2131,6 +2131,44 @@ def kthvalue(a, k, dim=-1, keepdim=False):
     )
 
 
+def instance_norm(input, weight=None, bias=None, running_mean=None, running_var=None,
+                  use_input_stats=True, momentum=0.1, eps=1e-5, cudnn_enabled=False):
+    arr = _to_numpy(input)
+    ndim = len(arr.shape)
+    N = arr.shape[0]
+    C = arr.shape[1] if ndim >= 2 else 1
+    spatial_axes = tuple(range(2, ndim))
+
+    if use_input_stats:
+        mean = arr.mean(axis=spatial_axes, keepdims=True)
+        var = arr.var(axis=spatial_axes, keepdims=True)
+        if running_mean is not None:
+            rm = _to_numpy(running_mean)
+            batch_mean = mean.reshape(N, C).mean(axis=0)
+            rm[:] = (1 - momentum) * rm + momentum * batch_mean
+        if running_var is not None:
+            rv = _to_numpy(running_var)
+            batch_var = var.reshape(N, C).mean(axis=0)
+            rv[:] = (1 - momentum) * rv + momentum * batch_var
+    else:
+        rm = _to_numpy(running_mean)
+        rv = _to_numpy(running_var)
+        shape = [1, C] + [1] * (ndim - 2)
+        mean = rm.reshape(shape)
+        var = rv.reshape(shape)
+
+    normalized = (arr - mean) / np.sqrt(var + eps)
+
+    if weight is not None:
+        shape = [1, C] + [1] * (ndim - 2)
+        normalized = normalized * _to_numpy(weight).reshape(shape)
+    if bias is not None:
+        shape = [1, C] + [1] * (ndim - 2)
+        normalized = normalized + _to_numpy(bias).reshape(shape)
+
+    return _from_numpy(normalized, input.dtype, input.device)
+
+
 def median(a, dim=None, keepdim=False):
     arr = _to_numpy(a)
     if dim is None:

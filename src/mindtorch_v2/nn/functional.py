@@ -92,6 +92,13 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None,
                    weight, bias, training, momentum, eps)
 
 
+def instance_norm(input, running_mean=None, running_var=None, weight=None, bias=None,
+                  use_input_stats=True, momentum=0.1, eps=1e-5):
+    from .._dispatch import dispatch
+    return dispatch("instance_norm", input.device.type, input, weight, bias,
+                   running_mean, running_var, use_input_stats, momentum, eps)
+
+
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0,
               scale_grad_by_freq=False, sparse=False):
     from .._dispatch import dispatch
