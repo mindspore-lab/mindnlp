@@ -31,9 +31,20 @@ def _state_map():
                 "cache_enabled": True,
                 "nesting": 0,
             },
+            "meta": {
+                "enabled": False,
+                "dtype": float16,
+                "cache_enabled": True,
+                "nesting": 0,
+            },
         }
         _TLS.amp_state = state
     return state
+
+
+def _state_for(device_type):
+    state = _state_map()
+    return state.get(device_type, state[_DEFAULT_DEVICE])
 
 
 def _normalize_device_type(device_type):
@@ -51,22 +62,22 @@ def is_autocast_available(device_type):
 
 def is_autocast_enabled(device_type=None):
     dev = _normalize_device_type(device_type)
-    return bool(_state_map()[dev]["enabled"])
+    return bool(_state_for(dev)["enabled"])
 
 
 def set_autocast_enabled(device_type, enabled):
     dev = _normalize_device_type(device_type)
-    _state_map()[dev]["enabled"] = bool(enabled)
+    _state_for(dev)["enabled"] = bool(enabled)
 
 
 def get_autocast_dtype(device_type=None):
     dev = _normalize_device_type(device_type)
-    return _state_map()[dev]["dtype"]
+    return _state_for(dev)["dtype"]
 
 
 def set_autocast_dtype(device_type, dtype):
     dev = _normalize_device_type(device_type)
-    _state_map()[dev]["dtype"] = dtype
+    _state_for(dev)["dtype"] = dtype
 
 
 def is_autocast_cache_enabled(device_type=None):
@@ -89,13 +100,13 @@ def clear_autocast_cache(device_type=None):
 
 def autocast_increment_nesting(device_type="cpu"):
     dev = _normalize_device_type(device_type)
-    _state_map()[dev]["nesting"] += 1
-    return _state_map()[dev]["nesting"]
+    _state_for(dev)["nesting"] += 1
+    return _state_for(dev)["nesting"]
 
 
 def autocast_decrement_nesting(device_type="cpu"):
     dev = _normalize_device_type(device_type)
-    _state_map()[dev]["nesting"] -= 1
-    if _state_map()[dev]["nesting"] < 0:
-        _state_map()[dev]["nesting"] = 0
-    return _state_map()[dev]["nesting"]
+    _state_for(dev)["nesting"] -= 1
+    if _state_for(dev)["nesting"] < 0:
+        _state_for(dev)["nesting"] = 0
+    return _state_for(dev)["nesting"]

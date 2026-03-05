@@ -420,3 +420,16 @@ def register_schemas():
     registry.register_schema("searchsorted", "searchsorted(Tensor sorted_sequence, Any values, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None) -> Tensor")
     registry.register_schema("kthvalue", "kthvalue(Tensor input, int k, int dim=-1, bool keepdim=False) -> (Tensor, Tensor)")
     registry.register_schema("median", "median(Tensor input, int? dim=None, bool keepdim=False) -> Any")
+
+    # New GROUP C ops for Tensor API alignment
+    registry.register_schema("logsumexp", "logsumexp(Tensor input, int dim, bool keepdim=False) -> Tensor")
+    registry.register_schema("trace", "trace(Tensor input) -> Tensor")
+    registry.register_schema("det", "det(Tensor input) -> Tensor")
+    registry.register_schema("matrix_power", "matrix_power(Tensor input, int n) -> Tensor")
+    registry.register_schema("dist", "dist(Tensor input, Tensor other, Any p=2) -> Tensor")
+    registry.register_schema("renorm", "renorm(Tensor input, Any p, int dim, Scalar maxnorm) -> Tensor")
+    registry.register_schema("nansum", "nansum(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("nanmean", "nanmean(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("argwhere", "argwhere(Tensor input) -> Tensor")
+    registry.register_schema("baddbmm", "baddbmm(Tensor input, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor")
+    registry.register_schema("cummin", "cummin(Tensor input, int dim) -> (Tensor, Tensor)")
