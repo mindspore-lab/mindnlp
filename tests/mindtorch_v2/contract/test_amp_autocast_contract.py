@@ -87,6 +87,18 @@ def test_autocast_unsupported_dtype_warns_and_disables():
             assert not mode._enabled
 
 
+def test_top_level_autocast_cache_api_shape_matches_torch():
+    import pytest
+
+    # torch.is_autocast_cache_enabled() takes no args.
+    with pytest.raises(TypeError):
+        torch.is_autocast_cache_enabled("cpu")
+
+    # torch.set_autocast_cache_enabled() takes exactly one bool arg.
+    with pytest.raises(TypeError):
+        torch.set_autocast_cache_enabled("cpu", True)
+
+
 def test_register_autocast_api_exists():
     import mindtorch_v2.library as library
 
