@@ -233,6 +233,18 @@ from .ops import (
     searchsorted,
     kthvalue,
     median,
+    # New GROUP C ops
+    logsumexp,
+    trace,
+    det,
+    matrix_power,
+    dist,
+    renorm,
+    nansum,
+    nanmean,
+    argwhere,
+    baddbmm,
+    cummin,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -493,3 +505,16 @@ registry.register("unique", "cpu", unique)
 registry.register("searchsorted", "cpu", searchsorted)
 registry.register("kthvalue", "cpu", kthvalue)
 registry.register("median", "cpu", median)
+
+# New GROUP C ops
+registry.register("logsumexp", "cpu", logsumexp, meta=meta_infer.infer_sum)
+registry.register("trace", "cpu", trace)  # Returns scalar
+registry.register("det", "cpu", det)  # Returns scalar or batch of scalars
+registry.register("matrix_power", "cpu", matrix_power, meta=meta_infer.infer_unary)
+registry.register("dist", "cpu", dist)  # Returns scalar
+registry.register("renorm", "cpu", renorm, meta=meta_infer.infer_unary)
+registry.register("nansum", "cpu", nansum, meta=meta_infer.infer_sum)
+registry.register("nanmean", "cpu", nanmean, meta=meta_infer.infer_sum)
+registry.register("argwhere", "cpu", argwhere)  # Returns 2D tensor
+registry.register("baddbmm", "cpu", baddbmm, meta=meta_infer.infer_binary)
+registry.register("cummin", "cpu", cummin)  # Returns namedtuple

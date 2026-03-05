@@ -38,7 +38,8 @@ __all__ = [
 
 def _cuda_available():
     try:
-        from .. import cuda as cuda_api
+        import importlib
+        cuda_api = importlib.import_module("mindtorch_v2.cuda")
     except Exception:
         return False
     return bool(getattr(cuda_api, "is_available", lambda: False)())

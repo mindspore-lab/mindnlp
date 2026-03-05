@@ -2151,3 +2151,161 @@ def median(a, dim=None, keepdim=False):
             _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
             _from_numpy(np.ascontiguousarray(med_idx.astype(np.int64)), int64_dtype, a.device),
         )
+
+
+# ---------------------------------------------------------------------------
+# Group 7: New math ops for Tensor API alignment
+# ---------------------------------------------------------------------------
+
+def logsumexp(a, dim, keepdim=False):
+    """Numerically stable logsumexp: log(sum(exp(x), dim))."""
+    arr = _to_numpy(a)
+    max_val = np.max(arr, axis=dim, keepdims=True)
+    exp_shifted = np.exp(arr - max_val)
+    sum_exp = np.sum(exp_shifted, axis=dim, keepdims=keepdim)
+    if keepdim:
+        out = np.log(sum_exp) + max_val
+    else:
+        out = np.log(sum_exp) + np.squeeze(max_val, axis=dim)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def trace(a):
+    """Sum of diagonal elements (2D only)."""
+    arr = _to_numpy(a)
+    if arr.ndim != 2:
+        raise RuntimeError(
+            f"trace: expected a matrix (2-D tensor), but got {arr.ndim}-D tensor"
+        )
+    out = np.trace(arr)
+    return _from_numpy(np.array(out, dtype=arr.dtype), a.dtype, a.device)
+
+
+def det(a):
+    """Determinant of a square matrix (or batch of square matrices)."""
+    arr = _to_numpy(a)
+    if arr.ndim < 2:
+        raise RuntimeError(f"det: input must be at least 2-D, got {arr.ndim}-D")
+    if arr.shape[-2] != arr.shape[-1]:
+        raise RuntimeError(
+            f"det: input must be a square matrix, got shape {arr.shape}"
+        )
+    out = np.linalg.det(arr.astype(np.float64))
+    return _from_numpy(np.ascontiguousarray(out).astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def matrix_power(a, n):
+    """Matrix raised to the integer power n."""
+    arr = _to_numpy(a)
+    if arr.ndim < 2:
+        raise RuntimeError(
+            f"matrix_power: input must be at least 2-D, got {arr.ndim}-D"
+        )
+    if arr.shape[-2] != arr.shape[-1]:
+        raise RuntimeError(
+            f"matrix_power: input must be a square matrix, got shape {arr.shape}"
+        )
+    out = np.linalg.matrix_power(arr, n)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def dist(a, b, p=2):
+    """p-norm distance between two tensors (flattened)."""
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b)
+    diff = a_np.ravel() - b_np.ravel()
+    out = np.linalg.norm(diff, ord=p)
+    return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def renorm(a, p, dim, maxnorm):
+    """Renormalize tensor: each sub-tensor along dim has norm <= maxnorm."""
+    arr = _to_numpy(a)
+    # Compute the norm along all axes except dim
+    norm = np.linalg.norm(arr, ord=p, axis=dim, keepdims=True)
+    # Scale: if norm > maxnorm, scale down; otherwise keep unchanged
+    scale = np.where(norm > maxnorm, maxnorm / (norm + 1e-7), 1.0)
+    out = arr * scale
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def nansum(a, dim=None, keepdim=False):
+    """Sum ignoring NaN values."""
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.nansum(arr)
+        return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        out = np.nansum(arr, axis=dim, keepdims=keepdim)
+        return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def nanmean(a, dim=None, keepdim=False):
+    """Mean ignoring NaN values."""
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.nanmean(arr)
+        return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        out = np.nanmean(arr, axis=dim, keepdims=keepdim)
+        return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def argwhere(a):
+    """Returns indices of non-zero elements as a 2D tensor (shape [N, ndim])."""
+    arr = _to_numpy(a)
+    out = np.argwhere(arr)
+    return _from_numpy(out.astype(np.int64), int64_dtype, a.device)
+
+
+def baddbmm(input, batch1, batch2, beta=1, alpha=1):
+    """Batch matrix-matrix product: beta * input + alpha * (batch1 @ batch2)."""
+    input_np = _to_numpy(input)
+    batch1_np = _to_numpy(batch1)
+    batch2_np = _to_numpy(batch2)
+
+    if batch1_np.ndim != 3 or batch2_np.ndim != 3:
+        raise RuntimeError("baddbmm: batch1 and batch2 must be 3-D tensors")
+
+    bmm_result = batch1_np @ batch2_np
+    out = beta * input_np + alpha * bmm_result
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def cummin(a, dim):
+    """Cumulative minimum along a dimension, returns (values, indices) namedtuple."""
+    arr = _to_numpy(a)
+    ndim = arr.ndim
+    if dim < 0:
+        dim = dim + ndim
+
+    values = np.minimum.accumulate(arr, axis=dim)
+
+    # Compute indices: for each position i along dim, index is where min first occurred
+    n = arr.shape[dim]
+    indices = np.zeros_like(arr, dtype=np.int64)
+
+    # Iterate over the dimension to compute the argmin up to each point
+    idx_shape = list(arr.shape)
+    idx_shape[dim] = 1
+    running_min = np.take(arr, [0], axis=dim)
+    running_idx = np.zeros(idx_shape, dtype=np.int64)
+
+    slc_base = [slice(None)] * ndim
+    for i in range(n):
+        slc = slc_base[:]
+        slc[dim] = slice(i, i + 1)
+        current = arr[tuple(slc)]
+        new_min_mask = current < running_min
+        running_idx = np.where(new_min_mask, i, running_idx)
+        running_min = np.minimum(running_min, current)
+        indices_slc = slc_base[:]
+        indices_slc[dim] = i
+        indices[tuple(indices_slc)] = running_idx.squeeze(axis=dim)
+
+    from collections import namedtuple
+    CumminResult = namedtuple("cummin", ["values", "indices"])
+    return CumminResult(
+        _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(indices), int64_dtype, a.device),
+    )
