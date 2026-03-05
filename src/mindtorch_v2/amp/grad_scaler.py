@@ -1,87 +1,127 @@
-from .._functional import isnan, isinf, any as _any
+from collections import defaultdict
+from enum import Enum
+
+class OptState(Enum):
+    READY = 0
+    UNSCALED = 1
+    STEPPED = 2
+
+
+def _refresh_per_optimizer_state():
+    return {"stage": OptState.READY, "found_inf_per_device": {}}
 
 
 class GradScaler:
-    """Gradient scaler for mixed precision training.
-
-    Scales loss to prevent gradient underflow in fp16,
-    then unscales gradients before optimizer step.
-    """
-
     def __init__(
         self,
+        device="cuda",
         init_scale=2.0 ** 16,
         growth_factor=2.0,
         backoff_factor=0.5,
         growth_interval=2000,
         enabled=True,
     ):
+        if isinstance(device, str):
+            self._device = device
+        else:
+            # Back-compat if device passed as torch.device-like
+            self._device = getattr(device, "type", str(device))
         self._enabled = enabled
-        self._scale = float(init_scale)
+        self._init_scale = float(init_scale)
+        self._scale = None
         self._growth_factor = growth_factor
         self._backoff_factor = backoff_factor
         self._growth_interval = growth_interval
-        self._growth_tracker = 0
+        self._init_growth_tracker = 0
+        self._growth_tracker = None
         self._found_inf = False
+        self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)
 
-    def scale(self, loss):
-        """Scale loss tensor by the current scale factor."""
+    def _check_scale_growth_tracker(self, funcname):
+        fix = (
+            "This may indicate your script did not use scaler.scale(loss or outputs) "
+            "earlier in the iteration."
+        )
+        assert self._scale is not None, f"Attempted {funcname} but _scale is None.  " + fix
+        assert (
+            self._growth_tracker is not None
+        ), f"Attempted {funcname} but _growth_tracker is None.  " + fix
+        return self._scale, self._growth_tracker
+
+    def _lazy_init_scale_growth_tracker(self):
+        if self._scale is None:
+            self._scale = self._init_scale
+        if self._growth_tracker is None:
+            self._growth_tracker = self._init_growth_tracker
+
+    def scale(self, outputs):
         if not self._enabled:
-            return loss
+            return outputs
         from .._creation import tensor
-        scale_tensor = tensor(self._scale)
-        return loss * scale_tensor
+        self._lazy_init_scale_growth_tracker()
+        return outputs * tensor(self._scale)
+
+    def _params_for_optimizer(self, optimizer):
+        if hasattr(optimizer, "param_groups"):
+            params = []
+            for group in optimizer.param_groups:
+                params.extend(group["params"])
+            return params
+        return optimizer.params
 
     def unscale_(self, optimizer):
-        """Unscale gradients by dividing by the scale factor. Detects inf/nan."""
         if not self._enabled:
             return
 
-        from .._creation import tensor
-        inv_scale = tensor(1.0 / self._scale)
+        self._check_scale_growth_tracker("unscale_")
+
+        optimizer_state = self._per_optimizer_states[id(optimizer)]
+        if optimizer_state["stage"] is OptState.UNSCALED:
+            raise RuntimeError("unscale_() has already been called on this optimizer since the last update().")
+        if optimizer_state["stage"] is OptState.STEPPED:
+            raise RuntimeError("unscale_() is being called after step().")
+
+        inv_scale = 1.0 / self._scale
         self._found_inf = False
 
-        # Support both param_groups (PyTorch-style) and params (mindtorch-style)
-        if hasattr(optimizer, 'param_groups'):
-            params_to_unscale = []
-            for param_group in optimizer.param_groups:
-                params_to_unscale.extend(param_group['params'])
-        else:
-            params_to_unscale = optimizer.params
-
-        for p in params_to_unscale:
-            if hasattr(p, 'grad') and p.grad is not None:
+        for p in self._params_for_optimizer(optimizer):
+            if hasattr(p, "grad") and p.grad is not None:
                 p.grad = p.grad * inv_scale
-                # Check for inf/nan
-                if _any(isnan(p.grad)) or _any(isinf(p.grad)):
+                # Basic numeric checks using Tensor API to avoid import cycles.
+                if p.grad.isnan().any() or p.grad.isinf().any():
                     self._found_inf = True
 
-    def step(self, optimizer, *args, **kwargs):
-        """Step the optimizer, skipping if inf/nan gradients were found.
+        optimizer_state["found_inf_per_device"] = {self._device: 1.0 if self._found_inf else 0.0}
+        optimizer_state["stage"] = OptState.UNSCALED
 
-        If unscale_ has not been called, it will be called first.
-        """
+    def step(self, optimizer, *args, **kwargs):
         if not self._enabled:
             return optimizer.step(*args, **kwargs)
 
-        # Auto-unscale if not already done
-        if not hasattr(self, '_found_inf') or self._found_inf is None:
+        self._check_scale_growth_tracker("step")
+
+        optimizer_state = self._per_optimizer_states[id(optimizer)]
+        if optimizer_state["stage"] is OptState.STEPPED:
+            raise RuntimeError("step() has already been called since the last update().")
+
+        if optimizer_state["stage"] is OptState.READY:
             self.unscale_(optimizer)
 
+        retval = None
         if not self._found_inf:
-            return optimizer.step(*args, **kwargs)
-        # else: skip step due to inf/nan grads
+            retval = optimizer.step(*args, **kwargs)
+        optimizer_state["stage"] = OptState.STEPPED
+        return retval
 
     def update(self, new_scale=None):
-        """Update the scale factor based on whether inf/nan was found."""
         if not self._enabled:
             return
+
+        self._check_scale_growth_tracker("update")
 
         if new_scale is not None:
             self._scale = float(new_scale)
-            return
-
-        if self._found_inf:
+        elif self._found_inf:
             self._scale *= self._backoff_factor
             self._growth_tracker = 0
         else:
@@ -90,31 +130,35 @@ class GradScaler:
                 self._scale *= self._growth_factor
                 self._growth_tracker = 0
 
-        # Reset for next iteration
         self._found_inf = False
+        self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)
 
     def get_scale(self):
-        """Return the current scale factor."""
+        if not self._enabled:
+            return 1.0
+        if self._scale is None:
+            return self._init_scale
         return self._scale
 
     def is_enabled(self):
-        """Return whether the scaler is enabled."""
         return self._enabled
 
     def state_dict(self):
-        """Return scaler state as a dict."""
+        if not self._enabled:
+            return {}
         return {
-            "scale": self._scale,
+            "scale": self.get_scale(),
             "growth_factor": self._growth_factor,
             "backoff_factor": self._backoff_factor,
             "growth_interval": self._growth_interval,
-            "growth_tracker": self._growth_tracker,
+            "_growth_tracker": self._growth_tracker if self._growth_tracker is not None else self._init_growth_tracker,
         }
 
     def load_state_dict(self, state_dict):
-        """Load scaler state from a dict."""
+        if not self._enabled:
+            return
         self._scale = state_dict["scale"]
         self._growth_factor = state_dict["growth_factor"]
         self._backoff_factor = state_dict["backoff_factor"]
         self._growth_interval = state_dict["growth_interval"]
-        self._growth_tracker = state_dict["growth_tracker"]
+        self._growth_tracker = state_dict["_growth_tracker"]

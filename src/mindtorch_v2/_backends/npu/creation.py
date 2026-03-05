@@ -135,6 +135,29 @@ def _device_index(device):
     return (device.index if hasattr(device, "index") else None) or 0
 
 
+def _is_310b_profile():
+    return npu_runtime.soc_profile() == "310b"
+
+
+def _linspace_fallback_npu(start, end, steps, dtype, device):
+    from . import ops as npu_ops
+
+    steps = int(steps)
+    shape = (steps,)
+    if steps == 0:
+        return empty_create(shape, dtype=dtype, device=device, requires_grad=False)
+    if steps == 1:
+        return full_create(shape, start, dtype=dtype, device=device)
+
+    # Build on NPU without calling aclnn.arange (keeps linspace single-op test semantics).
+    one = ones_create(shape, dtype=dtype, device=device)
+    idx = npu_ops.cumsum(one, dim=0)
+    idx = npu_ops.sub(idx, 1)
+    step = (float(end) - float(start)) / float(steps - 1)
+    idx = npu_ops.mul(idx, step)
+    return npu_ops.add(idx, float(start))
+
+
 def arange_create(start, end, step=1, dtype=None, device=None):
     dtype = _resolve_dtype(dtype)
     if step == 0:
@@ -170,6 +193,10 @@ def linspace_create(start, end, steps, dtype=None, device=None):
     if steps < 0:
         raise ValueError("number of steps must be non-negative")
     dtype = _resolve_dtype(dtype)
+
+    if _is_310b_profile():
+        return _linspace_fallback_npu(start, end, steps, dtype=dtype, device=device)
+
     if not aclnn.linspace_symbols_ok():
         raise RuntimeError("aclnnLinspace not available")
 
@@ -194,7 +221,7 @@ def logspace_create(start, end, steps, dtype=None, device=None):
     return npu_ops.pow(base, linear)
 
 
-def eye_create(n, m=None, dtype=None, device=None):
+def eye_create(n, m=None, dtype=None, device=None, out=None):
     if m is None:
         m = n
     if n < 0:
@@ -209,6 +236,12 @@ def eye_create(n, m=None, dtype=None, device=None):
     stride = _contiguous_stride(shape)
     runtime = npu_runtime.get_runtime(_device_index(device))
     stream = npu_state.current_stream(_device_index(device))
+
+    if out is not None:
+        out_storage = out.storage()
+        aclnn.eye(n, m, out_storage.data_ptr(), out.shape, out.stride, out.dtype, runtime, stream=stream.stream)
+        return out
+
     size = int(n) * int(m)
     itemsize = np.dtype(npu_runtime._dtype_to_numpy(dtype)).itemsize
     ptr = npu_runtime._alloc_device(max(size, 1) * itemsize, runtime=runtime)

@@ -48,6 +48,10 @@ class OpRegistry:
 
     def register_kernel(self, name, key, fn):
         entry = self._entry(name)
+        if entry.schema_obj is None:
+            raise RuntimeError(
+                f"schema must be registered before kernel registration for op {entry.name}"
+            )
         entry.kernels[key] = fn
         return entry
 
@@ -113,7 +117,6 @@ def _register_global_fallthroughs():
         DispatchKey.AutogradXPU,
         DispatchKey.AutogradMeta,
         DispatchKey.Python,
-        DispatchKey.Autocast,
         DispatchKey.CompositeImplicitAutograd,
         DispatchKey.CompositeExplicitAutograd,
         DispatchKey.PrivateUse1,
@@ -129,16 +132,56 @@ _register_global_fallthroughs()
 def resolve_dispatch_key(device):
     if isinstance(device, DispatchKey):
         return device
+
+    label = None
     if hasattr(device, "type"):
-        if device.type == "meta":
-            return DispatchKey.Meta
-        if device.type == "npu":
-            return DispatchKey.NPU
+        label = str(device.type).lower()
+    elif isinstance(device, str):
+        label = device.lower()
+
+    if label == "cpu":
         return DispatchKey.CPU
-    if device == "meta":
-        return DispatchKey.Meta
-    if device == "npu":
+    if label == "npu":
         return DispatchKey.NPU
-    if device == "cpu":
-        return DispatchKey.CPU
-    return DispatchKey.CPU
+    if label == "meta":
+        return DispatchKey.Meta
+    if label == "cuda":
+        return DispatchKey.PrivateUse1
+
+    raise ValueError(f"unsupported registration device: {device}")
+
+
+_DISPATCH_KEY_STRING_MAP = {
+    "CPU": DispatchKey.CPU,
+    "NPU": DispatchKey.NPU,
+    "CUDA": DispatchKey.PrivateUse1,
+    "PrivateUse1": DispatchKey.PrivateUse1,
+    "Meta": DispatchKey.Meta,
+    "Autograd": DispatchKey.Autograd,
+    "AutogradCPU": DispatchKey.AutogradCPU,
+    "AutogradNPU": DispatchKey.AutogradNPU,
+    "AutogradCUDA": DispatchKey.AutogradXPU,
+    "AutogradPrivateUse1": DispatchKey.AutogradXPU,
+    "AutogradMeta": DispatchKey.AutogradMeta,
+    "AutogradOther": DispatchKey.AutogradOther,
+    "AutogradXPU": DispatchKey.AutogradXPU,
+    "CompositeImplicitAutograd": DispatchKey.CompositeImplicitAutograd,
+    "CompositeExplicitAutograd": DispatchKey.CompositeExplicitAutograd,
+    "BackendSelect": DispatchKey.BackendSelect,
+    "Functionalize": DispatchKey.Functionalize,
+    "ADInplaceOrView": DispatchKey.ADInplaceOrView,
+}
+
+
+def dispatch_key_from_string(name):
+    """Map a dispatch key string to a DispatchKey enum value.
+
+    Raises ValueError if the string is not recognized.
+    """
+    key = _DISPATCH_KEY_STRING_MAP.get(name)
+    if key is None:
+        raise ValueError(
+            f"Unknown dispatch key string: {name!r}. "
+            f"Valid keys: {', '.join(sorted(_DISPATCH_KEY_STRING_MAP))}"
+        )
+    return key

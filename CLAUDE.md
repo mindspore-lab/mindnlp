@@ -121,6 +121,15 @@ push the current changes to origin and then pull latest from ms master."
 - All fixes must be generic PyTorch API implementations, not transformers accommodations
 - If a test fails due to transformers-specific behavior, document it as "not supported" rather than adding special cases
 
+### Core Design Principle: mindtorch_v2 is Fully Independent
+
+**CRITICAL**: mindtorch_v2 is completely independent of MindSpore and PyTorch. It must **NEVER** import or depend on either.
+
+- **NEVER** import `mindspore`, `mindspore.ops`, `mindspore.mint`, or any mindspore submodule in mindtorch_v2 code
+- **NEVER** import `torch` or any PyTorch module in mindtorch_v2 code
+- All computation must be implemented via the internal dispatch mechanism and ACLNN/ACL C bindings (ctypes)
+- The only external dependencies allowed are: `numpy`, `ctypes`, and the Python standard library
+
 ### For Test Runner Agent
 - Only modify files in `./src/mindnlp/`, `./src/mindtorch/`, or `./src/mindtorch_v2/`
 - **NEVER** modify test files in `./tests/transformers/`
@@ -212,60 +221,56 @@ python tests/run_test.py -vs tests/transformers/tests/models/bert/test_modeling_
 
 ## mindtorch_v2 Development Rules
 
-### CRITICAL: Never Use mindspore.ops or mindspore.mint Directly
+### CRITICAL: mindtorch_v2 Has Zero External Dependencies
 
-In mindtorch_v2 code, NEVER use `mindspore.ops.*` or `mindspore.mint.*` directly. Only use PyBoost primitives or gen_ops_prim because they support `set_device()` for our dispatch mechanism.
+mindtorch_v2 is fully independent. It does NOT depend on MindSpore or PyTorch.
 
-**Correct Pattern**:
-```python
-# In pyboost_cpu.py - import and instantiate primitives
-from mindspore.ops.auto_generate.gen_ops_prim import Maximum, Minimum
-maximum_op = Maximum().set_device('CPU')
-minimum_op = Minimum().set_device('CPU')
-
-# In cpu.py - register ops using the primitives
-from .pyboost_cpu import maximum_op, _get_ms_data, _wrap_result
-
-@register_op("maximum", DispatchKey.Backend_CPU)
-def maximum_cpu(a, b):
-    return _wrap_result(maximum_op(_get_ms_data(a), _get_ms_data(b)))
-
-# In _functional.py - use dispatch
-def maximum(input, other):
-    from ._dispatch import dispatch
-    return dispatch("maximum", input, other)
-```
-
-**Wrong Pattern**:
-```python
-# NEVER do this in mindtorch_v2:
-result = mindspore.ops.maximum(a, b)  # NO!
-result = mindspore.mint.maximum(a, b)  # NO!
-```
-
-**Allowed Exceptions**:
-- Importing primitive classes from `mindspore.ops.auto_generate.gen_ops_prim` is OK
-- Using `mindspore.Tensor()` for data conversion is OK
-- Code in stubs/ for compatibility layers may use mindspore.ops if needed
-- Creation functions (zeros, ones, etc.) may use `mindspore.ops.zeros()` for simplicity
+- **NEVER** import `mindspore`, `mindspore.ops`, `mindspore.mint`, `mindspore.Tensor`, or any mindspore module
+- **NEVER** import `torch` or any PyTorch module
+- **NEVER** use PyBoost primitives or `gen_ops_prim` — these are MindSpore APIs
+- All NPU computation is done via direct ACLNN C library calls through `ctypes`
+- All CPU computation is done via `numpy` or pure Python
+- The only allowed dependencies are: `numpy`, `ctypes`, and the Python standard library
 
 ### CRITICAL: Kernel Implementation Priority
 
 For GPU/NPU devices, NEVER use numpy for computation. Follow this priority order:
 
-1. **PyBoost kernels** (gen_ops_prim with `.set_device()`) - Best performance, device-aware
-2. **Legacy primitives** (mindspore.nn.Cell based) - Fallback for missing PyBoost ops
-3. **Composite of existing kernels** - Build complex ops from simpler dispatched ops
-4. **NumPy fallback** - ONLY for CPU backend when no MindSpore kernel exists
+1. **ACLNN kernels** (direct ctypes bindings to `libopapi.so`) - For NPU/Ascend operations
+2. **Composite of existing kernels** - Build complex ops from simpler dispatched ops
+3. **NumPy fallback** - ONLY for CPU backend
+
+### CRITICAL: NPU Must Prefer Large ACLNN Kernels Over Composite Small Ops
+
+**MANDATORY**: When an ACLNN large kernel exists for an operation, you **MUST** use it directly instead of compositing multiple small ops via dispatch.
+
+- **Check `_backends/npu/aclnn.py` FIRST** before implementing any NPU op as a composite
+- If `aclnn<OpName>` bindings exist (or can be added from the ACLNN C library headers), use them
+- Composite small-op implementations are **only acceptable** when no ACLNN large kernel is available
+- After merging any PR that adds composite NPU ops, a **follow-up PR must be created** to replace them with ACLNN large kernels wherever possible
+- This rule exists because compositing small ops on NPU incurs significant kernel launch overhead and prevents hardware-level fusion
+
+**Example — DO this:**
+```python
+# Use the single ACLNN large kernel
+aclnn.mean(input_ptr, out_ptr, shape, stride, dtype, dims, keepdim, ...)
+```
+
+**Example — Do NOT do this (when large kernel exists):**
+```python
+# BAD: compositing small ops when aclnnMean is available
+sum_result = dispatch("sum", "npu", a, dim=dim, keepdim=keepdim)
+count = tensor(float(n), device=a.device)
+result = dispatch("div", "npu", sum_result, count)
+```
 
 ### Ascend NPU Backend Migration Guide
 
 When adding support for a new device (e.g., migrating from CPU to Ascend):
 
-1. **Create `pyboost_<device>.py`**: Instantiate primitives with `.set_device('<Device>')`
-2. **Create `<device>.py`**: Register ops using `@register_op("op_name", DispatchKey.Backend_<Device>)`
-3. **Update `configs.py`**: Detect device from MindSpore context
-4. **Update `__init__.py`**: Conditionally import backend
+1. **Create `<device>.py`**: Register ops using `@register_op("op_name", DispatchKey.Backend_<Device>)`
+2. **Update `configs.py`**: Detect device from MindSpore context
+3. **Update `__init__.py`**: Conditionally import backend
 
 **Device naming convention**:
 - Use `"npu"` as device.type (matches torch_npu convention)

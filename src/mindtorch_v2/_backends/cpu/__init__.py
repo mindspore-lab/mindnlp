@@ -13,6 +13,8 @@ from .creation import (
     range_create,
     randn_create,
     rand_create,
+    randint_create,
+    randperm_create,
     tensor_create,
     zeros_create,
 )
@@ -20,9 +22,12 @@ from .ops import (
     add,
     matmul,
     mul,
+    div,
+    true_divide,
     relu,
     sum_,
     mean_,
+    std_,
     all_,
     any_,
     argmax,
@@ -57,10 +62,24 @@ from .ops import (
     allclose,
     isclose,
     equal,
+    eq,
+    ne,
+    lt,
+    le,
+    gt,
+    ge,
     add_,
     mul_,
     relu_,
     zero_,
+    uniform_,
+    normal_,
+    fill_,
+    clamp_,
+    copy_,
+    erfinv_,
+    sub_,
+    div_,
     contiguous,
     abs,
     neg,
@@ -95,6 +114,7 @@ from .ops import (
     erf,
     erfc,
     softplus,
+    gelu,
     silu,
     leaky_relu,
     elu,
@@ -143,14 +163,82 @@ from .ops import (
     setitem,
     batch_norm,
     group_norm,
+    layer_norm,
     dropout,
     pad,
     softmax,
     log_softmax,
+    linalg_qr,
+    narrow,
+    select,
+    expand,
+    masked_fill,
+    masked_fill_,
+    index_put_,
+    index_put,
+    index_copy_,
+    index_fill_,
+    index_add_,
+    scatter_,
+    scatter_add_,
+    masked_scatter_,
+    unfold,
+    embedding,
+    var_,
+    norm_,
+    prod_,
+    floor_divide,
+    rms_norm,
+    conv2d,
+    conv1d,
+    conv_transpose2d,
+    conv_transpose1d,
+    max_pool2d,
+    avg_pool2d,
+    adaptive_avg_pool2d,
+    logical_and,
+    logical_or,
+    logical_not,
+    # New math ops
+    sub,
+    log1p,
+    expm1,
+    reciprocal,
+    maximum,
+    minimum,
+    dot,
+    outer,
+    inner,
+    mv,
+    cross,
+    tensordot,
+    einsum,
+    # New logical ops
+    logical_xor,
+    # New bitwise ops
+    bitwise_and,
+    bitwise_or,
+    bitwise_xor,
+    bitwise_not,
+    # New random in-place op
+    randint_,
+    # New shape ops
+    flatten,
+    unflatten,
+    broadcast_to,
+    movedim,
+    diagonal,
+    # New search ops
+    unique,
+    searchsorted,
+    kthvalue,
+    median,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
 registry.register("mul", "cpu", mul, meta=meta_infer.infer_binary)
+registry.register("div", "cpu", div, meta=meta_infer.infer_binary)
+registry.register("true_divide", "cpu", true_divide, meta=meta_infer.infer_binary)
 registry.register("matmul", "cpu", matmul, meta=meta_infer.infer_matmul)
 registry.register("relu", "cpu", relu, meta=meta_infer.infer_unary)
 registry.register("abs", "cpu", abs, meta=meta_infer.infer_unary)
@@ -235,10 +323,13 @@ registry.register("setitem", "cpu", setitem)
 registry.register("contiguous", "cpu", contiguous, meta=meta_infer.infer_unary)
 registry.register("sum", "cpu", sum_, meta=meta_infer.infer_sum)
 registry.register("mean", "cpu", mean_, meta=meta_infer.infer_sum)
+registry.register("std", "cpu", std_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)
+registry.register("layer_norm", "cpu", layer_norm, meta=meta_infer.infer_unary)
 registry.register("dropout", "cpu", dropout, meta=meta_infer.infer_unary)
+registry.register("gelu", "cpu", gelu, meta=meta_infer.infer_unary)
 registry.register("pad", "cpu", pad, meta=meta_infer.infer_unary)
 registry.register("softmax", "cpu", softmax, meta=meta_infer.infer_unary)
 registry.register("log_softmax", "cpu", log_softmax, meta=meta_infer.infer_unary)
@@ -276,13 +367,29 @@ registry.register("unbind", "cpu", unbind, meta=meta_infer.infer_unbind)
 registry.register("allclose", "cpu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "cpu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "cpu", equal, meta=meta_infer.infer_reduce_bool)
+registry.register("eq", "cpu", eq, meta=meta_infer.infer_binary_bool)
+registry.register("ne", "cpu", ne, meta=meta_infer.infer_binary_bool)
+registry.register("lt", "cpu", lt, meta=meta_infer.infer_binary_bool)
+registry.register("le", "cpu", le, meta=meta_infer.infer_binary_bool)
+registry.register("gt", "cpu", gt, meta=meta_infer.infer_binary_bool)
+registry.register("ge", "cpu", ge, meta=meta_infer.infer_binary_bool)
 registry.register("add_", "cpu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "cpu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "cpu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "cpu", zero_, meta=meta_infer.infer_unary)
+registry.register("uniform_", "cpu", uniform_, meta=meta_infer.infer_unary)
+registry.register("normal_", "cpu", normal_, meta=meta_infer.infer_unary)
+registry.register("fill_", "cpu", fill_, meta=meta_infer.infer_unary)
+registry.register("clamp_", "cpu", clamp_, meta=meta_infer.infer_unary)
+registry.register("copy_", "cpu", copy_, meta=meta_infer.infer_unary)
+registry.register("erfinv_", "cpu", erfinv_, meta=meta_infer.infer_unary)
+registry.register("sub_", "cpu", sub_, meta=meta_infer.infer_binary)
 registry.register("reshape", "cpu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "cpu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "cpu", view_backend.transpose, meta=meta_infer.infer_transpose)
+registry.register("squeeze", "cpu", view_backend.squeeze, meta=meta_infer.infer_view)
+registry.register("unsqueeze", "cpu", view_backend.unsqueeze, meta=meta_infer.infer_view)
+registry.register("permute", "cpu", view_backend.permute, meta=meta_infer.infer_view)
 registry.register("to", "cpu", convert_backend.to_device)
 
 registry.register("tensor", "cpu", tensor_create)
@@ -297,3 +404,92 @@ registry.register("eye", "cpu", eye_create)
 registry.register("range", "cpu", range_create)
 registry.register("randn", "cpu", randn_create)
 registry.register("rand", "cpu", rand_create)
+registry.register("randint", "cpu", randint_create)
+registry.register("randperm", "cpu", randperm_create)
+registry.register("linalg_qr", "cpu", linalg_qr)
+
+# Tensor indexing / selection ops
+registry.register("narrow", "cpu", narrow)
+registry.register("select", "cpu", select)
+registry.register("expand", "cpu", expand)
+registry.register("masked_fill", "cpu", masked_fill, meta=meta_infer.infer_unary)
+registry.register("masked_fill_", "cpu", masked_fill_, meta=meta_infer.infer_unary)
+registry.register("index_put_", "cpu", index_put_)
+registry.register("index_put", "cpu", index_put)
+registry.register("index_copy_", "cpu", index_copy_)
+registry.register("index_fill_", "cpu", index_fill_)
+registry.register("index_add_", "cpu", index_add_)
+registry.register("scatter_", "cpu", scatter_)
+registry.register("scatter_add_", "cpu", scatter_add_)
+registry.register("masked_scatter_", "cpu", masked_scatter_)
+registry.register("unfold", "cpu", unfold)
+
+registry.register("var", "cpu", var_, meta=meta_infer.infer_sum)
+registry.register("norm", "cpu", norm_, meta=meta_infer.infer_sum)
+registry.register("prod", "cpu", prod_, meta=meta_infer.infer_sum)
+registry.register("floor_divide", "cpu", floor_divide, meta=meta_infer.infer_binary)
+registry.register("rms_norm", "cpu", rms_norm, meta=meta_infer.infer_unary)
+
+# Conv operations
+registry.register("conv2d", "cpu", conv2d)
+registry.register("conv1d", "cpu", conv1d)
+registry.register("conv_transpose2d", "cpu", conv_transpose2d)
+registry.register("conv_transpose1d", "cpu", conv_transpose1d)
+
+# Pooling operations
+registry.register("max_pool2d", "cpu", max_pool2d)
+registry.register("avg_pool2d", "cpu", avg_pool2d)
+registry.register("adaptive_avg_pool2d", "cpu", adaptive_avg_pool2d)
+
+registry.register("embedding", "cpu", embedding)
+
+# ---------------------------------------------------------------------------
+# Registrations for new ops
+# ---------------------------------------------------------------------------
+
+# Math ops
+registry.register("sub", "cpu", sub, meta=meta_infer.infer_binary)
+registry.register("log1p", "cpu", log1p, meta=meta_infer.infer_unary)
+registry.register("expm1", "cpu", expm1, meta=meta_infer.infer_unary)
+registry.register("reciprocal", "cpu", reciprocal, meta=meta_infer.infer_unary)
+registry.register("maximum", "cpu", maximum, meta=meta_infer.infer_binary)
+registry.register("minimum", "cpu", minimum, meta=meta_infer.infer_binary)
+registry.register("dot", "cpu", dot, meta=meta_infer.infer_dot)
+registry.register("outer", "cpu", outer, meta=meta_infer.infer_outer)
+registry.register("inner", "cpu", inner, meta=meta_infer.infer_binary)
+registry.register("mv", "cpu", mv, meta=meta_infer.infer_binary)
+registry.register("cross", "cpu", cross, meta=meta_infer.infer_binary)
+registry.register("tensordot", "cpu", tensordot)
+registry.register("einsum", "cpu", einsum)
+
+# Logical ops
+registry.register("logical_and", "cpu", logical_and, meta=meta_infer.infer_binary_bool)
+registry.register("logical_or", "cpu", logical_or, meta=meta_infer.infer_binary_bool)
+registry.register("logical_not", "cpu", logical_not, meta=meta_infer.infer_unary_bool)
+
+# In-place ops
+registry.register("div_", "cpu", div_, meta=meta_infer.infer_binary)
+
+registry.register("logical_xor", "cpu", logical_xor, meta=meta_infer.infer_binary_bool)
+
+# Bitwise ops
+registry.register("bitwise_and", "cpu", bitwise_and, meta=meta_infer.infer_binary)
+registry.register("bitwise_or", "cpu", bitwise_or, meta=meta_infer.infer_binary)
+registry.register("bitwise_xor", "cpu", bitwise_xor, meta=meta_infer.infer_binary)
+registry.register("bitwise_not", "cpu", bitwise_not, meta=meta_infer.infer_unary)
+
+# Random in-place op
+registry.register("randint_", "cpu", randint_, meta=meta_infer.infer_unary)
+
+# Shape ops
+registry.register("flatten", "cpu", flatten, meta=meta_infer.infer_flatten)
+registry.register("unflatten", "cpu", unflatten, meta=meta_infer.infer_unflatten)
+registry.register("broadcast_to", "cpu", broadcast_to, meta=meta_infer.infer_broadcast_to)
+registry.register("movedim", "cpu", movedim, meta=meta_infer.infer_movedim)
+registry.register("diagonal", "cpu", diagonal, meta=meta_infer.infer_diagonal)
+
+# Search ops (no meta — output shape is data-dependent or returns tuples)
+registry.register("unique", "cpu", unique)
+registry.register("searchsorted", "cpu", searchsorted)
+registry.register("kthvalue", "cpu", kthvalue)
+registry.register("median", "cpu", median)

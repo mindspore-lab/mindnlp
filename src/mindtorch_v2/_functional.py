@@ -268,8 +268,16 @@ def true_divide(a, b):
     return dispatch("true_divide", a.device.type, a, b)
 
 
-def mean(a, dim=None, keepdim=False, *, dtype=None):
+def mean(a, dim=None, keepdim=False, *, dtype=None, axis=None):
+    if axis is not None:
+        dim = axis
     return dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def std(a, dim=None, keepdim=False, unbiased=True, *, axis=None):
+    if axis is not None:
+        dim = axis
+    return dispatch("std", a.device.type, a, dim=dim, keepdim=keepdim, unbiased=unbiased)
 
 
 def sinh(a):
@@ -350,6 +358,22 @@ def repeat_interleave(a, repeats, dim=None):
 
 def tile(a, dims):
     return dispatch("tile", a.device.type, a, dims)
+
+
+def flatten(input, start_dim=0, end_dim=-1):
+    return input.flatten(start_dim, end_dim)
+
+
+def logical_and(a, b):
+    return dispatch("logical_and", a.device.type, a, b)
+
+
+def logical_or(a, b):
+    return dispatch("logical_or", a.device.type, a, b)
+
+
+def logical_not(a):
+    return dispatch("logical_not", a.device.type, a)
 
 
 
@@ -516,7 +540,7 @@ def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right
 
 
 def block_diag(*tensors):
-    return dispatch("block_diag", tensors[0].device.type, *tensors)
+    return dispatch("block_diag", tensors[0].device.type, tensors)
 
 
 def tril(a, diagonal=0):
@@ -532,7 +556,7 @@ def diag(a, diagonal=0):
 
 
 def cartesian_prod(*tensors):
-    return dispatch("cartesian_prod", tensors[0].device.type, *tensors)
+    return dispatch("cartesian_prod", tensors[0].device.type, tensors)
 
 
 def chunk(a, chunks, dim=0):
@@ -601,14 +625,46 @@ def equal(a, b):
     return dispatch("equal", a.device.type, a, b)
 
 
+def _compare_dispatch(op_name, a, b):
+    if not hasattr(a, "device"):
+        raise TypeError(f"'{op_name}' not supported between instances of '{type(a).__name__}' and '{type(b).__name__}'")
+    if not hasattr(b, "device") and not isinstance(b, (int, float, bool)):
+        raise TypeError(f"'{op_name}' not supported between instances of 'Tensor' and '{type(b).__name__}'")
+    return dispatch(op_name, a.device.type, a, b)
+
+
+def eq(a, b):
+    return _compare_dispatch("eq", a, b)
+
+
+def ne(a, b):
+    return _compare_dispatch("ne", a, b)
+
+
+def lt(a, b):
+    return _compare_dispatch("lt", a, b)
+
+
+def le(a, b):
+    return _compare_dispatch("le", a, b)
+
+
+def gt(a, b):
+    return _compare_dispatch("gt", a, b)
+
+
+def ge(a, b):
+    return _compare_dispatch("ge", a, b)
+
+
 def logspace(start, end, steps, dtype=None, device=None):
     dev = _as_device(device)
     return dispatch("logspace", dev, start, end, steps, dtype=dtype)
 
 
-def eye(n, m=None, dtype=None, device=None):
+def eye(n, m=None, dtype=None, device=None, out=None):
     dev = _as_device(device)
-    return dispatch("eye", dev, n, m, dtype=dtype)
+    return dispatch("eye", dev, n, m, dtype=dtype, out=out)
 
 
 def range(start, end, step=1, dtype=None, device=None):
@@ -625,7 +681,9 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     return dispatch("tensor", dev, data, dtype=dtype, requires_grad=requires_grad)
 
 
-def zeros(shape, *, dtype=None, device=None, memory_format=None):
+def zeros(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
     dev = _as_device(device)
     return dispatch("zeros", dev, shape, dtype=dtype, memory_format=memory_format)
 
@@ -638,12 +696,16 @@ def zeros_like(input, *, dtype=None, device=None, memory_format=None):
     return zeros(input.shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def ones(shape, *, dtype=None, device=None, memory_format=None):
+def ones(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
     dev = _as_device(device)
     return dispatch("ones", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
-def empty(shape, *, dtype=None, device=None, memory_format=None):
+def empty(*shape, dtype=None, device=None, memory_format=None):
+    if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
     dev = _as_device(device)
     return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
@@ -662,6 +724,16 @@ def rand(*shape, dtype=None, device=None, memory_format=None):
     return dispatch("rand", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
+def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False):
+    dev = _as_device(device)
+    return dispatch("randint", dev, low, high=high, size=size, dtype=dtype, requires_grad=requires_grad)
+
+
+def randperm(n, *, dtype=None, device=None, requires_grad=False):
+    dev = _as_device(device)
+    return dispatch("randperm", dev, n, dtype=dtype, requires_grad=requires_grad)
+
+
 def arange(start, end=None, step=1, dtype=None, device=None):
     dev = _as_device(device)
     if end is None:
@@ -674,7 +746,18 @@ def linspace(start, end, steps, dtype=None, device=None):
     return dispatch("linspace", dev, start, end, steps, dtype=dtype)
 
 
-def full(shape, fill_value, dtype=None, device=None):
+def full(*args, dtype=None, device=None):
+    if len(args) >= 2 and not isinstance(args[-1], (tuple, list, int)):
+        # full(shape, fill_value) or full(d1, d2, ..., fill_value)
+        *shape_args, fill_value = args
+    elif len(args) >= 2:
+        *shape_args, fill_value = args
+    else:
+        raise TypeError("full() requires at least a shape and fill_value")
+    if len(shape_args) == 1 and isinstance(shape_args[0], (tuple, list)):
+        shape = shape_args[0]
+    else:
+        shape = tuple(shape_args)
     dev = _as_device(device)
     return dispatch("full", dev, shape, fill_value, dtype=dtype)
 
@@ -691,6 +774,294 @@ def to(a, device=None, dtype=None, non_blocking=False, copy=False, memory_format
         memory_format=memory_format,
     )
 
+
+
+def linalg_qr(a, mode='reduced'):
+    return dispatch("linalg_qr", a.device.type, a, mode)
+
+
+# ---------------------------------------------------------------------------
+# Tensor indexing methods
+# ---------------------------------------------------------------------------
+
+def narrow(a, dim, start, length):
+    return dispatch("narrow", a.device.type, a, dim, start, length)
+
+
+def select(a, dim, index):
+    return dispatch("select", a.device.type, a, dim, index)
+
+
+def expand(a, *sizes):
+    if len(sizes) == 1 and isinstance(sizes[0], (tuple, list)):
+        sizes = tuple(sizes[0])
+    return dispatch("expand", a.device.type, a, sizes)
+
+
+def masked_fill(a, mask, value):
+    return dispatch("masked_fill", a.device.type, a, mask, value)
+
+
+def masked_fill_(a, mask, value):
+    return dispatch("masked_fill_", a.device.type, a, mask, value)
+
+
+def index_put_(a, indices, values, accumulate=False):
+    return dispatch("index_put_", a.device.type, a, indices, values, accumulate)
+
+
+def index_put(a, indices, values, accumulate=False):
+    return dispatch("index_put", a.device.type, a, indices, values, accumulate)
+
+
+def index_copy_(a, dim, index, source):
+    return dispatch("index_copy_", a.device.type, a, dim, index, source)
+
+
+def index_fill_(a, dim, index, value):
+    return dispatch("index_fill_", a.device.type, a, dim, index, value)
+
+
+def index_add_(a, dim, index, source, alpha=1.0):
+    return dispatch("index_add_", a.device.type, a, dim, index, source, alpha)
+
+
+def scatter_(a, dim, index, src):
+    return dispatch("scatter_", a.device.type, a, dim, index, src)
+
+
+def scatter_add_(a, dim, index, src):
+    return dispatch("scatter_add_", a.device.type, a, dim, index, src)
+
+
+def masked_scatter_(a, mask, source):
+    return dispatch("masked_scatter_", a.device.type, a, mask, source)
+
+
+def unfold(a, dimension, size, step):
+    return dispatch("unfold", a.device.type, a, dimension, size, step)
+
+
+def squeeze(a, dim=None):
+    return dispatch("squeeze", a.device.type, a, dim)
+
+
+def unsqueeze(a, dim):
+    return dispatch("unsqueeze", a.device.type, a, dim)
+
+
+def permute(a, dims):
+    return dispatch("permute", a.device.type, a, dims)
+
+
+def var(a, dim=None, keepdim=False, unbiased=True):
+    return dispatch("var", a.device.type, a, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+
+def norm(a, p=2, dim=None, keepdim=False):
+    return dispatch("norm", a.device.type, a, p=p, dim=dim, keepdim=keepdim)
+
+
+def prod(a, dim=None, keepdim=False):
+    return dispatch("prod", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def mm(a, b):
+    if len(a.shape) != 2 or len(b.shape) != 2:
+        raise RuntimeError(
+            f"mm: Expected 2-D tensors, got {len(a.shape)}-D and {len(b.shape)}-D"
+        )
+    return dispatch("matmul", a.device.type, a, b)
+
+
+def bmm(a, b):
+    if len(a.shape) != 3 or len(b.shape) != 3:
+        raise RuntimeError(
+            f"bmm: Expected 3-D tensors, got {len(a.shape)}-D and {len(b.shape)}-D"
+        )
+    return dispatch("matmul", a.device.type, a, b)
+
+
+def floor_divide(a, b):
+    return dispatch("floor_divide", a.device.type, a, b)
+
+
+def ones_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return ones(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def empty_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return empty(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def full_like(input, fill_value, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return full(input.shape, fill_value, dtype=dtype, device=device)
+
+
+def randn_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return randn(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def rand_like(input, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
+    return dispatch("rms_norm", input.device.type, input, normalized_shape, weight, eps)
+
+
+# ---------------------------------------------------------------------------
+# New ops: math, logical, bitwise, shape, search
+# ---------------------------------------------------------------------------
+
+def sub(a, b):
+    return dispatch("sub", None, a, b)
+
+
+def log1p(a):
+    return dispatch("log1p", a.device.type, a)
+
+
+def expm1(a):
+    return dispatch("expm1", a.device.type, a)
+
+
+def reciprocal(a):
+    return dispatch("reciprocal", a.device.type, a)
+
+
+def addmm(input, mat1, mat2, *, beta=1, alpha=1):
+    return dispatch("addmm", input.device.type, input, mat1, mat2, beta=beta, alpha=alpha)
+
+
+def maximum(a, b):
+    return dispatch("maximum", None, a, b)
+
+
+def minimum(a, b):
+    return dispatch("minimum", None, a, b)
+
+
+def dot(a, b):
+    return dispatch("dot", None, a, b)
+
+
+def outer(a, b):
+    return dispatch("outer", None, a, b)
+
+
+def inner(a, b):
+    return dispatch("inner", None, a, b)
+
+
+def mv(a, b):
+    return dispatch("mv", None, a, b)
+
+
+def cross(a, b, dim=-1):
+    return dispatch("cross", None, a, b, dim)
+
+
+def tensordot(a, b, dims=2):
+    return dispatch("tensordot", None, a, b, dims)
+
+
+def einsum(equation, *operands):
+    if len(operands) == 1 and isinstance(operands[0], (list, tuple)):
+        operands = operands[0]
+    first = operands[0]
+    return dispatch("einsum", first.device.type, equation, list(operands))
+
+
+def logical_and(a, b):
+    return dispatch("logical_and", None, a, b)
+
+
+def logical_or(a, b):
+    return dispatch("logical_or", None, a, b)
+
+
+def logical_not(a):
+    return dispatch("logical_not", a.device.type, a)
+
+
+def logical_xor(a, b):
+    return dispatch("logical_xor", None, a, b)
+
+
+def bitwise_and(a, b):
+    return dispatch("bitwise_and", None, a, b)
+
+
+def bitwise_or(a, b):
+    return dispatch("bitwise_or", None, a, b)
+
+
+def bitwise_xor(a, b):
+    return dispatch("bitwise_xor", None, a, b)
+
+
+def bitwise_not(a):
+    return dispatch("bitwise_not", a.device.type, a)
+
+
+def flatten(a, start_dim=0, end_dim=-1):
+    return dispatch("flatten", a.device.type, a, start_dim, end_dim)
+
+
+def unflatten(a, dim, sizes):
+    return dispatch("unflatten", a.device.type, a, dim, sizes)
+
+
+def broadcast_to(a, shape):
+    return dispatch("broadcast_to", a.device.type, a, shape)
+
+
+def movedim(a, source, destination):
+    return dispatch("movedim", a.device.type, a, source, destination)
+
+
+def diagonal(a, offset=0, dim1=0, dim2=1):
+    return dispatch("diagonal", a.device.type, a, offset, dim1, dim2)
+
+
+def unique(a, sorted=True, return_inverse=False, return_counts=False, dim=None):
+    return dispatch("unique", a.device.type, a, sorted, return_inverse, return_counts, dim)
+
+
+def searchsorted(sorted_seq, values, out_int32=False, right=False, side=None, sorter=None):
+    return dispatch(
+        "searchsorted", sorted_seq.device.type,
+        sorted_seq, values, out_int32, right, side, sorter,
+    )
+
+
+def kthvalue(a, k, dim=-1, keepdim=False):
+    return dispatch("kthvalue", a.device.type, a, k, dim, keepdim)
+
+
+def median(a, dim=None, keepdim=False):
+    return dispatch("median", a.device.type, a, dim, keepdim)
 
 
 def _as_device(dev):

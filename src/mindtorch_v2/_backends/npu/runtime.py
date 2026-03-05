@@ -59,6 +59,7 @@ class _Runtime:
         self.stream = None
         self._deferred_frees = []
         self._deferred_host_frees = []
+        self._deferred_raw_frees = []
 
     def init(self, device_id=0):
         if self.initialized:
@@ -195,6 +196,12 @@ class _Runtime:
             return
         self._deferred_frees.append(ptr)
 
+    def defer_raw_free(self, ptr):
+        """Defer freeing a raw acl.rt.malloc pointer (not managed by the allocator)."""
+        if ptr is None:
+            return
+        self._deferred_raw_frees.append(ptr)
+
     def synchronize(self):
         if not self.initialized:
             return
@@ -206,6 +213,12 @@ class _Runtime:
         self._deferred_frees = []
         for ptr in frees:
             npu_allocator.get_allocator(self.device_id).free(ptr)
+        raw_frees = self._deferred_raw_frees
+        self._deferred_raw_frees = []
+        for ptr in raw_frees:
+            ret = acl.rt.free(ptr)
+            if ret != ACL_ERROR_CODE:
+                raise RuntimeError(f"acl.rt.free failed: {ret}")
         host_frees = self._deferred_host_frees
         self._deferred_host_frees = []
         for ptr in host_frees:
@@ -232,6 +245,7 @@ _RUNTIMES = {}
 
 
 _MODEL_DIR = None
+_SOC_PROFILE = None
 
 _CANDIDATE_MODEL_DIRS = (
     "/usr/local/Ascend/ascend-toolkit/latest/opp",
@@ -298,6 +312,41 @@ def _model_dir():
 
 
 
+
+
+def soc_name():
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    try:
+        name = acl.get_soc_name()
+    except Exception as exc:
+        raise RuntimeError(f"Failed to query NPU SoC name: {exc}") from exc
+    if isinstance(name, (bytes, bytearray)):
+        name = name.decode()
+    if not name:
+        raise RuntimeError("Failed to query NPU SoC name")
+    return str(name)
+
+
+def soc_profile():
+    global _SOC_PROFILE
+    if _SOC_PROFILE is not None:
+        return _SOC_PROFILE
+    name = soc_name().lower()
+    if "910b" in name:
+        _SOC_PROFILE = "910b"
+    elif "910a" in name:
+        _SOC_PROFILE = "910a"
+    elif "910" in name:
+        _SOC_PROFILE = "910a"
+    elif "310p" in name:
+        _SOC_PROFILE = "310p"
+    elif "310" in name:
+        _SOC_PROFILE = "310b"
+    else:
+        _SOC_PROFILE = "unknown"
+    return _SOC_PROFILE
 
 
 

@@ -7,12 +7,12 @@ from . import init
 from .modules.container import Sequential, ModuleList, ModuleDict, ParameterList, ParameterDict
 
 # Linear
-from .modules.linear import Linear, Bilinear, Identity
+from .modules.linear import Linear, Bilinear, Identity, Flatten, Unflatten
 
 # Activations
 from .modules.activation import (
     ReLU, GELU, SiLU, Sigmoid, Tanh, Softmax, LogSoftmax,
-    LeakyReLU, ELU, Mish, PReLU,
+    LeakyReLU, ELU, Mish, PReLU, ReLU6, Hardtanh, LogSigmoid,
 )
 
 # Normalization

@@ -1,6 +1,7 @@
 class SchemaParam:
-    def __init__(self, name, *, kw_only=False, default=None, has_default=False, mutates=False, alias_set=None):
+    def __init__(self, name, *, type_name=None, kw_only=False, default=None, has_default=False, mutates=False, alias_set=None):
         self.name = name
+        self.type_name = type_name
         self.kw_only = kw_only
         self.default = default
         self.has_default = has_default
@@ -17,6 +18,18 @@ def _torch_param_name(name):
     if name == "self":
         return "input"
     return name
+
+
+def _parse_type_name(type_part):
+    text = type_part.strip()
+    if "(" in text:
+        text = text.split("(", 1)[0].strip()
+    text = text.replace("!", "").strip()
+    if text.endswith("?"):
+        text = text[:-1]
+    if text.endswith("[]"):
+        text = text[:-2]
+    return text
 
 
 class OpSchema:
@@ -71,7 +84,8 @@ class OpSchema:
             )
         for key in kwargs:
             if key == "device" and key not in {p.name for p in params}:
-                continue
+                _maybe_override("unexpected")
+                raise TypeError(f"{name}() got an unexpected keyword argument '{key}'")
             if key not in {p.name for p in params}:
                 _maybe_override("unexpected")
                 raise TypeError(f"{name}() got an unexpected keyword argument '{key}'")
@@ -89,7 +103,36 @@ class OpSchema:
             raise TypeError(
                 f"{name}() missing {len(missing)} required positional arguments: {missing_fmt}"
             )
+
+        # Minimal type checks for high-frequency schema mismatches that must
+        # match torch call-site validation paths.
+        self._validate_types(args, kwargs, name=name, error_overrides=error_overrides, got=_format_got())
         return True
+
+    def _validate_types(self, args, kwargs, *, name, error_overrides, got):
+        if kwargs is None:
+            kwargs = {}
+
+        def _raise_invalid_combo():
+            if error_overrides and error_overrides.get("unexpected") is not None:
+                raise TypeError(error_overrides["unexpected"].format(name=name, got=got))
+            raise TypeError(f"{name}() received an invalid combination of arguments - got {got}")
+
+        params = self.params
+        positional = [p for p in params if not p.kw_only]
+        bound = {}
+        for idx, value in enumerate(args):
+            if idx < len(positional):
+                bound[positional[idx].name] = value
+        bound.update(kwargs)
+
+        for param in params:
+            if param.name not in bound:
+                continue
+            value = bound[param.name]
+            ptype = getattr(param, "type_name", None)
+            if ptype == "bool" and not isinstance(value, bool):
+                _raise_invalid_combo()
 
 
 def _parse_schema(schema):
@@ -121,6 +164,7 @@ def _parse_schema(schema):
         parts = left.split()
         name = parts[-1]
         type_part = " ".join(parts[:-1])
+        parsed_type_name = _parse_type_name(type_part)
         mutates = "!" in type_part
         alias_set = None
         start = type_part.find("(")
@@ -132,6 +176,7 @@ def _parse_schema(schema):
         parsed.append(
             SchemaParam(
                 name,
+                type_name=parsed_type_name,
                 kw_only=kw_only,
                 default=default,
                 has_default=has_default,

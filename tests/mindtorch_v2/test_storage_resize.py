@@ -35,8 +35,8 @@ def test_pinned_storage_resize_raises():
             torch.tensor([1.0, 2.0]).numpy(),
             torch.float32,
         )
-    except RuntimeError:
-        pytest.skip("Pinned memory not available")
+    except (RuntimeError, ModuleNotFoundError):
+        pytest.skip("Pinned memory not available (NPU/ACL not installed)")
     with pytest.raises(NotImplementedError):
         storage.resize_(8)
 

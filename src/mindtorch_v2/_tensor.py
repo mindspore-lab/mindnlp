@@ -12,7 +12,7 @@ from ._device import _default_device, device as Device
 from ._dtype import float32, float16, float64, bfloat16, int8, int16, int32, int64, uint8
 from ._dtype import bool as dtype_bool
 from ._dtype import to_numpy_dtype
-from ._functional import add, mul, matmul, relu, sum, abs as abs_dispatch, neg as neg_dispatch
+from ._functional import add, mul, matmul, relu, sum, mean as mean_dispatch, std as std_dispatch, true_divide as true_divide_dispatch, repeat as repeat_dispatch, chunk as chunk_dispatch, split as split_dispatch, abs as abs_dispatch, neg as neg_dispatch
 from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
 from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_dispatch
 from ._functional import tanh as tanh_dispatch, sigmoid as sigmoid_dispatch
@@ -40,11 +40,31 @@ from ._functional import hypot as hypot_dispatch, remainder as remainder_dispatc
 from ._functional import all as all_dispatch, any as any_dispatch, argmax as argmax_dispatch
 from ._functional import argmin as argmin_dispatch, count_nonzero as count_nonzero_dispatch
 from ._functional import allclose as allclose_dispatch, isclose as isclose_dispatch, equal as equal_dispatch
+from ._functional import eq as eq_dispatch, ne as ne_dispatch, lt as lt_dispatch, le as le_dispatch, gt as gt_dispatch, ge as ge_dispatch
 from ._functional import cumsum as cumsum_dispatch, cumprod as cumprod_dispatch, cummax as cummax_dispatch
 from ._functional import argsort as argsort_dispatch, sort as sort_dispatch, topk as topk_dispatch
 from ._functional import tril as tril_dispatch, triu as triu_dispatch, diag as diag_dispatch
 from ._functional import reshape as reshape_dispatch
 from ._functional import transpose as transpose_dispatch, view as view_dispatch, to as to_dispatch
+from ._functional import nonzero as nonzero_dispatch, masked_select as masked_select_dispatch
+from ._functional import gather as gather_dispatch, scatter as scatter_dispatch
+from ._functional import index_select as index_select_dispatch, take as take_dispatch
+from ._functional import narrow as narrow_dispatch, select as select_dispatch
+from ._functional import expand as expand_dispatch
+from ._functional import masked_fill_ as masked_fill__dispatch, masked_fill as masked_fill_dispatch
+from ._functional import index_put_ as index_put__dispatch, index_put as index_put_dispatch
+from ._functional import index_copy_ as index_copy__dispatch
+from ._functional import index_fill_ as index_fill__dispatch
+from ._functional import index_add_ as index_add__dispatch
+from ._functional import scatter_ as scatter__dispatch, scatter_add_ as scatter_add__dispatch
+from ._functional import masked_scatter_ as masked_scatter__dispatch
+from ._functional import unfold as unfold_dispatch
+from ._functional import squeeze as squeeze_dispatch, unsqueeze as unsqueeze_dispatch, permute as permute_dispatch
+from ._functional import var as var_dispatch, norm as norm_dispatch, prod as prod_dispatch
+from ._functional import mm as mm_dispatch, bmm as bmm_dispatch
+from ._functional import floor_divide as floor_divide_dispatch
+from ._functional import tile as tile_dispatch, flip as flip_dispatch, roll as roll_dispatch, rot90 as rot90_dispatch
+from ._functional import reciprocal as reciprocal_dispatch, addmm as addmm_dispatch
 from ._autograd.engine import backward as _backward
 from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
@@ -133,6 +153,19 @@ class Tensor:
     def dim(self):
         return len(self.shape)
 
+    @property
+    def ndim(self):
+        return len(self.shape)
+
+    def size(self, dim=None):
+        if dim is None:
+            return self.shape
+        if dim < 0:
+            dim += len(self.shape)
+        if dim < 0 or dim >= len(self.shape):
+            raise IndexError("Dimension out of range")
+        return self.shape[dim]
+
     def numel(self):
         result = 1
         for s in self.shape:
@@ -178,8 +211,12 @@ class Tensor:
             base[self.offset:], shape=self.shape, strides=strides
         )
 
-    def reshape(self, new_shape):
-        return reshape_dispatch(self, new_shape)
+    def reshape(self, *shape):
+        if not shape:
+            raise TypeError("reshape() missing shape arguments")
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = tuple(shape[0])
+        return reshape_dispatch(self, shape)
 
     def view(self, *shape):
         if not shape:
@@ -192,6 +229,27 @@ class Tensor:
             shape = shape[0]
         return view_dispatch(self, shape)
 
+    def flatten(self, start_dim=0, end_dim=-1):
+        ndim = len(self.shape)
+        if ndim == 0:
+            return self.reshape((1,))
+        if start_dim < 0:
+            start_dim += ndim
+        if end_dim < 0:
+            end_dim += ndim
+        if start_dim < 0 or start_dim >= ndim:
+            raise IndexError("Dimension out of range")
+        if end_dim < 0 or end_dim >= ndim:
+            raise IndexError("Dimension out of range")
+        if start_dim > end_dim:
+            raise RuntimeError("flatten() has invalid args: start_dim cannot come after end_dim")
+
+        flattened = 1
+        for d in self.shape[start_dim:end_dim + 1]:
+            flattened *= d
+        new_shape = self.shape[:start_dim] + (flattened,) + self.shape[end_dim + 1:]
+        return self.reshape(new_shape)
+
     def transpose(self, dim0, dim1):
         return transpose_dispatch(self, dim0, dim1)
 
@@ -202,6 +260,32 @@ class Tensor:
         if len(self.shape) < 2:
             return self
         return self.transpose(0, 1)
+
+    def t_(self):
+        """In-place transpose for 2D tensors."""
+        if len(self.shape) > 2:
+            raise RuntimeError(f"t_() expects a tensor with <= 2 dimensions, but self is {len(self.shape)}D")
+        if len(self.shape) < 2:
+            return self
+        # Swap shape and stride dimensions in-place
+        self.shape = (self.shape[1], self.shape[0])
+        self.stride = (self.stride[1], self.stride[0])
+        return self
+
+    @property
+    def T(self):
+        return self.t()
+
+    def view_as(self, other):
+        """Reshape this tensor to the same shape as other."""
+        return self.view(other.shape)
+
+    def new_empty(self, size, *, dtype=None, device=None, requires_grad=False):
+        """Create a new empty tensor with the same dtype and device as self."""
+        from ._creation import empty
+        dt = dtype if dtype is not None else self.dtype
+        dev = device if device is not None else self.device
+        return empty(size, dtype=dt, device=dev)
 
     def _ones_like(self):
         if self.device.type == "meta":
@@ -255,6 +339,10 @@ class Tensor:
         return float(self.item())
 
     def __bool__(self):
+        if self.numel() == 0:
+            raise RuntimeError("Boolean value of Tensor with no values is ambiguous")
+        if self.numel() > 1:
+            raise RuntimeError("Boolean value of Tensor with more than one value is ambiguous")
         return bool(self.item())
 
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
@@ -359,6 +447,55 @@ class Tensor:
         out = dispatch("zero_", self.device.type, self)
         return out
 
+    def uniform_(self, low=0.0, high=1.0):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("uniform_", self.device.type, self, low, high)
+        return out
+
+    def normal_(self, mean=0.0, std=1.0):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("normal_", self.device.type, self, mean, std)
+        return out
+
+    def fill_(self, value):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("fill_", self.device.type, self, value)
+        return out
+
+    def clamp_(self, min=None, max=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("clamp_", self.device.type, self, min, max)
+        return out
+
+    def copy_(self, src):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("copy_", self.device.type, self, src)
+        return out
+
+    def erfinv_(self):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("erfinv_", self.device.type, self)
+        return out
+
+    def sub_(self, other):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("sub_", self.device.type, self, other)
+        return out
+
     def to(self, *args, **kwargs):
         if self._pending:
             from ._dispatch.pipeline import current_pipeline
@@ -407,6 +544,25 @@ class Tensor:
         if result is self and dtype is None and device is None:
             return self
         return result
+
+    def cpu(self, memory_format=None):
+        if memory_format is None:
+            return self.to("cpu")
+        return self.to("cpu", memory_format=memory_format)
+
+    def npu(self, device=None, non_blocking=False, memory_format=None):
+        if device is None:
+            device = "npu"
+        return self.to(device, non_blocking=non_blocking, memory_format=memory_format)
+
+    def cuda(self, device=None, non_blocking=False, memory_format=None):
+        if device is None:
+            target = "cuda"
+        elif isinstance(device, str):
+            target = device
+        else:
+            target = f"cuda:{int(device)}"
+        return self.to(target, non_blocking=non_blocking, memory_format=memory_format)
 
     def _to_dtype(self, dtype):
         if self.device.type == "cpu":
@@ -493,6 +649,24 @@ class Tensor:
     def bool(self):
         return self._to_dtype(dtype_bool) if self.dtype != dtype_bool else self
 
+    def new_ones(self, size, dtype=None, device=None):
+        from ._creation import ones
+
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = self.device
+        return ones(size, dtype=dtype, device=device)
+
+    def new_zeros(self, size, dtype=None, device=None):
+        from ._creation import zeros
+
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = self.device
+        return zeros(size, dtype=dtype, device=device)
+
     def type(self, dtype=None):
         if dtype is None:
             return f"torch.{self.dtype.name.capitalize()}Tensor"
@@ -519,8 +693,66 @@ class Tensor:
     def __add__(self, other):
         return add(self, other)
 
+    def __sub__(self, other):
+        if isinstance(other, Tensor):
+            return add(self, neg_dispatch(other))
+        return add(self, -other)
+
+    def __rsub__(self, other):
+        return add(neg_dispatch(self), other)
+
     def __mul__(self, other):
         return mul(self, other)
+
+    def __rmul__(self, other):
+        return mul(self, other)
+
+    def __truediv__(self, other):
+        return true_divide_dispatch(self, other)
+
+    def __rtruediv__(self, other):
+        return true_divide_dispatch(other, self)
+
+    def __pow__(self, exponent):
+        return pow_dispatch(self, exponent)
+
+    def __rpow__(self, base):
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("pow", self.device.type, base, self)
+
+    def __floordiv__(self, other):
+        return floor_divide_dispatch(self, other)
+
+    def __rfloordiv__(self, other):
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("floor_divide", self.device.type, other, self)
+
+    def __mod__(self, other):
+        return remainder_dispatch(self, other)
+
+    def __rmod__(self, other):
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("remainder", self.device.type, other, self)
+
+    def __iadd__(self, other):
+        self._check_inplace()
+        self.add_(other)
+        return self
+
+    def __isub__(self, other):
+        self._check_inplace()
+        self.sub_(other)
+        return self
+
+    def __imul__(self, other):
+        self._check_inplace()
+        self.mul_(other)
+        return self
+
+    def __itruediv__(self, other):
+        self._check_inplace()
+        self.div_(other)
+        return self
 
     def __neg__(self):
         return neg_dispatch(self)
@@ -532,6 +764,12 @@ class Tensor:
 
     def matmul(self, other):
         return matmul(self, other)
+
+    def __matmul__(self, other):
+        return matmul(self, other)
+
+    def __rmatmul__(self, other):
+        return matmul(other, self)
 
     def relu(self):
         return relu(self)
@@ -653,6 +891,11 @@ class Tensor:
     def clamp_max(self, max_val):
         return clamp_max_dispatch(self, max_val)
 
+    def clamp_(self, min=None, max=None):
+        self._check_inplace()
+        out = clamp_dispatch(self, min, max)
+        return self.copy_(out)
+
     def relu6(self):
         return relu6_dispatch(self)
 
@@ -715,8 +958,44 @@ class Tensor:
 
     def fmod(self, other):
         return fmod_dispatch(self, other)
+
+    def squeeze(self, dim=None):
+        return squeeze_dispatch(self, dim)
+
+    def unsqueeze(self, dim):
+        return unsqueeze_dispatch(self, dim)
+
+    def permute(self, *dims):
+        if len(dims) == 1 and isinstance(dims[0], (tuple, list)):
+            dims = tuple(dims[0])
+        return permute_dispatch(self, dims)
+
+    def var(self, dim=None, keepdim=False, unbiased=True):
+        return var_dispatch(self, dim=dim, keepdim=keepdim, unbiased=unbiased)
+
+    def norm(self, p=2, dim=None, keepdim=False):
+        return norm_dispatch(self, p=p, dim=dim, keepdim=keepdim)
+
+    def prod(self, dim=None, keepdim=False):
+        return prod_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def mm(self, mat2):
+        return mm_dispatch(self, mat2)
+
+    def bmm(self, batch2):
+        return bmm_dispatch(self, batch2)
     def sum(self, dim=None, keepdim=False):
         return sum(self, dim=dim, keepdim=keepdim)
+
+    def mean(self, dim=None, keepdim=False, axis=None):
+        if axis is not None:
+            dim = axis
+        return mean_dispatch(self, dim=dim, keepdim=keepdim)
+
+    def std(self, dim=None, keepdim=False, unbiased=True, axis=None):
+        if axis is not None:
+            dim = axis
+        return std_dispatch(self, dim=dim, keepdim=keepdim, unbiased=unbiased)
 
     def all(self, dim=None, keepdim=False):
         return all_dispatch(self, dim=dim, keepdim=keepdim)
@@ -751,6 +1030,139 @@ class Tensor:
     def topk(self, k, dim=-1, largest=True, sorted=True):
         return topk_dispatch(self, k, dim=dim, largest=largest, sorted=sorted)
 
+    def split(self, split_size_or_sections, dim=0):
+        return split_dispatch(self, split_size_or_sections, dim=dim)
+
+    def chunk(self, chunks, dim=0):
+        return chunk_dispatch(self, chunks, dim=dim)
+
+    def repeat(self, *repeats):
+        if len(repeats) == 1 and isinstance(repeats[0], (tuple, list)):
+            repeats = tuple(repeats[0])
+        return repeat_dispatch(self, repeats)
+
+    def tile(self, *dims):
+        if len(dims) == 1 and isinstance(dims[0], (tuple, list)):
+            dims = tuple(dims[0])
+        return tile_dispatch(self, dims)
+
+    def flip(self, dims):
+        if isinstance(dims, int):
+            dims = [dims]
+        return flip_dispatch(self, dims)
+
+    def roll(self, shifts, dims=None):
+        return roll_dispatch(self, shifts, dims)
+
+    def rot90(self, k=1, dims=(0, 1)):
+        return rot90_dispatch(self, k, dims)
+
+    def reciprocal(self):
+        return reciprocal_dispatch(self)
+
+    def addmm(self, mat1, mat2, *, beta=1, alpha=1):
+        return addmm_dispatch(self, mat1, mat2, beta=beta, alpha=alpha)
+
+    def type_as(self, other):
+        return self.to(other.dtype)
+
+    def reshape_as(self, other):
+        return self.reshape(other.shape)
+
+    def new_full(self, size, fill_value, *, dtype=None, device=None, requires_grad=False):
+        from ._creation import full
+        dt = dtype if dtype is not None else self.dtype
+        dev = device if device is not None else self.device
+        return full(size, fill_value, dtype=dt, device=dev)
+
+    def div_(self, other):
+        from ._dispatch.dispatcher import dispatch
+        self._check_inplace()
+        out = dispatch("div_", self.device.type, self, other)
+        return out
+
+    def unflatten(self, dim, sizes):
+        ndim = len(self.shape)
+        if dim < 0:
+            dim += ndim
+        new_shape = self.shape[:dim] + tuple(sizes) + self.shape[dim + 1:]
+        return self.view(new_shape)
+
+    # -----------------------------------------------------------------------
+    # Indexing / selection methods
+    # -----------------------------------------------------------------------
+
+    def narrow(self, dim, start, length):
+        return narrow_dispatch(self, dim, start, length)
+
+    def select(self, dim, index):
+        return select_dispatch(self, dim, index)
+
+    def expand(self, *sizes):
+        return expand_dispatch(self, *sizes)
+
+    def expand_as(self, other):
+        return expand_dispatch(self, *other.shape)
+
+    def nonzero(self, as_tuple=False):
+        return nonzero_dispatch(self, as_tuple=as_tuple)
+
+    def masked_select(self, mask):
+        return masked_select_dispatch(self, mask)
+
+    def gather(self, dim, index):
+        return gather_dispatch(self, dim, index)
+
+    def scatter(self, dim, index, src):
+        return scatter_dispatch(self, dim, index, src)
+
+    def scatter_(self, dim, index, src):
+        self._check_inplace()
+        return scatter__dispatch(self, dim, index, src)
+
+    def scatter_add_(self, dim, index, src):
+        self._check_inplace()
+        return scatter_add__dispatch(self, dim, index, src)
+
+    def index_select(self, dim, index):
+        return index_select_dispatch(self, dim, index)
+
+    def take(self, index):
+        return take_dispatch(self, index)
+
+    def masked_fill(self, mask, value):
+        return masked_fill_dispatch(self, mask, value)
+
+    def masked_fill_(self, mask, value):
+        self._check_inplace()
+        return masked_fill__dispatch(self, mask, value)
+
+    def masked_scatter_(self, mask, source):
+        self._check_inplace()
+        return masked_scatter__dispatch(self, mask, source)
+
+    def index_put_(self, indices, values, accumulate=False):
+        self._check_inplace()
+        return index_put__dispatch(self, indices, values, accumulate)
+
+    def index_put(self, indices, values, accumulate=False):
+        return index_put_dispatch(self, indices, values, accumulate)
+
+    def index_copy_(self, dim, index, source):
+        self._check_inplace()
+        return index_copy__dispatch(self, dim, index, source)
+
+    def index_fill_(self, dim, index, value):
+        self._check_inplace()
+        return index_fill__dispatch(self, dim, index, value)
+
+    def index_add_(self, dim, index, source, alpha=1.0):
+        self._check_inplace()
+        return index_add__dispatch(self, dim, index, source, alpha)
+
+    def unfold(self, dimension, size, step):
+        return unfold_dispatch(self, dimension, size, step)
+
     def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
         return allclose_dispatch(self, other, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
@@ -759,6 +1171,12 @@ class Tensor:
 
     def equal(self, other):
         return equal_dispatch(self, other)
+
+    def eq(self, other):
+        return self.__eq__(other)
+
+    def ne(self, other):
+        return self.__ne__(other)
 
     def __getitem__(self, key):
         from ._dispatch.dispatcher import dispatch
@@ -788,41 +1206,48 @@ class Tensor:
         for i in range(len(self)):
             yield self[i]
 
+    @staticmethod
+    def _is_scalar_comparable(other):
+        return isinstance(other, (int, float, bool))
+
     def __gt__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() > other.item()
-        return self.item() > other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return gt_dispatch(self, other)
+        return NotImplemented
 
     def __lt__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() < other.item()
-        return self.item() < other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return lt_dispatch(self, other)
+        return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() >= other.item()
-        return self.item() >= other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return ge_dispatch(self, other)
+        return NotImplemented
 
     def __le__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() <= other.item()
-        return self.item() <= other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return le_dispatch(self, other)
+        return NotImplemented
 
     def __eq__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() == other.item()
-        return self.item() == other
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return eq_dispatch(self, other)
+        return False
+
+    def __ne__(self, other):
+        if isinstance(other, Tensor) or self._is_scalar_comparable(other):
+            return ne_dispatch(self, other)
+        return True
+
+    def __and__(self, other):
+        return mul(self.bool(), other.bool() if isinstance(other, Tensor) else bool(other))
+
+    def __or__(self, other):
+        return add(self.bool(), other.bool() if isinstance(other, Tensor) else bool(other))
+
+    def __xor__(self, other):
+        return ne_dispatch(self.bool(), other.bool() if isinstance(other, Tensor) else bool(other))
 
     def __hash__(self):
         return id(self)
-
-    def __ne__(self, other):
-        if isinstance(other, Tensor):
-            if self.numel() == 1 and other.numel() == 1:
-                return self.item() != other.item()
-        return self.item() != other

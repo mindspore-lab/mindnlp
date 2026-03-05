@@ -1,0 +1,907 @@
+import inspect
+import os
+import json
+
+import pytest
+
+import mindtorch_v2 as torch
+from mindtorch_v2 import nn, optim
+
+
+def test_profiler_context_and_step_basics():
+    x = torch.ones((2, 2))
+    with torch.profiler.profile() as prof:
+        y = x + x
+        prof.step()
+        z = y * y
+
+    assert z is not None
+    events = prof.events()
+    assert len(events) >= 2
+    assert {event["step"] for event in events} == {0, 1}
+
+
+def test_profiler_captures_dispatch_ops_forward_backward():
+    x = torch.ones((2, 2))
+    x.requires_grad_(True)
+
+    with torch.profiler.profile() as prof:
+        y = (x * x).sum()
+        y.backward()
+
+    names = [event["name"] for event in prof.events() if event["kind"] == "op"]
+    assert any("mul" in name for name in names)
+    assert any("sum" in name for name in names)
+
+
+def test_record_function_nesting_and_exception_safe():
+    with torch.profiler.profile() as prof:
+        with pytest.raises(RuntimeError):
+            with torch.profiler.record_function("outer"):
+                with torch.profiler.record_function("inner"):
+                    _ = torch.ones((2, 2)) + 1
+                raise RuntimeError("boom")
+
+    scopes = [event for event in prof.events() if event["kind"] == "scope"]
+    assert [scope["name"] for scope in scopes] == ["outer", "inner"]
+    assert all(scope["duration_ns"] >= 0 for scope in scopes)
+
+
+def test_key_averages_table_contains_expected_columns():
+    x = torch.ones((4, 4))
+    with torch.profiler.profile() as prof:
+        _ = x + x
+        _ = x * x
+
+    table = prof.key_averages().table(sort_by="self_cpu_time_total")
+    assert "Name" in table
+    assert "Count" in table
+    assert "Total" in table
+
+
+def test_export_chrome_trace_json_valid(tmp_path):
+    x = torch.ones((2, 2))
+    out = tmp_path / "trace.json"
+
+    with torch.profiler.profile() as prof:
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    assert "traceEvents" in payload
+    assert len(payload["traceEvents"]) > 0
+
+
+def test_profiler_session_covers_optimizer_call():
+    layer = nn.Linear(2, 1)
+    opt = optim.SGD(layer.parameters(), lr=0.1)
+    x = torch.tensor([[1.0, 2.0]])
+
+    with torch.profiler.profile() as prof:
+        y = layer(x)
+        y.sum().backward()
+        opt.step()
+
+    op_names = [event["name"] for event in prof.events() if event["kind"] == "op"]
+    assert len(op_names) > 0
+
+
+def test_profiler_no_mindspore_dependency():
+    import mindtorch_v2.profiler.profiler as profiler_impl
+
+    source = inspect.getsource(profiler_impl)
+    assert "mindspore" not in source
+
+
+@pytest.mark.skipif(not torch.npu.is_available(), reason="NPU not available")
+def test_profiler_npu_event_device_type():
+    x = torch.ones((2, 2), device="npu")
+
+    with torch.profiler.profile() as prof:
+        _ = x + x
+
+    assert any(event["device_type"] == "NPU" for event in prof.events())
+
+
+def test_profiler_rejects_unknown_activity():
+    with pytest.raises(ValueError):
+        torch.profiler.profile(activities=["TPU"])
+
+
+def test_on_trace_ready_receives_profiler_instance():
+    seen = []
+
+    def callback(prof):
+        seen.append(prof)
+
+    with torch.profiler.profile(on_trace_ready=callback) as prof:
+        _ = torch.ones((2, 2)) + 1
+
+    assert seen == [prof]
+
+
+def test_on_trace_ready_type_error_from_callback_is_not_swallowed():
+    def callback(prof):
+        raise TypeError("callback boom")
+
+    with pytest.raises(TypeError, match="callback boom"):
+        with torch.profiler.profile(on_trace_ready=callback):
+            _ = torch.ones((2, 2)) + 1
+
+
+def test_export_chrome_trace_required_fields_and_pid(tmp_path):
+    out = tmp_path / "trace_with_pid.json"
+
+    with torch.profiler.profile() as prof:
+        _ = torch.ones((2, 2)) + 1
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    event = payload["traceEvents"][0]
+
+    for key in ("name", "ph", "ts", "dur", "pid", "tid"):
+        assert key in event
+    assert event["pid"] == os.getpid()
+
+
+def test_record_function_is_noop_when_profiler_inactive():
+    with torch.profiler.record_function("noop"):
+        x = torch.ones((1,))
+    assert x is not None
+
+
+def test_profiler_step_requires_active_session():
+    prof = torch.profiler.profile()
+    with pytest.raises(RuntimeError):
+        prof.step()
+
+
+def test_profile_rejects_non_callable_schedule():
+    with pytest.raises(TypeError):
+        torch.profiler.profile(schedule=123)
+
+
+def test_profiler_schedule_filters_recorded_steps():
+    sched = torch.profiler.schedule(wait=1, warmup=1, active=1, repeat=1, skip_first=0)
+
+    with torch.profiler.profile(schedule=sched) as prof:
+        _ = torch.ones((1,)) + 1
+        prof.step()
+        _ = torch.ones((1,)) + 2
+        prof.step()
+        _ = torch.ones((1,)) + 3
+
+    steps = {event["step"] for event in prof.events() if event["kind"] == "op"}
+    assert steps == {2}
+
+
+def test_profiler_schedule_triggers_trace_ready_on_save_action():
+    calls = []
+
+    def on_trace_ready(prof):
+        calls.append(len(prof.events()))
+
+    sched = torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=0)
+
+    with torch.profiler.profile(schedule=sched, on_trace_ready=on_trace_ready) as prof:
+        _ = torch.ones((1,)) + 1
+        prof.step()
+        _ = torch.ones((1,)) + 2
+
+    assert len(calls) >= 1
+
+
+def test_profiler_schedule_invalid_config_raises():
+    with pytest.raises(ValueError):
+        torch.profiler.schedule(wait=-1, warmup=0, active=1)
+    with pytest.raises(ValueError):
+        torch.profiler.schedule(wait=0, warmup=0, active=0)
+
+
+def test_profiler_record_shapes_captures_tensor_shapes():
+    with torch.profiler.profile(record_shapes=True) as prof:
+        x = torch.ones((2, 3))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert any("input_shapes" in event for event in op_events)
+
+
+def test_profiler_with_stack_captures_frame_metadata():
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert any("stack" in event and len(event["stack"]) > 0 for event in op_events)
+
+
+def test_profiler_default_flags_do_not_emit_shape_or_stack():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert all("input_shapes" not in event for event in op_events)
+    assert all("stack" not in event for event in op_events)
+
+
+def test_export_chrome_trace_includes_shape_and_stack_args_when_enabled(tmp_path):
+    out = tmp_path / "trace_shapes_stack.json"
+
+    with torch.profiler.profile(record_shapes=True, with_stack=True) as prof:
+        x = torch.ones((2, 4))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    events = payload["traceEvents"]
+    assert events
+    assert any("input_shapes" in event.get("args", {}) for event in events)
+    assert any("stack" in event.get("args", {}) for event in events)
+
+
+def test_key_averages_supports_group_by_input_shape():
+    with torch.profiler.profile(record_shapes=True) as prof:
+        x2 = torch.ones((2, 2))
+        x4 = torch.ones((4, 4))
+        _ = x2 + x2
+        _ = x4 + x4
+
+    default_rows = prof.key_averages()
+    grouped_rows = prof.key_averages(group_by_input_shape=True)
+
+    assert len(grouped_rows) >= len(default_rows)
+
+
+def test_key_averages_supports_group_by_stack_n():
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+
+        def call_site_one():
+            return x + x
+
+        def call_site_two():
+            return x + x
+
+        _ = call_site_one()
+        _ = call_site_two()
+
+    default_rows = prof.key_averages()
+    grouped_rows = prof.key_averages(group_by_stack_n=1)
+
+    assert len(grouped_rows) >= len(default_rows)
+
+
+def test_key_averages_table_unknown_sort_key_raises():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    with pytest.raises(AttributeError):
+        prof.key_averages().table(sort_by="foo")
+
+
+def test_profiler_profile_memory_disabled_has_no_npu_memory_fields():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert all("npu_memory_allocated_before" not in event for event in op_events)
+    assert all("npu_memory_allocated_after" not in event for event in op_events)
+    assert all("npu_memory_allocated_delta" not in event for event in op_events)
+
+
+@pytest.mark.skipif(not torch.npu.is_available(), reason="NPU not available")
+def test_profiler_profile_memory_adds_npu_memory_fields():
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((16, 16), device="npu")
+        y = x + x
+        _ = y + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op" and event["device_type"] == "NPU"]
+    assert op_events
+    for event in op_events:
+        assert "npu_memory_allocated_before" in event
+        assert "npu_memory_allocated_after" in event
+        assert "npu_memory_allocated_delta" in event
+        assert event["npu_memory_allocated_delta"] == event["npu_memory_allocated_after"] - event["npu_memory_allocated_before"]
+
+
+@pytest.mark.skipif(not torch.npu.is_available(), reason="NPU not available")
+def test_export_chrome_trace_includes_npu_memory_fields_when_enabled(tmp_path):
+    out = tmp_path / "trace_npu_mem.json"
+
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((8, 8), device="npu")
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    npu_events = [e for e in payload["traceEvents"] if e.get("args", {}).get("device_type") == "NPU"]
+    assert npu_events
+    assert any("npu_memory_allocated_before" in e.get("args", {}) for e in npu_events)
+    assert any("npu_memory_allocated_after" in e.get("args", {}) for e in npu_events)
+    assert any("npu_memory_allocated_delta" in e.get("args", {}) for e in npu_events)
+
+
+def test_profiler_profile_memory_adds_cpu_memory_fields():
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((64, 64))
+        y = x + x
+        _ = y + x
+
+    cpu_events = [event for event in prof.events() if event["kind"] == "op" and event["device_type"] == "CPU"]
+    assert cpu_events
+    for event in cpu_events:
+        assert "cpu_memory_allocated_before" in event
+        assert "cpu_memory_allocated_after" in event
+        assert "cpu_memory_allocated_delta" in event
+        assert event["cpu_memory_allocated_delta"] == event["cpu_memory_allocated_after"] - event["cpu_memory_allocated_before"]
+
+
+def test_export_chrome_trace_includes_cpu_memory_fields_when_enabled(tmp_path):
+    out = tmp_path / "trace_cpu_mem.json"
+
+    with torch.profiler.profile(profile_memory=True) as prof:
+        x = torch.ones((32, 32))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    cpu_events = [e for e in payload["traceEvents"] if e.get("args", {}).get("device_type") == "CPU"]
+    assert cpu_events
+    assert any("cpu_memory_allocated_before" in e.get("args", {}) for e in cpu_events)
+    assert any("cpu_memory_allocated_after" in e.get("args", {}) for e in cpu_events)
+    assert any("cpu_memory_allocated_delta" in e.get("args", {}) for e in cpu_events)
+
+
+def test_key_averages_self_time_subtracts_nested_scope_time():
+    with torch.profiler.profile() as prof:
+        with torch.profiler.record_function("outer_scope"):
+            with torch.profiler.record_function("inner_scope"):
+                _ = torch.ones((8, 8)) + 1
+
+    rows = prof.key_averages()._build_rows()
+    row_by_name = {row["name"]: row for row in rows}
+
+    assert "outer_scope" in row_by_name
+    assert "inner_scope" in row_by_name
+    assert row_by_name["outer_scope"]["self_time_ns"] < row_by_name["outer_scope"]["total_time_ns"]
+
+
+def test_key_averages_self_time_not_greater_than_total():
+    with torch.profiler.profile() as prof:
+        with torch.profiler.record_function("scope_a"):
+            _ = torch.ones((4, 4)) + 1
+
+    rows = prof.key_averages()._build_rows()
+    assert rows
+    for row in rows:
+        assert row["self_time_ns"] <= row["total_time_ns"]
+
+
+def test_profiler_events_include_correlation_id_for_ops():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    op_events = [event for event in prof.events() if event["kind"] == "op"]
+    assert op_events
+    assert all("correlation_id" in event for event in op_events)
+    assert len({event["correlation_id"] for event in op_events}) == len(op_events)
+
+
+def test_export_chrome_trace_includes_runtime_correlation_fields(tmp_path):
+    out = tmp_path / "trace_runtime_correlation.json"
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    op_events = [event for event in payload["traceEvents"] if event.get("cat") == "op"]
+    assert op_events
+    args = op_events[0].get("args", {})
+    assert "correlation_id" in args
+    assert "runtime_name" in args
+    assert "runtime_tid" in args
+
+
+def test_key_averages_table_includes_torch_like_cpu_columns():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    table = prof.key_averages().table(sort_by="self_cpu_time_total")
+    assert "Self CPU" in table
+    assert "CPU total" in table
+    assert "CPU time avg" in table
+    assert "# of Calls" in table
+
+
+def test_key_averages_table_accepts_cpu_time_avg_sort_alias():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    table = prof.key_averages().table(sort_by="cpu_time_avg")
+    assert "CPU time avg" in table
+
+
+def test_export_chrome_trace_includes_metadata_events(tmp_path):
+    out = tmp_path / "trace_metadata_events.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    meta_events = [event for event in payload["traceEvents"] if event.get("ph") == "M"]
+    assert meta_events
+
+
+def test_export_chrome_trace_includes_runtime_correlated_events(tmp_path):
+    out = tmp_path / "trace_runtime_events.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_chrome_trace(str(out))
+    payload = json.loads(out.read_text())
+    runtime_events = [event for event in payload["traceEvents"] if event.get("cat") == "runtime"]
+    assert runtime_events
+    assert all("correlation_id" in event.get("args", {}) for event in runtime_events)
+
+
+def test_key_averages_iter_returns_row_objects_with_torch_like_attrs():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = next(iter(rows))
+
+    assert hasattr(first, "key")
+    assert hasattr(first, "count")
+    assert hasattr(first, "self_cpu_time_total")
+    assert hasattr(first, "cpu_time_total")
+    assert hasattr(first, "cpu_time")
+
+
+def test_key_averages_row_is_not_subscriptable_like_torch():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = rows[0]
+
+    with pytest.raises(TypeError):
+        _ = first["key"]
+
+
+def test_key_averages_row_exposes_torch_like_default_attributes():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages()))
+
+    assert row.device_type == "CPU"
+    assert row.input_shapes == ""
+    assert row.stack == []
+    assert row.cpu_memory_usage == 0
+    assert row.self_cpu_memory_usage == 0
+    assert row.device_memory_usage == 0
+    assert row.self_device_memory_usage == 0
+    assert row.flops == 0
+    assert row.is_async is False
+    assert row.scope == 0
+    assert row.use_device is None
+    assert row.is_user_annotation is False
+
+
+def test_key_averages_row_populates_memory_and_input_shape_fields():
+    with torch.profiler.profile(record_shapes=True, profile_memory=True) as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages(group_by_input_shape=True)))
+
+    assert isinstance(row.input_shapes, list)
+    assert row.cpu_memory_usage >= row.self_cpu_memory_usage
+
+
+def test_key_averages_exposes_self_cpu_time_total_aggregate():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+        _ = x * x
+
+    rows = prof.key_averages()
+    per_row_sum = sum(row.self_cpu_time_total for row in rows)
+
+    assert rows.self_cpu_time_total == pytest.approx(per_row_sum)
+
+
+def test_key_averages_total_average_returns_total_row():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    total = rows.total_average()
+
+    assert total.key == "Total"
+    assert total.count == sum(row.count for row in rows)
+    assert total.self_cpu_time_total == pytest.approx(rows.self_cpu_time_total)
+
+
+def test_key_averages_empty_events_total_average_is_zero():
+    with torch.profiler.profile() as prof:
+        pass
+
+    rows = prof.key_averages()
+    total = rows.total_average()
+
+    assert len(rows) == 0
+    assert rows.self_cpu_time_total == 0
+    assert total.key == "Total"
+    assert total.count == 0
+    assert total.self_cpu_time_total == 0
+    assert total.cpu_time_total == 0
+    assert total.cpu_time == 0.0
+
+def test_key_averages_supported_export_stacks_metrics_matches_torch_shape():
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    metrics = prof.key_averages(group_by_stack_n=2).supported_export_stacks_metrics()
+
+    assert metrics == [
+        "self_cpu_time_total",
+        "self_cuda_time_total",
+        "self_xpu_time_total",
+        "self_privateuse1_time_total",
+    ]
+
+
+def test_key_averages_export_stacks_rejects_unsupported_metric(tmp_path):
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    out = tmp_path / "stacks_invalid.txt"
+    rows = prof.key_averages(group_by_stack_n=2)
+
+    with pytest.raises(ValueError, match="metric should be one of"):
+        rows.export_stacks(str(out), "cpu_time_total")
+
+
+def test_key_averages_export_stacks_writes_stack_lines(tmp_path):
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    out = tmp_path / "stacks.txt"
+    rows = prof.key_averages(group_by_stack_n=2)
+    rows.export_stacks(str(out), "self_cpu_time_total")
+
+    payload = out.read_text(encoding="utf-8")
+    lines = [line for line in payload.splitlines() if line.strip()]
+    assert lines
+    assert all(" " in line for line in lines)
+    assert all(";" in line for line in lines)
+
+def test_profile_exposes_acc_events_flag_and_defaults_false():
+    prof = torch.profiler.profile()
+    assert hasattr(prof, "acc_events")
+    assert prof.acc_events is False
+
+
+def test_profile_accepts_acc_events_init_kwarg():
+    prof = torch.profiler.profile(acc_events=True)
+    assert prof.acc_events is True
+
+
+def test_profile_add_metadata_requires_string_value():
+    with torch.profiler.profile() as prof:
+        assert hasattr(prof, "add_metadata")
+        prof.add_metadata("k", "v")
+        with pytest.raises(AttributeError):
+            prof.add_metadata("k", 1)
+
+
+def test_profile_add_metadata_json_accepts_raw_string():
+    with torch.profiler.profile() as prof:
+        prof.add_metadata_json("k", "notjson")
+
+
+def test_profile_preset_metadata_json_available_before_start():
+    prof = torch.profiler.profile()
+    prof.preset_metadata_json("foo", "{\"a\": 1}")
+
+
+def test_profile_toggle_collection_dynamic_blocks_and_restores_cpu_collection():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+        prof.toggle_collection_dynamic(False, [torch.profiler.ProfilerActivity.CPU])
+        _ = x * x
+        prof.toggle_collection_dynamic(True, [torch.profiler.ProfilerActivity.CPU])
+        _ = x + x
+
+    names = [event["name"] for event in prof.events() if event["kind"] == "op"]
+    add_count = sum(1 for name in names if "add" in name)
+    assert add_count >= 2
+    assert all("mul" not in name for name in names)
+
+
+def test_profile_export_memory_timeline_requires_memory_related_flags(tmp_path):
+    with torch.profiler.profile() as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    out = tmp_path / "memory.json"
+    with pytest.raises(ValueError, match="record_shapes=True, profile_memory=True, with_stack=True required"):
+        prof.export_memory_timeline(str(out))
+
+def test_key_averages_supports_copy_and_count():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    copied = rows.copy()
+
+    assert isinstance(copied, list)
+    assert len(copied) == len(rows)
+    assert rows.count(copied[0]) >= 1
+
+
+def test_key_averages_sort_and_reverse_operate_on_row_objects():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+        _ = x * x
+
+    rows = prof.key_averages()
+    rows.sort(key=lambda row: row.key)
+    keys_sorted = [row.key for row in rows]
+    rows.reverse()
+    keys_reversed = [row.key for row in rows]
+
+    assert keys_sorted
+    assert keys_reversed == list(reversed(keys_sorted))
+
+
+def test_key_averages_event_list_key_averages_accepts_torch_keywords():
+    with torch.profiler.profile(record_shapes=True, with_stack=True) as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    regrouped = rows.key_averages(
+        group_by_input_shapes=True,
+        group_by_stack_n=1,
+        group_by_overload_name=True,
+    )
+
+    assert len(regrouped) >= 1
+
+def test_key_averages_supports_append_extend_insert_pop_remove_clear():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = rows[0]
+    base = len(rows)
+
+    rows.append(first)
+    assert len(rows) == base + 1
+    rows.insert(0, first)
+    assert len(rows) == base + 2
+    rows.extend([first])
+    assert len(rows) == base + 3
+
+    popped = rows.pop()
+    assert popped is first
+    assert len(rows) == base + 2
+
+    rows.remove(first)
+    assert len(rows) == base + 1
+
+    rows.clear()
+    assert len(rows) == 0
+
+
+def test_key_averages_supports_index_lookup():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    first = rows[0]
+
+    assert rows.index(first) == 0
+
+def test_key_averages_row_exposes_torch_compat_fields_and_time_strings():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages()))
+
+    assert hasattr(row, "node_id")
+    assert hasattr(row, "is_legacy")
+    assert hasattr(row, "is_remote")
+    assert hasattr(row, "overload_name")
+    assert hasattr(row, "cpu_children")
+    assert hasattr(row, "cpu_parent")
+    assert hasattr(row, "cpu_time_str")
+    assert hasattr(row, "cpu_time_total_str")
+    assert hasattr(row, "self_cpu_time_total_str")
+    assert hasattr(row, "device_time_str")
+    assert hasattr(row, "device_time_total_str")
+    assert hasattr(row, "self_device_time_total_str")
+    assert hasattr(row, "cuda_time")
+    assert row.cpu_time_str.endswith("us")
+    assert row.device_time_str.endswith("us")
+
+
+def test_key_averages_row_add_merges_counts_and_times():
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    row = next(iter(prof.key_averages()))
+    clone = row.__class__(dict(row._row))
+
+    base_count = row.count
+    base_total = row.cpu_time_total
+    merged = row.add(clone)
+
+    assert merged is row
+    assert row.count == base_count + clone.count
+    assert row.cpu_time_total >= base_total
+
+def test_key_averages_export_chrome_trace_writes_valid_json(tmp_path):
+    out = tmp_path / "key_averages_trace.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+
+    rows = prof.key_averages()
+    rows.export_chrome_trace(str(out))
+
+    payload = json.loads(out.read_text())
+    assert "traceEvents" in payload
+    assert isinstance(payload["traceEvents"], list)
+
+
+def test_key_averages_export_chrome_trace_contains_row_entries(tmp_path):
+    out = tmp_path / "key_averages_trace_rows.json"
+
+    with torch.profiler.profile() as prof:
+        x = torch.ones((4, 4))
+        _ = x + x
+        _ = x * x
+
+    rows = prof.key_averages()
+    rows.export_chrome_trace(str(out))
+
+    payload = json.loads(out.read_text())
+    events = payload["traceEvents"]
+
+    assert events
+    required = {"name", "ph", "ts", "dur", "pid", "tid", "cat", "args"}
+    assert all(required.issubset(event.keys()) for event in events)
+    assert all("count" in event.get("args", {}) for event in events)
+    assert all("self_cpu_time_total" in event.get("args", {}) for event in events)
+
+
+
+def test_profile_exposes_scheduler_state_attributes():
+    prof = torch.profiler.profile()
+
+    assert hasattr(prof, "schedule")
+    assert hasattr(prof, "on_trace_ready")
+    assert hasattr(prof, "step_num")
+    assert hasattr(prof, "current_action")
+    assert hasattr(prof, "record_steps")
+    assert hasattr(prof, "action_map")
+    assert hasattr(prof, "profiler")
+    assert hasattr(prof, "mem_tl")
+
+
+def test_profile_scheduler_state_updates_step_num_and_current_action():
+    sched = torch.profiler.schedule(wait=1, warmup=1, active=1, repeat=1, skip_first=0)
+
+    with torch.profiler.profile(schedule=sched) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+        assert prof.step_num == 0
+        first_action = prof.current_action
+        prof.step()
+        _ = x + x
+        second_action = prof.current_action
+
+    assert first_action != second_action
+    assert prof.step_num >= 1
+
+
+def test_profile_export_stacks_delegates_to_key_averages(tmp_path):
+    out = tmp_path / "profile_stacks.txt"
+
+    with torch.profiler.profile(with_stack=True) as prof:
+        x = torch.ones((2, 2))
+        _ = x + x
+
+    prof.export_stacks(str(out), "self_cpu_time_total")
+
+    assert out.exists()
+    assert isinstance(out.read_text(encoding="utf-8"), str)
+
+
+def test_profile_exposes_trace_control_methods_and_has_cudagraphs_attr():
+    prof = torch.profiler.profile()
+
+    assert hasattr(prof, "prepare_trace")
+    assert hasattr(prof, "start_trace")
+    assert hasattr(prof, "stop_trace")
+    assert hasattr(prof, "get_trace_id")
+    assert hasattr(prof, "set_custom_trace_id_callback")
+    assert hasattr(prof, "has_cudagraphs")
+    assert prof.has_cudagraphs is False
+
+
+def test_profile_prepare_trace_sets_trace_id_and_honors_custom_callback():
+    prof = torch.profiler.profile()
+    assert prof.get_trace_id() is None
+
+    seen = []
+
+    def custom_trace_id():
+        seen.append("called")
+        return "TRACE_ID_CUSTOM"
+
+    prof.set_custom_trace_id_callback(custom_trace_id)
+    prof.prepare_trace()
+
+    assert seen == ["called"]
+    assert prof.profiler is not None
+    assert prof.get_trace_id() == "TRACE_ID_CUSTOM"
+
+
+def test_profile_start_stop_trace_requires_prepare_and_notifies_observer():
+    class _Observer:
+        def __init__(self):
+            self.events = []
+
+        def start(self):
+            self.events.append("start")
+
+        def stop(self):
+            self.events.append("stop")
+
+    prof = torch.profiler.profile(execution_trace_observer=_Observer())
+
+    with pytest.raises(AssertionError, match="Profiler must be initialized before starting trace"):
+        prof.start_trace()
+
+    prof.prepare_trace()
+    prof.start_trace()
+    prof.stop_trace()
+
+    assert prof.execution_trace_observer.events == ["start", "stop"]

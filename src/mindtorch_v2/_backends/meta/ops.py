@@ -224,6 +224,12 @@ def _meta_dstack_meta(tensors):
     return _meta_tensor(tuple(out_shape), tensors[0].dtype, tensors[0].device)
 
 
+def _normalize_tensor_sequence_args(tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        return tuple(tensors[0])
+    return tuple(tensors)
+
+
 def _meta_pad_sequence_meta(seqs, batch_first=False, padding_value=0.0, padding_side="right"):
     max_len = max(t.shape[0] for t in seqs)
     batch = len(seqs)
@@ -233,6 +239,7 @@ def _meta_pad_sequence_meta(seqs, batch_first=False, padding_value=0.0, padding_
 
 
 def _meta_block_diag_meta(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     rows = sum(t.shape[0] for t in tensors)
     cols = sum(t.shape[1] for t in tensors)
     return _meta_tensor((rows, cols), tensors[0].dtype, tensors[0].device)
@@ -296,6 +303,7 @@ def _meta_diag_meta(a, diagonal=0):
 
 
 def _meta_cartesian_prod_meta(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     rows = 1
     for t in tensors:
         rows *= t.shape[0]

@@ -1,4 +1,5 @@
 from collections import deque
+from contextlib import nullcontext
 import threading
 
 from .grad_mode import no_grad
@@ -15,7 +16,19 @@ def _task_stack():
     return stack
 
 
+def is_create_graph_enabled():
+    stack = _task_stack()
+    if not stack:
+        return False
+    return bool(stack[-1].create_graph)
+
+
 class _GraphTask:
+    def _grad_accum_context(self):
+        if self.create_graph:
+            return nullcontext()
+        return no_grad()
+
     def __init__(self, dependencies, *, retain_graph, create_graph, accumulate_grad, grads_map=None):
         self.dependencies = dependencies
         self.received = {}
@@ -28,13 +41,15 @@ class _GraphTask:
 
     def _accumulate_tensor_grad(self, tensor, grad):
         grad = _apply_hooks(tensor, grad)
+        if self.create_graph and grad is not None:
+            grad.requires_grad = True
         if self.accumulate_grad:
             if tensor.grad_fn is None or getattr(tensor, "_retain_grad", False):
                 if tensor.grad is None:
                     tensor.grad = grad
                 else:
                     from .._functional import add
-                    with no_grad():
+                    with self._grad_accum_context():
                         tensor.grad = add(tensor.grad, grad)
         else:
             prev = self.grads_map.get(tensor)
@@ -42,7 +57,7 @@ class _GraphTask:
                 self.grads_map[tensor] = grad
             else:
                 from .._functional import add
-                with no_grad():
+                with self._grad_accum_context():
                     self.grads_map[tensor] = add(prev, grad)
         return grad
 
@@ -52,7 +67,7 @@ class _GraphTask:
             self.node_grads[node] = grad
         else:
             from .._functional import add
-            with no_grad():
+            with self._grad_accum_context():
                 self.node_grads[node] = add(existing, grad)
         self.received[node] = self.received.get(node, 0) + 1
         if self.received[node] >= self.dependencies.get(node, 0):

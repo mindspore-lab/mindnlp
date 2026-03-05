@@ -7,6 +7,9 @@ from .functionalize import functionalize_op, is_functionalize_enabled, should_fu
 import threading
 
 from .._autograd.grad_mode import is_grad_enabled
+from ..amp.state import is_autocast_enabled
+from ..amp.policy import apply_autocast_policy
+from ..profiler.profiler import is_profiler_enabled, dispatch_op_enter, dispatch_op_exit
 
 
 _DISPATCH_STATE = threading.local()
@@ -131,7 +134,7 @@ def _check_inplace_targets(schema_obj, args, kwargs):
 
 
 class _PendingOp:
-    def __init__(self, impl, args, kwargs, out, keyset, key, schema_obj=None):
+    def __init__(self, impl, args, kwargs, out, keyset, key, schema_obj=None, op_name=None):
         self.impl = impl
         self.args = args
         self.kwargs = kwargs
@@ -139,6 +142,7 @@ class _PendingOp:
         self.keyset = keyset
         self.key = key
         self.schema_obj = schema_obj
+        self.op_name = op_name
 
     def _copy_result(self, pending, result):
         prev_requires_grad = pending.requires_grad
@@ -170,12 +174,16 @@ class _PendingOp:
         _bump_versions(self.schema_obj, self.args, self.kwargs)
 
 class _FunctionalizePendingOp:
-    def __init__(self, target, thunk, keyset, key, finalize=None):
+    def __init__(self, target, thunk, keyset, key, finalize=None, op_name=None, schema_obj=None, args=None, kwargs=None):
         self.target = target
         self.thunk = thunk
         self.keyset = keyset
         self.key = key
         self.finalize = finalize
+        self.op_name = op_name
+        self.schema_obj = schema_obj
+        self.args = args
+        self.kwargs = kwargs
 
     def execute(self):
         _push_dispatch_context(self.keyset, self.key)
@@ -237,9 +245,17 @@ def _key_order(keyset):
 
 def _extract_tensors(args, kwargs):
     tensors = []
-    for value in list(args) + list(kwargs.values()):
+
+    def _visit(value):
         if hasattr(value, "device"):
             tensors.append(value)
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                _visit(item)
+
+    for value in list(args) + list(kwargs.values()):
+        _visit(value)
     return tensors
 
 
@@ -306,13 +322,23 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
                 f"could not find kernel for op {name} with keys {[k.name for k in _key_order(keyset)]}"
             )
         impl_kwargs = _prepare_kwargs(kernel, kwargs, dispatch_device)
+        token = None
+        if is_profiler_enabled():
+            token = dispatch_op_enter(alias_name, dispatch_device, args, impl_kwargs)
         _push_dispatch_context(keyset, key)
         try:
             result = kernel(*args, **impl_kwargs)
         finally:
             _pop_dispatch_context()
+            if token is not None:
+                dispatch_op_exit(token)
         _bump_versions(entry.schema_obj, args, impl_kwargs)
         return result
+    if keyset.has(DispatchKey.Autocast):
+        device_type = dispatch_device.type if hasattr(dispatch_device, "type") else dispatch_device
+        casted_args, casted_kwargs = apply_autocast_policy(alias_name, args, kwargs, device_type)
+        return redispatch(alias_name, keyset.without(DispatchKey.Autocast), *casted_args, **casted_kwargs)
+
     if pipe is not None and keyset.has(DispatchKey.Pipeline):
         meta = entry.kernels.get(DispatchKey.Meta)
         if meta is None:
@@ -330,7 +356,19 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         if impl is None:
             raise RuntimeError(f"pipeline requires backend kernel for op {name}")
         impl_kwargs = _prepare_kwargs(impl, kwargs, dispatch_device)
-        pipe.record(_PendingOp(impl, args, impl_kwargs, out, keyset.without(DispatchKey.Pipeline), impl_key, schema_obj=entry.schema_obj), pending=out)
+        pipe.record(
+            _PendingOp(
+                impl,
+                args,
+                impl_kwargs,
+                out,
+                keyset.without(DispatchKey.Pipeline),
+                impl_key,
+                schema_obj=entry.schema_obj,
+                op_name=alias_name,
+            ),
+            pending=out,
+        )
         return out
     if pipe is not None and keyset.has(DispatchKey.Pipeline):
         pipe.flush()
@@ -346,6 +384,7 @@ def dispatch(name, dispatch_device, *args, **kwargs):
         pipeline_enabled=pipe is not None,
         functionalize_enabled=is_functionalize_enabled(),
         device=dispatch_device,
+        autocast_enabled=is_autocast_enabled(getattr(dispatch_device, "type", dispatch_device)),
     )
     return dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs)
 

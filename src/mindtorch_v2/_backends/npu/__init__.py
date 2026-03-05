@@ -65,6 +65,14 @@ from .ops import (
     mul_,
     relu_,
     zero_,
+    uniform_,
+    normal_,
+    fill_,
+    clamp_,
+    copy_,
+    erfinv_,
+    sub_,
+    div_,
     contiguous,
     getitem,
     setitem,
@@ -82,6 +90,16 @@ from .ops import (
     topk,
     tril,
     triu,
+    rot90,
+    repeat,
+    repeat_interleave,
+    tile,
+    scatter,
+    tril_indices,
+    triu_indices,
+    diag,
+    cartesian_prod,
+    block_diag,
     stack,
     cat,
     concatenate,
@@ -109,6 +127,12 @@ from .ops import (
     atan2,
     atanh,
     equal,
+    eq,
+    ne,
+    lt,
+    le,
+    gt,
+    ge,
     fmax,
     fmin,
     fmod,
@@ -141,6 +165,47 @@ from .ops import (
     take_along_dim,
     masked_select,
     dropout,
+    pad,
+    pad_sequence,
+    linalg_qr,
+    narrow,
+    select,
+    expand,
+    masked_fill,
+    masked_fill_,
+    index_put_,
+    index_put,
+    index_copy_,
+    index_fill_,
+    index_add_,
+    scatter_,
+    scatter_add_,
+    masked_scatter_,
+    unfold,
+    var_,
+    norm_,
+    prod_,
+    floor_divide,
+    rms_norm,
+    conv2d,
+    conv1d,
+    conv_transpose2d,
+    conv_transpose1d,
+    max_pool2d,
+    avg_pool2d,
+    adaptive_avg_pool2d,
+    # P1 ops
+    std_,
+    reciprocal_,
+    addmm,
+    einsum_,
+    upsample_nearest2d,
+    upsample_bilinear2d,
+    one_hot,
+    # Logical ops
+    logical_and,
+    logical_or,
+    logical_not,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -166,6 +231,16 @@ registry.register("sort", "npu", sort, meta=meta_infer.infer_sort)
 registry.register("topk", "npu", topk, meta=meta_infer.infer_topk)
 registry.register("tril", "npu", tril, meta=meta_infer.infer_unary)
 registry.register("triu", "npu", triu, meta=meta_infer.infer_unary)
+registry.register("rot90", "npu", rot90, meta=meta_infer.infer_rot90)
+registry.register("repeat", "npu", repeat, meta=meta_infer.infer_repeat)
+registry.register("repeat_interleave", "npu", repeat_interleave, meta=meta_infer.infer_repeat_interleave)
+registry.register("tile", "npu", tile, meta=meta_infer.infer_tile)
+registry.register("scatter", "npu", scatter, meta=meta_infer.infer_scatter)
+registry.register("tril_indices", "npu", tril_indices, meta=meta_infer.infer_tril_indices)
+registry.register("triu_indices", "npu", triu_indices, meta=meta_infer.infer_triu_indices)
+registry.register("diag", "npu", diag, meta=meta_infer.infer_diag)
+registry.register("cartesian_prod", "npu", cartesian_prod, meta=meta_infer.infer_cartesian_prod)
+registry.register("block_diag", "npu", block_diag, meta=meta_infer.infer_block_diag)
 registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
 registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)
@@ -212,6 +287,13 @@ registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "npu", zero_, meta=meta_infer.infer_unary)
+registry.register("uniform_", "npu", uniform_, meta=meta_infer.infer_unary)
+registry.register("normal_", "npu", normal_, meta=meta_infer.infer_unary)
+registry.register("fill_", "npu", fill_, meta=meta_infer.infer_unary)
+registry.register("clamp_", "npu", clamp_, meta=meta_infer.infer_unary)
+registry.register("copy_", "npu", copy_, meta=meta_infer.infer_unary)
+registry.register("erfinv_", "npu", erfinv_, meta=meta_infer.infer_unary)
+registry.register("sub_", "npu", sub_, meta=meta_infer.infer_binary)
 registry.register("sub", "npu", sub, meta=meta_infer.infer_binary)
 registry.register("div", "npu", div, meta=meta_infer.infer_binary)
 registry.register("true_divide", "npu", div, meta=meta_infer.infer_binary)
@@ -238,9 +320,18 @@ registry.register("fmod", "npu", fmod, meta=meta_infer.infer_binary)
 registry.register("allclose", "npu", allclose, meta=meta_infer.infer_reduce_bool)
 registry.register("isclose", "npu", isclose, meta=meta_infer.infer_unary_bool)
 registry.register("equal", "npu", equal, meta=meta_infer.infer_reduce_bool)
+registry.register("eq", "npu", eq, meta=meta_infer.infer_binary_bool)
+registry.register("ne", "npu", ne, meta=meta_infer.infer_binary_bool)
+registry.register("lt", "npu", lt, meta=meta_infer.infer_binary_bool)
+registry.register("le", "npu", le, meta=meta_infer.infer_binary_bool)
+registry.register("gt", "npu", gt, meta=meta_infer.infer_binary_bool)
+registry.register("ge", "npu", ge, meta=meta_infer.infer_binary_bool)
 registry.register("reshape", "npu", view_backend.reshape, meta=meta_infer.infer_view)
 registry.register("view", "npu", view_backend.view, meta=meta_infer.infer_view)
 registry.register("transpose", "npu", view_backend.transpose, meta=meta_infer.infer_transpose)
+registry.register("squeeze", "npu", view_backend.squeeze, meta=meta_infer.infer_view)
+registry.register("unsqueeze", "npu", view_backend.unsqueeze, meta=meta_infer.infer_view)
+registry.register("permute", "npu", view_backend.permute, meta=meta_infer.infer_view)
 registry.register("to", "npu", convert_backend.to_device)
 
 registry.register("tensor", "npu", tensor_create)
@@ -279,6 +370,8 @@ registry.register("index_select", "npu", index_select, meta=meta_infer.infer_ind
 registry.register("take", "npu", take, meta=meta_infer.infer_take)
 registry.register("take_along_dim", "npu", take_along_dim, meta=meta_infer.infer_take_along_dim)
 registry.register("masked_select", "npu", masked_select, meta=meta_infer.infer_masked_select)
+registry.register("pad", "npu", pad, meta=meta_infer.infer_unary)
+registry.register("pad_sequence", "npu", pad_sequence, meta=meta_infer.infer_pad_sequence)
 
 # Critical tier operations
 registry.register("mean", "npu", mean, meta=meta_infer.infer_sum)
@@ -302,6 +395,60 @@ registry.register("group_norm", "npu", group_norm, meta=meta_infer.infer_unary)
 # Tensor operations
 # Random operations
 registry.register("dropout", "npu", dropout, meta=meta_infer.infer_unary)
+
+# Linalg operations
+registry.register("linalg_qr", "npu", linalg_qr)
+
+# Tensor indexing / selection ops
+registry.register("narrow", "npu", narrow)
+registry.register("select", "npu", select)
+registry.register("expand", "npu", expand)
+registry.register("masked_fill", "npu", masked_fill, meta=meta_infer.infer_unary)
+registry.register("masked_fill_", "npu", masked_fill_, meta=meta_infer.infer_unary)
+registry.register("index_put_", "npu", index_put_)
+registry.register("index_put", "npu", index_put)
+registry.register("index_copy_", "npu", index_copy_)
+registry.register("index_fill_", "npu", index_fill_)
+registry.register("index_add_", "npu", index_add_)
+registry.register("scatter_", "npu", scatter_)
+registry.register("scatter_add_", "npu", scatter_add_)
+registry.register("masked_scatter_", "npu", masked_scatter_)
+registry.register("unfold", "npu", unfold)
+
+# Reduction ops (composite)
+registry.register("var", "npu", var_, meta=meta_infer.infer_sum)
+registry.register("norm", "npu", norm_, meta=meta_infer.infer_sum)
+registry.register("prod", "npu", prod_, meta=meta_infer.infer_sum)
+registry.register("floor_divide", "npu", floor_divide, meta=meta_infer.infer_binary)
+registry.register("rms_norm", "npu", rms_norm, meta=meta_infer.infer_unary)
+
+# Conv operations (ACLNN large kernels)
+registry.register("conv2d", "npu", conv2d)
+registry.register("conv1d", "npu", conv1d)
+registry.register("conv_transpose2d", "npu", conv_transpose2d)
+registry.register("conv_transpose1d", "npu", conv_transpose1d)
+
+# Pooling operations (ACLNN large kernels)
+registry.register("max_pool2d", "npu", max_pool2d)
+registry.register("avg_pool2d", "npu", avg_pool2d)
+registry.register("adaptive_avg_pool2d", "npu", adaptive_avg_pool2d)
+
+# P1 ops
+registry.register("std", "npu", std_, meta=meta_infer.infer_sum)
+registry.register("reciprocal", "npu", reciprocal_, meta=meta_infer.infer_unary)
+registry.register("addmm", "npu", addmm)
+registry.register("einsum", "npu", einsum_)
+registry.register("upsample_nearest2d", "npu", upsample_nearest2d)
+registry.register("upsample_bilinear2d", "npu", upsample_bilinear2d)
+registry.register("one_hot", "npu", one_hot)
+
+# Logical ops
+registry.register("logical_and", "npu", logical_and, meta=meta_infer.infer_binary_bool)
+registry.register("logical_or", "npu", logical_or, meta=meta_infer.infer_binary_bool)
+registry.register("logical_not", "npu", logical_not, meta=meta_infer.infer_unary_bool)
+
+# In-place ops (batch 1)
+registry.register("div_", "npu", div_, meta=meta_infer.infer_binary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

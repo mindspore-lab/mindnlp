@@ -1,0 +1,1188 @@
+import json
+import gzip
+import os
+import threading
+import time
+import tempfile
+import traceback
+import tracemalloc
+import uuid
+from dataclasses import dataclass
+
+from .common import ProfilerActivity, ProfilerAction
+
+
+_ACTIVE_SESSION = None
+_ACTIVE_LOCK = threading.Lock()
+_SCOPE_STATE = threading.local()
+_CORRELATION_LOCK = threading.Lock()
+_CORRELATION_ID = 0
+
+
+@dataclass
+class _Event:
+    name: str
+    kind: str
+    device_type: str
+    start_ns: int
+    end_ns: int
+    duration_ns: int
+    step: int
+    thread_id: int
+    metadata: dict = None
+
+    def to_dict(self):
+        payload = {
+            "name": self.name,
+            "kind": self.kind,
+            "device_type": self.device_type,
+            "start_ns": self.start_ns,
+            "end_ns": self.end_ns,
+            "duration_ns": self.duration_ns,
+            "step": self.step,
+            "thread_id": self.thread_id,
+        }
+        if self.metadata:
+            payload.update(self.metadata)
+        return payload
+
+
+class _ProfilerSession:
+    def __init__(self, activities, record_shapes=False, with_stack=False, profile_memory=False):
+        self.activities = set(activities)
+        self.current_step = 0
+        self._events = []
+        self._lock = threading.Lock()
+        self.is_recording = True
+        self.record_shapes = bool(record_shapes)
+        self.with_stack = bool(with_stack)
+        self.profile_memory = bool(profile_memory)
+
+    def make_op_token(self, name, device_type, metadata=None):
+        return (
+            self,
+            name,
+            device_type,
+            time.perf_counter_ns(),
+            self.current_step,
+            threading.get_ident(),
+            metadata,
+        )
+
+    def append_event(self, event):
+        if event.device_type not in self.activities:
+            return
+        with self._lock:
+            self._events.append(event)
+
+    def snapshot(self):
+        with self._lock:
+            return list(self._events)
+
+
+def _activity_name(activity):
+    if isinstance(activity, ProfilerActivity):
+        name = activity.value
+    else:
+        name = str(activity).split(".")[-1].upper()
+
+    if name in ("CUDA", "GPU"):
+        return "NPU"
+    if name in ("CPU", "NPU"):
+        return name
+    raise ValueError(f"unsupported profiler activity: {activity}")
+
+
+def _resolve_activities(activities):
+    if activities is None:
+        return {"CPU", "NPU"}
+    return {_activity_name(item) for item in activities}
+
+
+def _validate_schedule_value(name, value):
+    if not isinstance(value, int):
+        raise ValueError(f"{name} must be an int")
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0")
+
+
+def schedule(wait=0, warmup=0, active=0, repeat=0, skip_first=0):
+    _validate_schedule_value("wait", wait)
+    _validate_schedule_value("warmup", warmup)
+    _validate_schedule_value("active", active)
+    _validate_schedule_value("repeat", repeat)
+    _validate_schedule_value("skip_first", skip_first)
+
+    if active <= 0:
+        raise ValueError("active must be > 0")
+
+    cycle = wait + warmup + active
+
+    def _schedule(step):
+        if step < skip_first:
+            return ProfilerAction.NONE
+
+        local = step - skip_first
+        cycle_idx = local // cycle
+        if repeat > 0 and cycle_idx >= repeat:
+            return ProfilerAction.NONE
+
+        pos = local % cycle
+        if pos < wait:
+            return ProfilerAction.NONE
+        if pos < wait + warmup:
+            return ProfilerAction.WARMUP
+
+        active_pos = pos - (wait + warmup)
+        if active_pos == active - 1:
+            return ProfilerAction.RECORD_AND_SAVE
+        return ProfilerAction.RECORD
+
+    return _schedule
+
+
+def _normalize_device_type(device):
+    if hasattr(device, "type"):
+        dev = str(device.type)
+    else:
+        dev = str(device or "cpu")
+    dev = dev.split(":", 1)[0].lower()
+    if dev in ("cuda", "gpu", "npu"):
+        return "NPU"
+    if dev == "cpu":
+        return "CPU"
+    return dev.upper()
+
+
+def _is_tensor_like(value):
+    return hasattr(value, "shape") and hasattr(value, "device")
+
+
+def _shape_payload(value, depth=0):
+    if depth > 3:
+        return None
+    if _is_tensor_like(value):
+        return list(value.shape)
+    if isinstance(value, (list, tuple)):
+        items = []
+        for item in value:
+            item_shape = _shape_payload(item, depth + 1)
+            if item_shape is not None:
+                items.append(item_shape)
+        return items or None
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            item_shape = _shape_payload(item, depth + 1)
+            if item_shape is not None:
+                out[str(key)] = item_shape
+        return out or None
+    return None
+
+
+def _capture_input_shapes(args, kwargs):
+    arg_shapes = []
+    for value in args:
+        shape = _shape_payload(value)
+        if shape is not None:
+            arg_shapes.append(shape)
+
+    kw_shapes = {}
+    for key, value in kwargs.items():
+        shape = _shape_payload(value)
+        if shape is not None:
+            kw_shapes[key] = shape
+
+    if not arg_shapes and not kw_shapes:
+        return None
+
+    payload = {}
+    if arg_shapes:
+        payload["args"] = arg_shapes
+    if kw_shapes:
+        payload["kwargs"] = kw_shapes
+    return payload
+
+
+def _is_internal_stack_frame(filename):
+    normalized = filename.replace("\\", "/")
+    return (
+        "/mindtorch_v2/profiler/profiler.py" in normalized
+        or "/mindtorch_v2/_dispatch/dispatcher.py" in normalized
+    )
+
+
+def _capture_stack(limit=48):
+    frames = traceback.extract_stack(limit=limit)
+    entries = []
+    for frame in frames:
+        if _is_internal_stack_frame(frame.filename):
+            continue
+        entries.append(f"{frame.filename}:{frame.lineno}:{frame.name}")
+    return entries[-32:] if entries else None
+
+
+def _npu_memory_allocated_snapshot(device_type):
+    if device_type != "NPU":
+        return None
+
+    from .. import npu
+
+    if not npu.is_available():
+        return None
+    return int(npu.memory_allocated())
+
+
+def _cpu_memory_allocated_snapshot(device_type):
+    if device_type != "CPU":
+        return None
+    if not tracemalloc.is_tracing():
+        return None
+    current, _peak = tracemalloc.get_traced_memory()
+    return int(current)
+
+
+def _memory_prefix_for_device(device_type):
+    if device_type == "NPU":
+        return "npu_memory_allocated"
+    if device_type == "CPU":
+        return "cpu_memory_allocated"
+    return None
+
+
+def _memory_allocated_snapshot(device_type):
+    if device_type == "NPU":
+        return _npu_memory_allocated_snapshot(device_type)
+    if device_type == "CPU":
+        return _cpu_memory_allocated_snapshot(device_type)
+    return None
+
+
+
+def _next_correlation_id():
+    global _CORRELATION_ID
+    with _CORRELATION_LOCK:
+        _CORRELATION_ID += 1
+        return _CORRELATION_ID
+
+def _active_session():
+    return _ACTIVE_SESSION
+
+
+def is_profiler_enabled():
+    return _ACTIVE_SESSION is not None
+
+
+def dispatch_op_enter(name, dispatch_device, args, kwargs):
+    session = _active_session()
+    if session is None:
+        return None
+
+    device_type = _normalize_device_type(dispatch_device)
+    if device_type not in session.activities:
+        return None
+    if not session.is_recording:
+        return None
+
+    metadata = None
+    if session.record_shapes or session.with_stack or session.profile_memory:
+        metadata = {}
+        if session.record_shapes:
+            shapes = _capture_input_shapes(args, kwargs)
+            if shapes is not None:
+                metadata["input_shapes"] = shapes
+        if session.with_stack:
+            stack = _capture_stack()
+            if stack:
+                metadata["stack"] = stack
+        if session.profile_memory:
+            prefix = _memory_prefix_for_device(device_type)
+            if prefix is not None:
+                before = _memory_allocated_snapshot(device_type)
+                if before is not None:
+                    metadata[f"{prefix}_before"] = before
+        if not metadata:
+            metadata = None
+
+    if metadata is None:
+        metadata = {}
+    metadata["correlation_id"] = _next_correlation_id()
+    metadata["runtime_name"] = "dispatch_kernel"
+    metadata["runtime_tid"] = threading.get_ident()
+
+    return session.make_op_token(name, device_type, metadata)
+
+
+def dispatch_op_exit(token):
+    if token is None:
+        return
+
+    session, name, device_type, start_ns, step, thread_id, metadata = token
+    end_ns = time.perf_counter_ns()
+
+    if metadata is not None:
+        for prefix in ("npu_memory_allocated", "cpu_memory_allocated"):
+            before_key = f"{prefix}_before"
+            if before_key not in metadata:
+                continue
+            after = _memory_allocated_snapshot(device_type)
+            if after is None:
+                continue
+            before = metadata[before_key]
+            metadata[f"{prefix}_after"] = after
+            metadata[f"{prefix}_delta"] = int(after - before)
+
+    session.append_event(
+        _Event(
+            name=name,
+            kind="op",
+            device_type=device_type,
+            start_ns=start_ns,
+            end_ns=end_ns,
+            duration_ns=end_ns - start_ns,
+            step=step,
+            thread_id=thread_id,
+            metadata=metadata,
+        )
+    )
+
+
+def _scope_stack():
+    stack = getattr(_SCOPE_STATE, "stack", None)
+    if stack is None:
+        stack = []
+        _SCOPE_STATE.stack = stack
+    return stack
+
+
+class _RecordFunction:
+    def __init__(self, name):
+        self.name = str(name)
+        self._token = None
+
+    def __enter__(self):
+        session = _active_session()
+        if session is None or not session.is_recording:
+            return self
+
+        metadata = None
+        if session.with_stack:
+            stack = _capture_stack()
+            if stack:
+                metadata = {"stack": stack}
+
+        self._token = (
+            session,
+            self.name,
+            time.perf_counter_ns(),
+            session.current_step,
+            threading.get_ident(),
+            metadata,
+        )
+        _scope_stack().append(self._token)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self._token is None:
+            return False
+
+        session, name, start_ns, step, thread_id, metadata = self._token
+        end_ns = time.perf_counter_ns()
+        stack = _scope_stack()
+        if stack and stack[-1] is self._token:
+            stack.pop()
+        elif self._token in stack:
+            stack.remove(self._token)
+
+        session.append_event(
+            _Event(
+                name=name,
+                kind="scope",
+                device_type="CPU",
+                start_ns=start_ns,
+                end_ns=end_ns,
+                duration_ns=end_ns - start_ns,
+                step=step,
+                thread_id=thread_id,
+                metadata=metadata,
+            )
+        )
+        return False
+
+
+def record_function(name):
+    return _RecordFunction(name)
+
+
+class _FunctionEventAvgRow:
+    def __init__(self, row):
+        self._row = row
+        self._apply_row(row)
+
+    @staticmethod
+    def _format_us(value):
+        return f"{float(value):.3f}us"
+
+    def _apply_row(self, row):
+        self.key = row.get("name")
+        self.count = int(row.get("count", 0))
+        self.self_cpu_time_total = float(row.get("self_time_ns", 0)) / 1000.0
+        self.cpu_time_total = float(row.get("total_time_ns", 0)) / 1000.0
+        self.cpu_time = float(row.get("avg_time_ns", 0)) / 1000.0
+        self.self_device_time_total = float(row.get("self_device_time_ns", 0)) / 1000.0
+        self.device_time_total = float(row.get("device_time_ns", 0)) / 1000.0
+        self.device_time = float(row.get("avg_device_time_ns", 0)) / 1000.0
+        self.device_type = row.get("device_type", "CPU")
+        self.input_shapes = row.get("input_shapes", "")
+        self.stack = row.get("stack", [])
+        self.cpu_memory_usage = int(row.get("cpu_memory_usage", 0))
+        self.self_cpu_memory_usage = int(row.get("self_cpu_memory_usage", 0))
+        self.device_memory_usage = int(row.get("device_memory_usage", 0))
+        self.self_device_memory_usage = int(row.get("self_device_memory_usage", 0))
+        self.flops = int(row.get("flops", 0))
+        self.is_async = bool(row.get("is_async", False))
+        self.scope = int(row.get("scope", 0))
+        self.use_device = row.get("use_device", None)
+        self.is_user_annotation = bool(row.get("is_user_annotation", False))
+        self.node_id = int(row.get("node_id", -1))
+        self.is_legacy = bool(row.get("is_legacy", False))
+        self.is_remote = bool(row.get("is_remote", False))
+        self.overload_name = str(row.get("overload_name", ""))
+        self.cpu_children = list(row.get("cpu_children", []))
+        self.cpu_parent = row.get("cpu_parent", None)
+        self.cpu_time_str = self._format_us(self.cpu_time)
+        self.cpu_time_total_str = self._format_us(self.cpu_time_total)
+        self.self_cpu_time_total_str = self._format_us(self.self_cpu_time_total)
+        self.device_time_str = self._format_us(self.device_time)
+        self.device_time_total_str = self._format_us(self.device_time_total)
+        self.self_device_time_total_str = self._format_us(self.self_device_time_total)
+        self.cuda_time = self.device_time
+
+    def add(self, other):
+        if not isinstance(other, _FunctionEventAvgRow):
+            raise TypeError("other must be FunctionEventAvg")
+
+        self._row["count"] = int(self._row.get("count", 0)) + int(other._row.get("count", 0))
+        for key in (
+            "self_time_ns",
+            "total_time_ns",
+            "device_time_ns",
+            "self_device_time_ns",
+            "cpu_memory_usage",
+            "self_cpu_memory_usage",
+            "device_memory_usage",
+            "self_device_memory_usage",
+            "flops",
+        ):
+            self._row[key] = int(self._row.get(key, 0)) + int(other._row.get(key, 0))
+
+        count = max(1, int(self._row.get("count", 0)))
+        self._row["avg_time_ns"] = self._row.get("total_time_ns", 0) // count
+        self._row["avg_device_time_ns"] = self._row.get("device_time_ns", 0) // count
+
+        self._apply_row(self._row)
+        return self
+
+    def __repr__(self):
+        return (
+            "FunctionEventAvg("
+            f"key={self.key!r}, count={self.count}, "
+            f"self_cpu_time_total={self.self_cpu_time_total:.3f}, "
+            f"cpu_time_total={self.cpu_time_total:.3f})"
+        )
+
+
+def _event_self_time_map(events):
+    indexed = list(enumerate(events))
+    indexed.sort(key=lambda item: (item[1].thread_id, item[1].start_ns, -item[1].end_ns))
+
+    self_time = {idx: max(0, ev.duration_ns) for idx, ev in indexed}
+    stack = []
+
+    for idx, event in indexed:
+        # Pop intervals that no longer contain current event.
+        while stack and event.start_ns >= stack[-1][1].end_ns:
+            stack.pop()
+
+        if stack:
+            parent_idx, parent_event = stack[-1]
+            # Child entirely inside parent on same thread contributes to parent's child coverage.
+            if event.end_ns <= parent_event.end_ns:
+                self_time[parent_idx] = max(0, self_time[parent_idx] - max(0, event.duration_ns))
+
+        stack.append((idx, event))
+
+    return self_time
+
+
+class _KeyAverages:
+    _SORT_MAP = {
+        "self_cpu_time_total": "self_time_ns",
+        "self_cpu_time": "self_time_ns",
+        "cpu_time_total": "total_time_ns",
+        "cpu_time": "total_time_ns",
+        "cpu_time_avg": "avg_time_ns",
+        "count": "count",
+    }
+
+    def __init__(self, events, *, group_by_input_shape=False, group_by_stack_n=0):
+        self._events = list(events)
+        self._rows = None
+        self._row_cache = None
+        self._group_by_input_shape = bool(group_by_input_shape)
+        self._group_by_stack_n = int(group_by_stack_n)
+
+    def _group_key(self, event):
+        key = [event.name, event.device_type]
+        metadata = event.metadata or {}
+
+        if self._group_by_input_shape:
+            key.append(json.dumps(metadata.get("input_shapes", None), sort_keys=True))
+
+        if self._group_by_stack_n > 0:
+            stack = metadata.get("stack") or []
+            key.append(tuple(stack[-self._group_by_stack_n :]))
+
+        return tuple(key)
+
+    def _build_rows(self):
+        if self._rows is not None:
+            return self._rows
+
+        per_event_self_time = _event_self_time_map(self._events)
+
+        grouped = {}
+        for idx, event in enumerate(self._events):
+            group_key = self._group_key(event)
+            row = grouped.setdefault(
+                group_key,
+                {
+                    "name": event.name,
+                    "device_type": event.device_type,
+                    "count": 0,
+                    "total_time_ns": 0,
+                    "self_time_ns": 0,
+                    "device_time_ns": 0,
+                    "self_device_time_ns": 0,
+                    "input_shapes": "",
+                    "stack": [],
+                    "cpu_memory_usage": 0,
+                    "self_cpu_memory_usage": 0,
+                    "device_memory_usage": 0,
+                    "self_device_memory_usage": 0,
+                    "flops": 0,
+                    "is_async": False,
+                    "scope": 0,
+                    "use_device": None,
+                    "is_user_annotation": False,
+                    "node_id": -1,
+                    "is_legacy": False,
+                    "is_remote": False,
+                    "overload_name": "",
+                    "cpu_children": [],
+                    "cpu_parent": None,
+                },
+            )
+            metadata = event.metadata or {}
+            if self._group_by_input_shape:
+                input_shapes = metadata.get("input_shapes")
+                row["input_shapes"] = input_shapes if input_shapes is not None else []
+            if self._group_by_stack_n > 0:
+                stack = metadata.get("stack") or []
+                row["stack"] = stack[-self._group_by_stack_n :] if stack else []
+
+            event_self_time_ns = per_event_self_time.get(idx, max(0, event.duration_ns))
+            row["count"] += 1
+            row["total_time_ns"] += event.duration_ns
+            row["self_time_ns"] += event_self_time_ns
+            if event.device_type == "NPU":
+                row["device_time_ns"] += event.duration_ns
+                row["self_device_time_ns"] += event_self_time_ns
+
+            row["cpu_memory_usage"] += int(metadata.get("cpu_memory_allocated_delta", 0))
+            row["self_cpu_memory_usage"] += int(metadata.get("cpu_memory_allocated_delta", 0))
+            row["device_memory_usage"] += int(metadata.get("npu_memory_allocated_delta", 0))
+            row["self_device_memory_usage"] += int(metadata.get("npu_memory_allocated_delta", 0))
+            row["flops"] += int(metadata.get("flops", 0))
+            row["is_async"] = bool(metadata.get("is_async", False))
+            row["scope"] = int(metadata.get("scope", 0))
+            row["use_device"] = metadata.get("use_device", None)
+            row["is_user_annotation"] = bool(metadata.get("is_user_annotation", False))
+
+        for row in grouped.values():
+            row["avg_time_ns"] = row["total_time_ns"] // max(1, row["count"])
+            row["avg_device_time_ns"] = row["device_time_ns"] // max(1, row["count"])
+
+        self._rows = list(grouped.values())
+        self._row_cache = None
+        return self._rows
+
+    def _row_objects(self):
+        if self._row_cache is None:
+            self._row_cache = [_FunctionEventAvgRow(row) for row in self._build_rows()]
+        return self._row_cache
+
+    def __iter__(self):
+        return iter(self._row_objects())
+
+    def __getitem__(self, idx):
+        return self._row_objects()[idx]
+
+    def copy(self):
+        return list(self._row_objects())
+
+    def count(self, value):
+        return self._row_objects().count(value)
+
+    def sort(self, *, key=None, reverse=False):
+        self._row_objects().sort(key=key, reverse=reverse)
+
+    def reverse(self):
+        self._row_objects().reverse()
+
+    def append(self, value):
+        self._row_objects().append(value)
+
+    def extend(self, values):
+        self._row_objects().extend(values)
+
+    def insert(self, index, value):
+        self._row_objects().insert(index, value)
+
+    def pop(self, index=-1):
+        return self._row_objects().pop(index)
+
+    def remove(self, value):
+        self._row_objects().remove(value)
+
+    def clear(self):
+        self._row_objects().clear()
+
+    def index(self, value, start=0, stop=None):
+        rows = self._row_objects()
+        if stop is None:
+            return rows.index(value, start)
+        return rows.index(value, start, stop)
+
+    def key_averages(
+        self,
+        group_by_input_shapes=False,
+        group_by_stack_n=0,
+        group_by_overload_name=False,
+    ):
+        del group_by_overload_name
+        return _KeyAverages(
+            self._events,
+            group_by_input_shape=bool(group_by_input_shapes),
+            group_by_stack_n=int(group_by_stack_n),
+        )
+
+    def _aggregate_totals(self):
+        rows = self._build_rows()
+        if not rows:
+            return {"count": 0, "self_time_ns": 0, "total_time_ns": 0}
+
+        return {
+            "count": sum(int(row.get("count", 0)) for row in rows),
+            "self_time_ns": sum(int(row.get("self_time_ns", 0)) for row in rows),
+            "total_time_ns": sum(int(row.get("total_time_ns", 0)) for row in rows),
+        }
+
+    @property
+    def self_cpu_time_total(self):
+        totals = self._aggregate_totals()
+        return float(totals["self_time_ns"]) / 1000.0
+
+    def supported_export_stacks_metrics(self):
+        return [
+            "self_cpu_time_total",
+            "self_cuda_time_total",
+            "self_xpu_time_total",
+            "self_privateuse1_time_total",
+        ]
+
+    def export_stacks(self, path, metric):
+        supported = self.supported_export_stacks_metrics()
+        if metric not in supported:
+            raise ValueError("metric should be one of: " + str(supported))
+
+        translate_table = str.maketrans(" ;\t\n", "____")
+        mapped_metric = (
+            metric.replace("cuda", "device")
+            .replace("xpu", "device")
+            .replace("privateuse1", "device")
+        )
+
+        with open(path, "w", encoding="utf-8") as handle:
+            for evt in self:
+                stack = getattr(evt, "stack", None)
+                if stack and len(stack) > 0:
+                    metric_value = getattr(evt, mapped_metric)
+                    if int(metric_value) > 0:
+                        stack_entries = [entry.translate(translate_table) for entry in reversed(stack)]
+                        handle.write(";".join(stack_entries) + " " + str(int(metric_value)) + "\n")
+
+    def export_chrome_trace(self, path):
+        pid = os.getpid()
+        trace_events = []
+        for idx, row in enumerate(self._row_objects()):
+            trace_events.append(
+                {
+                    "name": row.key,
+                    "cat": "op",
+                    "ph": "X",
+                    "pid": pid,
+                    "tid": idx,
+                    "ts": 0.0,
+                    "dur": float(row.cpu_time_total),
+                    "args": {
+                        "count": int(row.count),
+                        "self_cpu_time_total": float(row.self_cpu_time_total),
+                        "cpu_time_total": float(row.cpu_time_total),
+                    },
+                }
+            )
+
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"traceEvents": trace_events}, handle)
+
+    def total_average(self):
+        totals = self._aggregate_totals()
+        count = totals["count"]
+        total_time_ns = totals["total_time_ns"]
+        avg_time_ns = total_time_ns / count if count > 0 else 0
+        row = {
+            "name": "Total",
+            "device_type": "CPU",
+            "count": count,
+            "self_time_ns": totals["self_time_ns"],
+            "total_time_ns": total_time_ns,
+            "avg_time_ns": avg_time_ns,
+            "device_time_ns": 0,
+            "self_device_time_ns": 0,
+            "avg_device_time_ns": 0,
+            "input_shapes": "",
+            "stack": [],
+            "cpu_memory_usage": 0,
+            "self_cpu_memory_usage": 0,
+            "device_memory_usage": 0,
+            "self_device_memory_usage": 0,
+            "flops": 0,
+            "is_async": False,
+            "scope": 0,
+            "use_device": None,
+            "is_user_annotation": False,
+            "node_id": -1,
+            "is_legacy": False,
+            "is_remote": False,
+            "overload_name": "",
+            "cpu_children": [],
+            "cpu_parent": None,
+        }
+        return _FunctionEventAvgRow(row)
+
+    def table(self, sort_by="self_cpu_time_total", row_limit=100):
+        if sort_by not in self._SORT_MAP:
+            raise AttributeError(f"'FunctionEventAvg' object has no attribute '{sort_by}'")
+
+        rows = list(self._build_rows())
+        sort_key = self._SORT_MAP[sort_by]
+        rows.sort(key=lambda item: (item[sort_key], item["name"]), reverse=True)
+        if row_limit is not None:
+            rows = rows[: int(row_limit)]
+
+        header = (
+            f"{'Name':<32} {'Device':<8} {'Self CPU':>12} "
+            f"{'CPU total':>12} {'Total(us)':>12} {'CPU time avg':>14} {'Count':>8} {'# of Calls':>10}"
+        )
+        lines = [header]
+        for row in rows:
+            self_us = row["self_time_ns"] / 1000.0
+            total_us = row["total_time_ns"] / 1000.0
+            avg_us = row["avg_time_ns"] / 1000.0
+            lines.append(
+                f"{row['name']:<32} {row['device_type']:<8} "
+                f"{self_us:>12.3f} {total_us:>12.3f} {total_us:>12.3f} {avg_us:>14.3f} {row['count']:>8} {row['count']:>10}"
+            )
+        return "\n".join(lines)
+
+    def __len__(self):
+        return len(self._row_objects())
+
+
+class profile:
+    def __init__(
+        self,
+        *,
+        activities=None,
+        schedule=None,
+        on_trace_ready=None,
+        record_shapes=False,
+        profile_memory=False,
+        with_stack=False,
+        with_flops=False,
+        with_modules=False,
+        experimental_config=None,
+        execution_trace_observer=None,
+        acc_events=False,
+        use_cuda=None,
+        custom_trace_id_callback=None,
+    ):
+        del use_cuda
+
+        self.activities = _resolve_activities(activities)
+        self._session = _ProfilerSession(
+            self.activities,
+            record_shapes=record_shapes,
+            with_stack=with_stack,
+            profile_memory=profile_memory,
+        )
+        self._started = False
+        self._stopped = False
+        self._trace_ready = on_trace_ready[0] if isinstance(on_trace_ready, tuple) else on_trace_ready
+        self._owns_tracemalloc = False
+
+        if schedule is not None and not callable(schedule):
+            raise TypeError("schedule must be callable")
+
+        self.acc_events = bool(acc_events)
+        self._preset_metadata = {}
+        self._metadata = {}
+
+        self.schedule = schedule if schedule is not None else (lambda _step: ProfilerAction.RECORD)
+        self.on_trace_ready = self._trace_ready
+        self.step_num = 0
+        self.current_action = self.schedule(self.step_num)
+        self.record_steps = schedule is not None
+        self.step_rec_fn = None
+        self.action_map = {}
+
+        self.profiler = None
+        self.mem_tl = None
+        self.preset_metadata = self._preset_metadata
+        self.record_shapes = bool(record_shapes)
+        self.profile_memory = bool(profile_memory)
+        self.with_stack = bool(with_stack)
+        self.with_flops = bool(with_flops)
+        self.with_modules = bool(with_modules)
+        self.experimental_config = experimental_config
+        self.use_device = None
+        self.custom_trace_id_callback = custom_trace_id_callback
+        self.execution_trace_observer = execution_trace_observer
+        self.has_cudagraphs = False
+        self._trace_started = False
+
+        self._schedule = schedule
+        self._current_action = ProfilerAction.RECORD if schedule is None else ProfilerAction.NONE
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.stop()
+        return False
+
+    def _maybe_sync_npu(self):
+        if "NPU" not in self.activities:
+            return
+
+        from .. import npu
+
+        if npu.is_available():
+            npu.synchronize()
+
+    def _maybe_start_cpu_memory_tracer(self):
+        if not self._session.profile_memory:
+            return
+        if "CPU" not in self.activities:
+            return
+        if tracemalloc.is_tracing():
+            self._owns_tracemalloc = False
+            return
+        tracemalloc.start()
+        self._owns_tracemalloc = True
+
+    def _maybe_stop_cpu_memory_tracer(self):
+        if not self._owns_tracemalloc:
+            return
+        if tracemalloc.is_tracing():
+            tracemalloc.stop()
+        self._owns_tracemalloc = False
+
+    def _action_for_step(self, step):
+        if self._schedule is None:
+            return ProfilerAction.RECORD
+        return self._schedule(step)
+
+    def _set_action_for_step(self, step):
+        self._current_action = self._action_for_step(step)
+        self.current_action = self._current_action
+        self.step_num = int(step)
+        self._session.is_recording = self._current_action in (
+            ProfilerAction.RECORD,
+            ProfilerAction.RECORD_AND_SAVE,
+        )
+
+    def _new_trace_id(self):
+        if callable(self.custom_trace_id_callback):
+            return str(self.custom_trace_id_callback())
+        return uuid.uuid4().hex.upper()
+
+    def prepare_trace(self):
+        if (self.profiler is None) or (not self.acc_events):
+            self.profiler = self._session
+        self.profiler.trace_id = self._new_trace_id()
+        self.has_cudagraphs = False
+
+    def start_trace(self):
+        if self.profiler is None:
+            raise AssertionError("Profiler must be initialized before starting trace")
+        if self.execution_trace_observer and not self._trace_started:
+            self.execution_trace_observer.start()
+        self._trace_started = True
+
+        if self.profile_memory:
+            self.add_metadata_json("profile_memory", "1")
+        if self.with_stack:
+            self.add_metadata_json("with_stack", "1")
+        if self.record_shapes:
+            self.add_metadata_json("record_shapes", "1")
+        if self.with_modules:
+            self.add_metadata_json("with_modules", "1")
+        if self.with_flops:
+            self.add_metadata_json("with_flops", "1")
+
+        for key, value in self._preset_metadata.items():
+            self.add_metadata_json(key, value)
+
+    def stop_trace(self):
+        if self.profiler is None:
+            raise AssertionError("Profiler must be initialized before stopping trace")
+        if self.execution_trace_observer and self._trace_started:
+            self.execution_trace_observer.stop()
+        self._trace_started = False
+
+    def get_trace_id(self):
+        if self.profiler is None:
+            return None
+        return getattr(self.profiler, "trace_id", None)
+
+    def set_custom_trace_id_callback(self, callback):
+        self.custom_trace_id_callback = callback
+
+    def start(self):
+        global _ACTIVE_SESSION
+        if self._started and not self._stopped:
+            return
+
+        with _ACTIVE_LOCK:
+            if _ACTIVE_SESSION is not None and _ACTIVE_SESSION is not self._session:
+                raise RuntimeError("another profiler session is already active")
+            _ACTIVE_SESSION = self._session
+
+        self._started = True
+        self._stopped = False
+        self._maybe_start_cpu_memory_tracer()
+        self._set_action_for_step(self._session.current_step)
+
+        if self._current_action != ProfilerAction.NONE:
+            self.prepare_trace()
+            self.start_trace()
+
+    def stop(self):
+        global _ACTIVE_SESSION
+        if not self._started or self._stopped:
+            return
+
+        self._maybe_sync_npu()
+        if self._trace_started:
+            self.stop_trace()
+
+        with _ACTIVE_LOCK:
+            if _ACTIVE_SESSION is self._session:
+                _ACTIVE_SESSION = None
+
+        self._maybe_stop_cpu_memory_tracer()
+        self._stopped = True
+        if callable(self._trace_ready) and self._schedule is None:
+            self._trace_ready(self)
+
+    def step(self):
+        if _active_session() is not self._session:
+            raise RuntimeError("profiler session is not active")
+
+        prev_action = self._current_action
+        self._maybe_sync_npu()
+        if prev_action == ProfilerAction.RECORD_AND_SAVE and callable(self._trace_ready):
+            self._trace_ready(self)
+
+        self._session.current_step += 1
+        self._set_action_for_step(self._session.current_step)
+
+        if prev_action == ProfilerAction.NONE and self._current_action != ProfilerAction.NONE:
+            self.prepare_trace()
+            self.start_trace()
+        elif prev_action != ProfilerAction.NONE and self._current_action == ProfilerAction.NONE and self._trace_started:
+            self.stop_trace()
+
+    def add_metadata(self, key, value):
+        wrapped_value = '"' + value.replace('"', '\\"') + '"'
+        self._metadata[str(key)] = wrapped_value
+
+    def add_metadata_json(self, key, value):
+        self._metadata[str(key)] = value
+
+    def preset_metadata_json(self, key, value):
+        self._preset_metadata[str(key)] = value
+
+    def toggle_collection_dynamic(self, enable, activities):
+        if activities is None:
+            return
+
+        targets = {_activity_name(item) for item in activities}
+        if not targets:
+            return
+
+        if enable:
+            self._session.activities.update(targets)
+        else:
+            self._session.activities.difference_update(targets)
+
+    def export_memory_timeline(self, path, device=None):
+        del device
+        if not (self._session.record_shapes and self._session.profile_memory and self._session.with_stack):
+            raise ValueError("record_shapes=True, profile_memory=True, with_stack=True required for memory profiling.")
+
+        events = [event for event in self._session.snapshot() if event.kind == "op"]
+        payload = {
+            "times": [event.start_ns / 1000.0 for event in events],
+            "sizes": [int((event.metadata or {}).get("cpu_memory_allocated_after", 0)) for event in events],
+        }
+
+        if path.endswith(".html"):
+            body = (
+                "<html><body><pre>"
+                + json.dumps(payload)
+                + "</pre></body></html>"
+            )
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(body)
+            return
+
+        if path.endswith(".gz"):
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tmp:
+                json.dump(payload, tmp)
+                tmp_path = tmp.name
+            try:
+                with open(tmp_path, "r", encoding="utf-8") as fin, gzip.open(path, "wt", encoding="utf-8") as fout:
+                    fout.writelines(fin)
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            return
+
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle)
+
+    def export_stacks(self, path, metric="self_cpu_time_total"):
+        self.key_averages().export_stacks(path, metric)
+
+    def events(self):
+        events = self._session.snapshot()
+        events.sort(key=lambda item: (item.start_ns, item.end_ns, item.name))
+        return [event.to_dict() for event in events]
+
+    def key_averages(self, group_by_input_shape=False, group_by_stack_n=0):
+        return _KeyAverages(
+            self._session.snapshot(),
+            group_by_input_shape=group_by_input_shape,
+            group_by_stack_n=group_by_stack_n,
+        )
+
+    def export_chrome_trace(self, path):
+        self._maybe_sync_npu()
+        pid = os.getpid()
+        trace_events = []
+        runtime_events = []
+        thread_ids = set()
+
+        for event in self._session.snapshot():
+            thread_ids.add(event.thread_id)
+            args = {
+                "device_type": event.device_type,
+                "step": event.step,
+            }
+            metadata = event.metadata or {}
+            if metadata:
+                args.update(metadata)
+            trace_events.append(
+                {
+                    "name": event.name,
+                    "cat": event.kind,
+                    "ph": "X",
+                    "pid": pid,
+                    "tid": event.thread_id,
+                    "ts": event.start_ns / 1000.0,
+                    "dur": event.duration_ns / 1000.0,
+                    "args": args,
+                }
+            )
+
+            correlation_id = metadata.get("correlation_id")
+            if event.kind == "op" and correlation_id is not None:
+                runtime_events.append(
+                    {
+                        "name": metadata.get("runtime_name", "dispatch_kernel"),
+                        "cat": "runtime",
+                        "ph": "X",
+                        "pid": pid,
+                        "tid": metadata.get("runtime_tid", event.thread_id),
+                        "ts": event.start_ns / 1000.0,
+                        "dur": event.duration_ns / 1000.0,
+                        "args": {
+                            "correlation_id": correlation_id,
+                            "op_name": event.name,
+                        },
+                    }
+                )
+
+        metadata_events = [
+            {
+                "name": "process_name",
+                "cat": "metadata",
+                "ph": "M",
+                "pid": pid,
+                "tid": 0,
+                "args": {"name": "mindtorch_v2_profiler"},
+            }
+        ]
+
+        all_metadata = dict(self._preset_metadata)
+        all_metadata.update(self._metadata)
+        for key, value in all_metadata.items():
+            metadata_events.append(
+                {
+                    "name": str(key),
+                    "cat": "metadata",
+                    "ph": "M",
+                    "pid": pid,
+                    "tid": 0,
+                    "args": {"value": value},
+                }
+            )
+        for tid in sorted(thread_ids):
+            metadata_events.append(
+                {
+                    "name": "thread_name",
+                    "cat": "metadata",
+                    "ph": "M",
+                    "pid": pid,
+                    "tid": tid,
+                    "args": {"name": f"thread_{tid}"},
+                }
+            )
+
+        all_events = trace_events + runtime_events + metadata_events
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"traceEvents": all_events, "displayTimeUnit": "ms"}, handle)

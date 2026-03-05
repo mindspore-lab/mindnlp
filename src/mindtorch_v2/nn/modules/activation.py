@@ -114,3 +114,30 @@ class PReLU(Module):
 
     def extra_repr(self):
         return f'num_parameters={self.num_parameters}'
+
+
+class ReLU6(Module):
+    def __init__(self, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.relu6(input)
+
+
+class Hardtanh(Module):
+    def __init__(self, min_val=-1.0, max_val=1.0, inplace=False):
+        super().__init__()
+        self.min_val = min_val
+        self.max_val = max_val
+
+    def forward(self, input):
+        return F.hardtanh(input, self.min_val, self.max_val)
+
+    def extra_repr(self):
+        return f'min_val={self.min_val}, max_val={self.max_val}'
+
+
+class LogSigmoid(Module):
+    def forward(self, input):
+        return F.logsigmoid(input)

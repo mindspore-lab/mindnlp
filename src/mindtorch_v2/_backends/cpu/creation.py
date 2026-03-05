@@ -80,10 +80,14 @@ def logspace_create(start, end, steps, dtype=None, device=None):
     return Tensor(storage, arr.shape, stride)
 
 
-def eye_create(n, m=None, dtype=None, device=None):
+def eye_create(n, m=None, dtype=None, device=None, out=None):
     if m is None:
         m = n
     arr = np.eye(n, m, dtype=to_numpy_dtype(dtype))
+    if out is not None:
+        out_arr = out._numpy_view()
+        out_arr[:] = arr.astype(out_arr.dtype)
+        return out
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
     return Tensor(storage, arr.shape, stride)
@@ -118,3 +122,34 @@ def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_form
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = _contiguous_stride(shape)
     return Tensor(storage, shape, stride, requires_grad=requires_grad)
+
+
+def randint_create(low, high=None, size=None, dtype=None, device=None, requires_grad=False, **kwargs):
+    """torch.randint(low=0, high, size, ...) — fills with random integers from [low, high)."""
+    from ..._dtype import int64 as int64_dtype
+    if high is None:
+        low, high = 0, low
+    if size is None:
+        raise ValueError("size is required for randint")
+    if isinstance(size, int):
+        size = (size,)
+    size = tuple(size)
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.randint(int(low), int(high), size=size).astype(np.int64)
+    out_dtype = dtype if dtype is not None else int64_dtype
+    storage = typed_storage_from_numpy(arr, out_dtype, device=device)
+    stride = _contiguous_stride(size)
+    return Tensor(storage, size, stride, requires_grad=requires_grad)
+
+
+def randperm_create(n, dtype=None, device=None, requires_grad=False, **kwargs):
+    """torch.randperm(n) — random permutation of integers 0..n-1."""
+    from ..._dtype import int64 as int64_dtype
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.permutation(int(n)).astype(np.int64)
+    out_dtype = dtype if dtype is not None else int64_dtype
+    storage = typed_storage_from_numpy(arr, out_dtype, device=device)
+    stride = _contiguous_stride(arr.shape)
+    return Tensor(storage, arr.shape, stride, requires_grad=requires_grad)

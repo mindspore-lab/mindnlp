@@ -64,3 +64,38 @@ def transpose(a, dim0, dim1):
     stride[dim0], stride[dim1] = stride[dim1], stride[dim0]
     base = _get_base(a)
     return _make_view(base, shape, stride, a.offset, "transpose")
+
+
+def squeeze(a, dim=None):
+    shape = list(a.shape)
+    stride = list(a.stride)
+    if dim is not None:
+        d = dim if dim >= 0 else dim + len(shape)
+        if 0 <= d < len(shape) and shape[d] == 1:
+            del shape[d]
+            del stride[d]
+    else:
+        pairs = [(s, st) for s, st in zip(shape, stride) if s != 1]
+        shape = [p[0] for p in pairs]
+        stride = [p[1] for p in pairs]
+    base = _get_base(a)
+    return _make_view(base, shape, stride, a.offset, "squeeze")
+
+
+def unsqueeze(a, dim):
+    ndim = len(a.shape)
+    d = dim if dim >= 0 else dim + ndim + 1
+    shape = list(a.shape)
+    stride = list(a.stride)
+    new_stride = stride[d] * shape[d] if d < ndim else 1
+    shape.insert(d, 1)
+    stride.insert(d, new_stride)
+    base = _get_base(a)
+    return _make_view(base, shape, stride, a.offset, "unsqueeze")
+
+
+def permute(a, dims):
+    shape = [a.shape[d] for d in dims]
+    stride = [a.stride[d] for d in dims]
+    base = _get_base(a)
+    return _make_view(base, shape, stride, a.offset, "permute")

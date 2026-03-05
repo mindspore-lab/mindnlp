@@ -12,6 +12,12 @@ def _to_numpy(t):
     return t._numpy_view()
 
 
+def _normalize_tensor_sequence_args(tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        return tuple(tensors[0])
+    return tuple(tensors)
+
+
 def _from_numpy(arr, dtype, device):
     storage = typed_storage_from_numpy(arr, dtype, device=device)
     stride = tuple(np.array(arr.strides) // arr.itemsize)
@@ -28,6 +34,17 @@ def mul(a, b):
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     return _from_numpy(a_np * b_np, a.dtype, a.device)
+
+
+def div(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    out = np.true_divide(a_np, b_np)
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype), copy=False), a.dtype, a.device)
+
+
+def true_divide(a, b):
+    return div(a, b)
 
 
 def matmul(a, b):
@@ -52,6 +69,14 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
 
 def mean_(a, dim=None, keepdim=False):
     return _from_numpy(_to_numpy(a).mean(axis=dim, keepdims=keepdim), a.dtype, a.device)
+
+
+def std_(a, dim=None, keepdim=False, unbiased=True):
+    if not a.dtype.is_floating_point and not a.dtype.is_complex:
+        raise RuntimeError("std and var only support floating point and complex dtypes")
+    ddof = 1 if unbiased else 0
+    out = np.std(_to_numpy(a), axis=dim, keepdims=keepdim, ddof=ddof)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
 
 
 def all_(a, dim=None, keepdim=False):
@@ -423,6 +448,7 @@ def pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side="right
 
 
 def block_diag(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     arrays = [_to_numpy(t) for t in tensors]
     rows = sum(a.shape[0] for a in arrays)
     cols = sum(a.shape[1] for a in arrays)
@@ -454,6 +480,7 @@ def diag(a, diagonal=0):
 
 
 def cartesian_prod(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     arrays = [_to_numpy(t) for t in tensors]
     grids = np.meshgrid(*arrays, indexing="ij")
     stacked = np.stack([g.reshape(-1) for g in grids], axis=1)
@@ -479,7 +506,7 @@ def chunk(a, chunks, dim=0):
             break
         slices = [slice(None)] * arr.ndim
         slices[dim] = slice(start, end)
-        out = arr[tuple(slices)]
+        out = np.ascontiguousarray(arr[tuple(slices)])
         outputs.append(_from_numpy(out, a.dtype, a.device))
     return tuple(outputs)
 
@@ -585,15 +612,45 @@ def equal(a, b):
     return np.array_equal(_to_numpy(a), _to_numpy(b))
 
 
+def eq(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def ne(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.not_equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def lt(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.less(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def le(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.less_equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def gt(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.greater(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
+def ge(a, b):
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.greater_equal(_to_numpy(a), b_np), bool_dtype, a.device)
+
+
 def add_(a, b):
     arr = _to_numpy(a)
-    arr += _to_numpy(b)
+    arr += _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
 def mul_(a, b):
     arr = _to_numpy(a)
-    arr *= _to_numpy(b)
+    arr *= _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
@@ -607,6 +664,107 @@ def zero_(a):
     arr = _to_numpy(a)
     arr.fill(0)
     return a
+
+
+def uniform_(a, low=0.0, high=1.0):
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[:] = rng.uniform(low, high, arr.shape).astype(arr.dtype)
+    return a
+
+
+def normal_(a, mean=0.0, std=1.0):
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[:] = rng.normal(mean, std, arr.shape).astype(arr.dtype)
+    return a
+
+
+def fill_(a, value):
+    arr = _to_numpy(a)
+    arr.fill(value)
+    return a
+
+
+def clamp_(a, min_val=None, max_val=None):
+    arr = _to_numpy(a)
+    np.clip(arr, min_val, max_val, out=arr)
+    return a
+
+
+def copy_(a, src):
+    arr = _to_numpy(a)
+    src_arr = _to_numpy(src)
+    np.copyto(arr, src_arr)
+    return a
+
+
+def erfinv_(a):
+    arr = _to_numpy(a)
+    arr[:] = _ndtr_inv((arr + 1.0) / 2.0) / np.sqrt(2.0)
+    return a
+
+
+def _ndtr_inv(p):
+    """Inverse normal CDF (probit function) using rational approximation.
+    Used to compute erfinv: erfinv(x) = ndtr_inv((x+1)/2) / sqrt(2)."""
+    p = np.asarray(p, dtype=np.float64)
+    result = np.zeros_like(p)
+
+    # Central region: |p - 0.5| <= 0.425
+    q = p - 0.5
+    mask_central = np.abs(q) <= 0.425
+    if np.any(mask_central):
+        r = q[mask_central]
+        r2 = r * r
+        # Rational approximation coefficients (Beasley-Springer-Moro)
+        a = np.array([
+            2.50662823884, -18.61500062529, 41.39119773534, -25.44106049637
+        ])
+        b = np.array([
+            -8.47351093090, 23.08336743743, -21.06224101826, 3.13082909833
+        ])
+        num = ((a[3] * r2 + a[2]) * r2 + a[1]) * r2 + a[0]
+        den = (((b[3] * r2 + b[2]) * r2 + b[1]) * r2 + b[0]) * r2 + 1.0
+        result[mask_central] = r * num / den
+
+    # Tail regions
+    mask_tail = ~mask_central & (p > 0) & (p < 1)
+    if np.any(mask_tail):
+        pp = np.where(p[mask_tail] < 0.5, p[mask_tail], 1.0 - p[mask_tail])
+        r = np.sqrt(-2.0 * np.log(pp))
+        c = np.array([
+            2.515517, 0.802853, 0.010328
+        ])
+        d = np.array([
+            1.432788, 0.189269, 0.001308
+        ])
+        num = (c[2] * r + c[1]) * r + c[0]
+        den = ((d[2] * r + d[1]) * r + d[0]) * r + 1.0
+        val = r - num / den
+        val = np.where(p[mask_tail] < 0.5, -val, val)
+        result[mask_tail] = val
+
+    # Boundary cases
+    result[p <= 0] = -np.inf
+    result[p >= 1] = np.inf
+    return result
+
+
+def sub_(a, b):
+    arr = _to_numpy(a)
+    arr -= _to_numpy(b) if isinstance(b, Tensor) else b
+    return a
+
+
+def div_(a, b):
+    arr = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    arr /= b_np
+    return a
+
 
 def contiguous(a):
     if a.device.type != "cpu":
@@ -680,12 +838,17 @@ def frac(a):
 
 
 def pow(a, b):
-    arr_a = _to_numpy(a)
+    if isinstance(a, Tensor):
+        arr_a = _to_numpy(a)
+        ref = a
+    else:
+        arr_a = a
+        ref = b
     if isinstance(b, Tensor):
         arr_b = _to_numpy(b)
     else:
         arr_b = b
-    return _from_numpy(np.power(arr_a, arr_b), a.dtype, a.device)
+    return _from_numpy(np.power(arr_a, arr_b), ref.dtype, ref.device)
 
 
 def log2(a):
@@ -924,7 +1087,10 @@ def hypot(a, b):
 
 
 def remainder(a, b):
-    return _from_numpy(np.remainder(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+    a_np = _to_numpy(a) if isinstance(a, Tensor) else a
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    ref = a if isinstance(a, Tensor) else b
+    return _from_numpy(np.remainder(a_np, b_np), ref.dtype, ref.device)
 
 
 def fmod(a, b):
@@ -944,9 +1110,108 @@ def _normalize_index_key(key):
     return key
 
 
+def _is_int_index(key):
+    return isinstance(key, (int, np.integer)) and not isinstance(key, (bool, np.bool_))
+
+
+def _is_basic_index_key(key):
+    keys = key if isinstance(key, tuple) else (key,)
+    for item in keys:
+        if item is Ellipsis or item is None:
+            continue
+        if isinstance(item, slice):
+            continue
+        if _is_int_index(item):
+            continue
+        return False
+    return True
+
+
+def _expand_ellipsis(keys, ndim):
+    ellipsis_count = sum(1 for item in keys if item is Ellipsis)
+    if ellipsis_count > 1:
+        raise IndexError("an index can only have a single ellipsis ('...')")
+    if ellipsis_count == 0:
+        return keys
+
+    specified_dims = sum(1 for item in keys if item is not None and item is not Ellipsis)
+    fill = ndim - specified_dims
+    if fill < 0:
+        raise IndexError("too many indices for tensor")
+
+    expanded = []
+    for item in keys:
+        if item is Ellipsis:
+            expanded.extend([slice(None)] * fill)
+        else:
+            expanded.append(item)
+    return expanded
+
+
+def _basic_getitem_view(tensor, key):
+    keys = list(key) if isinstance(key, tuple) else [key]
+    keys = _expand_ellipsis(keys, tensor.dim())
+
+    in_dim = 0
+    out_shape = []
+    out_stride = []
+    out_offset = tensor.offset
+
+    for item in keys:
+        if item is None:
+            out_shape.append(1)
+            out_stride.append(0)
+            continue
+
+        if in_dim >= tensor.dim():
+            raise IndexError("too many indices for tensor")
+
+        dim_size = tensor.shape[in_dim]
+        dim_stride = tensor.stride[in_dim]
+
+        if _is_int_index(item):
+            idx = int(item)
+            if idx < 0:
+                idx += dim_size
+            if idx < 0 or idx >= dim_size:
+                raise IndexError("index out of range")
+            out_offset += idx * dim_stride
+            in_dim += 1
+            continue
+
+        if isinstance(item, slice):
+            start, stop, step = item.indices(dim_size)
+            out_offset += start * dim_stride
+            out_shape.append(len(range(start, stop, step)))
+            out_stride.append(dim_stride * step)
+            in_dim += 1
+            continue
+
+        return None
+
+    while in_dim < tensor.dim():
+        out_shape.append(tensor.shape[in_dim])
+        out_stride.append(tensor.stride[in_dim])
+        in_dim += 1
+
+    # Keep fallback copy path for negative strides until Tensor._numpy_view
+    # supports them safely.
+    if any(s < 0 for s in out_stride):
+        return None
+
+    return Tensor(tensor.storage(), tuple(out_shape), tuple(out_stride), out_offset)
+
+
 def getitem(tensor, key):
+    norm_key = _normalize_index_key(key)
     arr = _to_numpy(tensor)
-    result = arr[_normalize_index_key(key)]
+    result = arr[norm_key]
+
+    if _is_basic_index_key(norm_key):
+        view = _basic_getitem_view(tensor, norm_key)
+        if view is not None:
+            return view
+
     if isinstance(result, np.generic) or (isinstance(result, np.ndarray) and result.ndim == 0):
         # Return 0-dim tensor (matches PyTorch behavior)
         scalar_arr = np.array(result)
@@ -1029,23 +1294,47 @@ def dropout(a, p=0.5, training=True):
 def pad(a, pad_widths, mode='constant', value=0):
     arr = _to_numpy(a)
     ndim = len(arr.shape)
-    np_pad = [(0, 0)] * ndim
-    # PyTorch pad format: (left, right, top, bottom, front, back, ...)
-    # Applied to last dims first
+
+    if len(pad_widths) % 2 != 0:
+        raise ValueError("Padding length must be divisible by 2")
+
     n_pairs = len(pad_widths) // 2
+    if n_pairs > ndim:
+        raise ValueError("Padding length too large for input dimensions")
+
+    pads = [(0, 0)] * ndim
+    # PyTorch pad format: (left, right, top, bottom, front, back, ...)
+    # Applied to last dims first.
     for i in range(n_pairs):
         dim = ndim - 1 - i
-        np_pad[dim] = (int(pad_widths[2 * i]), int(pad_widths[2 * i + 1]))
-    if mode == 'constant':
-        result = np.pad(arr, np_pad, mode='constant', constant_values=value)
-    elif mode == 'reflect':
-        result = np.pad(arr, np_pad, mode='reflect')
-    elif mode == 'replicate':
-        result = np.pad(arr, np_pad, mode='edge')
-    elif mode == 'circular':
-        result = np.pad(arr, np_pad, mode='wrap')
+        pads[dim] = (int(pad_widths[2 * i]), int(pad_widths[2 * i + 1]))
+
+    # Negative padding crops first, then positive padding extends.
+    slices = [slice(None)] * ndim
+    for dim, (left, right) in enumerate(pads):
+        start = max(-left, 0)
+        end = arr.shape[dim] - max(-right, 0)
+        length = end - start
+        if length < 0:
+            raise RuntimeError("narrow(): length must be non-negative.")
+        slices[dim] = slice(start, end)
+    result = arr[tuple(slices)]
+
+    np_pad = [(max(left, 0), max(right, 0)) for left, right in pads]
+    if any(left or right for left, right in np_pad):
+        if mode == 'constant':
+            result = np.pad(result, np_pad, mode='constant', constant_values=value)
+        elif mode == 'reflect':
+            result = np.pad(result, np_pad, mode='reflect')
+        elif mode == 'replicate':
+            result = np.pad(result, np_pad, mode='edge')
+        elif mode == 'circular':
+            result = np.pad(result, np_pad, mode='wrap')
+        else:
+            raise ValueError(f"Unsupported pad mode: {mode}")
     else:
-        raise ValueError(f"Unsupported pad mode: {mode}")
+        result = np.ascontiguousarray(result)
+
     return _from_numpy(result, a.dtype, a.device)
 
 
@@ -1110,3 +1399,755 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
         out = out + _to_numpy(bias).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
 
     return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def linalg_qr(a, mode='reduced'):
+    """QR decomposition on CPU via numpy."""
+    arr = _to_numpy(a)
+    np_mode = mode
+    q, r = np.linalg.qr(arr, mode=np_mode)
+    return _from_numpy(q, a.dtype, a.device), _from_numpy(r, a.dtype, a.device)
+
+
+
+# ---------------------------------------------------------------------------
+# Tensor indexing / selection ops
+# ---------------------------------------------------------------------------
+
+def narrow(a, dim, start, length):
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    new_shape = list(a.shape)
+    new_shape[d] = int(length)
+    new_offset = a.offset + int(start) * a.stride[d]
+    return Tensor(a.storage(), tuple(new_shape), a.stride, new_offset)
+
+
+def select(a, dim, index):
+    from ..._tensor import Tensor
+    d = dim if dim >= 0 else dim + a.dim()
+    idx = int(index)
+    if idx < 0:
+        idx += a.shape[d]
+    new_shape = list(a.shape)
+    del new_shape[d]
+    new_stride = list(a.stride)
+    new_offset = a.offset + idx * a.stride[d]
+    del new_stride[d]
+    return Tensor(a.storage(), tuple(new_shape), tuple(new_stride), new_offset)
+
+
+def expand(a, sizes):
+    from ..._tensor import Tensor
+    sizes = tuple(sizes)
+    ndiff = len(sizes) - a.dim()
+    if ndiff < 0:
+        raise RuntimeError("expand: number of sizes must be >= tensor dim")
+    src_shape = (1,) * ndiff + a.shape
+    src_stride = (0,) * ndiff + a.stride
+    out_shape = []
+    out_stride = []
+    for i, sz in enumerate(sizes):
+        if sz == -1:
+            out_shape.append(src_shape[i])
+            out_stride.append(src_stride[i])
+        elif src_shape[i] == 1:
+            out_shape.append(sz)
+            out_stride.append(0)
+        elif src_shape[i] == sz:
+            out_shape.append(sz)
+            out_stride.append(src_stride[i])
+        else:
+            raise RuntimeError(
+                f"expand: size {sz} not compatible with dim size {src_shape[i]}"
+            )
+    return Tensor(a.storage(), tuple(out_shape), tuple(out_stride), a.offset)
+
+
+def masked_fill(a, mask, value):
+    arr = _to_numpy(a).copy()
+    m = _to_numpy(mask).astype(bool)
+    arr[m] = value
+    return _from_numpy(arr, a.dtype, a.device)
+
+
+def masked_fill_(a, mask, value):
+    arr = _to_numpy(a)
+    m = _to_numpy(mask).astype(bool)
+    arr[m] = value
+    return a
+
+
+def index_put_(a, indices, values, accumulate=False):
+    arr = _to_numpy(a)
+    idx = tuple(_to_numpy(t) if hasattr(t, '_numpy_view') else t for t in indices)
+    vals = _to_numpy(values) if hasattr(values, '_numpy_view') else values
+    if accumulate:
+        np.add.at(arr, idx, vals)
+    else:
+        arr[idx] = vals
+    return a
+
+
+def index_put(a, indices, values, accumulate=False):
+    arr = _to_numpy(a).copy()
+    idx = tuple(_to_numpy(t) if hasattr(t, '_numpy_view') else t for t in indices)
+    vals = _to_numpy(values) if hasattr(values, '_numpy_view') else values
+    if accumulate:
+        np.add.at(arr, idx, vals)
+    else:
+        arr[idx] = vals
+    return _from_numpy(arr, a.dtype, a.device)
+
+
+def index_copy_(a, dim, index, source):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).ravel().astype(np.intp)
+    src = _to_numpy(source)
+    d = dim if dim >= 0 else dim + a.dim()
+    for j, i in enumerate(idx):
+        slices_dst = [slice(None)] * arr.ndim
+        slices_dst[d] = int(i)
+        slices_src = [slice(None)] * arr.ndim
+        slices_src[d] = j
+        arr[tuple(slices_dst)] = src[tuple(slices_src)]
+    return a
+
+
+def index_fill_(a, dim, index, value):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).ravel().astype(np.intp)
+    d = dim if dim >= 0 else dim + a.dim()
+    for i in idx:
+        slices = [slice(None)] * arr.ndim
+        slices[d] = int(i)
+        arr[tuple(slices)] = value
+    return a
+
+
+def index_add_(a, dim, index, source, alpha=1.0):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).ravel().astype(np.intp)
+    src = _to_numpy(source)
+    d = dim if dim >= 0 else dim + a.dim()
+    for j, i in enumerate(idx):
+        slices_dst = [slice(None)] * arr.ndim
+        slices_dst[d] = int(i)
+        slices_src = [slice(None)] * arr.ndim
+        slices_src[d] = j
+        arr[tuple(slices_dst)] += float(alpha) * src[tuple(slices_src)]
+    return a
+
+
+def scatter_(a, dim, index, src):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).astype(np.intp)
+    d = dim if dim >= 0 else dim + a.dim()
+    if hasattr(src, '_numpy_view'):
+        src_arr = _to_numpy(src)
+    else:
+        src_arr = src
+    it = np.nditer(idx, flags=['multi_index'])
+    while not it.finished:
+        mi = it.multi_index
+        dst_idx = list(mi)
+        dst_idx[d] = int(it[0])
+        if hasattr(src, '_numpy_view'):
+            arr[tuple(dst_idx)] = src_arr[mi]
+        else:
+            arr[tuple(dst_idx)] = src_arr
+        it.iternext()
+    return a
+
+
+def scatter_add_(a, dim, index, src):
+    arr = _to_numpy(a)
+    idx = _to_numpy(index).astype(np.intp)
+    src_arr = _to_numpy(src)
+    d = dim if dim >= 0 else dim + a.dim()
+    it = np.nditer(idx, flags=['multi_index'])
+    while not it.finished:
+        mi = it.multi_index
+        dst_idx = list(mi)
+        dst_idx[d] = int(it[0])
+        arr[tuple(dst_idx)] += src_arr[mi]
+        it.iternext()
+    return a
+
+
+def masked_scatter_(a, mask, source):
+    arr = _to_numpy(a)
+    m = _to_numpy(mask).astype(bool)
+    src = _to_numpy(source)
+    arr[m] = src.ravel()[:m.sum()]
+    return a
+
+
+def unfold(a, dimension, size, step):
+    arr = _to_numpy(a)
+    d = dimension if dimension >= 0 else dimension + arr.ndim
+    dim_size = arr.shape[d]
+    n_windows = max(0, (dim_size - size) // step + 1)
+    if n_windows == 0:
+        new_shape = list(arr.shape)
+        new_shape[d] = 0
+        new_shape.append(size)
+        return _from_numpy(np.empty(new_shape, dtype=arr.dtype), a.dtype, a.device)
+    out_shape = list(arr.shape)
+    out_shape[d] = n_windows
+    out_shape.append(size)
+    out = np.empty(out_shape, dtype=arr.dtype)
+    for i in range(n_windows):
+        src_s = [slice(None)] * arr.ndim
+        src_s[d] = slice(i * step, i * step + size)
+        chunk = np.moveaxis(arr[tuple(src_s)], d, -1)
+        dst_s = [slice(None)] * (arr.ndim + 1)
+        dst_s[d] = i
+        out[tuple(dst_s)] = chunk
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def var_(a, dim=None, unbiased=True, keepdim=False):
+    arr = _to_numpy(a)
+    ddof = 1 if unbiased else 0
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            dim = tuple(dim)
+        out = np.var(arr, axis=dim, keepdims=keepdim, ddof=ddof)
+    else:
+        out = np.var(arr, ddof=ddof)
+        if keepdim:
+            out = np.full([1] * arr.ndim, out)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(arr.dtype, copy=False)), a.dtype, a.device)
+
+
+def norm_(a, p=2, dim=None, keepdim=False):
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            dim = tuple(dim)
+        out = np.linalg.norm(arr, ord=p, axis=dim, keepdims=keepdim)
+    else:
+        out = np.linalg.norm(arr.ravel(), ord=p)
+        if keepdim:
+            out = np.full([1] * arr.ndim, out)
+    from ..._dtype import float32 as f32
+    out_dtype = a.dtype if a.dtype.is_floating_point else f32
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(out_dtype), copy=False)), out_dtype, a.device)
+
+
+def prod_(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is not None:
+        out = np.prod(arr, axis=dim, keepdims=keepdim)
+    else:
+        out = np.prod(arr)
+        if keepdim:
+            out = np.full([1] * arr.ndim, out)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(arr.dtype, copy=False)), a.dtype, a.device)
+
+
+def floor_divide(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    out = np.floor_divide(a_np, b_np)
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype), copy=False), a.dtype, a.device)
+
+
+def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
+    arr = _to_numpy(input)
+    norm_shape = tuple(normalized_shape)
+    axis = tuple(range(arr.ndim - len(norm_shape), arr.ndim))
+    variance = np.mean(arr ** 2, axis=axis, keepdims=True)
+    out = arr / np.sqrt(variance + eps)
+    if weight is not None:
+        out = out * _to_numpy(weight).reshape((1,) * (arr.ndim - len(norm_shape)) + norm_shape)
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def conv2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1):
+    """Conv2d forward using numpy. Input: (N,C,H,W), Weight: (O,C/g,kH,kW)."""
+    inp = _to_numpy(input)
+    w = _to_numpy(weight)
+    N, C_in, H, W = inp.shape
+    C_out, C_in_g, kH, kW = w.shape
+    sH, sW = stride
+    pH, pW = padding
+    dH, dW = dilation
+
+    # Effective kernel size with dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+
+    # Pad input
+    if pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pH, pH), (pW, pW)), mode='constant')
+
+    out = np.zeros((N, C_out, H_out, W_out), dtype=inp.dtype)
+
+    for g in range(groups):
+        c_out_per_g = C_out // groups
+        c_out_s = g * c_out_per_g
+        c_in_s = g * C_in_g
+        for co_local in range(c_out_per_g):
+            co = c_out_s + co_local
+            for ci_local in range(C_in_g):
+                ci = c_in_s + ci_local
+                kernel = w[co, ci_local]
+                # For dilated kernels, use the dilated positions
+                for oh in range(H_out):
+                    for ow in range(W_out):
+                        val = 0.0
+                        for kh in range(kH):
+                            for kw in range(kW):
+                                ih = oh * sH + kh * dH
+                                iw = ow * sW + kw * dW
+                                # Broadcasting over batch dimension
+                                out[:, co, oh, ow] += inp[:, ci, ih, iw] * kernel[kh, kw]
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out += b[np.newaxis, :, np.newaxis, np.newaxis]
+
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def conv1d(input, weight, bias=None, stride=(1,), padding=(0,), dilation=(1,), groups=1):
+    """Conv1d via conv2d: unsqueeze spatial dim."""
+    inp = _to_numpy(input)   # (N, C, L)
+    w = _to_numpy(weight)    # (O, C/g, kL)
+    # Add H=1 dimension
+    inp4d = inp[:, :, np.newaxis, :]  # (N, C, 1, L)
+    w4d = w[:, :, np.newaxis, :]      # (O, C/g, 1, kL)
+    inp_t = _from_numpy(np.ascontiguousarray(inp4d), input.dtype, input.device)
+    w_t = _from_numpy(np.ascontiguousarray(w4d), weight.dtype, weight.device)
+    out = conv2d(inp_t, w_t, bias, stride=(1, stride[0]),
+                 padding=(0, padding[0]), dilation=(1, dilation[0]), groups=groups)
+    out_np = _to_numpy(out)[:, :, 0, :]  # (N, C_out, L_out)
+    return _from_numpy(np.ascontiguousarray(out_np), input.dtype, input.device)
+
+
+def conv_transpose2d(input, weight, bias=None, stride=(1, 1), padding=(0, 0),
+                     output_padding=(0, 0), groups=1, dilation=(1, 1)):
+    """Transposed conv2d using numpy."""
+    inp = _to_numpy(input)
+    w = _to_numpy(weight)   # (C_in, C_out/g, kH, kW) — note: transposed weight layout
+    N, C_in, H_in, W_in = inp.shape
+    C_in_w, C_out_g, kH, kW = w.shape
+    sH, sW = stride
+    pH, pW = padding
+    opH, opW = output_padding
+    dH, dW = dilation
+
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    H_out = (H_in - 1) * sH - 2 * pH + ekH + opH
+    W_out = (W_in - 1) * sW - 2 * pW + ekW + opW
+    C_out = C_out_g * groups
+
+    # We compute in a padded buffer and then slice
+    H_buf = (H_in - 1) * sH + ekH
+    W_buf = (W_in - 1) * sW + ekW
+    buf = np.zeros((N, C_out, H_buf, W_buf), dtype=inp.dtype)
+
+    for g in range(groups):
+        c_in_per_g = C_in // groups
+        c_in_s = g * c_in_per_g
+        c_out_s = g * C_out_g
+        for ci_local in range(c_in_per_g):
+            ci = c_in_s + ci_local
+            for co_local in range(C_out_g):
+                co = c_out_s + co_local
+                kernel = w[ci_local, co_local]
+                for ih in range(H_in):
+                    for iw in range(W_in):
+                        oh_start = ih * sH
+                        ow_start = iw * sW
+                        for kh in range(kH):
+                            for kw in range(kW):
+                                oh = oh_start + kh * dH
+                                ow = ow_start + kw * dW
+                                buf[:, co, oh, ow] += inp[:, ci, ih, iw] * kernel[kh, kw]
+
+    # Slice to remove padding and apply output_padding
+    out = buf[:, :, pH:pH + H_out, pW:pW + W_out]
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out = out + b[np.newaxis, :, np.newaxis, np.newaxis]
+
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def conv_transpose1d(input, weight, bias=None, stride=(1,), padding=(0,),
+                     output_padding=(0,), groups=1, dilation=(1,)):
+    """Conv_transpose1d via conv_transpose2d: unsqueeze spatial dim."""
+    inp = _to_numpy(input)   # (N, C, L)
+    w = _to_numpy(weight)    # (C_in, C_out/g, kL)
+    inp4d = inp[:, :, np.newaxis, :]
+    w4d = w[:, :, np.newaxis, :]
+    inp_t = _from_numpy(np.ascontiguousarray(inp4d), input.dtype, input.device)
+    w_t = _from_numpy(np.ascontiguousarray(w4d), weight.dtype, weight.device)
+    out = conv_transpose2d(inp_t, w_t, bias, stride=(1, stride[0]),
+                           padding=(0, padding[0]), output_padding=(0, output_padding[0]),
+                           groups=groups, dilation=(1, dilation[0]))
+    out_np = _to_numpy(out)[:, :, 0, :]
+    return _from_numpy(np.ascontiguousarray(out_np), input.dtype, input.device)
+
+
+def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+    """MaxPool2d using numpy."""
+    inp = _to_numpy(input)  # (N, C, H, W)
+    kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    dH, dW = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    N, C, H, W = inp.shape
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    if ceil_mode:
+        H_out = math.ceil((H + 2 * pH - ekH) / sH) + 1
+        W_out = math.ceil((W + 2 * pW - ekW) / sW) + 1
+    else:
+        H_out = (H + 2 * pH - ekH) // sH + 1
+        W_out = (W + 2 * pW - ekW) // sW + 1
+
+    if pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pH, pH), (pW, pW)),
+                     mode='constant', constant_values=-np.inf)
+
+    out = np.full((N, C, H_out, W_out), -np.inf, dtype=inp.dtype)
+    for oh in range(H_out):
+        for ow in range(W_out):
+            for kh in range(kH):
+                for kw in range(kW):
+                    ih = oh * sH + kh * dH
+                    iw = ow * sW + kw * dW
+                    if ih < inp.shape[2] and iw < inp.shape[3]:
+                        out[:, :, oh, ow] = np.maximum(out[:, :, oh, ow], inp[:, :, ih, iw])
+
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False,
+               count_include_pad=True, divisor_override=None):
+    """AvgPool2d using numpy."""
+    inp = _to_numpy(input)  # (N, C, H, W)
+    kH, kW = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sH, sW = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    pH, pW = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    N, C, H, W = inp.shape
+    if ceil_mode:
+        H_out = math.ceil((H + 2 * pH - kH) / sH) + 1
+        W_out = math.ceil((W + 2 * pW - kW) / sW) + 1
+    else:
+        H_out = (H + 2 * pH - kH) // sH + 1
+        W_out = (W + 2 * pW - kW) // sW + 1
+
+    if pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pH, pH), (pW, pW)), mode='constant')
+
+    out = np.zeros((N, C, H_out, W_out), dtype=inp.dtype)
+    for oh in range(H_out):
+        for ow in range(W_out):
+            h_start = oh * sH
+            w_start = ow * sW
+            h_end = min(h_start + kH, inp.shape[2])
+            w_end = min(w_start + kW, inp.shape[3])
+            window = inp[:, :, h_start:h_end, w_start:w_end]
+            if divisor_override is not None:
+                out[:, :, oh, ow] = window.sum(axis=(-2, -1)) / divisor_override
+            elif count_include_pad:
+                out[:, :, oh, ow] = window.sum(axis=(-2, -1)) / (kH * kW)
+            else:
+                # Only count non-padded elements
+                actual_h = min(h_end, H + pH) - max(h_start, pH)
+                actual_w = min(w_end, W + pW) - max(w_start, pW)
+                count = max(actual_h * actual_w, 1)
+                out[:, :, oh, ow] = window.sum(axis=(-2, -1)) / count
+
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+def adaptive_avg_pool2d(input, output_size):
+    """AdaptiveAvgPool2d using numpy."""
+    inp = _to_numpy(input)  # (N, C, H, W)
+    N, C, H, W = inp.shape
+    if isinstance(output_size, int):
+        oH = oW = output_size
+    else:
+        oH, oW = output_size
+    out = np.zeros((N, C, oH, oW), dtype=inp.dtype)
+    for oh in range(oH):
+        h_start = oh * H // oH
+        h_end = (oh + 1) * H // oH
+        for ow in range(oW):
+            w_start = ow * W // oW
+            w_end = (ow + 1) * W // oW
+            out[:, :, oh, ow] = inp[:, :, h_start:h_end, w_start:w_end].mean(axis=(-2, -1))
+    return _from_numpy(np.ascontiguousarray(out.astype(inp.dtype)), input.dtype, input.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 1: Math ops
+# ---------------------------------------------------------------------------
+
+def sub(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(a_np - b_np, a.dtype, a.device)
+
+
+def log1p(a):
+    return _from_numpy(np.log1p(_to_numpy(a)), a.dtype, a.device)
+
+
+def expm1(a):
+    return _from_numpy(np.expm1(_to_numpy(a)), a.dtype, a.device)
+
+
+def reciprocal(a):
+    return _from_numpy(1.0 / _to_numpy(a), a.dtype, a.device)
+
+
+def maximum(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.maximum(a_np, b_np), a.dtype, a.device)
+
+
+def minimum(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.minimum(a_np, b_np), a.dtype, a.device)
+
+
+def dot(a, b):
+    return _from_numpy(np.dot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def outer(a, b):
+    return _from_numpy(np.outer(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def inner(a, b):
+    return _from_numpy(np.inner(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def mv(a, b):
+    return _from_numpy(np.dot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def cross(a, b, dim=-1):
+    a_np = np.moveaxis(_to_numpy(a), dim, -1)
+    b_np = np.moveaxis(_to_numpy(b), dim, -1)
+    out = np.cross(a_np, b_np)
+    out = np.moveaxis(out, -1, dim)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def tensordot(a, b, dims=2):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b)
+    if isinstance(dims, int):
+        out = np.tensordot(a_np, b_np, axes=dims)
+    elif isinstance(dims, (list, tuple)) and len(dims) == 2:
+        out = np.tensordot(a_np, b_np, axes=dims)
+    else:
+        out = np.tensordot(a_np, b_np, axes=dims)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def einsum(equation, *operands):
+    ops_np = [_to_numpy(op) for op in operands]
+    out = np.einsum(equation, *ops_np)
+    return _from_numpy(np.ascontiguousarray(out), operands[0].dtype, operands[0].device)
+
+
+# ---------------------------------------------------------------------------
+# Group 2: Logical ops
+# ---------------------------------------------------------------------------
+
+def logical_and(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.logical_and(a_np, b_np), bool_dtype, a.device)
+
+
+def logical_or(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.logical_or(a_np, b_np), bool_dtype, a.device)
+
+
+def logical_not(a):
+    return _from_numpy(np.logical_not(_to_numpy(a)), bool_dtype, a.device)
+
+
+def logical_xor(a, b):
+    a_np = _to_numpy(a).astype(bool)
+    b_np = (_to_numpy(b) if isinstance(b, Tensor) else np.array(b)).astype(bool)
+    return _from_numpy(np.logical_xor(a_np, b_np), bool_dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 3: Bitwise ops
+# ---------------------------------------------------------------------------
+
+def bitwise_and(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.bitwise_and(a_np, b_np), a.dtype, a.device)
+
+
+def bitwise_or(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.bitwise_or(a_np, b_np), a.dtype, a.device)
+
+
+def bitwise_xor(a, b):
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b) if isinstance(b, Tensor) else b
+    return _from_numpy(np.bitwise_xor(a_np, b_np), a.dtype, a.device)
+
+
+def bitwise_not(a):
+    return _from_numpy(np.bitwise_not(_to_numpy(a)), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 4: Random in-place op
+# ---------------------------------------------------------------------------
+
+def randint_(a, low, high=None):
+    """In-place randint — fills tensor a with random integers from [low, high)."""
+    if high is None:
+        low, high = 0, low
+    arr = _to_numpy(a)
+    arr[...] = np.random.randint(low, high, size=arr.shape)
+    return a
+
+
+# ---------------------------------------------------------------------------
+# Group 5: Shape ops
+# ---------------------------------------------------------------------------
+
+def flatten(a, start_dim=0, end_dim=-1):
+    arr = _to_numpy(a)
+    ndim = arr.ndim
+    start = start_dim if start_dim >= 0 else start_dim + ndim
+    end = end_dim if end_dim >= 0 else end_dim + ndim
+    new_shape = arr.shape[:start] + (-1,) + arr.shape[end + 1:]
+    out = arr.reshape(new_shape)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def unflatten(a, dim, sizes):
+    arr = _to_numpy(a)
+    ndim = arr.ndim
+    d = dim if dim >= 0 else dim + ndim
+    new_shape = arr.shape[:d] + tuple(sizes) + arr.shape[d + 1:]
+    out = arr.reshape(new_shape)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def broadcast_to(a, shape):
+    arr = _to_numpy(a)
+    out = np.broadcast_to(arr, shape)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def movedim(a, source, destination):
+    arr = _to_numpy(a)
+    out = np.moveaxis(arr, source, destination)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def diagonal(a, offset=0, dim1=0, dim2=1):
+    arr = _to_numpy(a)
+    out = np.diagonal(arr, offset=offset, axis1=dim1, axis2=dim2)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Group 6: Search ops
+# ---------------------------------------------------------------------------
+
+def unique(a, sorted=True, return_inverse=False, return_counts=False, dim=None):
+    arr = _to_numpy(a)
+    if dim is None:
+        flat = arr.flatten()
+        result = np.unique(flat, return_inverse=return_inverse, return_counts=return_counts)
+    else:
+        result = np.unique(arr, return_inverse=return_inverse, return_counts=return_counts, axis=dim)
+    if isinstance(result, tuple):
+        out = []
+        for i, r in enumerate(result):
+            r_cont = np.ascontiguousarray(r)
+            if i == 0:
+                out.append(_from_numpy(r_cont, a.dtype, a.device))
+            else:
+                out.append(_from_numpy(r_cont.astype(np.int64), int64_dtype, a.device))
+        return tuple(out)
+    return _from_numpy(np.ascontiguousarray(result), a.dtype, a.device)
+
+
+def searchsorted(sorted_seq, values, out_int32=False, right=False, side=None, sorter=None):
+    seq_np = _to_numpy(sorted_seq)
+    val_np = _to_numpy(values) if isinstance(values, Tensor) else np.array(values)
+    side_str = side if side is not None else ('right' if right else 'left')
+    if sorter is not None:
+        sorter_np = _to_numpy(sorter).astype(np.int64)
+        out = np.searchsorted(seq_np.flatten(), val_np.flatten(), side=side_str, sorter=sorter_np)
+    else:
+        if seq_np.ndim == 1:
+            out = np.searchsorted(seq_np, val_np, side=side_str)
+        else:
+            out = np.zeros_like(val_np, dtype=np.int64)
+            for i in range(seq_np.shape[0]):
+                out[i] = np.searchsorted(seq_np[i], val_np[i], side=side_str)
+    out_dtype_np = np.int32 if out_int32 else np.int64
+    return _from_numpy(out.astype(out_dtype_np), int64_dtype, sorted_seq.device)
+
+
+def kthvalue(a, k, dim=-1, keepdim=False):
+    arr = _to_numpy(a)
+    if dim < 0:
+        dim = dim + arr.ndim
+    sorted_idx = np.argsort(arr, axis=dim)
+    kth_idx = np.take(sorted_idx, [k - 1], axis=dim)
+    values = np.take_along_axis(arr, kth_idx, axis=dim)
+    if not keepdim:
+        values = np.squeeze(values, axis=dim)
+        kth_idx = np.squeeze(kth_idx, axis=dim)
+    return (
+        _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(kth_idx.astype(np.int64)), int64_dtype, a.device),
+    )
+
+
+def median(a, dim=None, keepdim=False):
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.median(arr.flatten())
+        return _from_numpy(np.array(out, dtype=arr.dtype), a.dtype, a.device)
+    else:
+        if dim < 0:
+            dim = dim + arr.ndim
+        sorted_idx = np.argsort(arr, axis=dim)
+        n = arr.shape[dim]
+        mid = n // 2
+        med_idx = np.take(sorted_idx, [mid], axis=dim)
+        values = np.take_along_axis(arr, med_idx, axis=dim)
+        if not keepdim:
+            values = np.squeeze(values, axis=dim)
+            med_idx = np.squeeze(med_idx, axis=dim)
+        return (
+            _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
+            _from_numpy(np.ascontiguousarray(med_idx.astype(np.int64)), int64_dtype, a.device),
+        )

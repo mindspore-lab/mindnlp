@@ -24,6 +24,7 @@ def test_tls_exclude_applies_to_dispatch_and_redispatch():
         calls.append("meta")
         return x
 
+    registry.register_schema("aten::dummy_dispatch", "dummy_dispatch(Any x) -> Any")
     registry.register_kernel("aten::dummy_dispatch", DispatchKey.CPU, cpu_kernel)
     registry.register_kernel("aten::dummy_dispatch", DispatchKey.Meta, meta_kernel)
 
@@ -39,6 +40,7 @@ def test_composite_keys_fallthrough():
         calls.append("cpu")
         return x
 
+    registry.register_schema("aten::dummy_composite", "dummy_composite(Any x) -> Any")
     registry.register_kernel("aten::dummy_composite", DispatchKey.CPU, cpu_kernel)
 
     keyset = DispatchKeySet.from_mask(

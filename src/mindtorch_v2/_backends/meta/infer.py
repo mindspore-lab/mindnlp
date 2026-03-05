@@ -34,11 +34,16 @@ def infer_binary(a, b):
     return TensorSpec(shape=tuple(shape), stride=_contiguous_stride(shape), dtype=a.dtype)
 
 
-def infer_unary(a):
+def infer_binary_bool(a, b):
+    shape = _broadcast_shape(a.shape, b.shape)
+    return TensorSpec(shape=tuple(shape), stride=_contiguous_stride(shape), dtype=bool_dtype)
+
+
+def infer_unary(a, *args, **kwargs):
     return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=a.dtype)
 
 
-def infer_unary_bool(a):
+def infer_unary_bool(a, *args, **kwargs):
     return TensorSpec(shape=tuple(a.shape), stride=_contiguous_stride(a.shape), dtype=bool_dtype)
 
 
@@ -195,6 +200,12 @@ def infer_tril_indices(row, col, offset=0, dtype=None, device=None, layout=None)
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=dtype)
 
 
+def _normalize_tensor_sequence_args(tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        return tuple(tensors[0])
+    return tuple(tensors)
+
+
 def infer_triu_indices(row, col, offset=0, dtype=None, device=None, layout=None):
     if row < 0 or col < 0:
         raise ValueError("row and col must be non-negative")
@@ -215,6 +226,7 @@ def infer_pad_sequence(seqs, batch_first=False, padding_value=0.0, padding_side=
 
 
 def infer_block_diag(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     rows = sum(t.shape[0] for t in tensors)
     cols = sum(t.shape[1] for t in tensors)
     shape = (rows, cols)
@@ -239,6 +251,7 @@ def infer_diag(a, diagonal=0):
 
 
 def infer_cartesian_prod(*tensors):
+    tensors = _normalize_tensor_sequence_args(tensors)
     rows = 1
     for t in tensors:
         rows *= t.shape[0]
@@ -512,3 +525,61 @@ def infer_nonzero(a, as_tuple=False):
         return tuple(spec for _ in range(len(a.shape)))
     shape = (0, len(a.shape))
     return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=int64_dtype)
+
+
+# ---------------------------------------------------------------------------
+# Meta infer for newly added ops
+# ---------------------------------------------------------------------------
+
+def infer_dot(a, b):
+    # dot of two 1D vectors returns a scalar
+    shape = ()
+    return TensorSpec(shape=shape, stride=(), dtype=a.dtype)
+
+
+def infer_outer(a, b):
+    shape = (a.shape[0], b.shape[0])
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_flatten(a, start_dim=0, end_dim=-1):
+    ndim = len(a.shape)
+    start = start_dim if start_dim >= 0 else start_dim + ndim
+    end = end_dim if end_dim >= 0 else end_dim + ndim
+    flat_size = 1
+    for i in range(start, end + 1):
+        flat_size *= a.shape[i]
+    shape = tuple(a.shape[:start]) + (flat_size,) + tuple(a.shape[end + 1:])
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_unflatten(a, dim, sizes):
+    ndim = len(a.shape)
+    d = dim if dim >= 0 else dim + ndim
+    shape = tuple(a.shape[:d]) + tuple(sizes) + tuple(a.shape[d + 1:])
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_broadcast_to(a, shape):
+    shape = tuple(shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_movedim(a, source, destination):
+    # Shape doesn't change, only strides
+    shape = tuple(a.shape)
+    return TensorSpec(shape=shape, stride=_contiguous_stride(shape), dtype=a.dtype)
+
+
+def infer_diagonal(a, offset=0, dim1=0, dim2=1):
+    shape = list(a.shape)
+    m = shape[dim1]
+    n = shape[dim2]
+    if offset >= 0:
+        diag_len = max(0, min(m, n - offset))
+    else:
+        diag_len = max(0, min(m + offset, n))
+    # Remove dim1 and dim2, append diag_len
+    remaining = [s for i, s in enumerate(shape) if i not in (dim1, dim2)]
+    out_shape = tuple(remaining) + (diag_len,)
+    return TensorSpec(shape=out_shape, stride=_contiguous_stride(out_shape), dtype=a.dtype)
