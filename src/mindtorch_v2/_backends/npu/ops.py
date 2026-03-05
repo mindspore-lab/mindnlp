@@ -6544,3 +6544,50 @@ def one_hot(indices, num_classes=-1):
     out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), f32, device=indices.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
+
+def instance_norm(input, weight=None, bias=None, running_mean=None, running_var=None,
+                  use_input_stats=True, momentum=0.1, eps=1e-5, cudnn_enabled=False):
+    """Instance normalization as composite of existing dispatched ops."""
+    if input.dim() < 2:
+        raise ValueError("instance_norm expects input with at least 2 dims")
+
+    C = int(input.shape[1])
+    ndim = input.dim()
+    spatial_axes = list(range(2, ndim))
+
+    if use_input_stats:
+        mean_t = mean(input, dim=spatial_axes, keepdim=True)
+        diff = sub(input, mean_t)
+        var_t = mean(mul(diff, diff), dim=spatial_axes, keepdim=True)
+
+        if running_mean is not None:
+            batch_dims = [0] + spatial_axes
+            global_mean = mean(input, dim=batch_dims, keepdim=False)
+            new_rm = add(mul(running_mean, (1.0 - float(momentum))), mul(global_mean, float(momentum)))
+            copy_(running_mean, new_rm)
+        if running_var is not None:
+            batch_dims = [0] + spatial_axes
+            global_diff = sub(input, mean(input, dim=batch_dims, keepdim=True))
+            global_var = mean(mul(global_diff, global_diff), dim=batch_dims, keepdim=False)
+            new_rv = add(mul(running_var, (1.0 - float(momentum))), mul(global_var, float(momentum)))
+            copy_(running_var, new_rv)
+    else:
+        stats_shape = (1, C) + (1,) * (ndim - 2)
+        mean_t = reshape(running_mean, stats_shape)
+        var_t = reshape(running_var, stats_shape)
+        diff = sub(input, mean_t)
+
+    eps_t = _scalar_to_npu_tensor(float(eps), mean_t)
+    denom = sqrt(add(var_t, eps_t))
+    out = div(diff, denom)
+
+    if weight is not None:
+        w_shape = (1, C) + (1,) * (ndim - 2)
+        w = reshape(weight, w_shape)
+        out = mul(out, w)
+    if bias is not None:
+        b_shape = (1, C) + (1,) * (ndim - 2)
+        b = reshape(bias, b_shape)
+        out = add(out, b)
+    return out
+

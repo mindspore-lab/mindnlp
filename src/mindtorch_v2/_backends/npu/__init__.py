@@ -158,6 +158,7 @@ from .ops import (
     mish,
     prelu,
     batch_norm,
+    instance_norm,
     group_norm,
     gather,
     index_select,
@@ -390,6 +391,7 @@ registry.register("prelu", "npu", prelu, meta=meta_infer.infer_binary)
 
 # Normalization (composite ops)
 registry.register("batch_norm", "npu", batch_norm, meta=meta_infer.infer_unary)
+registry.register("instance_norm", "npu", instance_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "npu", group_norm, meta=meta_infer.infer_unary)
 
 # Tensor operations

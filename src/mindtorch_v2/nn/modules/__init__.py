@@ -4,7 +4,7 @@ from .activation import (
     LeakyReLU, ELU, Mish, PReLU,
 )
 from .container import Sequential, ModuleList, ModuleDict, ParameterList, ParameterDict
-from .normalization import LayerNorm, BatchNorm1d, BatchNorm2d, GroupNorm, RMSNorm
+from .normalization import LayerNorm, BatchNorm1d, BatchNorm2d, GroupNorm, RMSNorm, InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
 from .sparse import Embedding, EmbeddingBag
 from .dropout import Dropout, Dropout1d, Dropout2d
 from .conv import Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d
