@@ -7,6 +7,8 @@ from .functionalize import functionalize_op, is_functionalize_enabled, should_fu
 import threading
 
 from .._autograd.grad_mode import is_grad_enabled
+from ..amp.state import is_autocast_enabled
+from ..amp.policy import apply_autocast_policy
 from ..profiler.profiler import is_profiler_enabled, dispatch_op_enter, dispatch_op_exit
 
 
@@ -332,6 +334,11 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
                 dispatch_op_exit(token)
         _bump_versions(entry.schema_obj, args, impl_kwargs)
         return result
+    if keyset.has(DispatchKey.Autocast):
+        device_type = dispatch_device.type if hasattr(dispatch_device, "type") else dispatch_device
+        casted_args, casted_kwargs = apply_autocast_policy(alias_name, args, kwargs, device_type)
+        return redispatch(alias_name, keyset.without(DispatchKey.Autocast), *casted_args, **casted_kwargs)
+
     if pipe is not None and keyset.has(DispatchKey.Pipeline):
         meta = entry.kernels.get(DispatchKey.Meta)
         if meta is None:
@@ -377,6 +384,7 @@ def dispatch(name, dispatch_device, *args, **kwargs):
         pipeline_enabled=pipe is not None,
         functionalize_enabled=is_functionalize_enabled(),
         device=dispatch_device,
+        autocast_enabled=is_autocast_enabled(getattr(dispatch_device, "type", dispatch_device)),
     )
     return dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs)
 
