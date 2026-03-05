@@ -31,7 +31,7 @@ def test_pipeline_last_error_structured_payload():
 
     op_name = f"pipeline_error_payload_{uuid.uuid4().hex}"
     registry.register_schema(op_name, f"{op_name}() -> Any")
-    def _meta(x):
+    def _meta():
         from mindtorch_v2._backends.meta.infer import TensorSpec
         from mindtorch_v2._dtype import float32
 
@@ -78,7 +78,7 @@ def test_pipeline_error_debug_interfaces():
 
     op_name = f"pipeline_error_debug_{uuid.uuid4().hex}"
     registry.register_schema(op_name, f"{op_name}() -> Any")
-    def _meta(x):
+    def _meta():
         from mindtorch_v2._backends.meta.infer import TensorSpec
         from mindtorch_v2._dtype import float32
 
@@ -117,7 +117,7 @@ def test_pipeline_error_id_is_deterministic_for_same_site():
 
     op_name = f"pipeline_error_stable_id_{uuid.uuid4().hex}"
     registry.register_schema(op_name, f"{op_name}() -> Any")
-    def _meta(x):
+    def _meta():
         from mindtorch_v2._backends.meta.infer import TensorSpec
         from mindtorch_v2._dtype import float32
 

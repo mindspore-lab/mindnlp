@@ -243,9 +243,17 @@ def _key_order(keyset):
 
 def _extract_tensors(args, kwargs):
     tensors = []
-    for value in list(args) + list(kwargs.values()):
+
+    def _visit(value):
         if hasattr(value, "device"):
             tensors.append(value)
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                _visit(item)
+
+    for value in list(args) + list(kwargs.values()):
+        _visit(value)
     return tensors
 
 

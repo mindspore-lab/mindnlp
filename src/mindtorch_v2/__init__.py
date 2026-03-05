@@ -60,7 +60,12 @@ from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
 from ._functional import unflatten, broadcast_to, movedim, diagonal
 from ._functional import unique, searchsorted, kthvalue, median
 from ._printing import set_printoptions, get_printoptions
-from ._dispatch import pipeline_context, functionalize_context
+from ._dispatch import (
+    pipeline_context,
+    functionalize_context,
+    set_pipeline_config,
+    get_pipeline_config,
+)
 from ._backends import cpu
 from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad, inference_mode
 from . import _autograd as autograd
@@ -86,8 +91,12 @@ from . import _random as random
 from .serialization import save, load
 
 
-def pipeline():
-    return pipeline_context()
+def pipeline(**kwargs):
+    return pipeline_context(**kwargs)
+
+
+def pipeline_config(**kwargs):
+    return set_pipeline_config(**kwargs)
 
 
 def functionalize():
@@ -287,6 +296,8 @@ __all__ = [
     # pipeline
     "pipeline",
     "pipeline_context",
+    "pipeline_config",
+    "get_pipeline_config",
     "functionalize",
     "functionalize_context",
     # device
