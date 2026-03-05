@@ -66,6 +66,27 @@ def test_autocast_invalid_device_type_raises():
             pass
 
 
+def test_autocast_unavailable_device_raises():
+    import pytest
+    from mindtorch_v2.amp import autocast
+    from mindtorch_v2 import npu as npu_api
+
+    if npu_api.is_available():
+        pytest.skip("npu available")
+    with pytest.raises(RuntimeError):
+        with autocast("npu"):
+            pass
+
+
+def test_autocast_unsupported_dtype_warns_and_disables():
+    import pytest
+    from mindtorch_v2.amp import autocast
+
+    with pytest.warns(UserWarning):
+        with autocast("cpu", dtype=torch.float32) as mode:
+            assert not mode._enabled
+
+
 def test_register_autocast_api_exists():
     import mindtorch_v2.library as library
 

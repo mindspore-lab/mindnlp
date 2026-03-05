@@ -69,6 +69,7 @@ from ._dispatch import (
 from ._backends import cpu
 from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad, inference_mode
 from . import _autograd as autograd
+from ._backends import autograd as _autograd_kernels
 from . import npu
 from . import _C
 from . import distributed
@@ -89,6 +90,12 @@ from ._random import (
 )
 from . import _random as random
 from .serialization import save, load
+from .amp.state import (
+    is_autocast_enabled,
+    set_autocast_enabled,
+    get_autocast_dtype,
+    set_autocast_dtype,
+)
 
 
 def pipeline(**kwargs):
@@ -317,6 +324,10 @@ __all__ = [
     "onnx",
     # amp
     "amp",
+    "is_autocast_enabled",
+    "set_autocast_enabled",
+    "get_autocast_dtype",
+    "set_autocast_dtype",
     "ops",
     "library",
     "compiler",

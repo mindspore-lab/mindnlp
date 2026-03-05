@@ -1,5 +1,6 @@
 import collections
 import functools
+import warnings
 from typing import Optional
 
 from .state import (
@@ -35,6 +36,29 @@ __all__ = [
 ]
 
 
+def _cuda_available():
+    try:
+        from .. import cuda as cuda_api
+    except Exception:
+        return False
+    return bool(getattr(cuda_api, "is_available", lambda: False)())
+
+
+def _npu_available():
+    try:
+        from .. import npu as npu_api
+    except Exception:
+        return False
+    return bool(getattr(npu_api, "is_available", lambda: False)())
+
+
+_DEVICE_TYPE_AVAILABILITY = {
+    "cpu": lambda: True,
+    "cuda": _cuda_available,
+    "npu": _npu_available,
+}
+
+
 def autocast_decorator(autocast_instance, func):
     @functools.wraps(func)
     def decorate_autocast(*args, **kwargs):
@@ -61,6 +85,10 @@ class autocast:
             raise RuntimeError(
                 f"User specified an unsupported autocast device_type '{self.device}'"
             )
+        if not _DEVICE_TYPE_AVAILABILITY.get(self.device, lambda: False)():
+            raise RuntimeError(
+                f"autocast is not available for device_type '{self.device}'"
+            )
 
         self.fast_dtype = get_autocast_dtype(self.device) if dtype is None else dtype
         self._enabled = bool(enabled)
@@ -69,6 +97,14 @@ class autocast:
             if cache_enabled is None
             else bool(cache_enabled)
         )
+        if self.fast_dtype not in (get_autocast_dtype(self.device),):
+            supported = {get_autocast_dtype(self.device)}
+            if self.fast_dtype not in supported:
+                warnings.warn(
+                    f"autocast is not supported for dtype {self.fast_dtype} on device_type {self.device}",
+                    UserWarning,
+                )
+                self._enabled = False
 
     def __enter__(self):
         self.prev = is_autocast_enabled(self.device)
@@ -101,7 +137,10 @@ def _cast(value, device_type: str, dtype):
             and value.device.type == device_type
             and str(value.dtype) != "torch.float64"
         )
-        return value.to(dtype) if is_eligible else value
+        if is_eligible:
+            from .._functional import to as _to
+            return _to(value, device=value.device, dtype=dtype)
+        return value
     if isinstance(value, (str, bytes)):
         return value
     if HAS_NUMPY and isinstance(value, np.ndarray):
