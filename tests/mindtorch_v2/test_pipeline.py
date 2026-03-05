@@ -63,6 +63,44 @@ def test_pipeline_context_max_ops_auto_flush():
     assert out.storage().data.tolist() == [4.0, 6.0]
 
 
+def test_pipeline_min_defer_ops_gates_deferral():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    with torch.pipeline(min_defer_ops=2):
+        c = a + b
+        assert c._pending is False
+        d = c + b
+        assert d._pending is True
+    assert d._pending is False
+
+
+def test_pipeline_adaptive_defer_uses_prev_window_prediction():
+    a = torch.tensor([1.0, 2.0])
+    b = torch.tensor([3.0, 4.0])
+    old_cfg = torch.get_pipeline_config()
+    try:
+        torch.pipeline_config(adaptive_defer=True, adaptive_small_window_ops=4, adaptive_min_defer_ops=3, min_defer_ops=None)
+
+        # First window has no prediction yet, so first op is deferred.
+        with torch.pipeline():
+            x = a + b
+            assert x._pending is True
+            y = x + b
+            assert y._pending is True
+
+        # Next window uses previous window size (2 <= 4), so first two ops go eager.
+        with torch.pipeline():
+            c = a + b
+            assert c._pending is False
+            d = c + b
+            assert d._pending is False
+            e = d + b
+            assert e._pending is True
+        assert e._pending is False
+    finally:
+        torch.pipeline_config(**old_cfg)
+
+
 def test_pipeline_global_config_applies_max_ops():
     old_cfg = torch.get_pipeline_config()
     try:

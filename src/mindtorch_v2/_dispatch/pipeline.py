@@ -10,11 +10,24 @@ from dataclasses import asdict, dataclass
 _TLS = threading.local()
 
 
+def _get_last_window_ops():
+    return getattr(_TLS, "last_window_ops", None)
+
+
+def _set_last_window_ops(value):
+    _TLS.last_window_ops = value
+
+
 @dataclass
 class PipelineConfig:
     max_ops: int | None = None
     max_pending_bytes: int | None = None
     max_wait_us: int | None = None
+    debug_enabled: bool = False
+    min_defer_ops: int | None = None
+    adaptive_defer: bool = False
+    adaptive_small_window_ops: int = 24
+    adaptive_min_defer_ops: int = 4
 
 
 @dataclass
@@ -48,16 +61,39 @@ def get_pipeline_config():
 
 
 def set_pipeline_config(**kwargs):
-    for key in ("max_ops", "max_pending_bytes", "max_wait_us"):
+    reset_adaptive_state = False
+    for key in (
+        "max_ops",
+        "max_pending_bytes",
+        "max_wait_us",
+        "debug_enabled",
+        "min_defer_ops",
+        "adaptive_defer",
+        "adaptive_small_window_ops",
+        "adaptive_min_defer_ops",
+    ):
         if key in kwargs:
             setattr(_GLOBAL_CONFIG, key, kwargs[key])
+            if key.startswith("adaptive_") or key == "min_defer_ops":
+                reset_adaptive_state = True
+    if reset_adaptive_state:
+        _set_last_window_ops(None)
     return get_pipeline_config()
 
 
 def _merged_config(overrides=None):
     cfg = PipelineConfig(**get_pipeline_config())
     if overrides:
-        for key in ("max_ops", "max_pending_bytes", "max_wait_us"):
+        for key in (
+            "max_ops",
+            "max_pending_bytes",
+            "max_wait_us",
+            "debug_enabled",
+            "min_defer_ops",
+            "adaptive_defer",
+            "adaptive_small_window_ops",
+            "adaptive_min_defer_ops",
+        ):
             if key in overrides and overrides[key] is not None:
                 setattr(cfg, key, overrides[key])
     return cfg
@@ -216,15 +252,32 @@ class Pipeline:
         self._last_error = None
         self._last_window_entries = []
         self._last_op_alias_sets = {}
+        self._observed_ops = 0
+        self._predicted_window_ops = _get_last_window_ops()
+
+    def should_defer_next(self):
+        self._observed_ops += 1
+        min_defer_ops = self.config.min_defer_ops
+        if min_defer_ops is None and self.config.adaptive_defer:
+            predicted = self._predicted_window_ops
+            if predicted is not None and predicted <= int(self.config.adaptive_small_window_ops):
+                min_defer_ops = int(self.config.adaptive_min_defer_ops)
+        if min_defer_ops is None:
+            return True
+        if int(min_defer_ops) <= 1:
+            return True
+        return self._observed_ops >= int(min_defer_ops)
 
     def record(self, entry, *, pending=None):
         entry._pipe_op_seq = self._next_op_seq
         self._next_op_seq += 1
-        if not hasattr(entry, "_pipe_callsite"):
+        if self.config.debug_enabled and not hasattr(entry, "_pipe_callsite"):
             entry._pipe_callsite = _infer_callsite()
-        _, _, alias_set, _ = _collect_alias_info(entry)
+        alias_set = None
+        if self.config.debug_enabled:
+            _, _, alias_set, _ = _collect_alias_info(entry)
+            self._last_op_alias_sets[entry._pipe_op_seq] = alias_set
         entry._pipe_alias_set = alias_set
-        self._last_op_alias_sets[entry._pipe_op_seq] = alias_set
         self.queue.append(entry)
         if self._window_started_ns is None:
             self._window_started_ns = time.monotonic_ns()
@@ -256,29 +309,56 @@ class Pipeline:
         self.queue.clear()
         self._last_window_entries = pending
         self._last_op_alias_sets = {}
-        for entry in pending:
-            self._last_op_alias_sets[getattr(entry, "_pipe_op_seq", -1)] = getattr(entry, "_pipe_alias_set", None)
+        if self.config.debug_enabled:
+            for entry in pending:
+                self._last_op_alias_sets[getattr(entry, "_pipe_op_seq", -1)] = getattr(entry, "_pipe_alias_set", None)
         if not pending:
             self.last_flush_reason = reason
             return
+        self._predicted_window_ops = len(pending)
+        _set_last_window_ops(self._predicted_window_ops)
         self.flush_id += 1
         self.last_flush_reason = reason
         self._window_started_ns = None
         self._last_error = None
+        active_ctx = None
+        active_entry = None
         for entry in pending:
             try:
-                entry.execute()
+                ctx = (getattr(entry, "keyset", None), getattr(entry, "key", None))
+                if ctx != active_ctx:
+                    if active_ctx is not None and active_entry is not None:
+                        active_entry.exit_dispatch_context()
+                    if hasattr(entry, "enter_dispatch_context"):
+                        entry.enter_dispatch_context()
+                        active_ctx = ctx
+                        active_entry = entry
+                    else:
+                        active_ctx = None
+                        active_entry = None
+                if active_ctx is not None and hasattr(entry, "execute_with_active_context"):
+                    entry.execute_with_active_context()
+                else:
+                    entry.execute()
             except Exception as exc:  # noqa: BLE001
+                if active_ctx is not None and active_entry is not None and hasattr(active_entry, "exit_dispatch_context"):
+                    active_entry.exit_dispatch_context()
+                    active_ctx = None
+                    active_entry = None
                 op_name = getattr(entry, "op_name", type(entry).__name__)
                 backend = "cpu"
                 if hasattr(entry, "args") and entry.args:
                     first = entry.args[0]
                     device = getattr(first, "device", None)
                     backend = getattr(device, "type", backend) if device is not None else backend
-                callsite = getattr(entry, "_pipe_callsite", {"file": None, "line": None, "func": None})
-                read_set, write_set, alias_set, version_plan = _collect_alias_info(entry)
-                dependency_edges = _build_dependency_edges(self._last_op_alias_sets)
-                dependency_edges.extend(_build_rw_edges(self._last_window_entries))
+                callsite = {"file": None, "line": None, "func": None}
+                read_set, write_set, alias_set, version_plan = [], [], None, {}
+                dependency_edges = []
+                if self.config.debug_enabled:
+                    callsite = getattr(entry, "_pipe_callsite", callsite)
+                    read_set, write_set, alias_set, version_plan = _collect_alias_info(entry)
+                    dependency_edges = _build_dependency_edges(self._last_op_alias_sets)
+                    dependency_edges.extend(_build_rw_edges(self._last_window_entries))
                 self._last_error = ErrorEnvelope(
                     error_id=_make_error_id(op_name, "submit", callsite, str(exc)),
                     flush_id=self.flush_id,
@@ -299,6 +379,8 @@ class Pipeline:
                 )
                 self.outputs.clear()
                 raise
+        if active_ctx is not None and active_entry is not None:
+            active_entry.exit_dispatch_context()
         self.outputs.clear()
 
     def last_error(self):

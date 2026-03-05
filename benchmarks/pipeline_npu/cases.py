@@ -246,7 +246,7 @@ CASES = {
         "seq": 128,
         "hidden": 1024,
         "heads": 8,
-        "dtype": "bfloat16",
+        "dtype": "float16",
         "builder": _case_b2,
     },
     "B3": {
@@ -273,7 +273,7 @@ CASES = {
         "seq": 256,
         "hidden": 1024,
         "heads": 16,
-        "dtype": "bfloat16",
+        "dtype": "float16",
         "builder": _case_c2,
     },
     "D1": {
