@@ -44,7 +44,7 @@ def test_pipeline_last_error_structured_payload():
 
     registry.register_kernel(op_name, DispatchKey.CPU, _boom)
 
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op_name, "cpu")
         try:
             pipe.flush()
@@ -91,7 +91,7 @@ def test_pipeline_error_debug_interfaces():
 
     registry.register_kernel(op_name, DispatchKey.CPU, _boom)
 
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op_name, "cpu")
         assert pipe.pending_count() == 1
         try:
@@ -132,7 +132,7 @@ def test_pipeline_error_id_is_deterministic_for_same_site():
 
     ids = []
     for _ in range(2):
-        with pipeline.pipeline_context() as pipe:
+        with pipeline.pipeline_context(debug_enabled=True) as pipe:
             dispatch(op_name, "cpu")
             try:
                 pipe.flush()
@@ -168,7 +168,7 @@ def test_pipeline_error_payload_captures_mutating_alias_set():
     import mindtorch_v2 as torch
 
     x = torch.tensor([1.0])
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op_name, "cpu", x)
         try:
             pipe.flush()
@@ -206,7 +206,7 @@ def test_pipeline_version_plan_counts_multiple_mutations():
 
     a = torch.tensor([1.0])
     b = torch.tensor([2.0])
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op_name, "cpu", a, b)
         try:
             pipe.flush()
@@ -249,7 +249,7 @@ def test_pipeline_dependency_edges_capture_write_write():
     registry.register_kernel(op2, DispatchKey.CPU, _boom)
 
     x = torch.tensor([1.0])
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op1, "cpu", x)
         dispatch(op2, "cpu", x)
         try:
@@ -296,7 +296,7 @@ def test_pipeline_dependency_edges_capture_alias_writes():
     registry.register_kernel(op2, DispatchKey.CPU, _boom)
 
     x = torch.tensor([1.0])
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op1, "cpu", x)
         dispatch(op2, "cpu", x)
         try:
@@ -344,7 +344,7 @@ def test_pipeline_dependency_edges_capture_tensor_rw():
     registry.register_kernel(op2, DispatchKey.CPU, _boom)
 
     x = torch.tensor([1.0])
-    with pipeline.pipeline_context() as pipe:
+    with pipeline.pipeline_context(debug_enabled=True) as pipe:
         dispatch(op1, "cpu", x)
         dispatch(op2, "cpu", x)
         try:
