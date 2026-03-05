@@ -409,6 +409,31 @@ def logical_not(a):
     return _unary_op(a, aclnn.logical_not, "logical_not", out_dtype=bool_dtype)
 
 
+# Bitwise operations
+def bitwise_not(a):
+    if not aclnn.bitwise_not_symbols_ok():
+        raise RuntimeError("aclnnBitwiseNot symbols not available")
+    return _unary_op(a, aclnn.bitwise_not, "bitwise_not")
+
+
+def bitwise_and(a, b):
+    if not aclnn.bitwise_and_symbols_ok():
+        raise RuntimeError("aclnnBitwiseAndTensor symbols not available")
+    return _binary_op(a, b, aclnn.bitwise_and, "bitwise_and")
+
+
+def bitwise_or(a, b):
+    if not aclnn.bitwise_or_symbols_ok():
+        raise RuntimeError("aclnnBitwiseOrTensor symbols not available")
+    return _binary_op(a, b, aclnn.bitwise_or, "bitwise_or")
+
+
+def bitwise_xor(a, b):
+    if not aclnn.bitwise_xor_symbols_ok():
+        raise RuntimeError("aclnnBitwiseXorTensor symbols not available")
+    return _binary_op(a, b, aclnn.bitwise_xor, "bitwise_xor")
+
+
 def le(a, b):
     return logical_or(signbit(sub(a, b)), eq(a, b))
 
@@ -523,6 +548,121 @@ def matmul(a, b):
 
         out = view_backend.reshape(out, out_shape)
     return out
+
+
+def dot(a, b):
+    """Dot product of two 1D tensors."""
+    if not aclnn.dot_symbols_ok():
+        raise RuntimeError("aclnnDot symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU dot expects NPU tensors")
+    if a.dtype != b.dtype:
+        raise ValueError("NPU dot requires matching dtypes")
+    if len(a.shape) != 1 or len(b.shape) != 1:
+        raise ValueError("NPU dot expects 1D tensors")
+    if a.shape[0] != b.shape[0]:
+        raise ValueError("NPU dot requires tensors of same length")
+
+    itemsize = _dtype_itemsize(a.dtype)
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    a_ptr = int(a_storage.data_ptr()) + int(a.offset * itemsize)
+    b_ptr = int(b_storage.data_ptr()) + int(b.offset * itemsize)
+
+    # Output is a 1-element tensor (not 0-dim, ACLNN expects 1D output)
+    out_shape = (1,)
+    out_stride = (1,)
+    out_ptr = npu_runtime._alloc_device(itemsize, runtime=runtime)
+
+    aclnn.dot(
+        a_ptr, b_ptr, out_ptr,
+        a.shape, a.stride,
+        b.shape, b.stride,
+        out_shape, out_stride,
+        a.dtype, runtime, stream=stream.stream,
+    )
+
+    storage = npu_typed_storage_from_ptr(out_ptr, 1, a.dtype, device=a.device)
+    result = _wrap_tensor(storage, out_shape, out_stride)
+    # Return as scalar (0-dim tensor)
+    from ..common import view as view_backend
+    return view_backend.reshape(result, ())
+
+
+def mv(a, b):
+    """Matrix-vector multiplication."""
+    if not aclnn.mv_symbols_ok():
+        raise RuntimeError("aclnnMv symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU mv expects NPU tensors")
+    if a.dtype != b.dtype:
+        raise ValueError("NPU mv requires matching dtypes")
+    if len(a.shape) != 2:
+        raise ValueError("NPU mv expects 2D matrix as first argument")
+    if len(b.shape) != 1:
+        raise ValueError("NPU mv expects 1D vector as second argument")
+    if a.shape[1] != b.shape[0]:
+        raise ValueError(f"NPU mv: matrix columns ({a.shape[1]}) != vector length ({b.shape[0]})")
+
+    itemsize = _dtype_itemsize(a.dtype)
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    a_ptr = int(a_storage.data_ptr()) + int(a.offset * itemsize)
+    b_ptr = int(b_storage.data_ptr()) + int(b.offset * itemsize)
+
+    out_shape = (a.shape[0],)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(out_shape[0] * itemsize, runtime=runtime)
+
+    aclnn.mv(
+        a_ptr, b_ptr, out_ptr,
+        a.shape, a.stride,
+        b.shape, b.stride,
+        out_shape, out_stride,
+        a.dtype, runtime, stream=stream.stream,
+    )
+
+    storage = npu_typed_storage_from_ptr(out_ptr, out_shape[0], a.dtype, device=a.device)
+    return _wrap_tensor(storage, out_shape, out_stride)
+
+
+def outer(a, b):
+    """Outer product of two 1D tensors (ger)."""
+    if not aclnn.ger_symbols_ok():
+        raise RuntimeError("aclnnGer symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu" or b.device.type != "npu":
+        raise ValueError("NPU outer expects NPU tensors")
+    if a.dtype != b.dtype:
+        raise ValueError("NPU outer requires matching dtypes")
+    if len(a.shape) != 1 or len(b.shape) != 1:
+        raise ValueError("NPU outer expects 1D tensors")
+
+    itemsize = _dtype_itemsize(a.dtype)
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    a_ptr = int(a_storage.data_ptr()) + int(a.offset * itemsize)
+    b_ptr = int(b_storage.data_ptr()) + int(b.offset * itemsize)
+
+    out_shape = (a.shape[0], b.shape[0])
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(out_shape[0] * out_shape[1] * itemsize, runtime=runtime)
+
+    aclnn.ger(
+        a_ptr, b_ptr, out_ptr,
+        a.shape, a.stride,
+        b.shape, b.stride,
+        out_shape, out_stride,
+        a.dtype, runtime, stream=stream.stream,
+    )
+
+    storage = npu_typed_storage_from_ptr(out_ptr, out_shape[0] * out_shape[1], a.dtype, device=a.device)
+    return _wrap_tensor(storage, out_shape, out_stride)
 
 
 def relu(a):
@@ -818,6 +958,259 @@ def argmin(a, dim=None, keepdim=False):
     runtime.defer_free(val_ptr)
     out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), int64_dtype, device=a.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def median(a, dim=None, keepdim=False):
+    """Median along a dimension or global median."""
+    if not aclnn.median_symbols_ok():
+        raise RuntimeError("aclnnMedian symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU median expects NPU tensors")
+
+    storage = _unwrap_storage(a)
+    itemsize = _dtype_itemsize(a.dtype)
+
+    if dim is None:
+        # Global median - reduce all
+        from ..common import view as view_backend
+        flat = view_backend.reshape(a, (_numel(a.shape),))
+        return median(flat, dim=0, keepdim=False)
+
+    dims = _normalize_reduction_dims(dim, len(a.shape))
+    if len(dims) != 1:
+        raise ValueError("NPU median only supports single dimension")
+
+    out_shape = _reduce_out_shape(a.shape, dims, keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = max(_numel(out_shape), 1)
+
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+    idx_ptr = npu_runtime._alloc_device(out_numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+
+    aclnn.median(
+        storage.data_ptr(),
+        out_ptr,
+        idx_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        dims[0],
+        keepdim,
+        runtime, stream=stream.stream,
+    )
+
+    runtime.defer_free(idx_ptr)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def kthvalue(a, k, dim=None, keepdim=False):
+    """K-th smallest element along a dimension."""
+    if not aclnn.kthvalue_symbols_ok():
+        raise RuntimeError("aclnnKthvalue symbols not available")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU kthvalue expects NPU tensors")
+
+    storage = _unwrap_storage(a)
+    itemsize = _dtype_itemsize(a.dtype)
+
+    if dim is None:
+        dim = 0
+        from ..common import view as view_backend
+        flat = view_backend.reshape(a, (_numel(a.shape),))
+        # Recurse with flattened tensor
+        if a.shape != flat.shape:
+            return kthvalue(flat, k, dim=0, keepdim=False)
+
+    # Ensure k is valid
+    if k < 1 or k > a.shape[dim]:
+        raise ValueError(f"k ({k}) out of range for dimension {dim} with size {a.shape[dim]}")
+
+    out_shape = _reduce_out_shape(a.shape, [dim], keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = max(_numel(out_shape), 1)
+
+    out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
+    idx_ptr = npu_runtime._alloc_device(out_numel * _dtype_itemsize(int64_dtype), runtime=runtime)
+
+    aclnn.kthvalue(
+        storage.data_ptr(),
+        out_ptr,
+        idx_ptr,
+        a.shape,
+        a.stride,
+        a.dtype,
+        k,
+        dim,
+        keepdim,
+        runtime, stream=stream.stream,
+    )
+
+    runtime.defer_free(idx_ptr)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def searchsorted(sorted_sequence, values, out_int32=False, right=False):
+    """Find indices where elements should be inserted to maintain order."""
+    if not aclnn.search_sorted_symbols_ok():
+        raise RuntimeError("aclnnSearchSorted symbols not available")
+    runtime = npu_runtime.get_runtime((sorted_sequence.device.index or 0))
+    stream = npu_state.current_stream((sorted_sequence.device.index or 0))
+    if sorted_sequence.device.type != "npu" or values.device.type != "npu":
+        raise ValueError("NPU searchsorted expects NPU tensors")
+    if sorted_sequence.dtype != values.dtype:
+        raise ValueError("NPU searchsorted requires matching dtypes")
+
+    sorted_storage = _unwrap_storage(sorted_sequence)
+    values_storage = _unwrap_storage(values)
+
+    out_dtype = "int32" if out_int32 else "int64"
+    out_shape = tuple(values.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = max(_numel(out_shape), 1)
+    out_ptr = npu_runtime._alloc_device(out_numel * _dtype_itemsize(out_dtype), runtime=runtime)
+
+    aclnn.search_sorted(
+        sorted_storage.data_ptr(),
+        values_storage.data_ptr(),
+        out_ptr,
+        sorted_sequence.shape, sorted_sequence.stride,
+        values.shape, values.stride,
+        out_shape, out_stride,
+        sorted_sequence.dtype,
+        out_int32,
+        right,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, out_dtype, device=sorted_sequence.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def unique(a, sorted=True, return_inverse=False, return_counts=False, dim=None):
+    """Unique elements of a tensor."""
+    if not aclnn.unique_symbols_ok():
+        raise RuntimeError("aclnnUnique symbols not available")
+    if dim is not None:
+        raise NotImplementedError("NPU unique with dim argument not supported")
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU unique expects NPU tensors")
+
+    storage = _unwrap_storage(a)
+    itemsize = _dtype_itemsize(a.dtype)
+    numel = _numel(a.shape)
+
+    # Output tensors - we don't know sizes ahead of time, so allocate same size as input
+    out_ptr = npu_runtime._alloc_device(numel * itemsize, runtime=runtime)
+    inverse_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize("int64"), runtime=runtime) if return_inverse else None
+    counts_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize("int64"), runtime=runtime) if return_counts else None
+
+    aclnn.unique(
+        storage.data_ptr(),
+        out_ptr,
+        inverse_ptr,
+        counts_ptr,
+        a.shape, a.stride,
+        a.dtype,
+        sorted,
+        return_inverse,
+        return_counts,
+        runtime, stream=stream.stream,
+    )
+
+    # For now, return just the unique values (no inverse/counts)
+    # Full implementation would need to query actual output sizes
+    out_storage = npu_typed_storage_from_ptr(out_ptr, numel, a.dtype, device=a.device)
+    out = _wrap_tensor(out_storage, (numel,), (1,))
+    if inverse_ptr:
+        runtime.defer_free(inverse_ptr)
+    if counts_ptr:
+        runtime.defer_free(counts_ptr)
+    return out
+
+
+def randperm(n, dtype=None, device=None):
+    """Random permutation of integers from 0 to n-1."""
+    if not aclnn.randperm_symbols_ok():
+        raise RuntimeError("aclnnRandperm symbols not available")
+    # Import device handling
+    from ..._device import device as Device
+    if device is None:
+        device = Device("npu:0")
+    elif isinstance(device, str):
+        device = Device(device)
+    if device.type != "npu":
+        raise ValueError("NPU randperm only supports NPU device")
+
+    if dtype is None:
+        dtype = "int64"
+    runtime = npu_runtime.get_runtime((device.index or 0))
+    stream = npu_state.current_stream((device.index or 0))
+
+    itemsize = _dtype_itemsize(dtype)
+    out_ptr = npu_runtime._alloc_device(n * itemsize, runtime=runtime)
+
+    aclnn.randperm(n, out_ptr, dtype, runtime, stream=stream.stream)
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, n, dtype, device=device)
+    return _wrap_tensor(out_storage, (n,), (1,))
+
+
+def flatten_op(a, start_dim=0, end_dim=-1):
+    """Flatten tensor dimensions."""
+    if not aclnn.flatten_symbols_ok():
+        # Fallback to reshape-based flatten
+        from ..common import view as view_backend
+        ndim = len(a.shape)
+        if start_dim < 0:
+            start_dim += ndim
+        if end_dim < 0:
+            end_dim += ndim
+        if start_dim == end_dim:
+            return a
+        new_shape = a.shape[:start_dim] + (-1,) + a.shape[end_dim+1:]
+        return view_backend.reshape(a, new_shape)
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    if a.device.type != "npu":
+        raise ValueError("NPU flatten expects NPU tensors")
+
+    ndim = len(a.shape)
+    if start_dim < 0:
+        start_dim += ndim
+    if end_dim < 0:
+        end_dim += ndim
+    if start_dim > end_dim:
+        raise ValueError(f"flatten: start_dim ({start_dim}) > end_dim ({end_dim})")
+
+    # If already contiguous and flattening all dims, use ACLNN
+    if start_dim == 0 and end_dim == ndim - 1:
+        storage = _unwrap_storage(a)
+        itemsize = _dtype_itemsize(a.dtype)
+        numel = _numel(a.shape)
+        out_ptr = npu_runtime._alloc_device(numel * itemsize, runtime=runtime)
+
+        aclnn.flatten(storage.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+
+        out_storage = npu_typed_storage_from_ptr(out_ptr, numel, a.dtype, device=a.device)
+        return _wrap_tensor(out_storage, (numel,), (1,))
+    else:
+        # Partial flatten - use reshape
+        from ..common import view as view_backend
+        flat_size = 1
+        for i in range(start_dim, end_dim + 1):
+            flat_size *= a.shape[i]
+        new_shape = a.shape[:start_dim] + (flat_size,) + a.shape[end_dim+1:]
+        return view_backend.reshape(a, new_shape)
+
 
 def amax(a, dim=None, keepdim=False):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
@@ -1146,6 +1539,18 @@ def log(a):
     return _unary_op(a, aclnn.log, "log")
 
 
+def expm1(a):
+    if not aclnn.expm1_symbols_ok():
+        raise RuntimeError("aclnnExpm1 symbols not available")
+    return _unary_op(a, aclnn.expm1, "expm1")
+
+
+def log1p(a):
+    if not aclnn.log1p_symbols_ok():
+        raise RuntimeError("aclnnLog1p symbols not available")
+    return _unary_op(a, aclnn.log1p, "log1p")
+
+
 def sqrt(a):
     return _unary_op(a, aclnn.sqrt, "sqrt")
 
@@ -1316,6 +1721,16 @@ def max_(a, b):
     result = _binary_op(a, b, aclnn.maximum, "max")
     nan_mask = logical_or(isnan(a), isnan(b))
     return where(nan_mask, add(a, b), result)
+
+
+def maximum(a, b):
+    """Element-wise maximum of two tensors."""
+    return _binary_op(a, b, aclnn.maximum, "maximum")
+
+
+def minimum(a, b):
+    """Element-wise minimum of two tensors."""
+    return _binary_op(a, b, aclnn.minimum, "minimum")
 
 
 def fmin(a, b):

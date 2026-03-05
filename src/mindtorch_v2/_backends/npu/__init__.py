@@ -206,6 +206,17 @@ from .ops import (
     logical_and,
     logical_or,
     logical_not,
+    # Bitwise ops
+    bitwise_not,
+    bitwise_and,
+    bitwise_or,
+    bitwise_xor,
+    # Math ops
+    expm1,
+    log1p,
+    # Element-wise min/max
+    maximum,
+    minimum,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -278,11 +289,17 @@ registry.register("hardtanh", "npu", hardtanh, meta=meta_infer.infer_unary)
 registry.register("min", "npu", min_, meta=meta_infer.infer_binary)
 registry.register("max", "npu", max_, meta=meta_infer.infer_binary)
 registry.register("pow", "npu", pow, meta=meta_infer.infer_binary)
+# Element-wise min/max
+registry.register("maximum", "npu", maximum, meta=meta_infer.infer_binary)
+registry.register("minimum", "npu", minimum, meta=meta_infer.infer_binary)
 
 registry.register("amin", "npu", amin, meta=meta_infer.infer_sum)
 registry.register("amax", "npu", amax, meta=meta_infer.infer_sum)
 registry.register("argmax", "npu", argmax, meta=meta_infer.infer_argmax)
 registry.register("argmin", "npu", argmin, meta=meta_infer.infer_argmax)
+# Reduction ops with dim - TODO: fix ACLNN signatures for median/kthvalue
+# registry.register("median", "npu", median, meta=meta_infer.infer_sum)
+# registry.register("kthvalue", "npu", kthvalue, meta=meta_infer.infer_sum)
 registry.register("add_", "npu", add_, meta=meta_infer.infer_binary)
 registry.register("mul_", "npu", mul_, meta=meta_infer.infer_binary)
 registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)
@@ -308,6 +325,23 @@ registry.register("min_", "npu", min_, meta=meta_infer.infer_binary)
 registry.register("max_", "npu", max_, meta=meta_infer.infer_binary)
 registry.register("fmin", "npu", fmin, meta=meta_infer.infer_binary)
 registry.register("fmax", "npu", fmax, meta=meta_infer.infer_binary)
+# Bitwise ops
+registry.register("bitwise_not", "npu", bitwise_not, meta=meta_infer.infer_unary)
+registry.register("bitwise_and", "npu", bitwise_and, meta=meta_infer.infer_binary)
+registry.register("bitwise_or", "npu", bitwise_or, meta=meta_infer.infer_binary)
+registry.register("bitwise_xor", "npu", bitwise_xor, meta=meta_infer.infer_binary)
+# Math ops
+registry.register("expm1", "npu", expm1, meta=meta_infer.infer_unary)
+registry.register("log1p", "npu", log1p, meta=meta_infer.infer_unary)
+# TODO: fix ACLNN signatures for dot, mv, outer (scalar/matrix output issues)
+# registry.register("dot", "npu", dot, meta=meta_infer.infer_binary)
+# registry.register("mv", "npu", mv, meta=meta_infer.infer_matmul)
+# registry.register("outer", "npu", outer, meta=meta_infer.infer_binary)
+# TODO: fix ACLNN signatures for searchsorted, unique, randperm, flatten
+# registry.register("searchsorted", "npu", searchsorted, meta=meta_infer.infer_unary)
+# registry.register("unique", "npu", unique)
+# registry.register("randperm", "npu", randperm)
+# registry.register("flatten", "npu", flatten_op, meta=meta_infer.infer_view)
 registry.register("where", "npu", where, meta=meta_infer.infer_binary)
 registry.register("lerp", "npu", lerp, meta=meta_infer.infer_binary)
 registry.register("addcmul", "npu", addcmul, meta=meta_infer.infer_binary)
