@@ -80,12 +80,11 @@ def set_autocast_dtype(device_type, dtype):
     _state_for(dev)["dtype"] = dtype
 
 
-def is_autocast_cache_enabled(device_type=None):
+def is_autocast_cache_enabled():
     return bool(_AUTOCACHE_ENABLED)
 
 
-def set_autocast_cache_enabled(device_type, enabled):
-    del device_type
+def set_autocast_cache_enabled(enabled):
     global _AUTOCACHE_ENABLED
     _AUTOCACHE_ENABLED = bool(enabled)
 

@@ -95,6 +95,8 @@ from .amp.state import (
     set_autocast_enabled,
     get_autocast_dtype,
     set_autocast_dtype,
+    is_autocast_cache_enabled,
+    set_autocast_cache_enabled,
 )
 
 
@@ -328,6 +330,8 @@ __all__ = [
     "set_autocast_enabled",
     "get_autocast_dtype",
     "set_autocast_dtype",
+    "is_autocast_cache_enabled",
+    "set_autocast_cache_enabled",
     "ops",
     "library",
     "compiler",

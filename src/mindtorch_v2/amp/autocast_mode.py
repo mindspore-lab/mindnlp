@@ -94,7 +94,7 @@ class autocast:
         self.fast_dtype = get_autocast_dtype(self.device) if dtype is None else dtype
         self._enabled = bool(enabled)
         self._cache_enabled = (
-            is_autocast_cache_enabled(self.device)
+            is_autocast_cache_enabled()
             if cache_enabled is None
             else bool(cache_enabled)
         )
@@ -110,11 +110,11 @@ class autocast:
     def __enter__(self):
         self.prev = is_autocast_enabled(self.device)
         self.prev_fastdtype = get_autocast_dtype(self.device)
-        self.prev_cache_enabled = is_autocast_cache_enabled(self.device)
+        self.prev_cache_enabled = is_autocast_cache_enabled()
 
         set_autocast_enabled(self.device, self._enabled)
         set_autocast_dtype(self.device, self.fast_dtype)
-        set_autocast_cache_enabled(self.device, self._cache_enabled)
+        set_autocast_cache_enabled(self._cache_enabled)
         autocast_increment_nesting(self.device)
         return self
 
@@ -123,7 +123,7 @@ class autocast:
             clear_autocast_cache()
         set_autocast_enabled(self.device, self.prev)
         set_autocast_dtype(self.device, self.prev_fastdtype)
-        set_autocast_cache_enabled(self.device, self.prev_cache_enabled)
+        set_autocast_cache_enabled(self.prev_cache_enabled)
         return False
 
     def __call__(self, func):
