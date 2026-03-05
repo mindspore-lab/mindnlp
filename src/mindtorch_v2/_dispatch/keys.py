@@ -172,7 +172,7 @@ class DispatchKeySet:
         return cls(int(mask))
 
     @classmethod
-    def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, functionalize_enabled=False, device=None):
+    def from_tensors(cls, tensors, *, grad_enabled=False, pipeline_enabled=False, functionalize_enabled=False, device=None, autocast_enabled=False):
         has_meta = False
         has_npu = False
         has_cuda = False
@@ -227,7 +227,8 @@ class DispatchKeySet:
                 mask |= int(DispatchKey.AutogradCPU)
         if functionalize_enabled:
             mask |= int(DispatchKey.Functionalize)
+        if autocast_enabled:
+            mask |= int(DispatchKey.Autocast)
         if pipeline_enabled and not has_meta and not has_cuda:
             mask |= int(DispatchKey.Pipeline)
         return cls(mask)
-

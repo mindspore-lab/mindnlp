@@ -108,6 +108,26 @@ def register_fake(qualname):
     return decorator
 
 
+def register_autocast(op, device_type, cast_inputs, *, lib=None):
+    """Register an autocast dispatch rule for a custom op.
+
+    Placeholder for torch.library.register_autocast parity. Valid device_type
+    values are "cpu" and "cuda". Custom op dispatch exclusion is not yet
+    implemented in mindtorch_v2, so this records the intent for future use.
+    """
+    if not isinstance(op, str):
+        raise ValueError(
+            f"register_autocast({op}): got unexpected type for op: {type(op)}"
+        )
+    if device_type not in ("cpu", "cuda"):
+        raise ValueError(f"Unknown device type: {device_type}")
+
+    del cast_inputs, lib
+    return {"op": op, "device_type": device_type}
+
+
+
+
 # ---------------------------------------------------------------------------
 # Schema inference from type hints
 # ---------------------------------------------------------------------------

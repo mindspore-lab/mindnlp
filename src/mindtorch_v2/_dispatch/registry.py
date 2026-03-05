@@ -117,7 +117,6 @@ def _register_global_fallthroughs():
         DispatchKey.AutogradXPU,
         DispatchKey.AutogradMeta,
         DispatchKey.Python,
-        DispatchKey.Autocast,
         DispatchKey.CompositeImplicitAutograd,
         DispatchKey.CompositeExplicitAutograd,
         DispatchKey.PrivateUse1,
