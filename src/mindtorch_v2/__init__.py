@@ -83,6 +83,8 @@ from . import optim
 from . import jit
 from . import profiler
 from . import multiprocessing
+from . import linalg
+from . import fft
 from ._random import (
     manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
     Generator, default_generator,
@@ -382,4 +384,7 @@ __all__ = [
     # new random ops
     "bernoulli",
     "multinomial",
+    # submodules
+    "linalg",
+    "fft",
 ]

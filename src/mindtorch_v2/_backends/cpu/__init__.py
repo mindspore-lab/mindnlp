@@ -548,3 +548,107 @@ registry.register("_radam_step", "cpu", _radam_step)
 registry.register("_asgd_step", "cpu", _asgd_step)
 registry.register("_rprop_step", "cpu", _rprop_step)
 registry.register("_sparse_adam_step", "cpu", _sparse_adam_step)
+
+# ---------------------------------------------------------------------------
+# torch.linalg ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    linalg_cholesky,
+    linalg_cond,
+    linalg_det,
+    linalg_eig,
+    linalg_eigh,
+    linalg_eigvals,
+    linalg_eigvalsh,
+    linalg_householder_product,
+    linalg_inv,
+    linalg_lstsq,
+    linalg_lu,
+    linalg_lu_factor,
+    linalg_lu_solve,
+    linalg_matrix_exp,
+    linalg_matrix_norm,
+    linalg_matrix_power,
+    linalg_matrix_rank,
+    linalg_multi_dot,
+    linalg_norm,
+    linalg_pinv,
+    linalg_slogdet,
+    linalg_solve,
+    linalg_solve_triangular,
+    linalg_svd,
+    linalg_svdvals,
+    linalg_tensorinv,
+    linalg_tensorsolve,
+    linalg_vander,
+    linalg_vector_norm,
+)
+
+registry.register("linalg_cholesky", "cpu", linalg_cholesky)
+registry.register("linalg_cond", "cpu", linalg_cond)
+registry.register("linalg_det", "cpu", linalg_det)
+registry.register("linalg_eig", "cpu", linalg_eig)
+registry.register("linalg_eigh", "cpu", linalg_eigh)
+registry.register("linalg_eigvals", "cpu", linalg_eigvals)
+registry.register("linalg_eigvalsh", "cpu", linalg_eigvalsh)
+registry.register("linalg_householder_product", "cpu", linalg_householder_product)
+registry.register("linalg_inv", "cpu", linalg_inv)
+registry.register("linalg_lstsq", "cpu", linalg_lstsq)
+registry.register("linalg_lu", "cpu", linalg_lu)
+registry.register("linalg_lu_factor", "cpu", linalg_lu_factor)
+registry.register("linalg_lu_solve", "cpu", linalg_lu_solve)
+registry.register("linalg_matrix_exp", "cpu", linalg_matrix_exp)
+registry.register("linalg_matrix_norm", "cpu", linalg_matrix_norm)
+registry.register("linalg_matrix_power", "cpu", linalg_matrix_power)
+registry.register("linalg_matrix_rank", "cpu", linalg_matrix_rank)
+registry.register("linalg_multi_dot", "cpu", linalg_multi_dot)
+registry.register("linalg_norm", "cpu", linalg_norm)
+registry.register("linalg_pinv", "cpu", linalg_pinv)
+registry.register("linalg_slogdet", "cpu", linalg_slogdet)
+registry.register("linalg_solve", "cpu", linalg_solve)
+registry.register("linalg_solve_triangular", "cpu", linalg_solve_triangular)
+registry.register("linalg_svd", "cpu", linalg_svd)
+registry.register("linalg_svdvals", "cpu", linalg_svdvals)
+registry.register("linalg_tensorinv", "cpu", linalg_tensorinv)
+registry.register("linalg_tensorsolve", "cpu", linalg_tensorsolve)
+registry.register("linalg_vander", "cpu", linalg_vander)
+registry.register("linalg_vector_norm", "cpu", linalg_vector_norm)
+
+# ---------------------------------------------------------------------------
+# torch.fft ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    fft_fft,
+    fft_ifft,
+    fft_fft2,
+    fft_ifft2,
+    fft_fftn,
+    fft_ifftn,
+    fft_rfft,
+    fft_irfft,
+    fft_rfft2,
+    fft_irfft2,
+    fft_rfftn,
+    fft_irfftn,
+    fft_hfft,
+    fft_ihfft,
+    fft_fftshift,
+    fft_ifftshift,
+)
+
+registry.register("fft_fft", "cpu", fft_fft)
+registry.register("fft_ifft", "cpu", fft_ifft)
+registry.register("fft_fft2", "cpu", fft_fft2)
+registry.register("fft_ifft2", "cpu", fft_ifft2)
+registry.register("fft_fftn", "cpu", fft_fftn)
+registry.register("fft_ifftn", "cpu", fft_ifftn)
+registry.register("fft_rfft", "cpu", fft_rfft)
+registry.register("fft_irfft", "cpu", fft_irfft)
+registry.register("fft_rfft2", "cpu", fft_rfft2)
+registry.register("fft_irfft2", "cpu", fft_irfft2)
+registry.register("fft_rfftn", "cpu", fft_rfftn)
+registry.register("fft_irfftn", "cpu", fft_irfftn)
+registry.register("fft_hfft", "cpu", fft_hfft)
+registry.register("fft_ihfft", "cpu", fft_ihfft)
+registry.register("fft_fftshift", "cpu", fft_fftshift)
+registry.register("fft_ifftshift", "cpu", fft_ifftshift)
