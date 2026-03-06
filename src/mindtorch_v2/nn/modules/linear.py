@@ -9,9 +9,6 @@ class Linear(Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        # PyTorch uses (out_features, in_features) shape for weight
-        # Initialize with uniform distribution U(-1/sqrt(in_features), 1/sqrt(in_features))
-        # Using randn as approximation (normal distribution with similar std)
         import math
         k = math.sqrt(1.0 / in_features)
         w = randn(out_features, in_features, device=device, dtype=dtype) * k
@@ -35,6 +32,7 @@ class Bilinear(Module):
         self.in1_features = in1_features
         self.in2_features = in2_features
         self.out_features = out_features
+        from ..._creation import tensor
         w = tensor([[[0.0] * in2_features for _ in range(in1_features)] for _ in range(out_features)])
         self.weight = Parameter(w)
         if bias:
@@ -43,7 +41,7 @@ class Bilinear(Module):
             self.register_parameter('bias', None)
 
     def forward(self, input1, input2):
-        raise NotImplementedError("Bilinear forward is not yet implemented")
+        return F.bilinear(input1, input2, self.weight, self.bias)
 
     def extra_repr(self):
         return (f'in1_features={self.in1_features}, in2_features={self.in2_features}, '

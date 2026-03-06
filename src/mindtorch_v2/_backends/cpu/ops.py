@@ -3771,3 +3771,264 @@ def upsample_bicubic2d(a, output_size, align_corners=False, scales_h=None, scale
                     weight = _cubic_weight(hy - (hy0 + dh)) * _cubic_weight(wx - (wx0 + dw))
                     out[:, :, j, i] += arr[:, :, hh, ww] * weight
     return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+
+def max_pool1d(input, kernel_size, stride, padding, dilation, ceil_mode=False, return_indices=False):
+    """Max pooling 1D via numpy sliding window."""
+    a = _to_numpy(input)
+    kW = kernel_size[0]
+    sW = stride[0]
+    pW = padding[0]
+    dW = dilation[0]
+
+    if input.ndim == 3:
+        N, C, W = a.shape
+    else:
+        raise ValueError(f"Expected 3D input, got {input.ndim}D")
+
+    # Pad input
+    if pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pW, pW)), mode='constant', constant_values=-np.inf)
+    W_padded = a.shape[2]
+
+    if ceil_mode:
+        oW = int(np.ceil((W_padded - dW * (kW - 1) - 1) / sW + 1))
+    else:
+        oW = int(np.floor((W_padded - dW * (kW - 1) - 1) / sW + 1))
+
+    out = np.empty((N, C, oW), dtype=a.dtype)
+    for ow in range(oW):
+        w_start = ow * sW
+        vals = [a[:, :, w_start + k * dW] for k in range(kW) if w_start + k * dW < W_padded]
+        out[:, :, ow] = np.maximum.reduce(vals)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def avg_pool1d(input, kernel_size, stride, padding, ceil_mode=False, count_include_pad=True):
+    """Avg pooling 1D via numpy sliding window."""
+    a = _to_numpy(input)
+    kW = kernel_size[0]
+    sW = stride[0]
+    pW = padding[0]
+
+    N, C, W = a.shape
+
+    if pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pW, pW)), mode='constant', constant_values=0)
+    W_padded = a.shape[2]
+
+    if ceil_mode:
+        oW = int(np.ceil((W_padded - kW) / sW + 1))
+    else:
+        oW = int(np.floor((W_padded - kW) / sW + 1))
+
+    out = np.empty((N, C, oW), dtype=a.dtype)
+    for ow in range(oW):
+        w_start = ow * sW
+        w_end = min(w_start + kW, W_padded)
+        window = a[:, :, w_start:w_end]
+        if count_include_pad:
+            out[:, :, ow] = window.sum(axis=2) / kW
+        else:
+            real_start = max(w_start - pW, 0)
+            real_end = min(w_end - pW, W)
+            count = max(real_end - real_start, 1)
+            out[:, :, ow] = window.sum(axis=2) / count
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def adaptive_avg_pool1d(input, output_size):
+    """Adaptive avg pool 1D: compute kernel and stride from output_size."""
+    a = _to_numpy(input)
+    N, C, W = a.shape
+    oW = output_size[0]
+
+    out = np.empty((N, C, oW), dtype=a.dtype)
+    for ow in range(oW):
+        w_start = int(np.floor(ow * W / oW))
+        w_end = int(np.ceil((ow + 1) * W / oW))
+        out[:, :, ow] = a[:, :, w_start:w_end].mean(axis=2)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def _conv_transpose3d_scatter(out, a, w, n, c_in, c_out_start, C_out_per_g,
+                               D_in, H_in, W_in, D_out, H_out, W_out,
+                               kD, kH, kW, sD, sH, sW, pD, pH, pW, dD, dH, dW):
+    """Scatter one input channel's contribution for conv_transpose3d."""
+    for d in range(D_in):
+        for h in range(H_in):
+            for wi in range(W_in):
+                val = a[n, c_in, d, h, wi]
+                if val == 0:
+                    continue
+                for c_out_local in range(C_out_per_g):
+                    c_out = c_out_start + c_out_local
+                    for kd in range(kD):
+                        od = d * sD - pD + kd * dD
+                        if od < 0 or od >= D_out:
+                            continue
+                        for kh in range(kH):
+                            oh = h * sH - pH + kh * dH
+                            if oh < 0 or oh >= H_out:
+                                continue
+                            for kw in range(kW):
+                                ow = wi * sW - pW + kw * dW
+                                if ow < 0 or ow >= W_out:
+                                    continue
+                                out[n, c_out, od, oh, ow] += val * w[c_in, c_out_local, kd, kh, kw]
+
+
+def conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation):
+    """Transposed convolution 3D via numpy."""
+    a = _to_numpy(input)
+    w = _to_numpy(weight)
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+    opD, opH, opW = output_padding
+    dD, dH, dW = dilation
+
+    N, C_in, D_in, H_in, W_in = a.shape
+    C_in_w, C_out_per_g, kD, kH, kW = w.shape
+    C_out = C_out_per_g * groups
+
+    D_out = (D_in - 1) * sD - 2 * pD + dD * (kD - 1) + opD + 1
+    H_out = (H_in - 1) * sH - 2 * pH + dH * (kH - 1) + opH + 1
+    W_out = (W_in - 1) * sW - 2 * pW + dW * (kW - 1) + opW + 1
+
+    out = np.zeros((N, C_out, D_out, H_out, W_out), dtype=a.dtype)
+    c_in_per_g = C_in // groups
+
+    for g in range(groups):
+        for n in range(N):
+            for c_in_local in range(c_in_per_g):
+                c_in = g * c_in_per_g + c_in_local
+                _conv_transpose3d_scatter(out, a, w, n, c_in, g * C_out_per_g, C_out_per_g,
+                                          D_in, H_in, W_in, D_out, H_out, W_out,
+                                          kD, kH, kW, sD, sH, sW, pD, pH, pW, dD, dH, dW)
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out += b.reshape(1, C_out, 1, 1, 1)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def max_pool3d(input, kernel_size, stride, padding, dilation, ceil_mode=False, return_indices=False):
+    """Max pooling 3D via numpy sliding window."""
+    a = _to_numpy(input)
+    kD, kH, kW = kernel_size
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+    dD, dH, dW = dilation
+
+    N, C, D, H, W = a.shape
+
+    if pD > 0 or pH > 0 or pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)),
+                   mode='constant', constant_values=-np.inf)
+
+    D_pad, H_pad, W_pad = a.shape[2], a.shape[3], a.shape[4]
+
+    if ceil_mode:
+        oD = int(np.ceil((D_pad - dD * (kD - 1) - 1) / sD + 1))
+        oH = int(np.ceil((H_pad - dH * (kH - 1) - 1) / sH + 1))
+        oW = int(np.ceil((W_pad - dW * (kW - 1) - 1) / sW + 1))
+    else:
+        oD = int(np.floor((D_pad - dD * (kD - 1) - 1) / sD + 1))
+        oH = int(np.floor((H_pad - dH * (kH - 1) - 1) / sH + 1))
+        oW = int(np.floor((W_pad - dW * (kW - 1) - 1) / sW + 1))
+
+    out = np.empty((N, C, oD, oH, oW), dtype=a.dtype)
+    for od in range(oD):
+        for oh in range(oH):
+            for ow in range(oW):
+                d_start = od * sD
+                h_start = oh * sH
+                w_start = ow * sW
+                window_vals = []
+                for kd in range(kD):
+                    di = d_start + kd * dD
+                    if di >= D_pad:
+                        continue
+                    for kh in range(kH):
+                        hi = h_start + kh * dH
+                        if hi >= H_pad:
+                            continue
+                        for kw in range(kW):
+                            wi = w_start + kw * dW
+                            if wi >= W_pad:
+                                continue
+                            window_vals.append(a[:, :, di, hi, wi])
+                if window_vals:
+                    out[:, :, od, oh, ow] = np.maximum.reduce(window_vals)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def avg_pool3d(input, kernel_size, stride, padding, ceil_mode=False, count_include_pad=True):
+    """Avg pooling 3D via numpy sliding window."""
+    a = _to_numpy(input)
+    kD, kH, kW = kernel_size
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+
+    N, C, D, H, W = a.shape
+
+    if pD > 0 or pH > 0 or pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)),
+                   mode='constant', constant_values=0)
+
+    D_pad, H_pad, W_pad = a.shape[2], a.shape[3], a.shape[4]
+
+    if ceil_mode:
+        oD = int(np.ceil((D_pad - kD) / sD + 1))
+        oH = int(np.ceil((H_pad - kH) / sH + 1))
+        oW = int(np.ceil((W_pad - kW) / sW + 1))
+    else:
+        oD = int(np.floor((D_pad - kD) / sD + 1))
+        oH = int(np.floor((H_pad - kH) / sH + 1))
+        oW = int(np.floor((W_pad - kW) / sW + 1))
+
+    out = np.empty((N, C, oD, oH, oW), dtype=a.dtype)
+    pool_size = kD * kH * kW
+    for od in range(oD):
+        for oh in range(oH):
+            for ow in range(oW):
+                d_start = od * sD
+                h_start = oh * sH
+                w_start = ow * sW
+                d_end = min(d_start + kD, D_pad)
+                h_end = min(h_start + kH, H_pad)
+                w_end = min(w_start + kW, W_pad)
+                window = a[:, :, d_start:d_end, h_start:h_end, w_start:w_end]
+                if count_include_pad:
+                    out[:, :, od, oh, ow] = window.sum(axis=(2, 3, 4)) / pool_size
+                else:
+                    count = window.shape[2] * window.shape[3] * window.shape[4]
+                    out[:, :, od, oh, ow] = window.sum(axis=(2, 3, 4)) / max(count, 1)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def adaptive_avg_pool3d(input, output_size):
+    """Adaptive avg pool 3D: compute regions from output_size."""
+    a = _to_numpy(input)
+    N, C, D, H, W = a.shape
+    oD, oH, oW = output_size
+
+    out = np.empty((N, C, oD, oH, oW), dtype=a.dtype)
+    for od in range(oD):
+        d_start = int(np.floor(od * D / oD))
+        d_end = int(np.ceil((od + 1) * D / oD))
+        for oh in range(oH):
+            h_start = int(np.floor(oh * H / oH))
+            h_end = int(np.ceil((oh + 1) * H / oH))
+            for ow in range(oW):
+                w_start = int(np.floor(ow * W / oW))
+                w_end = int(np.ceil((ow + 1) * W / oW))
+                out[:, :, od, oh, ow] = a[:, :, d_start:d_end, h_start:h_end, w_start:w_end].mean(axis=(2, 3, 4))
+
+    return _from_numpy(out, input.dtype, input.device)

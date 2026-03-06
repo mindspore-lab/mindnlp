@@ -57,7 +57,9 @@ class EmbeddingBag(Module):
             self.weight = Parameter(tensor([[0.0] * embedding_dim for _ in range(num_embeddings)]))
 
     def forward(self, input, offsets=None, per_sample_weights=None):
-        raise NotImplementedError("EmbeddingBag forward is not yet implemented")
+        return F.embedding_bag(input, self.weight, offsets=offsets,
+                               mode=self.mode, per_sample_weights=per_sample_weights,
+                               padding_idx=self.padding_idx)
 
     def extra_repr(self):
         return f'{self.num_embeddings}, {self.embedding_dim}, mode={repr(self.mode)}'

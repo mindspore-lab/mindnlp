@@ -143,3 +143,20 @@ class Conv3d(_ConvNd):
     def forward(self, input):
         return F.conv3d(input, self.weight, self.bias, self.stride,
                         self.padding, self.dilation, self.groups)
+
+
+class ConvTranspose3d(_ConvNd):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
+                 output_padding=0, groups=1, bias=True, dilation=1, padding_mode='zeros',
+                 device=None, dtype=None):
+        kernel_size = _triple(kernel_size)
+        stride = _triple(stride)
+        padding = _triple(padding)
+        dilation = _triple(dilation)
+        output_padding = _triple(output_padding)
+        super().__init__(in_channels, out_channels, kernel_size, stride,
+                         padding, dilation, True, output_padding, groups, bias, padding_mode, device, dtype)
+
+    def forward(self, input, output_size=None):
+        return F.conv_transpose3d(input, self.weight, self.bias, self.stride,
+                                  self.padding, self.output_padding, self.groups, self.dilation)
