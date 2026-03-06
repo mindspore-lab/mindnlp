@@ -80,3 +80,98 @@ class KLDivLoss(_Loss):
 
     def forward(self, input, target):
         return F.kl_div(input, target, reduction=self.reduction, log_target=self.log_target)
+
+
+class HuberLoss(_Loss):
+    def __init__(self, reduction='mean', delta=1.0):
+        super().__init__(reduction=reduction)
+        self.delta = delta
+
+    def forward(self, input, target):
+        return F.huber_loss(input, target, reduction=self.reduction, delta=self.delta)
+
+
+class CosineEmbeddingLoss(_Loss):
+    def __init__(self, margin=0, size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+
+    def forward(self, input1, input2, target):
+        return F.cosine_embedding_loss(input1, input2, target, margin=self.margin,
+                                       reduction=self.reduction)
+
+
+class MarginRankingLoss(_Loss):
+    def __init__(self, margin=0, size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+
+    def forward(self, input1, input2, target):
+        return F.margin_ranking_loss(input1, input2, target, margin=self.margin,
+                                     reduction=self.reduction)
+
+
+class TripletMarginLoss(_Loss):
+    def __init__(self, margin=1.0, p=2, eps=1e-6, swap=False,
+                 size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+        self.p = p
+        self.eps = eps
+        self.swap = swap
+
+    def forward(self, anchor, positive, negative):
+        return F.triplet_margin_loss(anchor, positive, negative, margin=self.margin,
+                                     p=self.p, eps=self.eps, swap=self.swap,
+                                     reduction=self.reduction)
+
+
+class HingeEmbeddingLoss(_Loss):
+    def __init__(self, margin=1.0, size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+
+    def forward(self, input, target):
+        return F.hinge_embedding_loss(input, target, margin=self.margin,
+                                      reduction=self.reduction)
+
+
+class SoftMarginLoss(_Loss):
+    def forward(self, input, target):
+        return F.soft_margin_loss(input, target, reduction=self.reduction)
+
+
+class MultiMarginLoss(_Loss):
+    def __init__(self, p=1, margin=1.0, weight=None, size_average=None,
+                 reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.p = p
+        self.margin = margin
+        self.register_buffer('weight', weight)
+
+    def forward(self, input, target):
+        return F.multi_margin_loss(input, target, p=self.p, margin=self.margin,
+                                   weight=self.weight, reduction=self.reduction)
+
+
+class MultiLabelSoftMarginLoss(_Loss):
+    def __init__(self, weight=None, size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.register_buffer('weight', weight)
+
+    def forward(self, input, target):
+        return F.multilabel_soft_margin_loss(input, target, weight=self.weight,
+                                             reduction=self.reduction)
+
+
+class PoissonNLLLoss(_Loss):
+    def __init__(self, log_input=True, full=False, size_average=None, eps=1e-8,
+                 reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.log_input = log_input
+        self.full = full
+        self.eps = eps
+
+    def forward(self, log_input, target):
+        return F.poisson_nll_loss(log_input, target, log_input=self.log_input,
+                                  full=self.full, eps=self.eps, reduction=self.reduction)
