@@ -207,7 +207,9 @@ class _Reducer:
         for pi, _ in bucket:
             g = grads[pi]
             dist.all_reduce(g, op=dist.ReduceOp.SUM, group=self.process_group)
-            grads[pi] = mul(g, 1.0 / self.world_size)
+            # Keep parameter gradients detached from autograd graph across
+            # iterations; DDP gradient reduction should not create a new graph.
+            grads[pi] = mul(g, 1.0 / self.world_size).detach()
 
     def _run_comm_hook(self, bucket_idx, bucket, grads):
         # Call comm hook per-parameter (avoids needing cat on NPU)
@@ -221,7 +223,7 @@ class _Reducer:
                 is_last=(bucket_idx == len(self.buckets) - 1 and i == len(bucket) - 1),
             )
             future = self.comm_hook(self.comm_hook_state, grad_bucket)
-            grads[pi] = future.wait()
+            grads[pi] = future.wait().detach()
 
     def _rebuild_views_from_buffer(self, bucket_idx):
         """Rebuild param views after buffer replacement (e.g. after mul)."""
@@ -244,7 +246,7 @@ class _Reducer:
             is_last=(bucket_idx == len(self.buckets) - 1),
         )
         future = self.comm_hook(self.comm_hook_state, grad_bucket)
-        result = future.wait()
+        result = future.wait().detach()
         self._bucket_buffers[bucket_idx] = result
         self._rebuild_views_from_buffer(bucket_idx)
 
