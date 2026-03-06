@@ -168,6 +168,20 @@ def test_register_autocast_affects_custom_op_dispatch_in_autocast_region():
         after = torch._dispatch.dispatch(qualname, x.device, x)
     assert after.dtype == torch.bfloat16
 
+
+
+def test_set_autocast_cache_enabled_validates_enabled_type_like_torch():
+    import pytest
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_cache_enabled(1)
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_cache_enabled(None)
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_cache_enabled("x")
+
 def test_register_autocast_api_exists():
     import mindtorch_v2.library as library
 
