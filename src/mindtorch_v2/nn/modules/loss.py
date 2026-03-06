@@ -175,3 +175,15 @@ class PoissonNLLLoss(_Loss):
     def forward(self, log_input, target):
         return F.poisson_nll_loss(log_input, target, log_input=self.log_input,
                                   full=self.full, eps=self.eps, reduction=self.reduction)
+
+
+class CTCLoss(_Loss):
+    def __init__(self, blank=0, reduction='mean', zero_infinity=False):
+        super().__init__(reduction=reduction)
+        self.blank = blank
+        self.zero_infinity = zero_infinity
+
+    def forward(self, log_probs, targets, input_lengths, target_lengths):
+        return F.ctc_loss(log_probs, targets, input_lengths, target_lengths,
+                          blank=self.blank, reduction=self.reduction,
+                          zero_infinity=self.zero_infinity)

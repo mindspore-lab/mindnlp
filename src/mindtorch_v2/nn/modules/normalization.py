@@ -66,6 +66,10 @@ class BatchNorm2d(BatchNorm1d):
     pass
 
 
+class BatchNorm3d(BatchNorm1d):
+    pass
+
+
 class _InstanceNorm(Module):
     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=False,
                  track_running_stats=False, device=None, dtype=None):
