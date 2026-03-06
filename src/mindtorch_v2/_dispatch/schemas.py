@@ -500,3 +500,28 @@ def register_schemas():
     registry.register_schema("fft_ihfft", "fft_ihfft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
     registry.register_schema("fft_fftshift", "fft_fftshift(Tensor input, Any dim=None) -> Tensor")
     registry.register_schema("fft_ifftshift", "fft_ifftshift(Tensor input, Any dim=None) -> Tensor")
+
+    # -----------------------------------------------------------------------
+    # torch.special ops
+    # -----------------------------------------------------------------------
+    registry.register_schema("special_digamma", "special_digamma(Tensor input) -> Tensor")
+    registry.register_schema("special_entr", "special_entr(Tensor input) -> Tensor")
+    registry.register_schema("special_erfcx", "special_erfcx(Tensor input) -> Tensor")
+    registry.register_schema("special_erfinv", "special_erfinv(Tensor input) -> Tensor")
+    registry.register_schema("special_gammainc", "special_gammainc(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_gammaincc", "special_gammaincc(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_gammaln", "special_gammaln(Tensor input) -> Tensor")
+    registry.register_schema("special_i0", "special_i0(Tensor input) -> Tensor")
+    registry.register_schema("special_i0e", "special_i0e(Tensor input) -> Tensor")
+    registry.register_schema("special_i1", "special_i1(Tensor input) -> Tensor")
+    registry.register_schema("special_i1e", "special_i1e(Tensor input) -> Tensor")
+    registry.register_schema("special_log_ndtr", "special_log_ndtr(Tensor input) -> Tensor")
+    registry.register_schema("special_logit", "special_logit(Tensor input, Any eps=None) -> Tensor")
+    registry.register_schema("special_multigammaln", "special_multigammaln(Tensor input, int p) -> Tensor")
+    registry.register_schema("special_ndtr", "special_ndtr(Tensor input) -> Tensor")
+    registry.register_schema("special_ndtri", "special_ndtri(Tensor input) -> Tensor")
+    registry.register_schema("special_polygamma", "special_polygamma(int n, Tensor input) -> Tensor")
+    registry.register_schema("special_sinc", "special_sinc(Tensor input) -> Tensor")
+    registry.register_schema("special_xlog1py", "special_xlog1py(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_xlogy", "special_xlogy(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_zeta", "special_zeta(Tensor input, Tensor other) -> Tensor")
