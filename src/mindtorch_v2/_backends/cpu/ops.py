@@ -682,6 +682,52 @@ def normal_(a, mean=0.0, std=1.0, generator=None):
     return a
 
 
+def bernoulli_(a, p=0.5, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    if hasattr(p, '_numpy_view'):
+        probs = p._numpy_view()
+    elif hasattr(p, 'numpy'):
+        probs = p.numpy()
+    else:
+        probs = float(p)
+    arr[...] = (rng.uniform(0, 1, arr.shape) < probs).astype(arr.dtype)
+    return a
+
+
+def exponential_(a, lambd=1.0, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = rng.exponential(1.0 / lambd, arr.shape).astype(arr.dtype)
+    return a
+
+
+def log_normal_(a, mean=1.0, std=2.0, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = rng.lognormal(mean, std, arr.shape).astype(arr.dtype)
+    return a
+
+
+def cauchy_(a, median=0.0, sigma=1.0, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = (median + sigma * np.tan(np.pi * (rng.uniform(0, 1, arr.shape) - 0.5))).astype(arr.dtype)
+    return a
+
+
+def geometric_(a, p, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = rng.geometric(p, arr.shape).astype(arr.dtype)
+    return a
+
+
 def fill_(a, value):
     arr = _to_numpy(a)
     arr.fill(value)

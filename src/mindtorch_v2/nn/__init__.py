@@ -25,7 +25,7 @@ from .modules.normalization import LayerNorm, BatchNorm1d, BatchNorm2d, BatchNor
 from .modules.sparse import Embedding, EmbeddingBag
 
 # Dropout
-from .modules.dropout import Dropout, Dropout1d, Dropout2d, Dropout3d
+from .modules.dropout import Dropout, Dropout1d, Dropout2d, Dropout3d, AlphaDropout
 
 # Convolution
 from .modules.conv import Conv1d, Conv2d, Conv3d, ConvTranspose1d, ConvTranspose2d

@@ -108,6 +108,23 @@ def dropout3d(input, p=0.5, training=True, inplace=False):
     return dispatch("dropout", input.device.type, input, p, training)
 
 
+def alpha_dropout(input, p=0.5, training=False, inplace=False):
+    if not training or p == 0:
+        return input
+    # SELU self-normalizing dropout constants
+    alpha = 1.6732632423543772
+    scale = 1.0507009873554805
+    alpha_p = -alpha * scale
+    a = ((1 - p) * (1 + p * alpha_p ** 2)) ** -0.5
+    b = -a * alpha_p * p
+    # Generate mask and apply
+    import math
+    from .._functional import rand
+    mask = (rand(input.shape, dtype=input.dtype, device=input.device) >= p).float()
+    result = input * mask + alpha_p * (1 - mask)
+    return result * a + b
+
+
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     from .._dispatch import dispatch
     return dispatch("layer_norm", input.device.type, input, normalized_shape, weight, bias, eps)

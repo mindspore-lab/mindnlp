@@ -251,6 +251,23 @@ def multinomial(input, num_samples, replacement=False, *, generator=None):
         raise ValueError("multinomial expects 1D or 2D input")
 
 
+def poisson(lam, generator=None):
+    """Sample from a Poisson distribution with rate parameter lam."""
+    from ._creation import tensor
+    from ._dtype import float32
+
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    if hasattr(lam, '_numpy_view'):
+        rates = lam._numpy_view().copy().astype(np.float64)
+    elif hasattr(lam, 'numpy'):
+        rates = lam.numpy().astype(np.float64)
+    else:
+        rates = np.array(lam, dtype=np.float64)
+    out = rng.poisson(rates).astype(np.float32)
+    out_dtype = lam.dtype if hasattr(lam, 'dtype') else float32
+    return tensor(out, dtype=out_dtype)
+
+
 __all__ = [
     'manual_seed',
     'seed',
@@ -261,4 +278,5 @@ __all__ = [
     'default_generator',
     'bernoulli',
     'multinomial',
+    'poisson',
 ]

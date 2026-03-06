@@ -412,6 +412,13 @@ def register_schemas():
     # random_ in-place op
     registry.register_schema("random_", "random_(Tensor(a!) self, int from_=0, int? to=None, *, Generator? generator=None) -> Tensor")
 
+    # Distribution in-place ops
+    registry.register_schema("bernoulli_", "bernoulli_(Tensor(a!) self, float p=0.5, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("exponential_", "exponential_(Tensor(a!) self, float lambd=1.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("log_normal_", "log_normal_(Tensor(a!) self, float mean=1.0, float std=2.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("cauchy_", "cauchy_(Tensor(a!) self, float median=0.0, float sigma=1.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("geometric_", "geometric_(Tensor(a!) self, float p, *, Generator? generator=None) -> Tensor")
+
     # New shape ops
     registry.register_schema("flatten", "flatten(Tensor input, int start_dim=0, int end_dim=-1) -> Tensor")
     registry.register_schema("unflatten", "unflatten(Tensor input, int dim, int[] sizes) -> Tensor")

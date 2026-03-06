@@ -113,7 +113,7 @@ from . import testing
 from ._random import (
     manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
     Generator, default_generator,
-    bernoulli, multinomial,
+    bernoulli, multinomial, poisson,
 )
 from . import _random as random
 from .serialization import save, load

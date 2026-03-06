@@ -71,6 +71,11 @@ from .ops import (
     normal_,
     randint_,
     random_,
+    bernoulli_,
+    exponential_,
+    log_normal_,
+    cauchy_,
+    geometric_,
     fill_,
     clamp_,
     copy_,
@@ -337,6 +342,11 @@ registry.register("uniform_", "npu", uniform_, meta=meta_infer.infer_unary)
 registry.register("normal_", "npu", normal_, meta=meta_infer.infer_unary)
 registry.register("randint_", "npu", randint_, meta=meta_infer.infer_unary)
 registry.register("random_", "npu", random_, meta=meta_infer.infer_unary)
+registry.register("bernoulli_", "npu", bernoulli_, meta=meta_infer.infer_unary)
+registry.register("exponential_", "npu", exponential_, meta=meta_infer.infer_unary)
+registry.register("log_normal_", "npu", log_normal_, meta=meta_infer.infer_unary)
+registry.register("cauchy_", "npu", cauchy_, meta=meta_infer.infer_unary)
+registry.register("geometric_", "npu", geometric_, meta=meta_infer.infer_unary)
 registry.register("fill_", "npu", fill_, meta=meta_infer.infer_unary)
 registry.register("clamp_", "npu", clamp_, meta=meta_infer.infer_unary)
 registry.register("copy_", "npu", copy_, meta=meta_infer.infer_unary)
