@@ -119,8 +119,10 @@ def is_autocast_cache_enabled():
 
 
 def set_autocast_cache_enabled(enabled):
+    if not isinstance(enabled, bool):
+        raise TypeError(f"enabled must be a bool (got {type(enabled).__name__})")
     global _AUTOCACHE_ENABLED
-    _AUTOCACHE_ENABLED = bool(enabled)
+    _AUTOCACHE_ENABLED = enabled
 
 
 def clear_autocast_cache(device_type=None):
