@@ -13,6 +13,9 @@ from .modules.linear import Linear, Bilinear, Identity, Flatten, Unflatten
 from .modules.activation import (
     ReLU, GELU, SiLU, Sigmoid, Tanh, Softmax, LogSoftmax,
     LeakyReLU, ELU, Mish, PReLU, ReLU6, Hardtanh, LogSigmoid,
+    Hardswish, Hardsigmoid, SELU, CELU, Softplus, Softsign,
+    Threshold, GLU, Softmax2d, Softmin, Tanhshrink,
+    Softshrink, Hardshrink, RReLU,
 )
 
 # Normalization
@@ -22,7 +25,7 @@ from .modules.normalization import LayerNorm, BatchNorm1d, BatchNorm2d, GroupNor
 from .modules.sparse import Embedding, EmbeddingBag
 
 # Dropout
-from .modules.dropout import Dropout, Dropout1d, Dropout2d
+from .modules.dropout import Dropout, Dropout1d, Dropout2d, Dropout3d
 
 # Convolution
 from .modules.conv import Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d
@@ -37,10 +40,13 @@ from .modules.pooling import (
 from .modules.loss import (
     CrossEntropyLoss, MSELoss, BCELoss, BCEWithLogitsLoss,
     NLLLoss, L1Loss, SmoothL1Loss, KLDivLoss,
+    HuberLoss, CosineEmbeddingLoss, MarginRankingLoss, TripletMarginLoss,
+    HingeEmbeddingLoss, SoftMarginLoss, MultiMarginLoss, MultiLabelSoftMarginLoss,
+    PoissonNLLLoss,
 )
 
 # RNN
-from .modules.rnn import RNN, LSTM, GRU
+from .modules.rnn import RNN, LSTM, GRU, RNNCell, LSTMCell, GRUCell
 
 # Attention
 from .modules.attention import MultiheadAttention
@@ -52,7 +58,19 @@ from .modules.padding import (
 )
 
 # Upsampling
-from .modules.upsampling import Upsample
+from .modules.upsampling import Upsample, UpsamplingNearest2d, UpsamplingBilinear2d
+
+# PixelShuffle / ChannelShuffle
+from .modules.pixelshuffle import PixelShuffle, PixelUnshuffle, ChannelShuffle
+
+# Distance
+from .modules.distance import CosineSimilarity, PairwiseDistance
+
+# Transformer
+from .modules.transformer import (
+    Transformer, TransformerEncoder, TransformerDecoder,
+    TransformerEncoderLayer, TransformerDecoderLayer,
+)
 
 # Utils
 from . import utils

@@ -20,3 +20,35 @@ class Upsample(Module):
         if self.scale_factor is not None:
             return f'scale_factor={self.scale_factor}, mode={repr(self.mode)}'
         return f'size={self.size}, mode={repr(self.mode)}'
+
+
+class UpsamplingNearest2d(Module):
+    def __init__(self, size=None, scale_factor=None):
+        super().__init__()
+        self.size = size
+        self.scale_factor = scale_factor
+
+    def forward(self, input):
+        return F.interpolate(input, size=self.size, scale_factor=self.scale_factor,
+                             mode='nearest')
+
+    def extra_repr(self):
+        if self.scale_factor is not None:
+            return f'scale_factor={self.scale_factor}'
+        return f'size={self.size}'
+
+
+class UpsamplingBilinear2d(Module):
+    def __init__(self, size=None, scale_factor=None):
+        super().__init__()
+        self.size = size
+        self.scale_factor = scale_factor
+
+    def forward(self, input):
+        return F.interpolate(input, size=self.size, scale_factor=self.scale_factor,
+                             mode='bilinear', align_corners=True)
+
+    def extra_repr(self):
+        if self.scale_factor is not None:
+            return f'scale_factor={self.scale_factor}'
+        return f'size={self.size}'

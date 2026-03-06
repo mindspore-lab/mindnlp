@@ -75,6 +75,19 @@ def dropout(input, p=0.5, training=True, inplace=False):
     return dispatch("dropout", input.device.type, input, p, training)
 
 
+def dropout3d(input, p=0.5, training=True, inplace=False):
+    """Randomly zero out entire channels of a 5D input (N, C, D, H, W).
+
+    Each channel is zeroed out independently with probability ``p``.
+    Falls back to the standard dropout dispatch (zeros individual elements) when
+    a dedicated channel-wise dropout op is not available.
+    """
+    if not training or p == 0:
+        return input
+    from .._dispatch import dispatch
+    return dispatch("dropout", input.device.type, input, p, training)
+
+
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     from .._dispatch import dispatch
     return dispatch("layer_norm", input.device.type, input, normalized_shape, weight, bias, eps)
@@ -433,3 +446,393 @@ def hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
 def logsigmoid(input):
     from .._functional import softplus as _softplus, neg as _neg
     return _neg(_softplus(_neg(input)))
+
+
+def huber_loss(input, target, reduction='mean', delta=1.0):
+    from .._functional import abs as _abs, add, neg, mul, mean, sum as _sum, where, signbit
+    from .._creation import tensor as _tensor
+    diff = add(input, neg(target))
+    abs_diff = _abs(diff)
+    delta_t = _tensor(delta, device=input.device)
+    half_t = _tensor(0.5, device=input.device)
+    # mask: abs_diff < delta (signbit is True when value < 0, i.e. abs_diff - delta < 0)
+    mask = signbit(add(abs_diff, neg(delta_t)))
+    # smooth part: 0.5 * diff^2
+    smooth_part = mul(half_t, mul(diff, diff))
+    # linear part: delta * (abs_diff - 0.5 * delta)
+    linear_part = mul(delta_t, add(abs_diff, neg(mul(half_t, delta_t))))
+    result = where(mask, smooth_part, linear_part)
+    if reduction == 'none':
+        return result
+    elif reduction == 'mean':
+        return mean(result)
+    elif reduction == 'sum':
+        return _sum(result)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def cosine_embedding_loss(input1, input2, target, margin=0, reduction='mean'):
+    from .._functional import mul, add, neg, mean, sum as _sum, clamp, where
+    from .._creation import tensor as _tensor
+    from .._dispatch import dispatch
+    eps = 1e-8
+    # compute cosine similarity along last dim
+    dot = mul(input1, input2)
+    dot_sum = dispatch("sum", input1.device.type, dot, dim=-1)
+    norm1 = dispatch("norm", input1.device.type, input1, dim=-1)
+    norm2 = dispatch("norm", input2.device.type, input2, dim=-1)
+    eps_t = _tensor(eps, device=input1.device)
+    denom = add(mul(norm1, norm2), eps_t)
+    cos_sim = dispatch("div", input1.device.type, dot_sum, denom)
+    # clamp cos_sim to [-1, 1]
+    cos_sim = clamp(cos_sim, -1.0, 1.0)
+    margin_t = _tensor(float(margin), device=input1.device)
+    # if y==1: max(0, 1 - cos_sim)
+    loss_pos = clamp(add(_tensor(1.0, device=input1.device), neg(cos_sim)), 0.0, None)
+    # if y==-1: max(0, cos_sim - margin)
+    loss_neg = clamp(add(cos_sim, neg(margin_t)), 0.0, None)
+    # select based on target
+    pos_mask = dispatch("eq", input1.device.type, target, 1)
+    losses = where(pos_mask, loss_pos, loss_neg)
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def margin_ranking_loss(input1, input2, target, margin=0, reduction='mean'):
+    from .._functional import add, neg, mul, mean, sum as _sum, clamp
+    from .._creation import tensor as _tensor
+    margin_t = _tensor(float(margin), device=input1.device)
+    # loss = max(0, -target * (input1 - input2) + margin)
+    diff = add(input1, neg(input2))
+    neg_target_diff = mul(neg(target), diff)
+    raw = add(neg_target_diff, margin_t)
+    losses = clamp(raw, 0.0, None)
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def triplet_margin_loss(anchor, positive, negative, margin=1.0, p=2, eps=1e-6,
+                        swap=False, reduction='mean'):
+    from .._functional import add, neg, mean, sum as _sum, clamp, norm
+    from .._creation import tensor as _tensor
+    from .._dispatch import dispatch
+    eps_t = _tensor(eps, device=anchor.device)
+    margin_t = _tensor(float(margin), device=anchor.device)
+    # d(a, p)
+    diff_ap = add(anchor, neg(positive))
+    dist_ap = norm(diff_ap, p=p, dim=-1)
+    dist_ap = add(dist_ap, eps_t)
+    # d(a, n)
+    diff_an = add(anchor, neg(negative))
+    dist_an = norm(diff_an, p=p, dim=-1)
+    dist_an = add(dist_an, eps_t)
+    if swap:
+        # d(p, n)
+        diff_pn = add(positive, neg(negative))
+        dist_pn = norm(diff_pn, p=p, dim=-1)
+        dist_pn = add(dist_pn, eps_t)
+        dist_an = dispatch("min", anchor.device.type, dist_an, dist_pn)
+    # loss = max(0, d(a,p) - d(a,n) + margin)
+    raw = add(add(dist_ap, neg(dist_an)), margin_t)
+    losses = clamp(raw, 0.0, None)
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def hinge_embedding_loss(input, target, margin=1.0, reduction='mean'):
+    from .._functional import add, neg, mean, sum as _sum, clamp, where
+    from .._creation import tensor as _tensor
+    from .._dispatch import dispatch
+    margin_t = _tensor(float(margin), device=input.device)
+    # if target == 1: loss = input
+    # if target == -1: loss = max(0, margin - input)
+    loss_pos = input
+    loss_neg = clamp(add(margin_t, neg(input)), 0.0, None)
+    pos_mask = dispatch("eq", input.device.type, target, 1)
+    losses = where(pos_mask, loss_pos, loss_neg)
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def soft_margin_loss(input, target, reduction='mean'):
+    from .._functional import mul, neg, log, exp, add, mean, sum as _sum
+    from .._creation import tensor as _tensor
+    one_t = _tensor(1.0, device=input.device)
+    # loss = log(1 + exp(-target * input))
+    neg_target_input = mul(neg(target), input)
+    losses = log(add(one_t, exp(neg_target_input)))
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def multi_margin_loss(input, target, p=1, margin=1.0, weight=None, reduction='mean'):
+    raise NotImplementedError("multi_margin_loss is not yet implemented")
+
+
+def multilabel_soft_margin_loss(input, target, weight=None, reduction='mean'):
+    from .._functional import mul, neg, log, add, mean, sum as _sum
+    from .._creation import tensor as _tensor
+    from .._dispatch import dispatch
+    # per-element binary cross entropy: -[y * log(sigmoid(x)) + (1-y) * log(1 - sigmoid(x))]
+    # then average over classes (last dim), then reduce over batch
+    sig = sigmoid(input)
+    eps_t = _tensor(1e-12, device=input.device)
+    one_t = _tensor(1.0, device=input.device)
+    log_sig = log(add(sig, eps_t))
+    log_one_minus_sig = log(add(add(neg(sig), one_t), eps_t))
+    one_minus_target = add(neg(target), one_t)
+    per_elem = neg(add(mul(target, log_sig), mul(one_minus_target, log_one_minus_sig)))
+    # sum over classes and divide by num_classes
+    num_classes = float(input.shape[-1])
+    num_classes_t = _tensor(num_classes, device=input.device)
+    losses_per_sample = dispatch("div", input.device.type,
+                                 dispatch("sum", input.device.type, per_elem, dim=-1),
+                                 num_classes_t)
+    if reduction == 'none':
+        return losses_per_sample
+    elif reduction == 'mean':
+        return mean(losses_per_sample)
+    elif reduction == 'sum':
+        return _sum(losses_per_sample)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def poisson_nll_loss(input, target, log_input=True, full=False, eps=1e-8,
+                     reduction='mean'):
+    from .._functional import exp, log, mul, add, neg, mean, sum as _sum
+    from .._creation import tensor as _tensor
+    eps_t = _tensor(eps, device=input.device)
+    if log_input:
+        # loss = exp(input) - target * input
+        losses = add(exp(input), neg(mul(target, input)))
+    else:
+        # loss = input - target * log(input + eps)
+        losses = add(input, neg(mul(target, log(add(input, eps_t)))))
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def hardswish(input, inplace=False):
+    from .._functional import relu6 as _relu6, mul as _mul, add as _add, div as _div
+    from .._creation import tensor as _tensor
+    three = _tensor(3.0, device=input.device)
+    six = _tensor(6.0, device=input.device)
+    return _div(_mul(input, _relu6(_add(input, three))), six)
+
+
+def hardsigmoid(input, inplace=False):
+    from .._functional import relu6 as _relu6, add as _add, div as _div
+    from .._creation import tensor as _tensor
+    three = _tensor(3.0, device=input.device)
+    six = _tensor(6.0, device=input.device)
+    return _div(_relu6(_add(input, three)), six)
+
+
+def selu(input, inplace=False):
+    from .._dispatch import dispatch
+    return dispatch("selu", input.device.type, input)
+
+
+def celu(input, alpha=1.0, inplace=False):
+    from .._dispatch import dispatch
+    return dispatch("celu", input.device.type, input, alpha)
+
+
+def softplus(input, beta=1, threshold=20):
+    from .._functional import softplus as _softplus
+    if beta == 1 and threshold == 20:
+        return _softplus(input)
+    from .._dispatch import dispatch
+    return dispatch("softplus", input.device.type, input, beta, threshold)
+
+
+def softsign(input):
+    from .._functional import abs as _abs, add as _add, div as _div
+    from .._creation import tensor as _tensor
+    one = _tensor(1.0, device=input.device)
+    return _div(input, _add(one, _abs(input)))
+
+
+def threshold(input, threshold, value, inplace=False):
+    from .._dispatch import dispatch
+    return dispatch("threshold", input.device.type, input, threshold, value)
+
+
+def glu(input, dim=-1):
+    from .._functional import sigmoid as _sigmoid, mul as _mul
+    from .._dispatch import dispatch
+    a, b = dispatch("chunk", input.device.type, input, 2, dim)
+    return _mul(a, _sigmoid(b))
+
+
+def softmax2d(input):
+    return softmax(input, dim=1)
+
+
+def softmin(input, dim=None, _stacklevel=3, dtype=None):
+    from .._functional import neg as _neg
+    if dim is None:
+        dim = -1
+    return softmax(_neg(input), dim=dim)
+
+
+def tanhshrink(input):
+    from .._functional import tanh as _tanh, add as _add, neg as _neg
+    return _add(input, _neg(_tanh(input)))
+
+
+def softshrink(input, lambd=0.5):
+    from .._dispatch import dispatch
+    return dispatch("softshrink", input.device.type, input, lambd)
+
+
+def hardshrink(input, lambd=0.5):
+    from .._dispatch import dispatch
+    return dispatch("hardshrink", input.device.type, input, lambd)
+
+
+def rrelu(input, lower=1.0/8, upper=1.0/3, training=False, inplace=False):
+    from .._dispatch import dispatch
+    return dispatch("rrelu", input.device.type, input, lower, upper, training)
+
+
+def cosine_similarity(x1, x2, dim=1, eps=1e-8):
+    """Computes cosine similarity between x1 and x2 along dim.
+
+    cosine_similarity = dot(x1, x2) / (||x1|| * ||x2|| + eps)
+    """
+    from .._functional import mul, div, add
+    from .._dispatch import dispatch
+    from .._creation import tensor as _tensor
+
+    # Compute dot product along dim: sum(x1 * x2, dim=dim)
+    dot = dispatch("sum", x1.device.type, mul(x1, x2), dim=dim)
+
+    # Compute norms along dim
+    norm_x1 = dispatch("norm", x1.device.type, x1, 2.0, dim, False)
+    norm_x2 = dispatch("norm", x2.device.type, x2, 2.0, dim, False)
+
+    # Denominator with eps to avoid division by zero
+    eps_t = _tensor(eps, device=x1.device)
+    denom = add(mul(norm_x1, norm_x2), eps_t)
+
+    return div(dot, denom)
+
+
+def pairwise_distance(x1, x2, p=2.0, eps=1e-6, keepdim=False):
+    """Computes the pairwise distance ||x1 - x2 + eps||_p."""
+    from .._functional import add, neg, abs as _abs, pow as _pow
+    from .._creation import tensor as _tensor
+    from .._dispatch import dispatch
+
+    eps_t = _tensor(eps, device=x1.device)
+    diff = add(x1, neg(x2))
+    diff = add(diff, eps_t)
+
+    if p == 2.0:
+        result = dispatch("norm", diff.device.type, diff, 2.0, -1, keepdim)
+    elif p == 1.0:
+        diff_abs = _abs(diff)
+        result = dispatch("sum", diff.device.type, diff_abs, dim=-1, keepdim=keepdim)
+    else:
+        p_t = _tensor(p, device=x1.device)
+        inv_p_t = _tensor(1.0 / p, device=x1.device)
+        diff_abs = _abs(diff)
+        powered = _pow(diff_abs, p_t)
+        summed = dispatch("sum", diff.device.type, powered, dim=-1, keepdim=keepdim)
+        result = _pow(summed, inv_p_t)
+
+    return result
+
+
+def pixel_shuffle(input, upscale_factor):
+    """Rearranges elements in a tensor of shape (N, C*r^2, H, W) to (N, C, H*r, W*r).
+
+    Args:
+        input: tensor of shape (N, C*r^2, H, W)
+        upscale_factor (int): factor to increase spatial resolution by (r)
+    """
+    from .._dispatch import dispatch
+
+    N, C_r2, H, W = input.shape
+    r = upscale_factor
+    C = C_r2 // (r * r)
+    # Reshape: (N, C, r, r, H, W)
+    x = dispatch("reshape", input.device.type, input, (N, C, r, r, H, W))
+    # Permute: (N, C, H, r, W, r)
+    x = dispatch("permute", input.device.type, x, (0, 1, 4, 2, 5, 3))
+    # Reshape: (N, C, H*r, W*r)
+    x = dispatch("reshape", input.device.type, x, (N, C, H * r, W * r))
+    return x
+
+
+def pixel_unshuffle(input, downscale_factor):
+    """Reverses the pixel_shuffle operation: (N, C, H*r, W*r) -> (N, C*r^2, H, W).
+
+    Args:
+        input: tensor of shape (N, C, H*r, W*r)
+        downscale_factor (int): factor to reduce spatial resolution by (r)
+    """
+    from .._dispatch import dispatch
+
+    N, C, Hr, Wr = input.shape
+    r = downscale_factor
+    H = Hr // r
+    W = Wr // r
+    # Reshape: (N, C, H, r, W, r)
+    x = dispatch("reshape", input.device.type, input, (N, C, H, r, W, r))
+    # Permute: (N, C, r, r, H, W)
+    x = dispatch("permute", input.device.type, x, (0, 1, 3, 5, 2, 4))
+    # Reshape: (N, C*r^2, H, W)
+    x = dispatch("reshape", input.device.type, x, (N, C * r * r, H, W))
+    return x
+
+
+def channel_shuffle(input, groups):
+    """Shuffles channels within groups to mix information across groups.
+
+    Args:
+        input: tensor of shape (N, C, H, W)
+        groups (int): number of groups to divide channels into
+    """
+    from .._dispatch import dispatch
+
+    N, C, H, W = input.shape
+    channels_per_group = C // groups
+    # Reshape: (N, groups, channels_per_group, H, W)
+    x = dispatch("reshape", input.device.type, input, (N, groups, channels_per_group, H, W))
+    # Transpose groups and channels: (N, channels_per_group, groups, H, W)
+    x = dispatch("permute", input.device.type, x, (0, 2, 1, 3, 4))
+    # Reshape back: (N, C, H, W)
+    x = dispatch("reshape", input.device.type, x, (N, C, H, W))
+    return x
