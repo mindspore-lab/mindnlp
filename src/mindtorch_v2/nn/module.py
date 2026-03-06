@@ -292,7 +292,11 @@ class Module:
 
         for key, param in self._parameters.items():
             if param is not None:
-                new_param = fn(param)
+                converted = fn(param)
+                # Keep converted parameters as leaf Parameter objects to avoid
+                # retaining autograd history across training iterations.
+                new_param = Parameter(converted.detach())
+                new_param.requires_grad_(param.requires_grad)
                 self._parameters[key] = new_param
                 super().__setattr__(key, new_param)
 
