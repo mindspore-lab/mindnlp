@@ -55,37 +55,20 @@ def range(start, end, step=1, dtype=float32, device=None):
     return range_dispatch(start, end, step=step, dtype=dtype, device=device)
 
 
-def randn(*shape, dtype=float32, device=None, memory_format=None):
+def randn(*shape, dtype=float32, device=None, memory_format=None, generator=None):
     return randn_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def rand(*shape, dtype=float32, device=None, memory_format=None):
+def rand(*shape, dtype=float32, device=None, memory_format=None, generator=None):
     return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
 
 
-def randint(low, high=None, size=None, *, dtype=None, device=None):
-    import numpy as np
-    from ._dtype import int64 as default_int
-    if dtype is None:
-        dtype = default_int
-    if high is None:
-        high = low
-        low = 0
-    if size is None:
-        raise TypeError("randint requires size argument")
-    if isinstance(size, int):
-        size = (size,)
-    arr = np.random.randint(low, high, size=size)
-    return tensor_dispatch(arr, dtype=dtype, device=device)
+def randint(low, high=None, size=None, *, dtype=None, device=None, generator=None):
+    return randint_dispatch(low, high=high, size=size, dtype=dtype, device=device)
 
 
-def randperm(n, *, dtype=None, device=None):
-    import numpy as np
-    from ._dtype import int64 as default_int
-    if dtype is None:
-        dtype = default_int
-    arr = np.random.permutation(n)
-    return tensor_dispatch(arr, dtype=dtype, device=device)
+def randperm(n, *, dtype=None, device=None, generator=None):
+    return randperm_dispatch(n, dtype=dtype, device=device)
 
 
 def from_numpy(ndarray):

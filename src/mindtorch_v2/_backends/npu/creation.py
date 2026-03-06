@@ -77,45 +77,28 @@ def empty_create(shape, dtype=None, device=None, requires_grad=False, memory_for
 
 
 def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create a tensor filled with random numbers from a normal distribution.
-
-    Generates on CPU using the shared RNG state and copies to NPU.
-    """
-    runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
+    """Create a tensor filled with random numbers from N(0,1) on NPU."""
     if isinstance(shape, int):
         shape = (shape,)
     shape = tuple(shape)
-
-    from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
-    arr = rng.randn(*shape).astype(npu_runtime._dtype_to_numpy(dtype))
-    size = int(np.prod(shape))
-    ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
-    stride = npu_runtime._contiguous_stride(shape)
-
-    storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
-    return _wrap_tensor(storage, shape, stride, requires_grad)
+    # Create empty NPU tensor, then fill with normal_ (uses ACLNN kernel)
+    t = empty_create(shape, dtype=dtype, device=device, requires_grad=requires_grad,
+                     memory_format=memory_format)
+    from .ops import normal_
+    normal_(t, mean=0.0, std=1.0)
+    return t
 
 
 def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create a tensor filled with random numbers from a uniform distribution [0, 1).
-
-    Generates on CPU using the shared RNG state and copies to NPU.
-    """
-    runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
+    """Create a tensor filled with random numbers from U(0,1) on NPU."""
     if isinstance(shape, int):
         shape = (shape,)
     shape = tuple(shape)
-
-    from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
-    arr = rng.random_sample(shape).astype(npu_runtime._dtype_to_numpy(dtype))
-    size = int(np.prod(shape))
-    ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
-    stride = npu_runtime._contiguous_stride(shape)
-
-    storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
-    return _wrap_tensor(storage, shape, stride, requires_grad)
+    t = empty_create(shape, dtype=dtype, device=device, requires_grad=requires_grad,
+                     memory_format=memory_format)
+    from .ops import uniform_
+    uniform_(t, low=0.0, high=1.0)
+    return t
 
 
 def _resolve_dtype(dtype):

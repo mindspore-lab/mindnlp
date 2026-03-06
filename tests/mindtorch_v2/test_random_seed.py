@@ -213,3 +213,203 @@ class TestNPUSeed:
     def test_npu_manual_seed_all(self):
         torch.npu.manual_seed_all(42)
         assert torch.npu._get_seed() == 42
+
+
+class TestCPUReproducibility:
+    """Test that all CPU random ops are reproducible with manual_seed."""
+
+    def test_randn_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.randn(5, 5)
+        torch.manual_seed(42)
+        b = torch.randn(5, 5)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_rand_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.rand(5, 5)
+        torch.manual_seed(42)
+        b = torch.rand(5, 5)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_randint_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.randint(0, 100, size=(5, 5))
+        torch.manual_seed(42)
+        b = torch.randint(0, 100, size=(5, 5))
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_randperm_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.randperm(100)
+        torch.manual_seed(42)
+        b = torch.randperm(100)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_uniform_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.empty(5, 5).uniform_()
+        torch.manual_seed(42)
+        b = torch.empty(5, 5).uniform_()
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_normal_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.empty(5, 5).normal_()
+        torch.manual_seed(42)
+        b = torch.empty(5, 5).normal_()
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_bernoulli_reproducible(self):
+        probs = torch.full((5, 5), 0.5)
+        torch.manual_seed(42)
+        a = torch.bernoulli(probs)
+        torch.manual_seed(42)
+        b = torch.bernoulli(probs)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_multinomial_reproducible(self):
+        weights = torch.tensor([1.0, 2.0, 3.0, 4.0])
+        torch.manual_seed(42)
+        a = torch.multinomial(weights, 10, replacement=True)
+        torch.manual_seed(42)
+        b = torch.multinomial(weights, 10, replacement=True)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_different_seeds_different_results(self):
+        torch.manual_seed(42)
+        a = torch.randn(100)
+        torch.manual_seed(123)
+        b = torch.randn(100)
+        assert not np.array_equal(a.numpy(), b.numpy())
+
+    def test_sequence_of_ops_reproducible(self):
+        """Multiple ops in sequence must produce identical results."""
+        torch.manual_seed(42)
+        a1 = torch.randn(3, 3)
+        a2 = torch.rand(3, 3)
+        a3 = torch.randint(0, 10, size=(3, 3))
+        a4 = torch.randperm(10)
+
+        torch.manual_seed(42)
+        b1 = torch.randn(3, 3)
+        b2 = torch.rand(3, 3)
+        b3 = torch.randint(0, 10, size=(3, 3))
+        b4 = torch.randperm(10)
+
+        np.testing.assert_array_equal(a1.numpy(), b1.numpy())
+        np.testing.assert_array_equal(a2.numpy(), b2.numpy())
+        np.testing.assert_array_equal(a3.numpy(), b3.numpy())
+        np.testing.assert_array_equal(a4.numpy(), b4.numpy())
+
+
+class TestGeneratorFull:
+    """Test Generator class functionality."""
+
+    def test_cpu_generator_independent(self):
+        """User generator should be independent from default generator."""
+        g = torch.Generator('cpu')
+        g.manual_seed(42)
+        torch.manual_seed(999)  # set default to different seed
+        a = torch.bernoulli(torch.full((100,), 0.5), generator=g)
+
+        g2 = torch.Generator('cpu')
+        g2.manual_seed(42)
+        b = torch.bernoulli(torch.full((100,), 0.5), generator=g2)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_generator_state_save_restore(self):
+        g = torch.Generator('cpu')
+        g.manual_seed(42)
+        _ = torch.bernoulli(torch.full((10,), 0.5), generator=g)  # advance state
+        state = g.get_state()
+        a = torch.bernoulli(torch.full((10,), 0.5), generator=g)
+        g.set_state(state)
+        b = torch.bernoulli(torch.full((10,), 0.5), generator=g)
+        np.testing.assert_array_equal(a.numpy(), b.numpy())
+
+    def test_initial_seed_default(self):
+        g = torch.Generator('cpu')
+        assert g.initial_seed() == 67280421310721
+
+    def test_manual_seed_returns_self(self):
+        g = torch.Generator('cpu')
+        result = g.manual_seed(42)
+        assert result is g
+
+    def test_npu_generator(self):
+        g = torch.Generator('npu')
+        g.manual_seed(42)
+        assert g.initial_seed() == 42
+        seed, offset = g.philox_engine_inputs(10)
+        assert seed == 42 and offset == 0
+        seed2, offset2 = g.philox_engine_inputs(10)
+        assert seed2 == 42 and offset2 == 10
+
+
+@pytest.mark.skipif(not NPU_AVAILABLE, reason="NPU not available")
+class TestNPUReproducibility:
+    """Test that NPU random ops are reproducible with manual_seed."""
+
+    def test_randn_npu_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.randn(5, 5, device='npu')
+        torch.manual_seed(42)
+        b = torch.randn(5, 5, device='npu')
+        np.testing.assert_array_equal(a.to('cpu').numpy(), b.to('cpu').numpy())
+
+    def test_rand_npu_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.rand(5, 5, device='npu')
+        torch.manual_seed(42)
+        b = torch.rand(5, 5, device='npu')
+        np.testing.assert_array_equal(a.to('cpu').numpy(), b.to('cpu').numpy())
+
+    def test_uniform_npu_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.empty(5, 5, device='npu').uniform_()
+        torch.manual_seed(42)
+        b = torch.empty(5, 5, device='npu').uniform_()
+        np.testing.assert_array_equal(a.to('cpu').numpy(), b.to('cpu').numpy())
+
+    def test_normal_npu_reproducible(self):
+        torch.manual_seed(42)
+        a = torch.empty(5, 5, device='npu').normal_()
+        torch.manual_seed(42)
+        b = torch.empty(5, 5, device='npu').normal_()
+        np.testing.assert_array_equal(a.to('cpu').numpy(), b.to('cpu').numpy())
+
+    def test_dropout_npu_reproducible(self):
+        torch.manual_seed(42)
+        x = torch.ones(10, 10, device='npu')
+        a = nn.functional.dropout(x, p=0.5, training=True)
+        torch.manual_seed(42)
+        b = nn.functional.dropout(x, p=0.5, training=True)
+        np.testing.assert_array_equal(a.to('cpu').numpy(), b.to('cpu').numpy())
+
+    def test_npu_rng_state_save_restore(self):
+        torch.manual_seed(42)
+        state = torch.npu.get_rng_state()
+        a = torch.randn(5, 5, device='npu')
+        torch.npu.set_rng_state(state)
+        b = torch.randn(5, 5, device='npu')
+        np.testing.assert_array_equal(a.to('cpu').numpy(), b.to('cpu').numpy())
+
+    def test_npu_sequence_reproducible(self):
+        """Multiple NPU ops in sequence must produce identical results."""
+        torch.manual_seed(42)
+        a1 = torch.randn(3, 3, device='npu')
+        a2 = torch.rand(3, 3, device='npu')
+        a3 = torch.empty(3, 3, device='npu').uniform_(-1, 1)
+        a4 = torch.empty(3, 3, device='npu').normal_(0, 2)
+
+        torch.manual_seed(42)
+        b1 = torch.randn(3, 3, device='npu')
+        b2 = torch.rand(3, 3, device='npu')
+        b3 = torch.empty(3, 3, device='npu').uniform_(-1, 1)
+        b4 = torch.empty(3, 3, device='npu').normal_(0, 2)
+
+        np.testing.assert_array_equal(a1.to('cpu').numpy(), b1.to('cpu').numpy())
+        np.testing.assert_array_equal(a2.to('cpu').numpy(), b2.to('cpu').numpy())
+        np.testing.assert_array_equal(a3.to('cpu').numpy(), b3.to('cpu').numpy())
+        np.testing.assert_array_equal(a4.to('cpu').numpy(), b4.to('cpu').numpy())
