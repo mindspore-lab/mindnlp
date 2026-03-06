@@ -911,3 +911,224 @@ class PolynomialLR(LRScheduler):
         super().load_state_dict(state_dict)
         self.total_iters = state_dict.get("total_iters", 5)
         self.power = state_dict.get("power", 1.0)
+
+
+class MultiplicativeLR(LRScheduler):
+    """Multiply the learning rate of each parameter group by the factor given
+    in the specified function.
+
+    Unlike LambdaLR which computes lr = base_lr * lambda(epoch), MultiplicativeLR
+    computes lr = lr * lambda(epoch) (cumulative multiplication).
+
+    Args:
+        optimizer: Wrapped optimizer.
+        lr_lambda: A function which computes a multiplicative factor given an
+            integer parameter epoch, or a list of such functions, one for each
+            group in optimizer.param_groups.
+        last_epoch: The index of last epoch. Default: -1.
+        verbose: If True, prints a message to stdout for each update. Default: False.
+    """
+
+    def __init__(
+        self,
+        optimizer,
+        lr_lambda: Union[Callable[[int], float], List[Callable[[int], float]]],
+        last_epoch: int = -1,
+        verbose: bool = False,
+    ):
+        if callable(lr_lambda):
+            self.lr_lambdas = [lr_lambda] * len(optimizer.param_groups)
+        else:
+            if len(lr_lambda) != len(optimizer.param_groups):
+                raise ValueError(
+                    f"Expected {len(optimizer.param_groups)} lr_lambdas, got {len(lr_lambda)}"
+                )
+            self.lr_lambdas = list(lr_lambda)
+        self._factor_products = [1.0] * len(optimizer.param_groups)
+        super().__init__(optimizer, last_epoch, verbose)
+
+    def get_lr(self) -> List[float]:
+        if self.last_epoch == 0:
+            return self.base_lrs
+        return [
+            base_lr * fp
+            for base_lr, fp in zip(self.base_lrs, self._factor_products)
+        ]
+
+    def step(self, epoch: Optional[int] = None) -> None:
+        if epoch is None:
+            epoch = self.last_epoch + 1
+        self.last_epoch = epoch
+        self._step_count += 1
+
+        if epoch > 0:
+            for i, lmbda in enumerate(self.lr_lambdas):
+                self._factor_products[i] *= lmbda(epoch)
+
+        lrs = self.get_lr()
+        for i, param_group in enumerate(self.optimizer.param_groups):
+            param_group["lr"] = lrs[i]
+
+        self._last_lr = lrs
+
+
+class CyclicLR:
+    """Sets the learning rate according to a cyclical learning rate policy.
+
+    The policy cycles the learning rate between base_lr and max_lr.
+    This scheduler is designed to be called after each batch (not epoch).
+
+    Args:
+        optimizer: Wrapped optimizer.
+        base_lr: Lower learning rate boundary in the cycle.
+        max_lr: Upper learning rate boundary in the cycle.
+        step_size_up: Number of training iterations in the increasing half
+            of a cycle. Default: 2000.
+        step_size_down: Number of training iterations in the decreasing half
+            of a cycle. If None, it is set to step_size_up. Default: None.
+        mode: One of 'triangular', 'triangular2', 'exp_range'.
+            Default: 'triangular'.
+        gamma: Constant in 'exp_range' scaling function: gamma^(cycle iterations).
+            Default: 1.0.
+        scale_fn: Custom scaling policy defined by a single argument lambda
+            function. If specified, mode is ignored. Default: None.
+        scale_mode: One of 'cycle', 'iterations'. Defines whether scale_fn
+            is evaluated on cycle number or cycle iterations.
+            Default: 'cycle'.
+        cycle_momentum: If True, momentum is cycled inversely to learning
+            rate between base_momentum and max_momentum. Default: True.
+        base_momentum: Lower momentum boundary in the cycle. Default: 0.8.
+        max_momentum: Upper momentum boundary in the cycle. Default: 0.9.
+        last_epoch: The index of the last batch. Default: -1.
+        verbose: If True, prints a message on each update. Default: False.
+    """
+
+    def __init__(
+        self,
+        optimizer,
+        base_lr: Union[float, List[float]],
+        max_lr: Union[float, List[float]],
+        step_size_up: int = 2000,
+        step_size_down: Optional[int] = None,
+        mode: str = "triangular",
+        gamma: float = 1.0,
+        scale_fn: Optional[Callable[[float], float]] = None,
+        scale_mode: str = "cycle",
+        cycle_momentum: bool = True,
+        base_momentum: Union[float, List[float]] = 0.8,
+        max_momentum: Union[float, List[float]] = 0.9,
+        last_epoch: int = -1,
+        verbose: bool = False,
+    ):
+        self.optimizer = optimizer
+        self.verbose = verbose
+        self.cycle_momentum = cycle_momentum
+        self.last_epoch = 0 if last_epoch == -1 else last_epoch
+        self._step_count = 0
+
+        n_groups = len(optimizer.param_groups)
+
+        # Normalize base_lr / max_lr to lists
+        if isinstance(base_lr, (list, tuple)):
+            self.base_lrs = list(base_lr)
+        else:
+            self.base_lrs = [base_lr] * n_groups
+
+        if isinstance(max_lr, (list, tuple)):
+            self.max_lrs = list(max_lr)
+        else:
+            self.max_lrs = [max_lr] * n_groups
+
+        self.step_size_up = step_size_up
+        self.step_size_down = step_size_down if step_size_down is not None else step_size_up
+        self.total_size = self.step_size_up + self.step_size_down
+
+        if isinstance(base_momentum, (list, tuple)):
+            self.base_momentums = list(base_momentum)
+        else:
+            self.base_momentums = [base_momentum] * n_groups
+
+        if isinstance(max_momentum, (list, tuple)):
+            self.max_momentums = list(max_momentum)
+        else:
+            self.max_momentums = [max_momentum] * n_groups
+
+        if scale_fn is not None:
+            self.scale_fn = scale_fn
+            self.scale_mode = scale_mode
+        elif mode == "triangular":
+            self.scale_fn = lambda x: 1.0
+            self.scale_mode = "cycle"
+        elif mode == "triangular2":
+            self.scale_fn = lambda x: 1 / (2.0 ** (x - 1))
+            self.scale_mode = "cycle"
+        elif mode == "exp_range":
+            self.scale_fn = lambda x: gamma ** x
+            self.scale_mode = "iterations"
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        # Set initial LRs
+        for group, blr in zip(optimizer.param_groups, self.base_lrs):
+            group["lr"] = blr
+        self._last_lr = [group["lr"] for group in optimizer.param_groups]
+
+    def _compute_scale(self, iteration, cycle):
+        if self.scale_mode == "cycle":
+            return self.scale_fn(cycle)
+        return self.scale_fn(iteration)
+
+    def get_lr(self) -> List[float]:
+        iteration = self.last_epoch
+        cycle = math.floor(1 + iteration / self.total_size)
+        x = 1 + iteration / self.total_size
+        cycle_x = x - math.floor(x)
+
+        if cycle_x <= self.step_size_up / self.total_size:
+            scale_x = cycle_x * self.total_size / self.step_size_up
+        else:
+            scale_x = (cycle_x * self.total_size - self.step_size_up) / self.step_size_down
+            scale_x = 1.0 - scale_x
+
+        scale = self._compute_scale(iteration, cycle)
+
+        return [
+            blr + (mlr - blr) * scale_x * scale
+            for blr, mlr in zip(self.base_lrs, self.max_lrs)
+        ]
+
+    def get_last_lr(self) -> List[float]:
+        return self._last_lr
+
+    def step(self, epoch: Optional[int] = None) -> None:
+        if epoch is not None:
+            self.last_epoch = epoch
+        else:
+            self.last_epoch += 1
+        self._step_count += 1
+
+        new_lrs = self.get_lr()
+        for group, lr in zip(self.optimizer.param_groups, new_lrs):
+            group["lr"] = lr
+        self._last_lr = new_lrs
+
+        if self.cycle_momentum:
+            iteration = self.last_epoch
+            x = 1 + iteration / self.total_size
+            cycle_x = x - math.floor(x)
+
+            if cycle_x <= self.step_size_up / self.total_size:
+                scale_x = cycle_x * self.total_size / self.step_size_up
+            else:
+                scale_x = (cycle_x * self.total_size - self.step_size_up) / self.step_size_down
+                scale_x = 1.0 - scale_x
+
+            for i, group in enumerate(self.optimizer.param_groups):
+                momentum = self.max_momentums[i] - (self.max_momentums[i] - self.base_momentums[i]) * scale_x
+                if "betas" in group:
+                    group["betas"] = (momentum, group["betas"][1])
+                elif "momentum" in group:
+                    group["momentum"] = momentum
+
+        if self.verbose:
+            print(f"Adjusting learning rate to {new_lrs}.")

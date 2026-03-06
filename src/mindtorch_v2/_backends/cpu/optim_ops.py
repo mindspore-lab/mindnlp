@@ -333,3 +333,41 @@ def _rprop_step(param, grad, prev, step_sizes, lr, etaminus, etaplus, step_size_
 
     _write_back(param, p_data)
     return param
+
+
+def _sparse_adam_step(param, grad, exp_avg, exp_avg_sq, step, lr, beta1, beta2, eps):
+    """Row-sparse Adam: only updates rows with non-zero gradients."""
+    p_data = _to_numpy(param)
+    g_data = _to_numpy(grad).copy()
+    ea = _to_numpy(exp_avg)
+    eas = _to_numpy(exp_avg_sq)
+
+    # Identify non-zero rows
+    if g_data.ndim >= 2:
+        row_norms = np.abs(g_data.reshape(g_data.shape[0], -1)).sum(axis=1)
+        active = np.where(row_norms != 0)[0]
+    else:
+        active = np.where(g_data != 0)[0]
+
+    if len(active) == 0:
+        return param
+
+    if g_data.ndim >= 2:
+        g = g_data[active]
+        ea[active] = beta1 * ea[active] + (1 - beta1) * g
+        eas[active] = beta2 * eas[active] + (1 - beta2) * g * g
+    else:
+        g = g_data[active]
+        ea[active] = beta1 * ea[active] + (1 - beta1) * g
+        eas[active] = beta2 * eas[active] + (1 - beta2) * g * g
+
+    bc1 = 1 - beta1 ** step
+    bc2 = 1 - beta2 ** step
+
+    m_hat = ea[active] / bc1
+    v_hat = eas[active] / bc2
+    denom = v_hat ** 0.5 + eps
+
+    p_data[active] = p_data[active] - lr * m_hat / denom
+    _write_back(param, p_data)
+    return param

@@ -446,3 +446,4 @@ def register_schemas():
     registry.register_schema("_radam_step", "_radam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, int step, float lr, float beta1, float beta2, float eps, float weight_decay, bool maximize) -> Tensor")
     registry.register_schema("_asgd_step", "_asgd_step(Tensor param, Tensor grad, Tensor ax, int step, float lr, float lambd, float alpha, float t0, float weight_decay, bool maximize) -> Tensor")
     registry.register_schema("_rprop_step", "_rprop_step(Tensor param, Tensor grad, Tensor prev, Tensor step_sizes, float lr, float etaminus, float etaplus, float step_size_min, float step_size_max, bool maximize) -> Tensor")
+    registry.register_schema("_sparse_adam_step", "_sparse_adam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, int step, float lr, float beta1, float beta2, float eps) -> Tensor")
