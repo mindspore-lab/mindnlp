@@ -1,5 +1,6 @@
 """Random number generation and seed management."""
 
+import contextlib
 import numpy as np
 from ._device import device as Device
 from ._dtype import uint8
@@ -268,6 +269,26 @@ def poisson(lam, generator=None):
     return tensor(out, dtype=out_dtype)
 
 
+@contextlib.contextmanager
+def fork_rng(devices=None, enabled=True, _caller='fork_rng', _devices_kw='devices'):
+    """Fork the RNG state so it is restored upon exiting the context.
+
+    Args:
+        devices: Ignored (for API compatibility with PyTorch CUDA fork_rng).
+        enabled (bool): If False, the context manager is a no-op. Default: True.
+    """
+    if not enabled:
+        yield
+        return
+    # Save CPU state
+    cpu_state = default_generator.get_state()
+    try:
+        yield
+    finally:
+        # Restore CPU state
+        default_generator.set_state(cpu_state)
+
+
 __all__ = [
     'manual_seed',
     'seed',
@@ -279,4 +300,5 @@ __all__ = [
     'bernoulli',
     'multinomial',
     'poisson',
+    'fork_rng',
 ]
