@@ -179,6 +179,13 @@ class _Reducer:
 
         with no_grad():
             if self._gradient_as_bucket_view:
+                # Ensure unused parameters stay zero in bucket-view mode: their
+                # placeholders are inserted before some used-grad hooks may fire,
+                # and later hook writes can otherwise overwrite those slots.
+                for pi, _ in bucket:
+                    if pi not in grads:
+                        grads[pi] = self._bucket_views[pi]
+
                 # Allreduce the single flat buffer; views update automatically
                 flat_buf = self._bucket_buffers[bucket_idx]
                 if self.comm_hook is not None:
@@ -373,8 +380,9 @@ class DistributedDataParallel(Module):
 
         # Build reducer with bucket-based grad sync
         bucket_cap_bytes = bucket_cap_mb * 1024 * 1024
+        params = list(module.parameters())
         self.reducer = _Reducer(
-            list(module.parameters()),
+            params,
             process_group,
             self.world_size,
             bucket_cap_bytes,
@@ -382,10 +390,18 @@ class DistributedDataParallel(Module):
 
         # Configure reducer flags
         self.reducer._static_graph = static_graph
-        self.reducer._gradient_as_bucket_view = gradient_as_bucket_view
 
-        # Initialize bucket views if gradient_as_bucket_view is enabled
-        if gradient_as_bucket_view:
+        # NPU slice/view semantics currently cannot guarantee isolated
+        # regions in a flat 1-D buffer, so bucket-view mode can corrupt
+        # unused-param gradients. Fall back to safe non-bucket-view path.
+        effective_bucket_view = gradient_as_bucket_view
+        if gradient_as_bucket_view and any(getattr(p.device, 'type', None) == 'npu' for p in params):
+            effective_bucket_view = False
+
+        self.reducer._gradient_as_bucket_view = effective_bucket_view
+
+        # Initialize bucket views only when effectively enabled
+        if effective_bucket_view:
             self.reducer._init_bucket_views()
 
         self.reducer.register_hooks()
