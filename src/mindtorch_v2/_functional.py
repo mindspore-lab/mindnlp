@@ -1064,6 +1064,26 @@ def median(a, dim=None, keepdim=False):
     return dispatch("median", a.device.type, a, dim, keepdim)
 
 
+def baddbmm(input, batch1, batch2, *, beta=1, alpha=1):
+    return dispatch("baddbmm", input.device.type, input, batch1, batch2, beta=beta, alpha=alpha)
+
+
+def trace(a):
+    return dispatch("trace", a.device.type, a)
+
+
+def cummin(a, dim):
+    return dispatch("cummin", a.device.type, a, dim)
+
+
+def logsumexp(a, dim, keepdim=False):
+    return dispatch("logsumexp", a.device.type, a, dim, keepdim)
+
+
+def renorm(a, p, dim, maxnorm):
+    return dispatch("renorm", a.device.type, a, p, dim, maxnorm)
+
+
 def _as_device(dev):
     if dev is None:
         return get_default_device()
