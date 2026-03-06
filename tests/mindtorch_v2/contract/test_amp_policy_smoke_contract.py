@@ -16,3 +16,27 @@ def test_autocast_fp16_policy_matmul():
     with torch.amp.autocast("cpu", dtype=torch.bfloat16):
         out = torch.matmul(x, x)
     assert out.dtype == torch.bfloat16
+
+
+def test_autocast_dot_mixed_dtype_matches_torch_error_semantics():
+    a = torch.randn((8,), dtype=torch.float32)
+    b = torch.randn((8,), dtype=torch.float16)
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        with pytest.raises(RuntimeError, match="same dtype"):
+            torch.dot(a, b)
+
+
+def test_autocast_tensordot_mixed_dtype_matches_torch_error_semantics():
+    a = torch.randn((4, 4), dtype=torch.float32)
+    b = torch.randn((4, 4), dtype=torch.float16)
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        with pytest.raises(RuntimeError, match="same dtype"):
+            torch.tensordot(a, b, ([1], [0]))
+
+
+def test_autocast_cross_mixed_dtype_matches_torch_error_semantics():
+    a = torch.randn((4, 3), dtype=torch.float32)
+    b = torch.randn((4, 3), dtype=torch.float16)
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        with pytest.raises(RuntimeError, match="same dtype"):
+            torch.cross(a, b, dim=1)
