@@ -141,6 +141,28 @@ def test_register_autocast_rejects_invalid_args_like_torch():
 
 
 
+
+
+def test_register_autocast_accepts_custom_op_handle_like_torch_customopdef():
+    import mindtorch_v2.library as library
+
+    @library.custom_op("ampautocast_handle::identity", mutates_args=(), device_types="cpu")
+    def _identity_handle(x):
+        return x
+
+    x = torch.randn((4, 4), dtype=torch.float32)
+
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        before = torch._dispatch.dispatch("ampautocast_handle::identity", x.device, x)
+    assert before.dtype == torch.float32
+
+    result = library.register_autocast(_identity_handle, "cpu", torch.bfloat16)
+    assert result is None
+
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        after = torch._dispatch.dispatch("ampautocast_handle::identity", x.device, x)
+    assert after.dtype == torch.bfloat16
+
 def test_register_autocast_duplicate_registration_raises_like_torch():
     import pytest
     import mindtorch_v2.library as library

@@ -108,6 +108,16 @@ def register_fake(qualname):
     return decorator
 
 
+def _normalize_autocast_op(op):
+    if isinstance(op, str):
+        return op
+    if isinstance(op, CustomOpHandle):
+        return op._qualname
+    raise ValueError(
+        f"register_autocast({op}): got unexpected type for op: {type(op)}"
+    )
+
+
 def register_autocast(op, device_type, cast_inputs, *, lib=None):
     """Register an autocast dispatch rule for a custom op.
 
@@ -115,27 +125,24 @@ def register_autocast(op, device_type, cast_inputs, *, lib=None):
     When autocast is enabled for the target device, floating-point Tensor
     inputs are cast to ``cast_inputs`` before dispatching the custom op.
     """
-    if not isinstance(op, str):
-        raise ValueError(
-            f"register_autocast({op}): got unexpected type for op: {type(op)}"
-        )
+    qualname = _normalize_autocast_op(op)
     if device_type not in ("cpu", "cuda"):
         raise ValueError(f"Unknown device type: {device_type}")
 
     # Match torch behavior: torch.library.register_autocast only supports
     # custom operators, not built-in aten operators.
-    if "::" not in op or op.split("::", 1)[0] == "aten":
-        raise RuntimeError(f"operator {op} does not exist")
+    if "::" not in qualname or qualname.split("::", 1)[0] == "aten":
+        raise RuntimeError(f"operator {qualname} does not exist")
 
     # Match torch behavior: registering on a missing operator is a runtime error.
     try:
-        registry.get(op)
+        registry.get(qualname)
     except KeyError as exc:
-        raise RuntimeError(f"operator {op} does not exist") from exc
+        raise RuntimeError(f"operator {qualname} does not exist") from exc
 
     from .amp.policy import register_custom_autocast_rule
 
-    register_custom_autocast_rule(op, device_type, cast_inputs)
+    register_custom_autocast_rule(qualname, device_type, cast_inputs)
     del lib
 
 
