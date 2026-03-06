@@ -534,6 +534,7 @@ from .optim_ops import (
     _radam_step,
     _asgd_step,
     _rprop_step,
+    _sparse_adam_step,
 )
 registry.register("_sgd_step", "cpu", _sgd_step)
 registry.register("_adam_step", "cpu", _adam_step)
@@ -546,3 +547,4 @@ registry.register("_nadam_step", "cpu", _nadam_step)
 registry.register("_radam_step", "cpu", _radam_step)
 registry.register("_asgd_step", "cpu", _asgd_step)
 registry.register("_rprop_step", "cpu", _rprop_step)
+registry.register("_sparse_adam_step", "cpu", _sparse_adam_step)

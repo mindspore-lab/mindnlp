@@ -1,7 +1,7 @@
 """
-RAdam optimizer for mindtorch_v2.
+SparseAdam optimizer for mindtorch_v2.
 
-Aligned with PyTorch's torch.optim.RAdam.
+Aligned with PyTorch's torch.optim.SparseAdam.
 """
 
 from typing import Any, Callable, Dict, Iterable, Optional, Union
@@ -12,28 +12,18 @@ from .._dispatch import dispatch
 from .._functional import zeros_like
 
 
-class RAdam(Optimizer):
-    """Implements RAdam (Rectified Adam) algorithm.
+class SparseAdam(Optimizer):
+    """Lazy Adam variant for sparse gradients.
 
-    RAdam uses variance rectification to stabilize training in the early stages.
+    Implements Adam update only on rows where gradients are non-zero,
+    leaving other parameter rows and their running averages untouched.
 
     Args:
-        params: Iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr: Learning rate (default: 1e-3)
-        betas: Coefficients used for computing running averages of gradient
-            and its square (default: (0.9, 0.999))
-        eps: Term added to the denominator to improve numerical stability
-            (default: 1e-8)
-        weight_decay: Weight decay (L2 penalty) (default: 0)
-        maximize: Maximize the params based on the objective, instead of
-            minimizing (default: False)
-
-    Example:
-        >>> optimizer = RAdam(model.parameters(), lr=0.001)
-        >>> optimizer.zero_grad()
-        >>> loss_fn(model(input), target).backward()
-        >>> optimizer.step()
+        params: Iterable of parameters to optimize.
+        lr: Learning rate (default: 1e-3).
+        betas: Coefficients used for computing running averages
+            (default: (0.9, 0.999)).
+        eps: Term added to the denominator (default: 1e-8).
     """
 
     def __init__(
@@ -42,9 +32,6 @@ class RAdam(Optimizer):
         lr: float = 1e-3,
         betas: tuple = (0.9, 0.999),
         eps: float = 1e-8,
-        weight_decay: float = 0,
-        *,
-        maximize: bool = False,
     ):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -54,22 +41,9 @@ class RAdam(Optimizer):
             raise ValueError(f"Invalid beta parameter at index 0: {betas[0]}")
         if not 0.0 <= betas[1] < 1.0:
             raise ValueError(f"Invalid beta parameter at index 1: {betas[1]}")
-        if weight_decay < 0.0:
-            raise ValueError(f"Invalid weight_decay value: {weight_decay}")
 
-        defaults = dict(
-            lr=lr,
-            betas=betas,
-            eps=eps,
-            weight_decay=weight_decay,
-            maximize=maximize,
-        )
+        defaults = dict(lr=lr, betas=betas, eps=eps)
         super().__init__(params, defaults)
-
-    def __setstate__(self, state: Dict[str, Any]) -> None:
-        super().__setstate__(state)
-        for group in self.param_groups:
-            group.setdefault("maximize", False)
 
     def step(self, closure: Optional[Callable[[], float]] = None) -> Optional[float]:
         """Performs a single optimization step."""
@@ -82,8 +56,6 @@ class RAdam(Optimizer):
             beta1, beta2 = group["betas"]
             lr = group["lr"]
             eps = group["eps"]
-            weight_decay = group["weight_decay"]
-            maximize = group["maximize"]
 
             for p in group["params"]:
                 if p.grad is None:
@@ -102,11 +74,10 @@ class RAdam(Optimizer):
                 state["step"] += 1
 
                 dispatch(
-                    "_radam_step", None,
+                    "_sparse_adam_step", None,
                     p, p.grad,
                     state["exp_avg"], state["exp_avg_sq"],
                     state["step"], lr, beta1, beta2, eps,
-                    weight_decay, maximize,
                 )
 
         self._call_step_post_hooks()

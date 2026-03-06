@@ -30,6 +30,8 @@ from .nadam import NAdam
 from .radam import RAdam
 from .asgd import ASGD
 from .rprop import Rprop
+from .lbfgs import LBFGS
+from .sparse_adam import SparseAdam
 from . import lr_scheduler
 
 __all__ = [
@@ -45,5 +47,7 @@ __all__ = [
     "RAdam",
     "ASGD",
     "Rprop",
+    "LBFGS",
+    "SparseAdam",
     "lr_scheduler",
 ]

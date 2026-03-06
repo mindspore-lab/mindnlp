@@ -74,6 +74,7 @@ class SGD(Optimizer):
         loss = None
         if closure is not None:
             loss = closure()
+        self._call_step_pre_hooks()
 
         for group in self.param_groups:
             momentum = group["momentum"]
@@ -105,4 +106,5 @@ class SGD(Optimizer):
                     nesterov, maximize,
                 )
 
+        self._call_step_post_hooks()
         return loss

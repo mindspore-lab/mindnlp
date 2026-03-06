@@ -4,9 +4,28 @@ Base Optimizer class for mindtorch_v2.
 Aligned with PyTorch's torch.optim.Optimizer API.
 """
 import math
+from collections import OrderedDict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from .._tensor import Tensor
+
+
+class RemovableHandle:
+    """Handle returned by hook registration methods. Call .remove() to unregister."""
+
+    def __init__(self, hooks_dict, hook_id):
+        self._hooks_dict = hooks_dict
+        self._id = hook_id
+
+    def remove(self):
+        if self._id in self._hooks_dict:
+            del self._hooks_dict[self._id]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.remove()
 
 
 class Optimizer:
@@ -24,9 +43,19 @@ class Optimizer:
         >>> optimizer.step()
     """
 
+    _hook_id_counter = 0
+
     def __init__(self, params: Iterable[Union[Tensor, Dict]], defaults: Dict[str, Any]):
         self.defaults = defaults
         self._hook_for_profile = False
+
+        # Hook registries
+        self._step_pre_hooks: OrderedDict[int, Callable] = OrderedDict()
+        self._step_post_hooks: OrderedDict[int, Callable] = OrderedDict()
+        self._state_dict_pre_hooks: OrderedDict[int, Callable] = OrderedDict()
+        self._state_dict_post_hooks: OrderedDict[int, Callable] = OrderedDict()
+        self._load_state_dict_pre_hooks: OrderedDict[int, Callable] = OrderedDict()
+        self._load_state_dict_post_hooks: OrderedDict[int, Callable] = OrderedDict()
 
         if params is None:
             raise TypeError("params argument given to the optimizer should be "
@@ -102,59 +131,52 @@ class Optimizer:
         raise NotImplementedError("step() must be implemented by subclass")
 
     def state_dict(self) -> Dict[str, Any]:
-        """Returns the state of the optimizer as a dict.
+        """Returns the state of the optimizer as a dict."""
+        for hook in self._state_dict_pre_hooks.values():
+            hook(self)
 
-        It contains two entries:
-        - state: a dict holding current optimization state.
-        - param_groups: a list containing all parameter groups.
-        """
-        # Save the state for each parameter
         state_dict: Dict[str, Any] = {
             "state": {},
             "param_groups": [],
         }
 
-        # Convert state keyed by id(param) to state keyed by param index
         for param_group in self.param_groups:
             for param in param_group["params"]:
                 param_id = id(param)
                 if param_id in self.state:
-                    # Store state with string key (param index within group)
                     state_dict["state"][str(param_id)] = self.state[param_id]
 
-        # Deep copy param_groups but replace params with their indices
         for param_group in self.param_groups:
             param_group_copy = {k: v for k, v in param_group.items() if k != "params"}
-            # Store param ids for reconstruction
             param_group_copy["param_ids"] = [id(p) for p in param_group["params"]]
             state_dict["param_groups"].append(param_group_copy)
+
+        for hook in self._state_dict_post_hooks.values():
+            result = hook(self, state_dict)
+            if result is not None:
+                state_dict = result
 
         return state_dict
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        """Loads the optimizer state.
+        """Loads the optimizer state."""
+        for hook in self._load_state_dict_pre_hooks.values():
+            result = hook(self, state_dict)
+            if result is not None:
+                state_dict = result
 
-        Args:
-            state_dict: optimizer state. Should be an object returned
-                from a call to :meth:`state_dict`.
-        """
-        # Restore state
         self.state = {}
         for param_id_str, state in state_dict["state"].items():
             param_id = int(param_id_str)
             self.state[param_id] = state
 
-        # Restore param_groups
         self.param_groups = []
         for param_group in state_dict["param_groups"]:
             param_ids = param_group.pop("param_ids", [])
-            # We can't restore the actual params here, caller needs to
-            # ensure params are the same objects
             self.param_groups.append(param_group)
 
-        # Update param_groups to reference actual params
-        # This requires the caller to have the same param objects
-        # For now, we just restore the metadata
+        for hook in self._load_state_dict_post_hooks.values():
+            hook(self)
 
     def add_param_group(self, param_group: Dict[str, Any]) -> None:
         """Add a param group to the :class:`Optimizer` s `param_groups`.
@@ -197,3 +219,78 @@ class Optimizer:
             for param_idx, param in enumerate(group["params"]):
                 id_to_idx[id(param)] = (group_idx, param_idx)
         return id_to_idx
+
+    # ---- Hook registration methods ----
+
+    @classmethod
+    def _next_hook_id(cls):
+        cls._hook_id_counter += 1
+        return cls._hook_id_counter
+
+    def register_step_pre_hook(self, hook: Callable) -> RemovableHandle:
+        """Register a hook called before each step().
+
+        hook(optimizer, args, kwargs) -> None or modified (args, kwargs)
+        """
+        hid = self._next_hook_id()
+        self._step_pre_hooks[hid] = hook
+        return RemovableHandle(self._step_pre_hooks, hid)
+
+    def register_step_post_hook(self, hook: Callable) -> RemovableHandle:
+        """Register a hook called after each step().
+
+        hook(optimizer, args, kwargs) -> None
+        """
+        hid = self._next_hook_id()
+        self._step_post_hooks[hid] = hook
+        return RemovableHandle(self._step_post_hooks, hid)
+
+    def register_state_dict_pre_hook(self, hook: Callable) -> RemovableHandle:
+        """Register a hook called before state_dict().
+
+        hook(optimizer) -> None
+        """
+        hid = self._next_hook_id()
+        self._state_dict_pre_hooks[hid] = hook
+        return RemovableHandle(self._state_dict_pre_hooks, hid)
+
+    def register_state_dict_post_hook(self, hook: Callable) -> RemovableHandle:
+        """Register a hook called after state_dict().
+
+        hook(optimizer, state_dict) -> state_dict or None
+        """
+        hid = self._next_hook_id()
+        self._state_dict_post_hooks[hid] = hook
+        return RemovableHandle(self._state_dict_post_hooks, hid)
+
+    def register_load_state_dict_pre_hook(self, hook: Callable) -> RemovableHandle:
+        """Register a hook called before load_state_dict().
+
+        hook(optimizer, state_dict) -> state_dict or None
+        """
+        hid = self._next_hook_id()
+        self._load_state_dict_pre_hooks[hid] = hook
+        return RemovableHandle(self._load_state_dict_pre_hooks, hid)
+
+    def register_load_state_dict_post_hook(self, hook: Callable) -> RemovableHandle:
+        """Register a hook called after load_state_dict().
+
+        hook(optimizer) -> None
+        """
+        hid = self._next_hook_id()
+        self._load_state_dict_post_hooks[hid] = hook
+        return RemovableHandle(self._load_state_dict_post_hooks, hid)
+
+    # ---- Hook call helpers ----
+
+    def _call_step_pre_hooks(self, *args, **kwargs):
+        for hook in self._step_pre_hooks.values():
+            result = hook(self, args, kwargs)
+            if result is not None:
+                if isinstance(result, tuple) and len(result) == 2:
+                    args, kwargs = result
+        return args, kwargs
+
+    def _call_step_post_hooks(self, *args, **kwargs):
+        for hook in self._step_post_hooks.values():
+            hook(self, args, kwargs)

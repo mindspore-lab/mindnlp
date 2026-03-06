@@ -453,5 +453,346 @@ class TestParamGroups:
         assert not np.allclose(x2.detach().numpy(), [2.0])
 
 
+# ============================================================
+# Optimizer Hooks
+# ============================================================
+
+class TestOptimizerHooks:
+    def test_step_pre_hook_called(self):
+        x = _tensor([1.0, 2.0])
+        opt = optim.Adam([x], lr=0.1)
+        called = []
+
+        def pre_hook(optimizer, args, kwargs):
+            called.append("pre")
+
+        opt.register_step_pre_hook(pre_hook)
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert called == ["pre"]
+
+    def test_step_post_hook_called(self):
+        x = _tensor([1.0, 2.0])
+        opt = optim.Adam([x], lr=0.1)
+        called = []
+
+        def post_hook(optimizer, args, kwargs):
+            called.append("post")
+
+        opt.register_step_post_hook(post_hook)
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert called == ["post"]
+
+    def test_step_hooks_order(self):
+        x = _tensor([1.0])
+        opt = optim.SGD([x], lr=0.1)
+        order = []
+
+        opt.register_step_pre_hook(lambda o, a, k: order.append("pre"))
+        opt.register_step_post_hook(lambda o, a, k: order.append("post"))
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert order == ["pre", "post"]
+
+    def test_removable_handle(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        called = []
+
+        handle = opt.register_step_pre_hook(lambda o, a, k: called.append(1))
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert called == [1]
+
+        handle.remove()
+        opt.zero_grad()
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert called == [1]
+
+    def test_removable_handle_context_manager(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        called = []
+
+        with opt.register_step_pre_hook(lambda o, a, k: called.append(1)):
+            y = (x * x).sum()
+            y.backward()
+            opt.step()
+        assert called == [1]
+
+        opt.zero_grad()
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert called == [1]
+
+    def test_state_dict_hooks(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+
+        pre_called = []
+        post_called = []
+        opt.register_state_dict_pre_hook(lambda o: pre_called.append(1))
+        opt.register_state_dict_post_hook(lambda o, sd: post_called.append(1))
+
+        sd = opt.state_dict()
+        assert pre_called == [1]
+        assert post_called == [1]
+
+    def test_load_state_dict_hooks(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+
+        pre_called = []
+        post_called = []
+        opt.register_load_state_dict_pre_hook(lambda o, sd: pre_called.append(1))
+        opt.register_load_state_dict_post_hook(lambda o: post_called.append(1))
+
+        opt.load_state_dict({"state": {}, "param_groups": []})
+        assert pre_called == [1]
+        assert post_called == [1]
+
+    def test_sgd_hooks(self):
+        x = _tensor([1.0])
+        opt = optim.SGD([x], lr=0.1)
+        called = []
+        opt.register_step_pre_hook(lambda o, a, k: called.append("pre"))
+        opt.register_step_post_hook(lambda o, a, k: called.append("post"))
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert called == ["pre", "post"]
+
+
+# ============================================================
+# LBFGS
+# ============================================================
+
+class TestLBFGS:
+    def test_requires_closure(self):
+        x = _tensor([1.0])
+        opt = optim.LBFGS([x], lr=1.0)
+        with pytest.raises(RuntimeError, match="requires a closure"):
+            opt.step(None)
+
+    def test_basic_convergence(self):
+        """L-BFGS should minimize f(x) = x^2 quickly."""
+        x = _tensor([5.0])
+        opt = optim.LBFGS([x], lr=1.0, max_iter=20)
+
+        def closure():
+            opt.zero_grad()
+            loss = x * x
+            loss.sum().backward()
+            return loss.sum()
+
+        for _ in range(5):
+            opt.step(closure)
+
+        assert abs(x.detach().numpy()[0]) < 1.0
+
+    def test_multivariate(self):
+        """Minimize f(x,y) = x^2 + y^2."""
+        x = _tensor([3.0, 4.0])
+        opt = optim.LBFGS([x], lr=1.0, max_iter=20)
+
+        def closure():
+            opt.zero_grad()
+            loss = (x * x).sum()
+            loss.backward()
+            return loss
+
+        for _ in range(10):
+            opt.step(closure)
+
+        vals = x.detach().numpy()
+        assert np.all(np.abs(vals) < 1.0)
+
+    def test_with_line_search(self):
+        x = _tensor([5.0])
+        opt = optim.LBFGS([x], lr=1.0, max_iter=20, line_search_fn="strong_wolfe")
+
+        def closure():
+            opt.zero_grad()
+            loss = x * x
+            loss.sum().backward()
+            return loss.sum()
+
+        for _ in range(5):
+            opt.step(closure)
+
+        assert abs(x.detach().numpy()[0]) < 1.0
+
+
+# ============================================================
+# SparseAdam
+# ============================================================
+
+class TestSparseAdam:
+    def test_basic_step(self):
+        x = _tensor([1.0, 2.0, 3.0])
+        opt = optim.SparseAdam([x], lr=0.1)
+        y = (x * x).sum()
+        y.backward()
+        opt.step()
+        assert not np.allclose(x.detach().numpy(), [1.0, 2.0, 3.0])
+
+    def test_sparse_update_2d(self):
+        """Only rows with non-zero gradients should be updated."""
+        x = _tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        opt = optim.SparseAdam([x], lr=0.1)
+
+        grad = torch.tensor([[1.0, 1.0], [0.0, 0.0], [0.0, 0.0]])
+        y = (x * grad).sum()
+        y.backward()
+        opt.step()
+
+        vals = x.detach().numpy()
+        assert not np.allclose(vals[0], [1.0, 2.0])
+        assert np.allclose(vals[1], [3.0, 4.0])
+        assert np.allclose(vals[2], [5.0, 6.0])
+
+    def test_multiple_steps(self):
+        x = _tensor([5.0])
+        opt = optim.SparseAdam([x], lr=0.1)
+        for _ in range(10):
+            opt.zero_grad()
+            y = x * x
+            y.sum().backward()
+            opt.step()
+        assert abs(x.detach().numpy()[0]) < 5.0
+
+
+# ============================================================
+# MultiplicativeLR
+# ============================================================
+
+class TestMultiplicativeLR:
+    def test_basic_decay(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=1.0)
+        scheduler = optim.lr_scheduler.MultiplicativeLR(opt, lr_lambda=lambda epoch: 0.9)
+
+        lrs = [opt.param_groups[0]["lr"]]
+        for _ in range(5):
+            scheduler.step()
+            lrs.append(opt.param_groups[0]["lr"])
+
+        for i in range(1, len(lrs)):
+            assert lrs[i] < lrs[i - 1]
+
+    def test_multiplicative_factor(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=1.0)
+        scheduler = optim.lr_scheduler.MultiplicativeLR(opt, lr_lambda=lambda epoch: 0.5)
+
+        scheduler.step()  # epoch 1: lr = 1.0 * 0.5 = 0.5
+        assert abs(opt.param_groups[0]["lr"] - 0.5) < 1e-7
+        scheduler.step()  # epoch 2: lr = 0.5 * 0.5 = 0.25
+        assert abs(opt.param_groups[0]["lr"] - 0.25) < 1e-7
+
+    def test_get_last_lr(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        scheduler = optim.lr_scheduler.MultiplicativeLR(opt, lr_lambda=lambda epoch: 0.9)
+        scheduler.step()
+        assert abs(scheduler.get_last_lr()[0] - 0.09) < 1e-7
+
+
+# ============================================================
+# CyclicLR
+# ============================================================
+
+class TestCyclicLR:
+    def test_triangular_mode(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        scheduler = optim.lr_scheduler.CyclicLR(
+            opt, base_lr=0.001, max_lr=0.01, step_size_up=10,
+            mode='triangular', cycle_momentum=False
+        )
+
+        lrs = []
+        for _ in range(20):
+            scheduler.step()
+            lrs.append(opt.param_groups[0]["lr"])
+
+        assert lrs[0] < lrs[5]
+
+    def test_triangular2_mode(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        scheduler = optim.lr_scheduler.CyclicLR(
+            opt, base_lr=0.001, max_lr=0.01, step_size_up=5,
+            mode='triangular2', cycle_momentum=False
+        )
+
+        first_cycle_max = 0
+        second_cycle_max = 0
+        for i in range(20):
+            scheduler.step()
+            lr = opt.param_groups[0]["lr"]
+            if i < 10:
+                first_cycle_max = max(first_cycle_max, lr)
+            else:
+                second_cycle_max = max(second_cycle_max, lr)
+
+        assert second_cycle_max < first_cycle_max
+
+    def test_exp_range_mode(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        scheduler = optim.lr_scheduler.CyclicLR(
+            opt, base_lr=0.001, max_lr=0.01, step_size_up=5,
+            mode='exp_range', gamma=0.99, cycle_momentum=False
+        )
+
+        lrs = []
+        for _ in range(10):
+            scheduler.step()
+            lrs.append(opt.param_groups[0]["lr"])
+        assert len(lrs) == 10
+
+    def test_cycle_momentum(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1, betas=(0.9, 0.999))
+        scheduler = optim.lr_scheduler.CyclicLR(
+            opt, base_lr=0.001, max_lr=0.01, step_size_up=5,
+            cycle_momentum=True, base_momentum=0.8, max_momentum=0.95
+        )
+
+        scheduler.step()
+        scheduler.step()
+        scheduler.step()
+        # Momentum should have changed from initial 0.9
+        assert opt.param_groups[0]["betas"][0] != 0.9
+
+    def test_base_lr_set(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        scheduler = optim.lr_scheduler.CyclicLR(
+            opt, base_lr=0.001, max_lr=0.01, step_size_up=10,
+            cycle_momentum=False
+        )
+        assert abs(opt.param_groups[0]["lr"] - 0.001) < 1e-7
+
+    def test_get_last_lr(self):
+        x = _tensor([1.0])
+        opt = optim.Adam([x], lr=0.1)
+        scheduler = optim.lr_scheduler.CyclicLR(
+            opt, base_lr=0.001, max_lr=0.01, step_size_up=10,
+            cycle_momentum=False
+        )
+        scheduler.step()
+        assert scheduler.get_last_lr()[0] == opt.param_groups[0]["lr"]
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -78,6 +78,7 @@ class Adam(Optimizer):
         loss = None
         if closure is not None:
             loss = closure()
+        self._call_step_pre_hooks()
 
         for group in self.param_groups:
             beta1, beta2 = group["betas"]
@@ -114,6 +115,7 @@ class Adam(Optimizer):
                     weight_decay, amsgrad, maximize,
                 )
 
+        self._call_step_post_hooks()
         return loss
 
 
@@ -182,6 +184,7 @@ class AdamW(Optimizer):
         loss = None
         if closure is not None:
             loss = closure()
+        self._call_step_pre_hooks()
 
         for group in self.param_groups:
             beta1, beta2 = group["betas"]
@@ -218,4 +221,5 @@ class AdamW(Optimizer):
                     weight_decay, amsgrad, maximize,
                 )
 
+        self._call_step_post_hooks()
         return loss

@@ -18,6 +18,8 @@ from ._lr_scheduler import (
     SequentialLR,
     ChainedScheduler,
     PolynomialLR,
+    MultiplicativeLR,
+    CyclicLR,
 )
 
 __all__ = [
@@ -35,4 +37,6 @@ __all__ = [
     "SequentialLR",
     "ChainedScheduler",
     "PolynomialLR",
+    "MultiplicativeLR",
+    "CyclicLR",
 ]
