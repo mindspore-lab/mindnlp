@@ -560,18 +560,18 @@ class Tensor:
         out = dispatch("zero_", self.device.type, self)
         return out
 
-    def uniform_(self, low=0.0, high=1.0):
+    def uniform_(self, low=0.0, high=1.0, *, generator=None):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
-        out = dispatch("uniform_", self.device.type, self, low, high)
+        out = dispatch("uniform_", self.device.type, self, low, high, generator=generator)
         return out
 
-    def normal_(self, mean=0.0, std=1.0):
+    def normal_(self, mean=0.0, std=1.0, *, generator=None):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
-        out = dispatch("normal_", self.device.type, self, mean, std)
+        out = dispatch("normal_", self.device.type, self, mean, std, generator=generator)
         return out
 
     def fill_(self, value):

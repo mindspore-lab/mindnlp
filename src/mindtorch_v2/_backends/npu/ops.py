@@ -3407,14 +3407,17 @@ def zero_(a):
     return a
 
 
-def uniform_(a, low=0.0, high=1.0):
+def uniform_(a, low=0.0, high=1.0, generator=None):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError("NPU uniform_ expects NPU tensors")
 
-    from ... import npu as npu_mod
-    seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
+    if generator is not None and hasattr(generator, 'philox_engine_inputs'):
+        seed, offset = generator.philox_engine_inputs(10)
+    else:
+        from ... import npu as npu_mod
+        seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
     a_storage = _unwrap_storage(a)
     aclnn.inplace_uniform(
@@ -3432,14 +3435,17 @@ def uniform_(a, low=0.0, high=1.0):
     return a
 
 
-def normal_(a, mean=0.0, std=1.0):
+def normal_(a, mean=0.0, std=1.0, generator=None):
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError("NPU normal_ expects NPU tensors")
 
-    from ... import npu as npu_mod
-    seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
+    if generator is not None and hasattr(generator, 'philox_engine_inputs'):
+        seed, offset = generator.philox_engine_inputs(10)
+    else:
+        from ... import npu as npu_mod
+        seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
     a_storage = _unwrap_storage(a)
     aclnn.inplace_normal(

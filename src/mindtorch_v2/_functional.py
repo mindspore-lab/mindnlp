@@ -710,28 +710,28 @@ def empty(*shape, dtype=None, device=None, memory_format=None):
     return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
-def randn(*shape, dtype=None, device=None, memory_format=None):
+def randn(*shape, dtype=None, device=None, memory_format=None, generator=None):
     if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
         shape = shape[0]
     dev = _as_device(device)
-    return dispatch("randn", dev, shape, dtype=dtype, memory_format=memory_format)
+    return dispatch("randn", dev, shape, dtype=dtype, memory_format=memory_format, generator=generator)
 
 
-def rand(*shape, dtype=None, device=None, memory_format=None):
+def rand(*shape, dtype=None, device=None, memory_format=None, generator=None):
     if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
         shape = shape[0]
     dev = _as_device(device)
-    return dispatch("rand", dev, shape, dtype=dtype, memory_format=memory_format)
+    return dispatch("rand", dev, shape, dtype=dtype, memory_format=memory_format, generator=generator)
 
 
-def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False):
+def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False, generator=None):
     dev = _as_device(device)
-    return dispatch("randint", dev, low, high=high, size=size, dtype=dtype, requires_grad=requires_grad)
+    return dispatch("randint", dev, low, high=high, size=size, dtype=dtype, requires_grad=requires_grad, generator=generator)
 
 
-def randperm(n, *, dtype=None, device=None, requires_grad=False):
+def randperm(n, *, dtype=None, device=None, requires_grad=False, generator=None):
     dev = _as_device(device)
-    return dispatch("randperm", dev, n, dtype=dtype, requires_grad=requires_grad)
+    return dispatch("randperm", dev, n, dtype=dtype, requires_grad=requires_grad, generator=generator)
 
 
 def arange(start, end=None, step=1, dtype=None, device=None):

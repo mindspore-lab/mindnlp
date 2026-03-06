@@ -666,17 +666,17 @@ def zero_(a):
     return a
 
 
-def uniform_(a, low=0.0, high=1.0):
+def uniform_(a, low=0.0, high=1.0, generator=None):
     from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     arr = _to_numpy(a)
     arr[:] = rng.uniform(low, high, arr.shape).astype(arr.dtype)
     return a
 
 
-def normal_(a, mean=0.0, std=1.0):
+def normal_(a, mean=0.0, std=1.0, generator=None):
     from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     arr = _to_numpy(a)
     arr[:] = rng.normal(mean, std, arr.shape).astype(arr.dtype)
     return a

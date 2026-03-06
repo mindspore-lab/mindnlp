@@ -76,7 +76,7 @@ def empty_create(shape, dtype=None, device=None, requires_grad=False, memory_for
     return _wrap_tensor(storage, shape, stride, requires_grad)
 
 
-def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
+def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None, generator=None):
     """Create a tensor filled with random numbers from N(0,1) on NPU."""
     if isinstance(shape, int):
         shape = (shape,)
@@ -85,11 +85,11 @@ def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_for
     t = empty_create(shape, dtype=dtype, device=device, requires_grad=requires_grad,
                      memory_format=memory_format)
     from .ops import normal_
-    normal_(t, mean=0.0, std=1.0)
+    normal_(t, mean=0.0, std=1.0, generator=generator)
     return t
 
 
-def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
+def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None, generator=None):
     """Create a tensor filled with random numbers from U(0,1) on NPU."""
     if isinstance(shape, int):
         shape = (shape,)
@@ -97,7 +97,7 @@ def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_form
     t = empty_create(shape, dtype=dtype, device=device, requires_grad=requires_grad,
                      memory_format=memory_format)
     from .ops import uniform_
-    uniform_(t, low=0.0, high=1.0)
+    uniform_(t, low=0.0, high=1.0, generator=generator)
     return t
 
 
