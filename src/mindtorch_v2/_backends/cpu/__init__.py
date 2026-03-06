@@ -792,3 +792,16 @@ registry.register("upsample_linear1d", "cpu", upsample_linear1d)
 registry.register("upsample_nearest2d", "cpu", upsample_nearest2d)
 registry.register("upsample_bilinear2d", "cpu", upsample_bilinear2d)
 registry.register("upsample_bicubic2d", "cpu", upsample_bicubic2d)
+
+# 1D pooling ops
+from .ops import max_pool1d, avg_pool1d, adaptive_avg_pool1d
+registry.register("max_pool1d", "cpu", max_pool1d)
+registry.register("avg_pool1d", "cpu", avg_pool1d)
+registry.register("adaptive_avg_pool1d", "cpu", adaptive_avg_pool1d)
+
+# 3D conv/pool ops
+from .ops import conv_transpose3d, max_pool3d, avg_pool3d, adaptive_avg_pool3d
+registry.register("conv_transpose3d", "cpu", conv_transpose3d)
+registry.register("max_pool3d", "cpu", max_pool3d)
+registry.register("avg_pool3d", "cpu", avg_pool3d)
+registry.register("adaptive_avg_pool3d", "cpu", adaptive_avg_pool3d)

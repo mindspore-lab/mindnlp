@@ -28,12 +28,13 @@ from .modules.sparse import Embedding, EmbeddingBag
 from .modules.dropout import Dropout, Dropout1d, Dropout2d, Dropout3d, AlphaDropout
 
 # Convolution
-from .modules.conv import Conv1d, Conv2d, Conv3d, ConvTranspose1d, ConvTranspose2d
+from .modules.conv import Conv1d, Conv2d, Conv3d, ConvTranspose1d, ConvTranspose2d, ConvTranspose3d
 
 # Pooling
 from .modules.pooling import (
-    MaxPool1d, MaxPool2d, AvgPool1d, AvgPool2d,
-    AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveMaxPool2d,
+    MaxPool1d, MaxPool2d, MaxPool3d, AvgPool1d, AvgPool2d, AvgPool3d,
+    AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d,
+    AdaptiveMaxPool1d, AdaptiveMaxPool2d,
 )
 
 # Loss
@@ -42,7 +43,7 @@ from .modules.loss import (
     NLLLoss, L1Loss, SmoothL1Loss, KLDivLoss,
     HuberLoss, CosineEmbeddingLoss, MarginRankingLoss, TripletMarginLoss,
     HingeEmbeddingLoss, SoftMarginLoss, MultiMarginLoss, MultiLabelSoftMarginLoss,
-    PoissonNLLLoss, CTCLoss,
+    PoissonNLLLoss, CTCLoss, GaussianNLLLoss,
 )
 
 # RNN
@@ -54,7 +55,7 @@ from .modules.attention import MultiheadAttention
 # Padding
 from .modules.padding import (
     ZeroPad1d, ZeroPad2d, ConstantPad1d, ConstantPad2d,
-    ReflectionPad1d, ReflectionPad2d, ReplicationPad2d,
+    ReflectionPad1d, ReflectionPad2d, ReplicationPad1d, ReplicationPad2d,
 )
 
 # Upsampling

@@ -187,3 +187,14 @@ class CTCLoss(_Loss):
         return F.ctc_loss(log_probs, targets, input_lengths, target_lengths,
                           blank=self.blank, reduction=self.reduction,
                           zero_infinity=self.zero_infinity)
+
+
+class GaussianNLLLoss(_Loss):
+    def __init__(self, full=False, eps=1e-6, reduction='mean'):
+        super().__init__(reduction=reduction)
+        self.full = full
+        self.eps = eps
+
+    def forward(self, input, target, var):
+        return F.gaussian_nll_loss(input, target, var, full=self.full,
+                                   eps=self.eps, reduction=self.reduction)
