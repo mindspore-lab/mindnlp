@@ -2347,3 +2347,475 @@ def cummin(a, dim):
         _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
         _from_numpy(np.ascontiguousarray(indices), int64_dtype, a.device),
     )
+
+
+# ---------------------------------------------------------------------------
+# torch.linalg ops
+# ---------------------------------------------------------------------------
+
+def linalg_cholesky(a, upper=False):
+    """Cholesky decomposition."""
+    arr = _to_numpy(a).astype(np.float64)
+    L = np.linalg.cholesky(arr)
+    if upper:
+        # Transpose the last two dims
+        L = np.swapaxes(L, -2, -1).conj()
+    return _from_numpy(np.ascontiguousarray(L.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_cond(a, p=None):
+    """Condition number of a matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.cond(arr, p=p)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_det(a):
+    """Determinant of a square matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.det(arr)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_eig(a):
+    """Eigenvalue decomposition of a square matrix."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a).astype(np.float64)
+    eigenvalues, eigenvectors = np.linalg.eig(arr)
+    return (
+        _from_numpy(np.ascontiguousarray(eigenvalues), complex128_dtype, a.device),
+        _from_numpy(np.ascontiguousarray(eigenvectors), complex128_dtype, a.device),
+    )
+
+
+def linalg_eigh(a, UPLO='L'):
+    """Eigenvalue decomposition of a symmetric/Hermitian matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    eigenvalues, eigenvectors = np.linalg.eigh(arr, UPLO=UPLO)
+    return (
+        _from_numpy(np.ascontiguousarray(eigenvalues.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(eigenvectors.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+    )
+
+
+def linalg_eigvals(a):
+    """Eigenvalues of a square matrix."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.eigvals(arr)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def linalg_eigvalsh(a, UPLO='L'):
+    """Eigenvalues of a symmetric/Hermitian matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.eigvalsh(arr, UPLO=UPLO)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_householder_product(input, tau):
+    """Computes the first n columns of the product of Householder matrices."""
+    A = _to_numpy(input).astype(np.float64)
+    tau_np = _to_numpy(tau).astype(np.float64)
+    m, n = A.shape[-2], A.shape[-1]
+    k = tau_np.shape[-1]
+    Q = np.eye(m, dtype=np.float64)
+    for i in range(k):
+        v = np.zeros(m, dtype=np.float64)
+        v[i] = 1.0
+        v[i + 1:] = A[i + 1:, i]
+        Q = Q - tau_np[i] * np.outer(Q @ v, v)
+    Q = Q[:, :n]
+    return _from_numpy(np.ascontiguousarray(Q.astype(to_numpy_dtype(input.dtype))), input.dtype, input.device)
+
+
+def linalg_inv(a):
+    """Inverse of a square matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.inv(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_lstsq(a, b, rcond=None, driver=None):
+    """Least-squares solution to a linear matrix equation."""
+    from collections import namedtuple
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    if rcond is None:
+        rcond = -1 if np.lib.NumpyVersion(np.__version__) < '2.0.0' else None
+    solution, residuals, rank, singular_values = np.linalg.lstsq(a_np, b_np, rcond=rcond)
+    LstsqResult = namedtuple("LstsqResult", ["solution", "residuals", "rank", "singular_values"])
+    return LstsqResult(
+        _from_numpy(np.ascontiguousarray(solution.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(np.atleast_1d(residuals).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        rank,
+        _from_numpy(np.ascontiguousarray(singular_values.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+    )
+
+
+def linalg_lu(a, pivot=True):
+    """LU decomposition with partial pivoting."""
+    from collections import namedtuple
+    from scipy import linalg as scipy_linalg
+    arr = _to_numpy(a).astype(np.float64)
+    P_mat, L, U = scipy_linalg.lu(arr)
+    LUResult = namedtuple("LUResult", ["P", "L", "U"])
+    dt = to_numpy_dtype(a.dtype)
+    return LUResult(
+        _from_numpy(np.ascontiguousarray(P_mat.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(L.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(U.astype(dt)), a.dtype, a.device),
+    )
+
+
+def linalg_lu_factor(a, pivot=True):
+    """Compact LU factorization."""
+    from collections import namedtuple
+    from scipy import linalg as scipy_linalg
+    arr = _to_numpy(a).astype(np.float64)
+    lu, piv = scipy_linalg.lu_factor(arr)
+    LUFactorResult = namedtuple("LUFactorResult", ["LU", "pivots"])
+    return LUFactorResult(
+        _from_numpy(np.ascontiguousarray(lu.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(piv.astype(np.int32)), int64_dtype, a.device),
+    )
+
+
+def linalg_lu_solve(LU, pivots, B, left=True, adjoint=False):
+    """Solve using LU factorization."""
+    from scipy import linalg as scipy_linalg
+    lu_np = _to_numpy(LU).astype(np.float64)
+    piv_np = _to_numpy(pivots).astype(np.int32)
+    b_np = _to_numpy(B).astype(np.float64)
+    if not left:
+        b_np = b_np.T
+    trans = 1 if adjoint else 0
+    out = scipy_linalg.lu_solve((lu_np, piv_np), b_np, trans=trans)
+    if not left:
+        out = out.T
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(B.dtype))), B.dtype, B.device)
+
+
+def linalg_matrix_exp(a):
+    """Matrix exponential."""
+    from scipy import linalg as scipy_linalg
+    arr = _to_numpy(a).astype(np.float64)
+    out = scipy_linalg.expm(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_matrix_norm(a, ord='fro', dim=(-2, -1), keepdim=False):
+    """Matrix norm."""
+    arr = _to_numpy(a).astype(np.float64)
+    if isinstance(dim, (list, tuple)) and len(dim) == 2:
+        axis = tuple(dim)
+    else:
+        axis = dim
+    if ord == 'fro':
+        out = np.sqrt(np.sum(arr ** 2, axis=axis, keepdims=keepdim))
+    elif ord == 'nuc':
+        # Nuclear norm = sum of singular values
+        out = np.sum(np.linalg.svd(arr, compute_uv=False), axis=-1, keepdims=keepdim)
+    else:
+        out = np.linalg.norm(arr, ord=ord, axis=axis, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_matrix_power(a, n):
+    """Matrix raised to integer power n."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.matrix_power(arr, n)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_matrix_rank(a, atol=None, rtol=None, hermitian=False):
+    """Numerical rank of a matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    if atol is not None or rtol is not None:
+        s = np.linalg.svd(arr, compute_uv=False)
+        tol = 0.0
+        if atol is not None:
+            tol = max(tol, atol)
+        if rtol is not None:
+            tol = max(tol, rtol * s[..., 0])
+        rank = np.sum(s > tol, axis=-1)
+    else:
+        rank = np.linalg.matrix_rank(arr)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(rank).astype(np.int64)), int64_dtype, a.device)
+
+
+def linalg_multi_dot(tensors):
+    """Efficiently multiply 2+ matrices using np.linalg.multi_dot."""
+    arrays = [_to_numpy(t).astype(np.float64) for t in tensors]
+    out = np.linalg.multi_dot(arrays)
+    dt = tensors[0].dtype
+    dev = tensors[0].device
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(dt))), dt, dev)
+
+
+def linalg_norm(a, ord=None, dim=None, keepdim=False):
+    """Vector or matrix norm."""
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            axis = tuple(dim)
+        else:
+            axis = dim
+    else:
+        axis = None
+    out = np.linalg.norm(arr, ord=ord, axis=axis, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_pinv(a, atol=None, rtol=None, hermitian=False):
+    """Moore-Penrose pseudoinverse."""
+    arr = _to_numpy(a).astype(np.float64)
+    if rtol is not None:
+        rcond = rtol
+    elif atol is not None:
+        s_max = np.linalg.svd(arr, compute_uv=False)[..., 0]
+        rcond = atol / s_max
+    else:
+        rcond = 1e-15
+    out = np.linalg.pinv(arr, rcond=rcond)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_slogdet(a):
+    """Sign and log absolute value of determinant."""
+    from collections import namedtuple
+    arr = _to_numpy(a).astype(np.float64)
+    sign, logabsdet = np.linalg.slogdet(arr)
+    SlogdetResult = namedtuple("SlogdetResult", ["sign", "logabsdet"])
+    dt = to_numpy_dtype(a.dtype)
+    return SlogdetResult(
+        _from_numpy(np.ascontiguousarray(np.atleast_1d(sign).astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(np.atleast_1d(logabsdet).astype(dt)), a.dtype, a.device),
+    )
+
+
+def linalg_solve(a, b, left=True):
+    """Solve a square system of linear equations."""
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    if not left:
+        # X @ A = B => A^T @ X^T = B^T
+        out = np.linalg.solve(a_np.T, b_np.T).T
+    else:
+        out = np.linalg.solve(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_solve_triangular(a, b, upper, left=True, unitriangular=False):
+    """Solve a triangular system."""
+    from scipy import linalg as scipy_linalg
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    if not left:
+        a_np = a_np.T
+        b_np = b_np.T
+        upper = not upper
+    out = scipy_linalg.solve_triangular(a_np, b_np, lower=not upper, unit_diagonal=unitriangular)
+    if not left:
+        out = out.T
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_svd(a, full_matrices=True):
+    """Singular value decomposition."""
+    arr = _to_numpy(a).astype(np.float64)
+    U, S, Vh = np.linalg.svd(arr, full_matrices=full_matrices)
+    dt = to_numpy_dtype(a.dtype)
+    return (
+        _from_numpy(np.ascontiguousarray(U.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(S.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(Vh.astype(dt)), a.dtype, a.device),
+    )
+
+
+def linalg_svdvals(a):
+    """Singular values of a matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.svd(arr, compute_uv=False)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_tensorinv(a, ind=2):
+    """Tensor inverse (generalization of matrix inverse)."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.tensorinv(arr, ind=ind)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_tensorsolve(a, b, dims=None):
+    """Solve a tensor equation."""
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    axes = None if dims is None else tuple(dims)
+    out = np.linalg.tensorsolve(a_np, b_np, axes=axes)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_vander(x, N=None):
+    """Vandermonde matrix."""
+    arr = _to_numpy(x)
+    n = N if N is not None else len(arr)
+    out = np.vander(arr, N=n, increasing=True)
+    return _from_numpy(np.ascontiguousarray(out), x.dtype, x.device)
+
+
+def linalg_vector_norm(a, ord=2, dim=None, keepdim=False):
+    """Vector norm."""
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            axis = tuple(dim)
+        else:
+            axis = dim
+    else:
+        axis = None
+    if ord == float('inf'):
+        out = np.max(np.abs(arr), axis=axis, keepdims=keepdim)
+    elif ord == float('-inf'):
+        out = np.min(np.abs(arr), axis=axis, keepdims=keepdim)
+    elif ord == 0:
+        out = np.sum(arr != 0, axis=axis, keepdims=keepdim).astype(np.float64)
+    else:
+        out = np.sum(np.abs(arr) ** ord, axis=axis, keepdims=keepdim) ** (1.0 / ord)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# torch.fft ops
+# ---------------------------------------------------------------------------
+
+def fft_fft(a, n=None, dim=-1, norm=None):
+    """1D discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.fft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_ifft(a, n=None, dim=-1, norm=None):
+    """1D inverse discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.ifft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_fft2(a, s=None, dim=(-2, -1), norm=None):
+    """2D discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.fft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_ifft2(a, s=None, dim=(-2, -1), norm=None):
+    """2D inverse discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.ifft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_fftn(a, s=None, dim=None, norm=None):
+    """N-D discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.fftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_ifftn(a, s=None, dim=None, norm=None):
+    """N-D inverse discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.ifftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_rfft(a, n=None, dim=-1, norm=None):
+    """1D FFT of real-valued input."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.rfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_irfft(a, n=None, dim=-1, norm=None):
+    """Inverse of rfft."""
+    arr = _to_numpy(a)
+    out = np.fft.irfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_rfft2(a, s=None, dim=(-2, -1), norm=None):
+    """2D FFT of real-valued input."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.rfft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_irfft2(a, s=None, dim=(-2, -1), norm=None):
+    """Inverse of rfft2."""
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.irfft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_rfftn(a, s=None, dim=None, norm=None):
+    """N-D FFT of real-valued input."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.rfftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_irfftn(a, s=None, dim=None, norm=None):
+    """Inverse of rfftn."""
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.irfftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_hfft(a, n=None, dim=-1, norm=None):
+    """1D FFT of Hermitian symmetric signal (output is real)."""
+    arr = _to_numpy(a)
+    out = np.fft.hfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_ihfft(a, n=None, dim=-1, norm=None):
+    """Inverse of hfft."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.ihfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_fftshift(a, dim=None):
+    """Shift zero-frequency component to center."""
+    arr = _to_numpy(a)
+    axes = None if dim is None else (tuple(dim) if isinstance(dim, (list, tuple)) else (dim,))
+    out = np.fft.fftshift(arr, axes=axes)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_ifftshift(a, dim=None):
+    """Inverse of fftshift."""
+    arr = _to_numpy(a)
+    axes = None if dim is None else (tuple(dim) if isinstance(dim, (list, tuple)) else (dim,))
+    out = np.fft.ifftshift(arr, axes=axes)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
