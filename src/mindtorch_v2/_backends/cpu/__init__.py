@@ -103,6 +103,7 @@ from .ops import (
     rsqrt,
     sign,
     signbit,
+    square,
     isnan,
     isinf,
     isfinite,
@@ -276,6 +277,7 @@ registry.register("log10", "cpu", log10, meta=meta_infer.infer_unary)
 registry.register("exp2", "cpu", exp2, meta=meta_infer.infer_unary)
 registry.register("rsqrt", "cpu", rsqrt, meta=meta_infer.infer_unary)
 registry.register("sign", "cpu", sign, meta=meta_infer.infer_unary)
+registry.register("square", "cpu", square, meta=meta_infer.infer_unary)
 registry.register("signbit", "cpu", signbit, meta=meta_infer.infer_unary_bool)
 registry.register("isnan", "cpu", isnan, meta=meta_infer.infer_unary_bool)
 registry.register("isinf", "cpu", isinf, meta=meta_infer.infer_unary_bool)

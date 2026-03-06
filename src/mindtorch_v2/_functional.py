@@ -1328,3 +1328,28 @@ def isin(elements, test_elements):
 
 def heaviside(a, values):
     return dispatch("heaviside", a.device.type, a, values)
+
+
+# ---------------------------------------------------------------------------
+# P0 dtype utilities & query functions
+# ---------------------------------------------------------------------------
+
+def is_tensor(obj):
+    from ._tensor import Tensor
+    return isinstance(obj, Tensor)
+
+
+def is_floating_point(input):
+    return input.is_floating_point()
+
+
+def is_complex(input):
+    return input.is_complex()
+
+
+def numel(input):
+    return input.numel()
+
+
+def square(a):
+    return dispatch("square", a.device.type, a)
