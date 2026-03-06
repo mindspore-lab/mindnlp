@@ -232,6 +232,13 @@ from .ops import (
     randperm,
     # Shape
     flatten_op,
+    # P1 new ops
+    baddbmm,
+    trace_op,
+    cummin_op,
+    logsumexp_op,
+    renorm_op,
+    logical_xor,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -497,6 +504,14 @@ registry.register("logical_not", "npu", logical_not, meta=meta_infer.infer_unary
 
 # In-place ops (batch 1)
 registry.register("div_", "npu", div_, meta=meta_infer.infer_binary)
+
+# P1 new ops
+registry.register("baddbmm", "npu", baddbmm)
+registry.register("trace", "npu", trace_op)
+registry.register("cummin", "npu", cummin_op)
+registry.register("logsumexp", "npu", logsumexp_op, meta=meta_infer.infer_sum)
+registry.register("renorm", "npu", renorm_op, meta=meta_infer.infer_unary)
+registry.register("logical_xor", "npu", logical_xor, meta=meta_infer.infer_binary_bool)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

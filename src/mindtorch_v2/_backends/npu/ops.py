@@ -2727,31 +2727,89 @@ def nonzero(a, as_tuple=False):
 
 
 def lerp(a, b, weight):
-    if not hasattr(weight, "shape"):
-        weight = _scalar_to_npu_tensor(weight, a)
-    return add(a, mul(weight, sub(b, a)))
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    if hasattr(weight, "shape"):
+        # Tensor weight path
+        w_storage = _unwrap_storage(weight)
+        out_shape = _broadcast_shape(_broadcast_shape(a.shape, b.shape), weight.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.lerp_tensor(
+            a_storage.data_ptr(), b_storage.data_ptr(), w_storage.data_ptr(), out_ptr,
+            a.shape, a.stride, b.shape, b.stride,
+            weight.shape, weight.stride, out_shape, out_stride,
+            a.dtype, runtime, stream=stream.stream,
+        )
+    else:
+        # Scalar weight path
+        out_shape = _broadcast_shape(a.shape, b.shape)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+        out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+        aclnn.lerp_scalar(
+            a_storage.data_ptr(), b_storage.data_ptr(), out_ptr,
+            a.shape, a.stride, b.shape, b.stride,
+            out_shape, out_stride, a.dtype, float(weight),
+            runtime, stream=stream.stream,
+        )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def addcmul(a, b, c, value=1.0):
-    if not hasattr(value, "shape"):
-        value = _scalar_to_npu_tensor(value, a)
-    return add(a, mul(value, mul(b, c)))
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    c_storage = _unwrap_storage(c)
+    out_shape = _broadcast_shape(_broadcast_shape(a.shape, b.shape), c.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    if hasattr(value, "shape"):
+        value = float(_to_numpy(value))
+    aclnn.addcmul(
+        a_storage.data_ptr(), b_storage.data_ptr(), c_storage.data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        c.shape, c.stride, out_shape, out_stride,
+        a.dtype, float(value), runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def addcdiv(a, b, c, value=1.0):
-    if not hasattr(value, "shape"):
-        value = _scalar_to_npu_tensor(value, a)
-    return add(a, mul(value, div(b, c)))
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    b_storage = _unwrap_storage(b)
+    c_storage = _unwrap_storage(c)
+    out_shape = _broadcast_shape(_broadcast_shape(a.shape, b.shape), c.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    if hasattr(value, "shape"):
+        value = float(_to_numpy(value))
+    aclnn.addcdiv(
+        a_storage.data_ptr(), b_storage.data_ptr(), c_storage.data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        c.shape, c.stride, out_shape, out_stride,
+        a.dtype, float(value), runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def logaddexp(a, b):
-    m = max_(a, b)
-    return add(m, log(add(exp(sub(a, m)), exp(sub(b, m)))))
+    return _binary_op(a, b, aclnn.slogaddexp, "logaddexp")
 
 
 def logaddexp2(a, b):
-    m = max_(a, b)
-    return add(m, log2(add(exp2(sub(a, m)), exp2(sub(b, m)))))
+    return _binary_op(a, b, aclnn.slogaddexp2, "logaddexp2")
 
 
 def hypot(a, b):
@@ -2759,11 +2817,15 @@ def hypot(a, b):
 
 
 def remainder(a, b):
-    return sub(a, mul(floor(div(a, b)), b))
+    if isinstance(b, (int, float)):
+        b = _scalar_to_npu_tensor(b, a)
+    return _binary_op(a, b, aclnn.sremainder, "remainder")
 
 
 def fmod(a, b):
-    return sub(a, mul(trunc(div(a, b)), b))
+    if isinstance(b, (int, float)):
+        b = _scalar_to_npu_tensor(b, a)
+    return _binary_op(a, b, aclnn.sfmod, "fmod")
 
 
 def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
@@ -6995,4 +7057,149 @@ def instance_norm(input, weight=None, bias=None, running_mean=None, running_var=
         b = reshape(bias, b_shape)
         out = add(out, b)
     return out
+
+
+# --- P1 ops ---
+
+def baddbmm(self_tensor, batch1, batch2, beta=1.0, alpha=1.0):
+    """beta * self + alpha * (batch1 @ batch2)"""
+    runtime = npu_runtime.get_runtime((self_tensor.device.index or 0))
+    stream = npu_state.current_stream((self_tensor.device.index or 0))
+    self_storage = _unwrap_storage(self_tensor)
+    b1_storage = _unwrap_storage(batch1)
+    b2_storage = _unwrap_storage(batch2)
+    # Output shape: (B, N, P) from (B, N, M) @ (B, M, P)
+    B = batch1.shape[0]
+    N = batch1.shape[1]
+    P = batch2.shape[2]
+    out_shape = (B, N, P)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_size = _numel(out_shape) * _dtype_itemsize(self_tensor.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    if hasattr(beta, "shape"):
+        beta = float(_unwrap_storage(beta).to_numpy())
+    if hasattr(alpha, "shape"):
+        alpha = float(_unwrap_storage(alpha).to_numpy())
+    aclnn.baddbmm(
+        self_storage.data_ptr(), b1_storage.data_ptr(), b2_storage.data_ptr(), out_ptr,
+        self_tensor.shape, self_tensor.stride, batch1.shape, batch1.stride,
+        batch2.shape, batch2.stride, out_shape, out_stride,
+        self_tensor.dtype, float(beta), float(alpha),
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), self_tensor.dtype, device=self_tensor.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def trace_op(a):
+    """Sum of diagonal elements of a 2D matrix."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    out_shape = ()
+    out_stride = ()
+    out_size = max(1, _numel(out_shape)) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.strace(
+        a_storage.data_ptr(), out_ptr,
+        a.shape, a.stride, a.dtype,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(1, _numel(out_shape)), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def cummin_op(a, dim):
+    """Cumulative minimum along a dimension. Returns namedtuple (values, indices)."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    ndim = len(a.shape)
+    if dim < 0:
+        dim = dim + ndim
+    out_shape = a.shape
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    values_size = out_numel * _dtype_itemsize(a.dtype)
+    indices_size = out_numel * _dtype_itemsize("int64")
+    values_ptr = npu_runtime._alloc_device(values_size, runtime=runtime)
+    indices_ptr = npu_runtime._alloc_device(indices_size, runtime=runtime)
+    aclnn.cummin(
+        a_storage.data_ptr(), values_ptr, indices_ptr,
+        a.shape, a.stride, a.dtype,
+        dim, out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+    values_storage = npu_typed_storage_from_ptr(values_ptr, out_numel, a.dtype, device=a.device)
+    indices_storage = npu_typed_storage_from_ptr(indices_ptr, out_numel, "int64", device=a.device)
+    values = _wrap_tensor(values_storage, out_shape, out_stride)
+    indices = _wrap_tensor(indices_storage, out_shape, out_stride)
+    return values, indices
+
+
+def logsumexp_op(a, dim, keepdim=False):
+    """LogSumExp reduction along dim."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    ndim = len(a.shape)
+    if isinstance(dim, int):
+        dims = [dim % ndim if ndim > 0 else 0]
+    else:
+        dims = [d % ndim if ndim > 0 else 0 for d in dim]
+    out_shape = _reduce_out_shape(a.shape, dims, keepdim)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = max(1, _numel(out_shape))
+    out_size = out_numel * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.logsumexp(
+        a_storage.data_ptr(), out_ptr,
+        a.shape, a.stride, a.dtype,
+        dims, keepdim,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, out_numel, a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def renorm_op(a, p, dim, maxnorm):
+    """Renormalize sub-tensors along dim so that p-norm <= maxnorm."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    ndim = len(a.shape)
+    if dim < 0:
+        dim = dim + ndim
+    out_size = _numel(a.shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(out_size, runtime=runtime)
+    aclnn.renorm(
+        a_storage.data_ptr(), out_ptr,
+        a.shape, a.stride, a.dtype,
+        float(p), dim, float(maxnorm),
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def logical_xor(a, b):
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(bool_dtype), runtime=runtime)
+    aclnn.logical_xor(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(b).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype,
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 

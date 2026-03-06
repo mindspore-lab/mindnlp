@@ -56,6 +56,7 @@ from ._functional import logical_and, logical_or, logical_not
 from ._functional import sub, log1p, expm1, maximum, minimum
 from ._functional import dot, outer, inner, mv, cross, tensordot
 from ._functional import logical_xor
+from ._functional import baddbmm, trace, cummin, logsumexp, renorm
 from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
 from ._functional import unflatten, broadcast_to, movedim, diagonal
 from ._functional import unique, searchsorted, kthvalue, median
@@ -382,6 +383,12 @@ __all__ = [
     "searchsorted",
     "kthvalue",
     "median",
+    # P1 new ops
+    "baddbmm",
+    "trace",
+    "cummin",
+    "logsumexp",
+    "renorm",
     # new random ops
     "bernoulli",
     "multinomial",
