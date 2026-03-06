@@ -99,6 +99,63 @@ def test_top_level_autocast_cache_api_shape_matches_torch():
         torch.set_autocast_cache_enabled("cpu", True)
 
 
+
+
+
+def _define_identity_custom_op():
+    import uuid
+    import mindtorch_v2.library as library
+
+    ns = f"ampautocast_{uuid.uuid4().hex}"
+    lib = library.Library(ns, "DEF")
+    lib.define("identity(Tensor x) -> Tensor")
+
+    @lib.impl("identity", dispatch_key="CPU")
+    def _identity_cpu(x):
+        return x
+
+    return f"{ns}::identity"
+
+
+def test_register_autocast_raises_for_unknown_op():
+    import pytest
+    import mindtorch_v2.library as library
+
+    with pytest.raises(RuntimeError):
+        library.register_autocast("ampautocast_missing::identity", "cpu", torch.bfloat16)
+
+
+def test_register_autocast_rejects_invalid_args_like_torch():
+    import pytest
+    import mindtorch_v2.library as library
+
+    with pytest.raises(ValueError):
+        library.register_autocast(1, "cpu", torch.bfloat16)
+
+    with pytest.raises(ValueError):
+        library.register_autocast("aten::add", "npu", torch.bfloat16)
+
+    with pytest.raises(RuntimeError):
+        library.register_autocast("aten::add", "cpu", torch.bfloat16)
+
+
+def test_register_autocast_affects_custom_op_dispatch_in_autocast_region():
+    import mindtorch_v2.library as library
+
+    qualname = _define_identity_custom_op()
+    x = torch.randn((4, 4), dtype=torch.float32)
+
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        before = torch._dispatch.dispatch(qualname, x.device, x)
+    assert before.dtype == torch.float32
+
+    result = library.register_autocast(qualname, "cpu", torch.bfloat16)
+    assert result is None
+
+    with torch.amp.autocast("cpu", dtype=torch.bfloat16):
+        after = torch._dispatch.dispatch(qualname, x.device, x)
+    assert after.dtype == torch.bfloat16
+
 def test_register_autocast_api_exists():
     import mindtorch_v2.library as library
 

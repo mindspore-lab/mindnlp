@@ -150,6 +150,14 @@ for name in _TORCH_LISTS["banned"]:
     _POLICY_MAP[name] = BANNED
 
 
+# Custom op autocast overrides registered via torch.library.register_autocast
+_CUSTOM_AUTOCAST_RULES = {}
+
+
+def register_custom_autocast_rule(op_name, device_type, cast_inputs):
+    _CUSTOM_AUTOCAST_RULES[(op_name, device_type)] = cast_inputs
+
+
 def _normalize_name(name: str) -> str:
     if name.startswith("aten::"):
         return name.split("::", 1)[1]
@@ -184,6 +192,10 @@ def _promote_dtype(args):
 def apply_autocast_policy(op_name, args, kwargs, device_type):
     if not is_autocast_enabled(device_type):
         return args, kwargs
+
+    custom_cast_dtype = _CUSTOM_AUTOCAST_RULES.get((op_name, device_type))
+    if custom_cast_dtype is not None:
+        return _cast_args(args, kwargs, device_type, custom_cast_dtype)
 
     normalized_name = _normalize_name(op_name)
     # Keep torch-like mixed-dtype runtime checks for these CPU ops.
