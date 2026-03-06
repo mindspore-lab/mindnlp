@@ -3414,8 +3414,7 @@ def uniform_(a, low=0.0, high=1.0):
         raise ValueError("NPU uniform_ expects NPU tensors")
 
     from ... import npu as npu_mod
-    seed = npu_mod._get_seed()
-    offset = npu_mod._get_and_advance_offset(advance=_numel(a.shape))
+    seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
     a_storage = _unwrap_storage(a)
     aclnn.inplace_uniform(
@@ -3440,8 +3439,7 @@ def normal_(a, mean=0.0, std=1.0):
         raise ValueError("NPU normal_ expects NPU tensors")
 
     from ... import npu as npu_mod
-    seed = npu_mod._get_seed()
-    offset = npu_mod._get_and_advance_offset(advance=_numel(a.shape))
+    seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
     a_storage = _unwrap_storage(a)
     aclnn.inplace_normal(
@@ -5071,8 +5069,7 @@ def _dropout_310b_mask(a, keep_prob):
     idx = _npu_arange_1d(numel, a.device)
     idx_f = _cast_tensor_dtype(idx, float_dtype)
 
-    seed = npu_mod._get_seed()
-    offset = npu_mod._get_and_advance_offset(advance=numel)
+    seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
     seed_t = _scalar_to_npu_tensor(float(seed + offset), idx_f)
 
     val = sin(add(mul(idx_f, 12.9898), mul(seed_t, 78.233)))
@@ -5119,8 +5116,7 @@ def dropout(a, p=0.5, training=True):
 
     # Get seed and offset from npu module
     from ... import npu as npu_mod
-    seed = npu_mod._get_seed()
-    offset = npu_mod._get_and_advance_offset(advance=out_numel)
+    seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
     # Step 1: Generate mask
     aclnn.dropout_gen_mask(
