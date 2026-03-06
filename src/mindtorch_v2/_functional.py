@@ -912,24 +912,35 @@ def full_like(input, fill_value, *, dtype=None, device=None, memory_format=None)
     return full(input.shape, fill_value, dtype=dtype, device=device)
 
 
-def randn_like(input, *, dtype=None, device=None, memory_format=None):
+def randn_like(input, *, dtype=None, device=None, memory_format=None, generator=None):
     if dtype is None:
         dtype = input.dtype
     if device is None:
         device = input.device
-    return randn(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+    return randn(input.shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
-def rand_like(input, *, dtype=None, device=None, memory_format=None):
+def rand_like(input, *, dtype=None, device=None, memory_format=None, generator=None):
     if dtype is None:
         dtype = input.dtype
     if device is None:
         device = input.device
-    return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+    return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
 def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     return dispatch("rms_norm", input.device.type, input, normalized_shape, weight, eps)
+
+
+def normal(mean, std, size=None, *, generator=None, out=None):
+    if size is not None:
+        result = empty(size)
+        result.normal_(float(mean), float(std), generator=generator)
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    raise NotImplementedError("tensor mean/std form not yet supported")
 
 
 # ---------------------------------------------------------------------------

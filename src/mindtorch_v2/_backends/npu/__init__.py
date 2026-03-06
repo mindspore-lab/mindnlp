@@ -13,6 +13,8 @@ from .creation import (
     range_create,
     rand_create,
     randn_create,
+    randint_create,
+    randperm_create,
     tensor_create,
     zeros_create,
 )
@@ -67,6 +69,8 @@ from .ops import (
     zero_,
     uniform_,
     normal_,
+    randint_,
+    random_,
     fill_,
     clamp_,
     copy_,
@@ -331,6 +335,8 @@ registry.register("relu_", "npu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "npu", zero_, meta=meta_infer.infer_unary)
 registry.register("uniform_", "npu", uniform_, meta=meta_infer.infer_unary)
 registry.register("normal_", "npu", normal_, meta=meta_infer.infer_unary)
+registry.register("randint_", "npu", randint_, meta=meta_infer.infer_unary)
+registry.register("random_", "npu", random_, meta=meta_infer.infer_unary)
 registry.register("fill_", "npu", fill_, meta=meta_infer.infer_unary)
 registry.register("clamp_", "npu", clamp_, meta=meta_infer.infer_unary)
 registry.register("copy_", "npu", copy_, meta=meta_infer.infer_unary)
@@ -397,6 +403,8 @@ registry.register("ones", "npu", ones_create)
 registry.register("empty", "npu", empty_create)
 registry.register("randn", "npu", randn_create)
 registry.register("rand", "npu", rand_create)
+registry.register("randint", "npu", randint_create)
+registry.register("randperm", "npu", randperm_create)
 registry.register("arange", "npu", arange_create)
 registry.register("linspace", "npu", linspace_create)
 registry.register("full", "npu", full_create)

@@ -12104,7 +12104,7 @@ def unique(self_ptr, out_ptr, inverse_indices_ptr,
 
 
 # Randperm
-def randperm(n, out_ptr, dtype, runtime, stream=None):
+def randperm(n, out_ptr, dtype, runtime, stream=None, seed=None, offset=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -12118,9 +12118,11 @@ def randperm(n, out_ptr, dtype, runtime, stream=None):
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
-        import random
-        seed = random.randint(0, 2**31 - 1)
-        offset = 0
+        if seed is None:
+            import random
+            seed = random.randint(0, 2**31 - 1)
+        if offset is None:
+            offset = 0
         ret = bindings.aclnn_randperm_get_workspace(
             ctypes.c_int64(n),
             ctypes.c_int64(seed),

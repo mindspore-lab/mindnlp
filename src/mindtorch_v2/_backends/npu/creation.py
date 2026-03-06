@@ -264,3 +264,41 @@ def range_create(start, end, step=1, dtype=None, device=None):
 
     storage = npu_typed_storage_from_ptr(ptr, max(size, 1), dtype, device=device)
     return _wrap_tensor(storage, shape, stride, requires_grad=False)
+
+
+def randint_create(low, high=None, size=None, dtype=None, device=None, requires_grad=False, generator=None, **kwargs):
+    """Create a tensor filled with random integers from [low, high) on NPU."""
+    from ..._dtype import int64 as int64_dtype, float32 as f32
+    if high is None:
+        low, high = 0, low
+    if size is None:
+        raise ValueError("size is required for randint")
+    size = tuple(size)
+    out_dtype = dtype if dtype is not None else int64_dtype
+    # Create float tensor, fill uniform [low, high), floor, then cast to int dtype
+    t = empty_create(size, dtype=f32, device=device)
+    from .ops import uniform_
+    uniform_(t, float(low), float(high), generator=generator)
+    # floor
+    runtime = npu_runtime.get_runtime(_device_index(device))
+    stream = npu_state.current_stream(_device_index(device))
+    t_storage = t.storage()
+    aclnn.floor(t_storage.data_ptr(), t_storage.data_ptr(), t.shape, t.stride, t.dtype, runtime, stream=stream.stream)
+    # cast to target int dtype if needed
+    if out_dtype != f32:
+        if not aclnn.cast_symbols_ok():
+            raise RuntimeError("aclnnCast not available")
+        numel = int(np.prod(size))
+        out_itemsize = np.dtype(npu_runtime._dtype_to_numpy(out_dtype)).itemsize
+        out_ptr = npu_runtime._alloc_device(max(numel, 1) * out_itemsize, runtime=runtime)
+        out_stride = _contiguous_stride(size)
+        aclnn.cast(t_storage.data_ptr(), out_ptr, size, out_stride, f32, out_dtype, runtime, stream=stream.stream)
+        out_storage = npu_typed_storage_from_ptr(out_ptr, max(numel, 1), out_dtype, device=device)
+        return _wrap_tensor(out_storage, size, out_stride, requires_grad)
+    return t
+
+
+def randperm_create(n, dtype=None, device=None, requires_grad=False, generator=None, **kwargs):
+    """Create a random permutation of integers from 0 to n-1 on NPU."""
+    from .ops import randperm as randperm_op
+    return randperm_op(n, dtype=dtype, device=device, generator=generator)

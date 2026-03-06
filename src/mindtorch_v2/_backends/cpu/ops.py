@@ -2032,12 +2032,28 @@ def bitwise_not(a):
 # Group 4: Random in-place op
 # ---------------------------------------------------------------------------
 
-def randint_(a, low, high=None):
+def randint_(a, low, high=None, generator=None):
     """In-place randint — fills tensor a with random integers from [low, high)."""
     if high is None:
         low, high = 0, low
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     arr = _to_numpy(a)
-    arr[...] = np.random.randint(low, high, size=arr.shape)
+    arr[...] = rng.randint(int(low), int(high), size=arr.shape)
+    return a
+
+
+def random_(a, from_=0, to=None, generator=None):
+    """In-place random — fills tensor with random values from [from_, to)."""
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    if to is None:
+        if np.issubdtype(arr.dtype, np.floating):
+            to = 2**24 if arr.dtype == np.float32 else 2**53
+        else:
+            to = int(np.iinfo(arr.dtype).max) + 1
+    arr[...] = rng.randint(int(from_), int(to), size=arr.shape).astype(arr.dtype)
     return a
 
 

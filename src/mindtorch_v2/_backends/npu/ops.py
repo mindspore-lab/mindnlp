@@ -1208,7 +1208,7 @@ def unique(a, sorted=True, return_inverse=False, return_counts=False, dim=None):
         return out
 
 
-def randperm(n, dtype=None, device=None):
+def randperm(n, dtype=None, device=None, generator=None):
     """Random permutation of integers from 0 to n-1."""
     if not aclnn.randperm_symbols_ok():
         raise RuntimeError("aclnnRandperm symbols not available")
@@ -1226,10 +1226,17 @@ def randperm(n, dtype=None, device=None):
     runtime = npu_runtime.get_runtime((device.index or 0))
     stream = npu_state.current_stream((device.index or 0))
 
+    # Get deterministic seed
+    if generator is not None and hasattr(generator, 'philox_engine_inputs'):
+        seed, offset = generator.philox_engine_inputs(10)
+    else:
+        from ... import npu as npu_mod
+        seed, offset = npu_mod._get_and_advance_offset(device_index=(device.index or 0), increment=10)
+
     itemsize = _dtype_itemsize(dtype)
     out_ptr = npu_runtime._alloc_device(n * itemsize, runtime=runtime)
 
-    aclnn.randperm(n, out_ptr, dtype, runtime, stream=stream.stream)
+    aclnn.randperm(n, out_ptr, dtype, runtime, stream=stream.stream, seed=seed, offset=offset)
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, n, dtype, device=device)
     return _wrap_tensor(out_storage, (n,), (1,))
@@ -3528,6 +3535,39 @@ def normal_(a, mean=0.0, std=1.0, generator=None):
         runtime,
         stream=stream.stream,
     )
+    return a
+
+
+def randint_(a, low, high=None, generator=None):
+    """In-place randint — fills tensor with random integers from [low, high)."""
+    if high is None:
+        low, high = 0, low
+    # Fill with uniform [low, high), then floor to get integers
+    uniform_(a, float(low), float(high), generator=generator)
+    # In-place floor
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    aclnn.floor(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return a
+
+
+def random_(a, from_=0, to=None, generator=None):
+    """In-place random — fills tensor with random values from [from_, to)."""
+    import numpy as np
+    from ..._dtype import to_numpy_dtype
+    np_dtype = to_numpy_dtype(a.dtype)
+    if to is None:
+        if np.issubdtype(np_dtype, np.floating):
+            to = 2**24 if np_dtype == np.float32 else 2**53
+        else:
+            to = int(np.iinfo(np_dtype).max) + 1
+    # Fill with uniform [from_, to), then floor
+    uniform_(a, float(from_), float(to), generator=generator)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    aclnn.floor(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
     return a
 
 
