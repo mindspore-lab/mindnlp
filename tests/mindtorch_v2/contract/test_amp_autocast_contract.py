@@ -139,6 +139,18 @@ def test_register_autocast_rejects_invalid_args_like_torch():
         library.register_autocast("aten::add", "cpu", torch.bfloat16)
 
 
+
+
+def test_register_autocast_duplicate_registration_raises_like_torch():
+    import pytest
+    import mindtorch_v2.library as library
+
+    qualname = _define_identity_custom_op()
+    library.register_autocast(qualname, "cpu", torch.bfloat16)
+
+    with pytest.raises(RuntimeError):
+        library.register_autocast(qualname, "cpu", torch.float16)
+
 def test_register_autocast_affects_custom_op_dispatch_in_autocast_region():
     import mindtorch_v2.library as library
 

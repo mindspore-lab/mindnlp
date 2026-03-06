@@ -155,7 +155,14 @@ _CUSTOM_AUTOCAST_RULES = {}
 
 
 def register_custom_autocast_rule(op_name, device_type, cast_inputs):
-    _CUSTOM_AUTOCAST_RULES[(op_name, device_type)] = cast_inputs
+    key = (op_name, device_type)
+    if key in _CUSTOM_AUTOCAST_RULES:
+        raise RuntimeError(
+            "This is not allowed since there's already a kernel registered from python "
+            f"overriding {op_name.split('::', 1)[1]}'s behavior for Autocast{device_type.upper()} dispatch key "
+            f"and {op_name.split('::', 1)[0]} namespace."
+        )
+    _CUSTOM_AUTOCAST_RULES[key] = cast_inputs
 
 
 def _normalize_name(name: str) -> str:
