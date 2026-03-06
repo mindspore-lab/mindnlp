@@ -7502,3 +7502,240 @@ def cross_op(a, b, dim=-1):
     out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
+
+# ---------- P0: ACLNN large-kernel ops ----------
+
+def im2col_op(a, kernel_size, dilation, padding, stride):
+    """F.unfold: extract sliding local blocks.
+
+    Composite implementation: aclnnIm2col returns 561103 on CANN 8.3.RC2.
+    Uses pad + flatten + gather with existing NPU ops.
+    """
+    from ..._dispatch.dispatcher import dispatch
+    from ..common import view as view_backend
+
+    N, C, H, W = a.shape
+    kH, kW = kernel_size
+    dH, dW = dilation
+    pH, pW = padding
+    sH, sW = stride
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    out_H = (H + 2 * pH - ekH) // sH + 1
+    out_W = (W + 2 * pW - ekW) // sW + 1
+    L = out_H * out_W
+
+    if pH > 0 or pW > 0:
+        a = dispatch("pad", "npu", a, (pW, pW, pH, pH))
+    a = contiguous(a)
+
+    import numpy as _np
+    _, _, H_pad, W_pad = a.shape
+
+    # Build gather indices: for each kernel position, compute flat index into H_pad*W_pad plane
+    patches = []
+    for kh in range(kH):
+        for kw in range(kW):
+            row_indices = []
+            for oh in range(out_H):
+                for ow in range(out_W):
+                    r = oh * sH + kh * dH
+                    c = ow * sW + kw * dW
+                    row_indices.append(r * W_pad + c)
+            patches.append(row_indices)
+
+    # Stack into (kH*kW, L), tile to (C*kH*kW, L) with per-channel offsets
+    idx_2d = _np.stack([_np.array(p, dtype=_np.int64) for p in patches], axis=0)
+    idx_full = _np.tile(idx_2d, (C, 1))
+
+    offsets = _np.arange(C, dtype=_np.int64).reshape(C, 1) * (H_pad * W_pad)
+    offsets_tiled = _np.repeat(offsets, kH * kW, axis=0)
+    idx_with_offset = idx_full + offsets_tiled
+
+    # Broadcast to (N, C*kH*kW, L), then flatten last two dims for gather
+    idx_with_offset_batch = _np.broadcast_to(
+        idx_with_offset[None], (N, C * kH * kW, L)
+    ).copy()
+    idx_flat = idx_with_offset_batch.reshape(N, C * kH * kW * L)
+
+    # Flatten input to (N, C*H_pad*W_pad)
+    a_fully_flat = view_backend.reshape(a, (N, C * H_pad * W_pad))
+
+    # Copy index to NPU and gather
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    idx_ptr, _ = npu_runtime._copy_cpu_to_npu(idx_flat, runtime=runtime)
+    idx_shape = (N, C * kH * kW * L)
+    idx_stride = npu_runtime._contiguous_stride(idx_shape)
+    idx_storage = npu_typed_storage_from_ptr(
+        idx_ptr, _numel(idx_shape), int64_dtype, device=a.device
+    )
+    idx_tensor = _wrap_tensor(idx_storage, idx_shape, idx_stride)
+
+    result = gather(a_fully_flat, -1, idx_tensor)
+    out_shape = (N, C * kH * kW, L)
+    result = view_backend.reshape(result, out_shape)
+    return result
+
+
+def grid_sample_op(input, grid, mode='bilinear', padding_mode='zeros',
+                   align_corners=None):
+    """F.grid_sample via aclnnGridSampler2D."""
+    if align_corners is None:
+        align_corners = False
+    mode_map = {'bilinear': 0, 'nearest': 1, 'bicubic': 2}
+    pad_map = {'zeros': 0, 'border': 1, 'reflection': 2}
+    interp = mode_map.get(mode, 0)
+    pad = pad_map.get(padding_mode, 0)
+
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    N, C = input.shape[0], input.shape[1]
+    H_out, W_out = grid.shape[1], grid.shape[2]
+    out_shape = (N, C, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(
+        _numel(out_shape) * _dtype_itemsize(input.dtype), runtime=runtime
+    )
+    aclnn.sgrid_sampler2d(
+        _unwrap_storage(input).data_ptr(), _unwrap_storage(grid).data_ptr(),
+        out_ptr,
+        input.shape, input.stride, grid.shape, grid.stride,
+        out_shape, out_stride, input.dtype,
+        interp, pad, align_corners,
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(
+        out_ptr, _numel(out_shape), input.dtype, device=input.device
+    )
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def affine_grid_op(theta, size, align_corners=None):
+    """F.affine_grid via aclnnAffineGrid."""
+    if align_corners is None:
+        align_corners = False
+
+    runtime = npu_runtime.get_runtime((theta.device.index or 0))
+    stream = npu_state.current_stream((theta.device.index or 0))
+
+    N = size[0]
+    if len(size) == 4:
+        H, W = size[2], size[3]
+        out_shape = (N, H, W, 2)
+    else:
+        D, H, W = size[2], size[3], size[4]
+        out_shape = (N, D, H, W, 3)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(
+        _numel(out_shape) * _dtype_itemsize(theta.dtype), runtime=runtime
+    )
+    aclnn.saffine_grid(
+        _unwrap_storage(theta).data_ptr(), out_ptr,
+        theta.shape, theta.stride, theta.dtype,
+        list(size), align_corners,
+        out_shape, out_stride,
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(
+        out_ptr, _numel(out_shape), theta.dtype, device=theta.device
+    )
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+# ---------- P1: View / reshape composite ops ----------
+
+def broadcast_to_op(a, shape):
+    """Tensor.broadcast_to — delegates to expand."""
+    return expand(a, shape)
+
+
+def movedim_op(a, source, destination):
+    """torch.movedim — compute permutation then delegate to permute."""
+    from ..common import view as view_backend
+    ndim = a.dim()
+    if isinstance(source, int):
+        source = [source]
+    if isinstance(destination, int):
+        destination = [destination]
+    source = [s % ndim for s in source]
+    destination = [d % ndim for d in destination]
+    order = [i for i in range(ndim) if i not in source]
+    dst_src = sorted(zip(destination, source))
+    for dst, src in dst_src:
+        order.insert(dst, src)
+    return view_backend.permute(a, order)
+
+
+def unflatten_op(a, dim, sizes):
+    """Tensor.unflatten — reshape one dim into multiple dims."""
+    from ..common import view as view_backend
+    ndim = a.dim()
+    d = dim if dim >= 0 else dim + ndim
+    new_shape = a.shape[:d] + tuple(sizes) + a.shape[d + 1:]
+    return view_backend.reshape(a, new_shape)
+
+
+def diagonal_op(a, offset=0, dim1=0, dim2=1):
+    """torch.diagonal — permute + flatten + gather.
+
+    Uses gather with pre-expanded numpy indices to avoid ACLNN offset bug
+    (select creates views with non-zero offset that _create_tensor ignores).
+    """
+    from ..common import view as view_backend
+    import numpy as _np
+
+    ndim = a.dim()
+    d1 = dim1 % ndim
+    d2 = dim2 % ndim
+    if d1 == d2:
+        raise RuntimeError("diagonal: dim1 and dim2 cannot be equal")
+
+    # Move d1, d2 to the last two dims
+    dims = [i for i in range(ndim) if i != d1 and i != d2] + [d1, d2]
+    t = view_backend.permute(a, dims)
+
+    rows = t.shape[-2]
+    cols = t.shape[-1]
+    if offset >= 0:
+        diag_len = max(0, min(rows, cols - offset))
+    else:
+        diag_len = max(0, min(rows + offset, cols))
+
+    if diag_len == 0:
+        batch_shape = t.shape[:-2]
+        out_shape = batch_shape + (0,)
+        out_stride = npu_runtime._contiguous_stride(out_shape)
+        runtime = npu_runtime.get_runtime((a.device.index or 0))
+        out_ptr = npu_runtime._alloc_device(
+            max(1, _numel(out_shape) * _dtype_itemsize(a.dtype)), runtime=runtime
+        )
+        out_storage = npu_typed_storage_from_ptr(
+            out_ptr, max(1, _numel(out_shape)), a.dtype, device=a.device
+        )
+        return _wrap_tensor(out_storage, out_shape, out_stride)
+
+    batch_shape = t.shape[:-2]
+    flat_shape = batch_shape + (rows * cols,)
+    t_flat = view_backend.reshape(contiguous(t), flat_shape)
+
+    if offset >= 0:
+        flat_idx = [(i * cols + i + offset) for i in range(diag_len)]
+    else:
+        flat_idx = [((i - offset) * cols + i) for i in range(diag_len)]
+
+    idx_1d = _np.array(flat_idx, dtype=_np.int64)
+    idx_expanded = _np.broadcast_to(idx_1d, batch_shape + (diag_len,)).copy()
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    idx_ptr, _ = npu_runtime._copy_cpu_to_npu(idx_expanded, runtime=runtime)
+    idx_shape = batch_shape + (diag_len,)
+    idx_stride = npu_runtime._contiguous_stride(idx_shape)
+    idx_storage = npu_typed_storage_from_ptr(
+        idx_ptr, _numel(idx_shape), int64_dtype, device=a.device
+    )
+    idx_tensor = _wrap_tensor(idx_storage, idx_shape, idx_stride)
+
+    result = gather(t_flat, -1, idx_tensor)
+    return result
+

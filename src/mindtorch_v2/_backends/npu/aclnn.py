@@ -3393,6 +3393,43 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnIm2col: (self, kernelSize, dilation, padding, stride, out)
+        self.aclnn_im2col_get_workspace = _optional_symbol(
+            libs, "aclnnIm2colGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_im2col = _optional_symbol(
+            libs, "aclnnIm2col", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnGridSampler2D: (input, grid, interpolation_mode, padding_mode, align_corners, out)
+        self.aclnn_grid_sampler2d_get_workspace = _optional_symbol(
+            libs, "aclnnGridSampler2DGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_int64, ctypes.c_int64, ctypes.c_bool,
+             ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_grid_sampler2d = _optional_symbol(
+            libs, "aclnnGridSampler2D", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnAffineGrid: (theta, size, align_corners, out)
+        self.aclnn_affine_grid_get_workspace = _optional_symbol(
+            libs, "aclnnAffineGridGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool,
+             ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_affine_grid = _optional_symbol(
+            libs, "aclnnAffineGrid", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -13280,5 +13317,124 @@ def linalg_cross(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sh
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(other_tensor)
         bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def im2col_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_im2col_get_workspace is not None and b.aclnn_im2col is not None
+
+def grid_sampler2d_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_grid_sampler2d_get_workspace is not None and b.aclnn_grid_sampler2d is not None
+
+def affine_grid_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_affine_grid_get_workspace is not None and b.aclnn_affine_grid is not None
+
+
+def sgrid_sampler2d(input_ptr, grid_ptr, out_ptr,
+                    input_shape, input_stride, grid_shape, grid_stride,
+                    out_shape, out_stride, dtype,
+                    interpolation_mode, padding_mode, align_corners,
+                    runtime, stream=None):
+    """Grid sample 2D via aclnnGridSampler2D."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not grid_sampler2d_symbols_ok():
+        raise RuntimeError("aclnnGridSampler2D symbols not available")
+    # input and output use NCHW format, grid uses ND
+    input_tensor, input_keep = _create_tensor(bindings, input_shape, input_stride, dtype, input_ptr,
+                                              fmt=_ACL_FORMAT_NCHW)
+    grid_tensor, grid_keep = _create_tensor(bindings, grid_shape, grid_stride, dtype, grid_ptr,
+                                            fmt=_ACL_FORMAT_ND)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr,
+                                          fmt=_ACL_FORMAT_NCHW)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_grid_sampler2d_get_workspace(
+            input_tensor, grid_tensor,
+            ctypes.c_int64(interpolation_mode), ctypes.c_int64(padding_mode),
+            ctypes.c_bool(align_corners),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGridSampler2DGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_grid_sampler2d(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGridSampler2D failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(input_tensor)
+        bindings.acl_destroy_tensor(grid_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def saffine_grid(theta_ptr, out_ptr,
+                 theta_shape, theta_stride, dtype,
+                 size, align_corners,
+                 out_shape, out_stride,
+                 runtime, stream=None):
+    """Affine grid generator via aclnnAffineGrid."""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not affine_grid_symbols_ok():
+        raise RuntimeError("aclnnAffineGrid symbols not available")
+    theta_tensor, theta_keep = _create_tensor(bindings, theta_shape, theta_stride, dtype, theta_ptr,
+                                              fmt=_ACL_FORMAT_ND)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr,
+                                          fmt=_ACL_FORMAT_ND)
+    # size is a list of ints (e.g. [N, C, H, W])
+    size_arr = _make_int64_array(size)
+    size_int_array = bindings.acl_create_int_array(size_arr, len(size))
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_affine_grid_get_workspace(
+            theta_tensor, size_int_array, ctypes.c_bool(align_corners),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAffineGridGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_affine_grid(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAffineGrid failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(theta_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_int_array(size_int_array)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
