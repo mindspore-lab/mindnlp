@@ -223,6 +223,7 @@ from .ops import (
     bitwise_not,
     # New random in-place op
     randint_,
+    random_,
     # New shape ops
     flatten,
     unflatten,
@@ -494,6 +495,7 @@ registry.register("bitwise_not", "cpu", bitwise_not, meta=meta_infer.infer_unary
 
 # Random in-place op
 registry.register("randint_", "cpu", randint_, meta=meta_infer.infer_unary)
+registry.register("random_", "cpu", random_, meta=meta_infer.infer_unary)
 
 # Shape ops
 registry.register("flatten", "cpu", flatten, meta=meta_infer.infer_flatten)

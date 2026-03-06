@@ -13,6 +13,7 @@ from ._functional import randn as randn_dispatch
 from ._functional import rand as rand_dispatch
 from ._functional import randint as randint_dispatch
 from ._functional import randperm as randperm_dispatch
+from ._functional import normal as normal_dispatch
 
 
 def tensor(data, *, dtype=float32, device=None, requires_grad=False):
@@ -90,3 +91,7 @@ def as_tensor(data, dtype=None, device=None):
     if dtype is None:
         dtype = float32
     return tensor_dispatch(data, dtype=dtype, device=device)
+
+
+def normal(mean, std, size=None, *, generator=None, out=None):
+    return normal_dispatch(mean, std, size=size, generator=generator, out=out)

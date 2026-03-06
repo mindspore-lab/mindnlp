@@ -574,6 +574,20 @@ class Tensor:
         out = dispatch("normal_", self.device.type, self, mean, std, generator=generator)
         return out
 
+    def random_(self, from_=0, to=None, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("random_", self.device.type, self, from_, to, generator=generator)
+        return out
+
+    def randint_(self, low, high=None, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("randint_", self.device.type, self, low, high, generator=generator)
+        return out
+
     def fill_(self, value):
         from ._dispatch.dispatcher import dispatch
 

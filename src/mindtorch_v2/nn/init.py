@@ -354,7 +354,7 @@ def kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu', gener
     return _no_grad_normal_(tensor, 0.0, std, generator=generator)
 
 
-def orthogonal_(tensor, gain=1.0):
+def orthogonal_(tensor, gain=1.0, *, generator=None):
     r"""Fill the input Tensor with a (semi) orthogonal matrix.
 
     The input tensor must have at least 2 dimensions. For tensors with
@@ -363,6 +363,7 @@ def orthogonal_(tensor, gain=1.0):
     Args:
         tensor: an n-dimensional Tensor, where n >= 2
         gain: optional scaling factor
+        generator: optional random number generator
 
     Returns:
         Tensor: the input tensor
@@ -375,7 +376,7 @@ def orthogonal_(tensor, gain=1.0):
     rows = tensor.shape[0]
     cols = tensor.numel() // rows
     from .._creation import randn as _randn
-    flattened = _randn(rows, cols, dtype=tensor.dtype, device=tensor.device)
+    flattened = _randn(rows, cols, dtype=tensor.dtype, device=tensor.device, generator=generator)
 
     if rows < cols:
         flattened.t_()
@@ -398,7 +399,7 @@ def orthogonal_(tensor, gain=1.0):
     return tensor
 
 
-def sparse_(tensor, sparsity, std=0.01):
+def sparse_(tensor, sparsity, std=0.01, *, generator=None):
     r"""Fill the 2D input Tensor as a sparse matrix.
 
     The non-zero elements will be drawn from N(0, std^2).
@@ -407,6 +408,7 @@ def sparse_(tensor, sparsity, std=0.01):
         tensor: an n-dimensional Tensor
         sparsity: The fraction of elements in each column to be set to zero
         std: the standard deviation of the normal distribution
+        generator: optional random number generator
 
     Returns:
         Tensor: the input tensor
@@ -427,7 +429,7 @@ def sparse_(tensor, sparsity, std=0.01):
         # Build the sparse matrix in numpy, then transfer to device
         from .._random import _get_cpu_rng
         from .._dtype import to_numpy_dtype
-        rng = _get_cpu_rng()
+        rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
         arr = rng.normal(0, std, (rows, cols)).astype(to_numpy_dtype(tensor.dtype))
         for col_idx in range(cols):
             row_indices = rng.permutation(rows)[:num_zeros]

@@ -402,11 +402,14 @@ def register_schemas():
     registry.register_schema("bitwise_not", "bitwise_not(Tensor input) -> Tensor")
 
     # New random in-place op
-    registry.register_schema("randint_", "randint_(Tensor(a!) self, int low, int? high=None) -> Tensor")
+    registry.register_schema("randint_", "randint_(Tensor(a!) self, int low, int? high=None, *, Generator? generator=None) -> Tensor")
 
     # New creation ops
     registry.register_schema("randint", "randint(int low, int? high=None, int[]? size=None, Dtype? dtype=None, bool requires_grad=False, Generator? generator=None) -> Tensor")
     registry.register_schema("randperm", "randperm(int n, Dtype? dtype=None, bool requires_grad=False, Generator? generator=None) -> Tensor")
+
+    # random_ in-place op
+    registry.register_schema("random_", "random_(Tensor(a!) self, int from_=0, int? to=None, *, Generator? generator=None) -> Tensor")
 
     # New shape ops
     registry.register_schema("flatten", "flatten(Tensor input, int start_dim=0, int end_dim=-1) -> Tensor")
