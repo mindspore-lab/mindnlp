@@ -9,6 +9,8 @@ from ._dtype import (
     complex64, complex128,
     # aliases
     half, double, short, long, byte, cfloat, cdouble,
+    # info classes
+    finfo, iinfo,
 )
 from ._dtype import float as float  # noqa: F811
 from ._dtype import int as int  # noqa: F811
@@ -78,6 +80,8 @@ from ._functional import diff, bincount, cdist, aminmax
 from ._functional import quantile, nanquantile, nanmedian
 from ._functional import histc, histogram, bucketize
 from ._functional import isneginf, isposinf, isreal, isin, heaviside
+# P0 dtype utilities & query functions
+from ._functional import is_tensor, is_floating_point, is_complex, numel, square
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import (
     pipeline_context,
@@ -464,6 +468,14 @@ __all__ = [
     "isreal",
     "isin",
     "heaviside",
+    # P0 dtype utilities & query functions
+    "finfo",
+    "iinfo",
+    "is_tensor",
+    "is_floating_point",
+    "is_complex",
+    "numel",
+    "square",
     # submodules
     "linalg",
     "fft",

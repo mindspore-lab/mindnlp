@@ -873,6 +873,12 @@ def sign(a):
     return _from_numpy(np.sign(_to_numpy(a)), a.dtype, a.device)
 
 
+def square(a):
+    arr = _to_numpy(a)
+    out = np.square(arr)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def signbit(a):
     arr = np.signbit(_to_numpy(a))
     return _from_numpy(arr, bool_dtype, a.device)

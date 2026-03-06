@@ -291,6 +291,7 @@ def register_schemas():
         "log2", "log10", "exp2", "rsqrt", "reciprocal", "sign", "signbit", "isnan", "isinf", "isfinite",
         "sinh", "cosh", "asinh", "acosh", "atanh", "erf", "erfc", "softplus",
         "relu6", "contiguous", "gelu", "silu", "mish",
+        "square",
     ))
     registry.register_schema("hardtanh", "hardtanh(Tensor input, Scalar min_val=-1.0, Scalar max_val=1.0) -> Tensor")
     registry.register_schema("softmax", "softmax(Tensor input, int dim=-1, Dtype? dtype=None) -> Tensor")
