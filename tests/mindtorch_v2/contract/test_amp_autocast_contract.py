@@ -150,3 +150,29 @@ def test_set_autocast_enabled_invalid_device_raises_runtimeerror_like_torch():
 
     with pytest.raises(RuntimeError):
         torch.set_autocast_enabled("invalid_device", True)
+
+
+def test_set_autocast_enabled_validates_enabled_type_like_torch():
+    import pytest
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_enabled("cpu", 1)
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_enabled("cpu", None)
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_enabled(1)
+
+
+def test_set_autocast_dtype_validates_args_like_torch():
+    import pytest
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_dtype(None, torch.bfloat16)
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_dtype("cpu", None)
+
+    with pytest.raises(TypeError):
+        torch.set_autocast_dtype("cpu", 1)

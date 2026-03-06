@@ -1,6 +1,7 @@
 import threading
 
 from .._dtype import bfloat16, float16
+from .._dtype import DType
 
 
 _TLS = threading.local()
@@ -74,8 +75,22 @@ def is_autocast_enabled(device_type=None):
 
 def set_autocast_enabled(device_type, enabled=None):
     if enabled is None:
+        if not isinstance(device_type, bool):
+            raise TypeError(
+                f"set_autocast_enabled(): argument 'enabled' (position 1) must be bool, not {type(device_type).__name__}"
+            )
         enabled = device_type
         device_type = _DEFAULT_DEVICE
+    elif not isinstance(enabled, bool):
+        raise TypeError(
+            f"set_autocast_enabled(): argument 'enabled' (position 2) must be bool, not {type(enabled).__name__}"
+        )
+
+    if not isinstance(device_type, str):
+        raise TypeError(
+            f"set_autocast_enabled(): argument 'device_type' (position 1) must be str, not {type(device_type).__name__}"
+        )
+
     dev = _normalize_device_type(device_type)
     _state_for(dev)["enabled"] = bool(enabled)
 
@@ -86,6 +101,15 @@ def get_autocast_dtype(device_type):
 
 
 def set_autocast_dtype(device_type, dtype):
+    if not isinstance(device_type, str):
+        raise TypeError(
+            f"set_autocast_dtype(): argument 'device_type' (position 1) must be str, not {type(device_type).__name__}"
+        )
+    if not isinstance(dtype, DType):
+        raise TypeError(
+            f"set_autocast_dtype(): argument 'dtype' (position 2) must be torch.dtype, not {type(dtype).__name__}"
+        )
+
     dev = _normalize_device_type(device_type)
     _state_for(dev)["dtype"] = dtype
 
