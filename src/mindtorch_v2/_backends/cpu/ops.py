@@ -1927,6 +1927,8 @@ def minimum(a, b):
 
 
 def dot(a, b):
+    if a.dtype != b.dtype:
+        raise RuntimeError("dot: expected both vectors to have same dtype")
     return _from_numpy(np.dot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
 
@@ -1943,6 +1945,8 @@ def mv(a, b):
 
 
 def cross(a, b, dim=-1):
+    if a.dtype != b.dtype:
+        raise RuntimeError("cross: expected both inputs to have same dtype")
     a_np = np.moveaxis(_to_numpy(a), dim, -1)
     b_np = np.moveaxis(_to_numpy(b), dim, -1)
     out = np.cross(a_np, b_np)
@@ -1951,6 +1955,8 @@ def cross(a, b, dim=-1):
 
 
 def tensordot(a, b, dims=2):
+    if a.dtype != b.dtype:
+        raise RuntimeError("tensordot: expected both inputs to have same dtype")
     a_np = _to_numpy(a)
     b_np = _to_numpy(b)
     if isinstance(dims, int):

@@ -185,7 +185,13 @@ def apply_autocast_policy(op_name, args, kwargs, device_type):
     if not is_autocast_enabled(device_type):
         return args, kwargs
 
-    policy = _POLICY_MAP.get(_normalize_name(op_name))
+    normalized_name = _normalize_name(op_name)
+    # Keep torch-like mixed-dtype runtime checks for these CPU ops.
+    # If we pre-promote here, backend kernels won't raise the same errors as torch.
+    if device_type == "cpu" and normalized_name in {"dot", "tensordot", "cross"}:
+        return args, kwargs
+
+    policy = _POLICY_MAP.get(normalized_name)
     if policy is None or policy == BUILTIN_PROMOTE:
         return args, kwargs
     if policy == BANNED:
