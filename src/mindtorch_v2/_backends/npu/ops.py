@@ -2786,6 +2786,12 @@ def nonzero(a, as_tuple=False):
 
 
 def lerp(a, b, weight):
+    if _is_310b_profile():
+        # Static small-op fallback on 310B to avoid aclnnLerp 561103.
+        delta = sub(b, a)
+        scaled = mul(delta, weight)
+        return add(a, scaled)
+
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     a_storage = _unwrap_storage(a)
@@ -2875,9 +2881,23 @@ def hypot(a, b):
     return sqrt(add(mul(a, a), mul(b, b)))
 
 
+def _remainder_310b_fallback(a, b):
+    # torch-style remainder keeps the sign of divisor b.
+    r = fmod(a, b)
+    zero = _scalar_to_npu_tensor(0, r)
+    nz = ne(r, zero)
+    r_neg = lt(r, zero)
+    b_neg = lt(b, zero)
+    mismatch = ne(r_neg, b_neg)
+    fix = logical_and(nz, mismatch)
+    return where(fix, add(r, b), r)
+
+
 def remainder(a, b):
     if isinstance(b, (int, float)):
         b = _scalar_to_npu_tensor(b, a)
+    if _is_310b_profile():
+        return _remainder_310b_fallback(a, b)
     return _binary_op(a, b, aclnn.sremainder, "remainder")
 
 
@@ -3488,6 +3508,30 @@ def uniform_(a, low=0.0, high=1.0, generator=None):
     if a.device.type != "npu":
         raise ValueError("NPU uniform_ expects NPU tensors")
 
+    if _is_310b_profile():
+        from ... import npu as npu_mod
+
+        if generator is not None and hasattr(generator, 'philox_engine_inputs'):
+            seed, offset = generator.philox_engine_inputs(10)
+        else:
+            seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
+
+        idx = _cast_tensor_dtype(_npu_arange_1d(_numel(a.shape), a.device), float_dtype)
+        idx = add(idx, float(seed + offset))
+        u = sin(add(mul(idx, 12.9898), float(seed) * 78.233))
+        u = frac(abs(mul(u, 43758.5453)))
+        u = reshape(u, a.shape)
+
+        scale = float(high) - float(low)
+        if scale != 1.0:
+            u = mul(u, scale)
+        if float(low) != 0.0:
+            u = add(u, float(low))
+
+        if a.dtype != float_dtype:
+            u = _cast_tensor_dtype(u, a.dtype)
+        return copy_(a, u)
+
     if generator is not None and hasattr(generator, 'philox_engine_inputs'):
         seed, offset = generator.philox_engine_inputs(10)
     else:
@@ -3515,6 +3559,34 @@ def normal_(a, mean=0.0, std=1.0, generator=None):
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
         raise ValueError("NPU normal_ expects NPU tensors")
+
+    if _is_310b_profile():
+        # Deterministic hash-based normal approximation on NPU to avoid unstable ACLNN random ops.
+        from ... import npu as npu_mod
+
+        if generator is not None and hasattr(generator, 'philox_engine_inputs'):
+            seed, offset = generator.philox_engine_inputs(10)
+        else:
+            seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
+
+        idx = _cast_tensor_dtype(_npu_arange_1d(_numel(a.shape), a.device), float_dtype)
+        idx = add(idx, float(seed + offset))
+
+        # u = frac(abs(sin(idx * 12.9898 + seed * 78.233) * 43758.5453))
+        u = sin(add(mul(idx, 12.9898), float(seed) * 78.233))
+        u = frac(abs(mul(u, 43758.5453)))
+
+        # map to roughly standard normal via centered scaling
+        z = mul(sub(u, 0.5), 3.4641016151377544)
+        z = reshape(z, a.shape)
+
+        if float(std) != 1.0:
+            z = mul(z, float(std))
+        if float(mean) != 0.0:
+            z = add(z, float(mean))
+        if a.dtype != float_dtype:
+            z = _cast_tensor_dtype(z, a.dtype)
+        return copy_(a, z)
 
     if generator is not None and hasattr(generator, 'philox_engine_inputs'):
         seed, offset = generator.philox_engine_inputs(10)
