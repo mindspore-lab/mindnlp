@@ -239,6 +239,9 @@ from .ops import (
     logsumexp_op,
     renorm_op,
     logical_xor,
+    # P2 new ops
+    nansum,
+    cross_op,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -512,6 +515,10 @@ registry.register("cummin", "npu", cummin_op)
 registry.register("logsumexp", "npu", logsumexp_op, meta=meta_infer.infer_sum)
 registry.register("renorm", "npu", renorm_op, meta=meta_infer.infer_unary)
 registry.register("logical_xor", "npu", logical_xor, meta=meta_infer.infer_binary_bool)
+
+# P2 new ops
+registry.register("nansum", "npu", nansum, meta=meta_infer.infer_sum)
+registry.register("cross", "npu", cross_op, meta=meta_infer.infer_binary)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

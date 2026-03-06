@@ -60,6 +60,7 @@ from ._functional import baddbmm, trace, cummin, logsumexp, renorm
 from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
 from ._functional import unflatten, broadcast_to, movedim, diagonal
 from ._functional import unique, searchsorted, kthvalue, median
+from ._functional import nansum
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import (
     pipeline_context,
@@ -393,6 +394,8 @@ __all__ = [
     # new random ops
     "bernoulli",
     "multinomial",
+    # P2 new ops
+    "nansum",
     # submodules
     "linalg",
     "fft",

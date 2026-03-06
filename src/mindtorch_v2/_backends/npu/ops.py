@@ -435,19 +435,71 @@ def bitwise_xor(a, b):
 
 
 def le(a, b):
-    return logical_or(signbit(sub(a, b)), eq(a, b))
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(bool_dtype), runtime=runtime)
+    aclnn.le_tensor(
+        _unwrap_storage(a).data_ptr(), _unwrap_storage(b).data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype, runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def lt(a, b):
-    return signbit(sub(a, b))
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(bool_dtype), runtime=runtime)
+    aclnn.lt_tensor(
+        _unwrap_storage(a).data_ptr(), _unwrap_storage(b).data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype, runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def gt(a, b):
-    return signbit(sub(b, a))
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(bool_dtype), runtime=runtime)
+    aclnn.gt_tensor(
+        _unwrap_storage(a).data_ptr(), _unwrap_storage(b).data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype, runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def ge(a, b):
-    return logical_or(gt(a, b), eq(a, b))
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(bool_dtype), runtime=runtime)
+    aclnn.ge_tensor(
+        _unwrap_storage(a).data_ptr(), _unwrap_storage(b).data_ptr(), out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype, runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
 def matmul(a, b):
@@ -2842,13 +2894,29 @@ def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 
 def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
-    diff = abs(sub(a, b))
-    tol = add(_scalar_to_npu_tensor(atol, diff), mul(_scalar_to_npu_tensor(rtol, diff), abs(b)))
-    close = le(diff, tol)
-    if equal_nan:
-        nan_match = logical_and(isnan(a), isnan(b))
-        close = logical_or(close, nan_match)
-    return close
+    if isinstance(b, (int, float, bool)):
+        b = _scalar_to_npu_tensor(b, a)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(bool_dtype), runtime=runtime)
+    aclnn.sisclose(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(b).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype,
+        float(rtol), float(atol), True,  # ACLNN ignores equal_nan, always pass True
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    result = _wrap_tensor(out_storage, out_shape, out_stride)
+    if not equal_nan:
+        # ACLNN always treats NaN==NaN as True; mask out when equal_nan=False
+        nan_both = logical_and(isnan(a), isnan(b))
+        result = logical_and(result, logical_not(nan_both))
+    return result
 
 
 def equal(a, b):
@@ -7055,7 +7123,11 @@ def one_hot(indices, num_classes=-1):
 
 def instance_norm(input, weight=None, bias=None, running_mean=None, running_var=None,
                   use_input_stats=True, momentum=0.1, eps=1e-5, cudnn_enabled=False):
-    """Instance normalization as composite of existing dispatched ops."""
+    """Instance normalization as composite of existing dispatched ops.
+
+    Note: aclnnInstanceNorm returns 161002 on CANN 8.3.RC2 (Ascend910B),
+    so we use composite implementation.
+    """
     if input.dim() < 2:
         raise ValueError("instance_norm expects input with at least 2 dims")
 
@@ -7242,5 +7314,36 @@ def logical_xor(a, b):
         runtime, stream=stream.stream,
     )
     out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), bool_dtype, device=a.device)
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def nansum(a, dim=None, keepdim=False):
+    """Sum ignoring NaN values. Composite: where(isnan, 0, x) then sum.
+
+    Note: aclnnReduceNansum returns 161002 on CANN 8.3.RC2 (Ascend910B).
+    """
+    zero = _scalar_to_npu_tensor(0.0, a)
+    nan_mask = isnan(a)
+    clean = where(nan_mask, zero, a)
+    return sum_(clean, dim=dim, keepdim=keepdim)
+
+
+def cross_op(a, b, dim=-1):
+    """Cross product via aclnnLinalgCross."""
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    out_shape = _broadcast_shape(a.shape, b.shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_ptr = npu_runtime._alloc_device(_numel(out_shape) * _dtype_itemsize(a.dtype), runtime=runtime)
+    aclnn.linalg_cross(
+        _unwrap_storage(a).data_ptr(),
+        _unwrap_storage(b).data_ptr(),
+        out_ptr,
+        a.shape, a.stride, b.shape, b.stride,
+        out_shape, out_stride, a.dtype,
+        int(dim),
+        runtime, stream=stream.stream,
+    )
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
