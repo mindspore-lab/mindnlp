@@ -32,6 +32,7 @@ from .padding import (
 from .upsampling import Upsample, UpsamplingNearest2d, UpsamplingBilinear2d
 from .pixelshuffle import PixelShuffle, PixelUnshuffle, ChannelShuffle
 from .distance import CosineSimilarity, PairwiseDistance
+from .fold import Fold, Unfold
 from .transformer import (
     Transformer, TransformerEncoder, TransformerDecoder,
     TransformerEncoderLayer, TransformerDecoderLayer,

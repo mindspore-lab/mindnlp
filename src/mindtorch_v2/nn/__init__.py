@@ -66,6 +66,9 @@ from .modules.pixelshuffle import PixelShuffle, PixelUnshuffle, ChannelShuffle
 # Distance
 from .modules.distance import CosineSimilarity, PairwiseDistance
 
+# Fold / Unfold
+from .modules.fold import Fold, Unfold
+
 # Transformer
 from .modules.transformer import (
     Transformer, TransformerEncoder, TransformerDecoder,

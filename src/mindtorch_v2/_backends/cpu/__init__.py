@@ -701,3 +701,45 @@ registry.register("special_sinc", "cpu", special_sinc)
 registry.register("special_xlog1py", "cpu", special_xlog1py)
 registry.register("special_xlogy", "cpu", special_xlogy)
 registry.register("special_zeta", "cpu", special_zeta)
+
+# ---------------------------------------------------------------------------
+# F.affine_grid / F.grid_sample
+# ---------------------------------------------------------------------------
+from .ops import grid_sample, affine_grid
+registry.register("grid_sample", "cpu", grid_sample)
+registry.register("affine_grid", "cpu", affine_grid)
+
+# ---------------------------------------------------------------------------
+# F.unfold (im2col) / F.fold (col2im)
+# ---------------------------------------------------------------------------
+from .ops import im2col, col2im
+registry.register("im2col", "cpu", im2col)
+registry.register("col2im", "cpu", col2im)
+
+# ---------------------------------------------------------------------------
+# one_hot (was missing registration)
+# ---------------------------------------------------------------------------
+from .ops import one_hot
+registry.register("one_hot", "cpu", one_hot)
+
+# ---------------------------------------------------------------------------
+# uniform (out-of-place)
+# ---------------------------------------------------------------------------
+from .ops import uniform
+registry.register("uniform", "cpu", uniform)
+
+# ---------------------------------------------------------------------------
+# Upsample ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    upsample_nearest1d,
+    upsample_linear1d,
+    upsample_nearest2d,
+    upsample_bilinear2d,
+    upsample_bicubic2d,
+)
+registry.register("upsample_nearest1d", "cpu", upsample_nearest1d)
+registry.register("upsample_linear1d", "cpu", upsample_linear1d)
+registry.register("upsample_nearest2d", "cpu", upsample_nearest2d)
+registry.register("upsample_bilinear2d", "cpu", upsample_bilinear2d)
+registry.register("upsample_bicubic2d", "cpu", upsample_bicubic2d)
