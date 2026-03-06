@@ -1084,6 +1084,10 @@ def renorm(a, p, dim, maxnorm):
     return dispatch("renorm", a.device.type, a, p, dim, maxnorm)
 
 
+def nansum(a, dim=None, keepdim=False):
+    return dispatch("nansum", None, a, dim=dim, keepdim=keepdim)
+
+
 def _as_device(dev):
     if dev is None:
         return get_default_device()

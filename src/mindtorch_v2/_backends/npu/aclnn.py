@@ -3296,6 +3296,103 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        self._init_comparison_and_new_ops(libs)
+
+
+    def _init_comparison_and_new_ops(self, libs):
+        """Initialize comparison, isclose, instance_norm, nansum, cross bindings."""
+        # --- P0: Replace comparison composites with ACLNN large kernels ---
+
+        # aclnnLtTensor: (self, other, out) — standard binary comparison
+        self.aclnn_lt_tensor_get_workspace = _optional_symbol(
+            libs, "aclnnLtTensorGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_lt_tensor = _optional_symbol(
+            libs, "aclnnLtTensor", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # aclnnLeTensor: (self, other, out)
+        self.aclnn_le_tensor_get_workspace = _optional_symbol(
+            libs, "aclnnLeTensorGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_le_tensor = _optional_symbol(
+            libs, "aclnnLeTensor", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # aclnnGtTensor: (self, other, out)
+        self.aclnn_gt_tensor_get_workspace = _optional_symbol(
+            libs, "aclnnGtTensorGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_gt_tensor = _optional_symbol(
+            libs, "aclnnGtTensor", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # aclnnGeTensor: (self, other, out)
+        self.aclnn_ge_tensor_get_workspace = _optional_symbol(
+            libs, "aclnnGeTensorGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_ge_tensor = _optional_symbol(
+            libs, "aclnnGeTensor", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # aclnnIsClose: (self, other, rtol, atol, equal_nan, out)
+        self.aclnn_isclose_get_workspace = _optional_symbol(
+            libs, "aclnnIsCloseGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_double, ctypes.c_double, ctypes.c_bool,
+             ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_isclose = _optional_symbol(
+            libs, "aclnnIsClose", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # aclnnInstanceNorm: (x, gamma, beta, dataFormat, eps, y, mean, variance)
+        self.aclnn_instance_norm_get_workspace = _optional_symbol(
+            libs, "aclnnInstanceNormGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_char_p, ctypes.c_double,
+             ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_instance_norm = _optional_symbol(
+            libs, "aclnnInstanceNorm", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # --- P1: New ops ---
+
+        # aclnnReduceNansum: (self, dim_array, keepDim, dtype, out)
+        self.aclnn_reduce_nansum_get_workspace = _optional_symbol(
+            libs, "aclnnReduceNansumGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool,
+             ctypes.c_int32, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_reduce_nansum = _optional_symbol(
+            libs, "aclnnReduceNansum", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # aclnnLinalgCross: (self, other, dim, out)
+        self.aclnn_linalg_cross_get_workspace = _optional_symbol(
+            libs, "aclnnLinalgCrossGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64,
+             ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_linalg_cross = _optional_symbol(
+            libs, "aclnnLinalgCross", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -12782,15 +12879,50 @@ def renorm(self_ptr, out_ptr, shape, stride, dtype,
         _ = (self_keep, out_keep, p_buf, max_norm_buf)
 
 
-def logical_xor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
-                out_shape, out_stride, dtype, runtime, stream=None):
-    """Element-wise logical XOR."""
+# --- P0+P1 batch 3: symbols_ok + wrappers ---
+
+def lt_tensor_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_lt_tensor_get_workspace is not None and b.aclnn_lt_tensor is not None
+
+def le_tensor_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_le_tensor_get_workspace is not None and b.aclnn_le_tensor is not None
+
+def gt_tensor_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_gt_tensor_get_workspace is not None and b.aclnn_gt_tensor is not None
+
+def ge_tensor_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_ge_tensor_get_workspace is not None and b.aclnn_ge_tensor is not None
+
+def isclose_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_isclose_get_workspace is not None and b.aclnn_isclose is not None
+
+def instance_norm_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_instance_norm_get_workspace is not None and b.aclnn_instance_norm is not None
+
+def nansum_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_reduce_nansum_get_workspace is not None and b.aclnn_reduce_nansum is not None
+
+def linalg_cross_symbols_ok():
+    b = get_bindings()
+    return b.aclnn_linalg_cross_get_workspace is not None and b.aclnn_linalg_cross is not None
+
+
+# Comparison ops: lt, le, gt, ge
+def lt_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+              out_shape, out_stride, dtype, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
     bindings = get_bindings()
-    if not logical_xor_symbols_ok():
-        raise RuntimeError("aclnnLogicalXor symbols not available")
+    if not lt_tensor_symbols_ok():
+        raise RuntimeError("aclnnLtTensor symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
     other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
     out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
@@ -12798,24 +12930,24 @@ def logical_xor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
-        ret = bindings.aclnn_logical_xor_get_workspace(
+        ret = bindings.aclnn_lt_tensor_get_workspace(
             self_tensor, other_tensor, out_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
         if ret != 0:
-            raise RuntimeError(f"aclnnLogicalXorGetWorkspaceSize failed: {ret}")
+            raise RuntimeError(f"aclnnLtTensorGetWorkspaceSize failed: {ret}")
         if workspace_size.value:
             workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
             if ret != 0:
                 raise RuntimeError(f"acl.rt.malloc failed: {ret}")
             workspace = workspace_ptr
-        ret = bindings.aclnn_logical_xor(
+        ret = bindings.aclnn_lt_tensor(
             ctypes.c_void_p(0 if workspace is None else int(workspace)),
             ctypes.c_uint64(workspace_size.value), executor,
             ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
         )
         if ret != 0:
-            raise RuntimeError(f"aclnnLogicalXor failed: {ret}")
+            raise RuntimeError(f"aclnnLtTensor failed: {ret}")
         _maybe_sync(runtime)
     finally:
         _defer_executor(executor)
@@ -12824,4 +12956,327 @@ def logical_xor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_sha
         bindings.acl_destroy_tensor(out_tensor)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
-        _ = (self_keep, other_keep, out_keep)
+
+
+def le_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+              out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not le_tensor_symbols_ok():
+        raise RuntimeError("aclnnLeTensor symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_le_tensor_get_workspace(
+            self_tensor, other_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLeTensorGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_le_tensor(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLeTensor failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def gt_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+              out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not gt_tensor_symbols_ok():
+        raise RuntimeError("aclnnGtTensor symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_gt_tensor_get_workspace(
+            self_tensor, other_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGtTensorGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_gt_tensor(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGtTensor failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def ge_tensor(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+              out_shape, out_stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not ge_tensor_symbols_ok():
+        raise RuntimeError("aclnnGeTensor symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_ge_tensor_get_workspace(
+            self_tensor, other_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGeTensorGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_ge_tensor(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnGeTensor failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def sisclose(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+             out_shape, out_stride, dtype, rtol, atol, equal_nan, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not isclose_symbols_ok():
+        raise RuntimeError("aclnnIsClose symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, "bool", out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_isclose_get_workspace(
+            self_tensor, other_tensor,
+            ctypes.c_double(rtol), ctypes.c_double(atol), ctypes.c_bool(equal_nan),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnIsCloseGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_isclose(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnIsClose failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def sinstance_norm(x_ptr, gamma_ptr, beta_ptr, out_ptr, mean_ptr, var_ptr,
+                   x_shape, x_stride, gamma_shape, gamma_stride,
+                   beta_shape, beta_stride, out_shape, out_stride,
+                   mean_shape, mean_stride, var_shape, var_stride,
+                   dtype, eps, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not instance_norm_symbols_ok():
+        raise RuntimeError("aclnnInstanceNorm symbols not available")
+    x_tensor, x_keep = _create_tensor(bindings, x_shape, x_stride, dtype, x_ptr, _ACL_FORMAT_NCHW)
+    gamma_tensor, gamma_keep = _create_tensor(bindings, gamma_shape, gamma_stride, dtype, gamma_ptr)
+    beta_tensor, beta_keep = _create_tensor(bindings, beta_shape, beta_stride, dtype, beta_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr, _ACL_FORMAT_NCHW)
+    mean_tensor, mean_keep = _create_tensor(bindings, mean_shape, mean_stride, dtype, mean_ptr)
+    var_tensor, var_keep = _create_tensor(bindings, var_shape, var_stride, dtype, var_ptr)
+    data_format = b"NCHW"
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_instance_norm_get_workspace(
+            x_tensor, gamma_tensor, beta_tensor,
+            data_format, ctypes.c_double(eps),
+            out_tensor, mean_tensor, var_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInstanceNormGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_instance_norm(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnInstanceNorm failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(x_tensor)
+        bindings.acl_destroy_tensor(gamma_tensor)
+        bindings.acl_destroy_tensor(beta_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        bindings.acl_destroy_tensor(mean_tensor)
+        bindings.acl_destroy_tensor(var_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+
+
+def reduce_nansum(self_ptr, out_ptr, shape, stride, dtype,
+                  dims, keepdim, out_shape, out_stride, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not nansum_symbols_ok():
+        raise RuntimeError("aclnnReduceNansum symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    if isinstance(dims, int):
+        dims = [dims]
+    dim_array = _make_int64_array(dims)
+    dim_handle = bindings.acl_create_int_array(dim_array, ctypes.c_uint64(len(dims)))
+    if not dim_handle:
+        raise RuntimeError("aclCreateIntArray returned null for nansum dims")
+    acl_dtype = _dtype_to_acl(dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_reduce_nansum_get_workspace(
+            self_tensor, dim_handle, ctypes.c_bool(keepdim),
+            ctypes.c_int32(acl_dtype), out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnReduceNansumGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_reduce_nansum(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnReduceNansum failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if dim_handle:
+            bindings.acl_destroy_int_array(dim_handle)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (dim_array,)
+
+
+def linalg_cross(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
+                 out_shape, out_stride, dtype, dim, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if not linalg_cross_symbols_ok():
+        raise RuntimeError("aclnnLinalgCross symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    other_tensor, other_keep = _create_tensor(bindings, other_shape, other_stride, dtype, other_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_linalg_cross_get_workspace(
+            self_tensor, other_tensor, ctypes.c_int64(dim), out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLinalgCrossGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_linalg_cross(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLinalgCross failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(other_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
