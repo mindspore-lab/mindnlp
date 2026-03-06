@@ -7,6 +7,12 @@ _TLS = threading.local()
 _AMP_CACHE = {}
 _AUTOCACHE_ENABLED = True
 _DEFAULT_DEVICE = "cpu"
+_VALID_DEVICE_TYPES = {"cpu", "npu", "cuda", "meta"}
+
+
+def _require_valid_device_type(device_type):
+    if device_type not in _VALID_DEVICE_TYPES:
+        raise RuntimeError(f"invalid device_type '{device_type}'")
 
 
 def _state_map():
@@ -43,8 +49,9 @@ def _state_map():
 
 
 def _state_for(device_type):
+    _require_valid_device_type(device_type)
     state = _state_map()
-    return state.get(device_type, state[_DEFAULT_DEVICE])
+    return state[device_type]
 
 
 def _normalize_device_type(device_type):

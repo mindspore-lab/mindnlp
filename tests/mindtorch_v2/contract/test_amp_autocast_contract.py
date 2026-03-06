@@ -136,3 +136,17 @@ def test_set_autocast_enabled_accepts_single_arg_like_torch():
     # restore default state for test isolation
     torch.set_autocast_enabled(prev_default)
     torch.set_autocast_enabled(default_device, prev_default_device)
+
+
+def test_get_autocast_dtype_invalid_device_raises_runtimeerror_like_torch():
+    import pytest
+
+    with pytest.raises(RuntimeError):
+        torch.get_autocast_dtype("invalid_device")
+
+
+def test_set_autocast_enabled_invalid_device_raises_runtimeerror_like_torch():
+    import pytest
+
+    with pytest.raises(RuntimeError):
+        torch.set_autocast_enabled("invalid_device", True)
