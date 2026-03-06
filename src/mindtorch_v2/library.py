@@ -111,9 +111,9 @@ def register_fake(qualname):
 def register_autocast(op, device_type, cast_inputs, *, lib=None):
     """Register an autocast dispatch rule for a custom op.
 
-    Placeholder for torch.library.register_autocast parity. Valid device_type
-    values are "cpu" and "cuda". Custom op dispatch exclusion is not yet
-    implemented in mindtorch_v2, so this records the intent for future use.
+    Valid ``device_type`` values are ``"cpu"`` and ``"cuda"``.
+    When autocast is enabled for the target device, floating-point Tensor
+    inputs are cast to ``cast_inputs`` before dispatching the custom op.
     """
     if not isinstance(op, str):
         raise ValueError(
@@ -122,8 +122,21 @@ def register_autocast(op, device_type, cast_inputs, *, lib=None):
     if device_type not in ("cpu", "cuda"):
         raise ValueError(f"Unknown device type: {device_type}")
 
-    del cast_inputs, lib
-    return {"op": op, "device_type": device_type}
+    # Match torch behavior: torch.library.register_autocast only supports
+    # custom operators, not built-in aten operators.
+    if "::" not in op or op.split("::", 1)[0] == "aten":
+        raise RuntimeError(f"operator {op} does not exist")
+
+    # Match torch behavior: registering on a missing operator is a runtime error.
+    try:
+        registry.get(op)
+    except KeyError as exc:
+        raise RuntimeError(f"operator {op} does not exist") from exc
+
+    from .amp.policy import register_custom_autocast_rule
+
+    register_custom_autocast_rule(op, device_type, cast_inputs)
+    del lib
 
 
 
