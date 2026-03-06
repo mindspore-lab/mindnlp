@@ -11,6 +11,10 @@ class Module:
         self._modules = {}
         self._buffers = {}
         self._non_persistent_buffers_set = set()
+        self._forward_pre_hooks_dict = OrderedDict()
+        self._forward_hooks_dict = OrderedDict()
+        self._backward_hooks_dict = OrderedDict()
+        self._next_hook_id = 0
         self.training = True
 
     def __setattr__(self, name, value):
@@ -21,7 +25,18 @@ class Module:
         super().__setattr__(name, value)
 
     def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
+        for hook in self._forward_pre_hooks_dict.values():
+            result = hook(self, args)
+            if result is not None:
+                if not isinstance(result, tuple):
+                    result = (result,)
+                args = result
+        result = self.forward(*args, **kwargs)
+        for hook in self._forward_hooks_dict.values():
+            hook_result = hook(self, args, result)
+            if hook_result is not None:
+                result = hook_result
+        return result
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
@@ -340,31 +355,43 @@ class Module:
 
     @property
     def _backward_hooks(self):
-        return OrderedDict()
+        return self._backward_hooks_dict
 
     @property
     def _forward_hooks(self):
-        return OrderedDict()
+        return self._forward_hooks_dict
 
     @property
     def _forward_pre_hooks(self):
-        return OrderedDict()
+        return self._forward_pre_hooks_dict
 
     def register_forward_hook(self, hook, *, prepend=False, with_kwargs=False):
-        """Register a forward hook (stub)."""
-        return _RemovableHandle()
+        """Register a forward hook."""
+        hook_id = self._next_hook_id
+        self._next_hook_id += 1
+        self._forward_hooks_dict[hook_id] = hook
+        return _RemovableHandle(self._forward_hooks_dict, hook_id)
 
     def register_forward_pre_hook(self, hook, *, prepend=False, with_kwargs=False):
-        """Register a forward pre-hook (stub)."""
-        return _RemovableHandle()
+        """Register a forward pre-hook."""
+        hook_id = self._next_hook_id
+        self._next_hook_id += 1
+        self._forward_pre_hooks_dict[hook_id] = hook
+        return _RemovableHandle(self._forward_pre_hooks_dict, hook_id)
 
     def register_backward_hook(self, hook):
-        """Register a backward hook (stub)."""
-        return _RemovableHandle()
+        """Register a backward hook."""
+        hook_id = self._next_hook_id
+        self._next_hook_id += 1
+        self._backward_hooks_dict[hook_id] = hook
+        return _RemovableHandle(self._backward_hooks_dict, hook_id)
 
     def register_full_backward_hook(self, hook, prepend=False):
-        """Register a full backward hook (stub)."""
-        return _RemovableHandle()
+        """Register a full backward hook."""
+        hook_id = self._next_hook_id
+        self._next_hook_id += 1
+        self._backward_hooks_dict[hook_id] = hook
+        return _RemovableHandle(self._backward_hooks_dict, hook_id)
 
     def apply(self, fn):
         """Apply fn recursively to every submodule and self."""
@@ -421,11 +448,13 @@ class _IncompatibleKeys:
 class _RemovableHandle:
     """Handle to remove a hook."""
 
-    def __init__(self):
-        pass
+    def __init__(self, hooks_dict=None, hook_id=None):
+        self._hooks_dict = hooks_dict
+        self._hook_id = hook_id
 
     def remove(self):
-        pass
+        if self._hooks_dict is not None and self._hook_id in self._hooks_dict:
+            del self._hooks_dict[self._hook_id]
 
     def __enter__(self):
         return self

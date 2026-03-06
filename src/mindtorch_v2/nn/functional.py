@@ -158,9 +158,24 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0,
                     _stride, _padding, _output_padding, groups, _dilation)
 
 
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    from .._dispatch import dispatch
+    _stride = (stride, stride, stride) if isinstance(stride, int) else tuple(stride)
+    _padding = (padding, padding, padding) if isinstance(padding, int) else tuple(padding)
+    _dilation = (dilation, dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("conv3d", input.device.type, input, weight, bias,
+                    _stride, _padding, _dilation, groups)
+
+
 def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1,
                ceil_mode=False, return_indices=False):
-    raise NotImplementedError("max_pool1d is not yet implemented")
+    from .._dispatch import dispatch
+    _kernel_size = (kernel_size,) if isinstance(kernel_size, int) else tuple(kernel_size)
+    _stride = _kernel_size if stride is None else ((stride,) if isinstance(stride, int) else tuple(stride))
+    _padding = (padding,) if isinstance(padding, int) else tuple(padding)
+    _dilation = (dilation,) if isinstance(dilation, int) else tuple(dilation)
+    return dispatch("max_pool1d", input.device.type, input, _kernel_size, _stride,
+                    _padding, _dilation, ceil_mode, return_indices)
 
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1,
@@ -176,7 +191,12 @@ def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1,
 
 def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False,
                count_include_pad=True):
-    raise NotImplementedError("avg_pool1d is not yet implemented")
+    from .._dispatch import dispatch
+    _kernel_size = (kernel_size,) if isinstance(kernel_size, int) else tuple(kernel_size)
+    _stride = _kernel_size if stride is None else ((stride,) if isinstance(stride, int) else tuple(stride))
+    _padding = (padding,) if isinstance(padding, int) else tuple(padding)
+    return dispatch("avg_pool1d", input.device.type, input, _kernel_size, _stride,
+                    _padding, ceil_mode, count_include_pad)
 
 
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False,
@@ -190,7 +210,12 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False,
 
 
 def adaptive_avg_pool1d(input, output_size):
-    raise NotImplementedError("adaptive_avg_pool1d is not yet implemented")
+    from .._dispatch import dispatch
+    if isinstance(output_size, int):
+        _output_size = (output_size,)
+    else:
+        _output_size = tuple(output_size)
+    return dispatch("adaptive_avg_pool1d", input.device.type, input, _output_size)
 
 
 def adaptive_avg_pool2d(input, output_size):
@@ -200,6 +225,16 @@ def adaptive_avg_pool2d(input, output_size):
     else:
         _output_size = tuple(output_size)
     return dispatch("adaptive_avg_pool2d", input.device.type, input, _output_size)
+
+
+def adaptive_max_pool2d(input, output_size, return_indices=False):
+    from .._dispatch import dispatch
+    if isinstance(output_size, int):
+        _output_size = (output_size, output_size)
+    else:
+        _output_size = tuple(output_size)
+    return dispatch("adaptive_max_pool2d", input.device.type, input, _output_size,
+                    return_indices)
 
 
 def cross_entropy(input, target, weight=None, size_average=None, ignore_index=-100,
@@ -371,6 +406,16 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest',
         else:
             sh, sw = 0.0, 0.0
         return dispatch("upsample_bilinear2d", input.device.type, input, output_size, ac, sh, sw)
+    elif mode == 'bicubic':
+        ac = align_corners if align_corners is not None else False
+        if scale_factor is not None and not recompute_scale_factor:
+            if isinstance(scale_factor, (int, float)):
+                sh = sw = float(scale_factor)
+            else:
+                sh, sw = float(scale_factor[0]), float(scale_factor[1])
+        else:
+            sh, sw = 0.0, 0.0
+        return dispatch("upsample_bicubic2d", input.device.type, input, output_size, ac, sh, sw)
     else:
         raise NotImplementedError(f"interpolate mode '{mode}' is not yet implemented")
 
@@ -588,6 +633,13 @@ def soft_margin_loss(input, target, reduction='mean'):
     elif reduction == 'sum':
         return _sum(losses)
     raise ValueError(f"Invalid reduction mode: {reduction}")
+
+
+def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0,
+             reduction='mean', zero_infinity=False):
+    from .._dispatch import dispatch
+    return dispatch("ctc_loss", log_probs.device.type, log_probs, targets,
+                    input_lengths, target_lengths, blank, reduction, zero_infinity)
 
 
 def multi_margin_loss(input, target, p=1, margin=1.0, weight=None, reduction='mean'):

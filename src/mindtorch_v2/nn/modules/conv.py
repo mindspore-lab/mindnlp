@@ -15,6 +15,10 @@ def _pair(x):
     return (x, x) if isinstance(x, int) else tuple(x)
 
 
+def _triple(x):
+    return (x, x, x) if isinstance(x, int) else tuple(x)
+
+
 def _make_nested(flat, shape):
     if len(shape) == 1:
         return flat[:shape[0]]
@@ -124,3 +128,18 @@ class ConvTranspose2d(_ConvNd):
     def forward(self, input, output_size=None):
         return F.conv_transpose2d(input, self.weight, self.bias, self.stride,
                                   self.padding, self.output_padding, self.groups, self.dilation)
+
+
+class Conv3d(_ConvNd):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
+                 dilation=1, groups=1, bias=True, padding_mode='zeros', device=None, dtype=None):
+        kernel_size = _triple(kernel_size)
+        stride = _triple(stride)
+        padding = _triple(padding) if not isinstance(padding, str) else padding
+        dilation = _triple(dilation)
+        super().__init__(in_channels, out_channels, kernel_size, stride,
+                         padding, dilation, False, (0, 0, 0), groups, bias, padding_mode, device, dtype)
+
+    def forward(self, input):
+        return F.conv3d(input, self.weight, self.bias, self.stride,
+                        self.padding, self.dilation, self.groups)
