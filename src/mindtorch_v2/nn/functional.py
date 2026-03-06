@@ -39,6 +39,18 @@ def log_softmax(input, dim=None, _stacklevel=3, dtype=None):
 
 
 def gelu(input, approximate='none'):
+    if approximate == 'tanh':
+        import math
+        from .._functional import tanh as _tanh, mul as _mul, add as _add, pow as _pow
+        from .._creation import tensor as _tensor
+        # 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+        coeff = _tensor(math.sqrt(2.0 / math.pi), device=input.device)
+        k = _tensor(0.044715, device=input.device)
+        half = _tensor(0.5, device=input.device)
+        one = _tensor(1.0, device=input.device)
+        three = _tensor(3.0, device=input.device)
+        inner = _mul(coeff, _add(input, _mul(k, _pow(input, three))))
+        return _mul(half, _mul(input, _add(one, _tanh(inner))))
     from .._dispatch import dispatch
     return dispatch("gelu", input.device.type, input)
 
@@ -75,13 +87,21 @@ def dropout(input, p=0.5, training=True, inplace=False):
     return dispatch("dropout", input.device.type, input, p, training)
 
 
-def dropout3d(input, p=0.5, training=True, inplace=False):
-    """Randomly zero out entire channels of a 5D input (N, C, D, H, W).
+def dropout1d(input, p=0.5, training=True, inplace=False):
+    if not training or p == 0:
+        return input
+    from .._dispatch import dispatch
+    return dispatch("dropout", input.device.type, input, p, training)
 
-    Each channel is zeroed out independently with probability ``p``.
-    Falls back to the standard dropout dispatch (zeros individual elements) when
-    a dedicated channel-wise dropout op is not available.
-    """
+
+def dropout2d(input, p=0.5, training=True, inplace=False):
+    if not training or p == 0:
+        return input
+    from .._dispatch import dispatch
+    return dispatch("dropout", input.device.type, input, p, training)
+
+
+def dropout3d(input, p=0.5, training=True, inplace=False):
     if not training or p == 0:
         return input
     from .._dispatch import dispatch
@@ -379,23 +399,45 @@ def pad(input, pad, mode='constant', value=0):
 def interpolate(input, size=None, scale_factor=None, mode='nearest',
                 align_corners=None, recompute_scale_factor=None, antialias=False):
     from .._dispatch import dispatch
-    if size is not None:
-        if isinstance(size, int):
-            output_size = (size, size)
+    ndim = input.ndim
+    # Determine output_size based on input dimensionality
+    if ndim == 3:
+        # 1D: (N, C, W)
+        if size is not None:
+            output_size = (size,) if isinstance(size, int) else tuple(size)
+        elif scale_factor is not None:
+            sf = float(scale_factor) if isinstance(scale_factor, (int, float)) else float(scale_factor[0])
+            W = input.shape[2]
+            output_size = (int(W * sf),)
         else:
-            output_size = tuple(size)
-    elif scale_factor is not None:
-        if isinstance(scale_factor, (int, float)):
-            sf_h = sf_w = float(scale_factor)
-        else:
-            sf_h, sf_w = float(scale_factor[0]), float(scale_factor[1])
-        H, W = input.shape[2], input.shape[3]
-        output_size = (int(H * sf_h), int(W * sf_w))
+            raise ValueError("either size or scale_factor must be defined")
     else:
-        raise ValueError("either size or scale_factor must be defined")
+        # 2D: (N, C, H, W)
+        if size is not None:
+            if isinstance(size, int):
+                output_size = (size, size)
+            else:
+                output_size = tuple(size)
+        elif scale_factor is not None:
+            if isinstance(scale_factor, (int, float)):
+                sf_h = sf_w = float(scale_factor)
+            else:
+                sf_h, sf_w = float(scale_factor[0]), float(scale_factor[1])
+            H, W = input.shape[2], input.shape[3]
+            output_size = (int(H * sf_h), int(W * sf_w))
+        else:
+            raise ValueError("either size or scale_factor must be defined")
 
     if mode == 'nearest':
+        if ndim == 3:
+            return dispatch("upsample_nearest1d", input.device.type, input, output_size)
         return dispatch("upsample_nearest2d", input.device.type, input, output_size)
+    elif mode == 'linear':
+        ac = align_corners if align_corners is not None else False
+        sf = 0.0
+        if scale_factor is not None and not recompute_scale_factor:
+            sf = float(scale_factor) if isinstance(scale_factor, (int, float)) else float(scale_factor[0])
+        return dispatch("upsample_linear1d", input.device.type, input, output_size, ac, sf)
     elif mode == 'bilinear':
         ac = align_corners if align_corners is not None else False
         if scale_factor is not None and not recompute_scale_factor:
@@ -643,7 +685,41 @@ def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0,
 
 
 def multi_margin_loss(input, target, p=1, margin=1.0, weight=None, reduction='mean'):
-    raise NotImplementedError("multi_margin_loss is not yet implemented")
+    from .._functional import add, neg, mul, mean, sum as _sum, clamp, pow as _pow
+    from .._creation import tensor as _tensor, zeros as _zeros
+    from .._dispatch import dispatch
+    from .._dtype import int64 as int64_dtype
+    # loss_i = (1/C) * sum_j max(0, margin - (x[y_i] - x[j]))^p   for j != y_i
+    batch_size, n_classes = input.shape[0], input.shape[1]
+    if target.dtype != int64_dtype:
+        target = target.to(dtype=int64_dtype)
+    target_2d = target.view((batch_size, 1))
+    correct_scores = dispatch("gather", input.device.type, input, 1, target_2d)
+    # correct_scores: (batch_size, 1) -> broadcast with input (batch_size, n_classes)
+    margin_t = _tensor(float(margin), device=input.device)
+    diff = add(margin_t, add(input, neg(correct_scores)))  # margin - (correct - x_j) = margin + x_j - correct
+    diff = clamp(diff, 0.0, None)
+    if p == 2:
+        diff = mul(diff, diff)
+    # Zero out the correct class
+    from .._functional import where as _where
+    from .._creation import arange as _arange
+    mask = dispatch("eq", input.device.type,
+                    _arange(n_classes, device=input.device).unsqueeze(0),
+                    target_2d)
+    zero_t = _tensor(0.0, device=input.device)
+    diff = _where(mask, zero_t, diff)
+    # Sum over classes and divide by n_classes
+    losses = dispatch("sum", input.device.type, diff, dim=1)
+    n_classes_t = _tensor(float(n_classes), device=input.device)
+    losses = dispatch("div", input.device.type, losses, n_classes_t)
+    if reduction == 'none':
+        return losses
+    elif reduction == 'mean':
+        return mean(losses)
+    elif reduction == 'sum':
+        return _sum(losses)
+    raise ValueError(f"Invalid reduction mode: {reduction}")
 
 
 def multilabel_soft_margin_loss(input, target, weight=None, reduction='mean'):
@@ -888,3 +964,58 @@ def channel_shuffle(input, groups):
     # Reshape back: (N, C, H, W)
     x = dispatch("reshape", input.device.type, x, (N, C, H, W))
     return x
+
+
+def gumbel_softmax(logits, tau=1, hard=False, eps=1e-10, dim=-1):
+    from .._functional import log as _log, add as _add, neg as _neg, div as _div
+    from .._creation import tensor as _tensor
+    from .._dispatch import dispatch
+    # Sample from Gumbel(0, 1): -log(-log(U)) where U ~ Uniform(0,1)
+    u = dispatch("uniform", logits.device.type, logits)
+    eps_t = _tensor(eps, device=logits.device)
+    gumbels = _neg(_log(_add(_neg(_log(_add(u, eps_t))), eps_t)))
+    # (logits + gumbels) / tau
+    tau_t = _tensor(float(tau), device=logits.device)
+    scores = _div(_add(logits, gumbels), tau_t)
+    y_soft = softmax(scores, dim=dim)
+    if hard:
+        idx = dispatch("argmax", logits.device.type, y_soft, dim)
+        y_hard = dispatch("one_hot", logits.device.type, idx, logits.shape[dim])
+        # Straight-through: y_hard - y_soft.detach() + y_soft
+        ret = _add(_add(y_hard.to(dtype=y_soft.dtype), _neg(y_soft.detach())), y_soft)
+        return ret
+    return y_soft
+
+
+def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
+    from .._dispatch import dispatch
+    _kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    _dilation = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    _padding = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    _stride = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    return dispatch("im2col", input.device.type, input, _kernel_size, _dilation, _padding, _stride)
+
+
+def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
+    from .._dispatch import dispatch
+    _output_size = (output_size, output_size) if isinstance(output_size, int) else tuple(output_size)
+    _kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    _dilation = (dilation, dilation) if isinstance(dilation, int) else tuple(dilation)
+    _padding = (padding, padding) if isinstance(padding, int) else tuple(padding)
+    _stride = (stride, stride) if isinstance(stride, int) else tuple(stride)
+    return dispatch("col2im", input.device.type, input, _output_size, _kernel_size,
+                    _dilation, _padding, _stride)
+
+
+def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=None):
+    from .._dispatch import dispatch
+    if align_corners is None:
+        align_corners = False
+    return dispatch("grid_sample", input.device.type, input, grid, mode, padding_mode, align_corners)
+
+
+def affine_grid(theta, size, align_corners=None):
+    from .._dispatch import dispatch
+    if align_corners is None:
+        align_corners = False
+    return dispatch("affine_grid", theta.device.type, theta, size, align_corners)

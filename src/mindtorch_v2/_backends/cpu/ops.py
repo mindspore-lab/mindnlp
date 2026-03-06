@@ -1356,7 +1356,9 @@ def log_softmax(a, dim):
 
 def one_hot(a, num_classes=-1):
     arr = _to_numpy(a)
-    if not np.issubdtype(arr.dtype, np.integer):
+    # Check logical dtype — may be a string or DType object
+    dtype_str = str(a.dtype).replace('torch.', '')
+    if dtype_str not in ('int8', 'int16', 'int32', 'int64', 'uint8', 'bool'):
         raise TypeError("one_hot is only applicable to index tensor")
     flat = arr.astype(np.int64, copy=False).reshape(-1)
     if num_classes is None or int(num_classes) < 0:
@@ -3002,3 +3004,498 @@ def special_zeta(a, b):
     b_np = _to_numpy(b).astype(np.float64)
     out = sp.zeta(a_np, b_np)
     return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# F.affine_grid / F.grid_sample
+# ---------------------------------------------------------------------------
+
+def affine_grid(theta, size, align_corners=None):
+    """Generate 2D or 3D affine sampling grid from transformation matrix.
+
+    Args:
+        theta: Tensor of shape (N, 2, 3) for 4-D or (N, 3, 4) for 5-D.
+        size: output spatial size, e.g. torch.Size([N, C, H, W]).
+        align_corners: if True, [-1, 1] maps to pixel centres at corners;
+                       if False, [-1, 1] maps to the edges of the corner pixels.
+    Returns:
+        grid: (N, H, W, 2) for 4-D or (N, D, H, W, 3) for 5-D.
+    """
+    if align_corners is None:
+        align_corners = False
+
+    theta_np = _to_numpy(theta).astype(np.float32)  # (N, 2, 3) or (N, 3, 4)
+    N = theta_np.shape[0]
+
+    if len(size) == 4:
+        # 2-D spatial
+        _, _, H, W = size
+        # Build base grid of (x, y, 1) coordinates
+        if align_corners:
+            # linspace from -1 to 1 with H / W points
+            ys = np.linspace(-1.0, 1.0, H, dtype=np.float32) if H > 1 else np.array([0.0], dtype=np.float32)
+            xs = np.linspace(-1.0, 1.0, W, dtype=np.float32) if W > 1 else np.array([0.0], dtype=np.float32)
+        else:
+            # coordinates centred in each cell, ranging from -1+1/W to 1-1/W
+            ys = (np.arange(H, dtype=np.float32) * 2.0 + 1.0) / H - 1.0 if H > 0 else np.zeros(0, dtype=np.float32)
+            xs = (np.arange(W, dtype=np.float32) * 2.0 + 1.0) / W - 1.0 if W > 0 else np.zeros(0, dtype=np.float32)
+
+        # meshgrid: grid_x (H, W), grid_y (H, W)
+        grid_x, grid_y = np.meshgrid(xs, ys)  # both (H, W)
+        ones = np.ones_like(grid_x)
+
+        # base_grid: (H*W, 3) — columns are x, y, 1
+        base_grid = np.stack([grid_x.ravel(), grid_y.ravel(), ones.ravel()], axis=1)  # (H*W, 3)
+
+        # Apply theta: out = base_grid @ theta^T  =>  (N, H*W, 2)
+        # theta: (N, 2, 3), base_grid: (H*W, 3)
+        # result[n] = base_grid @ theta[n].T  ->  (H*W, 2)
+        out = np.einsum('ij,nkj->nik', base_grid, theta_np)  # (N, H*W, 2)
+        out = out.reshape(N, H, W, 2)
+
+    elif len(size) == 5:
+        # 3-D spatial
+        _, _, D, H, W = size
+        if align_corners:
+            zs = np.linspace(-1.0, 1.0, D, dtype=np.float32) if D > 1 else np.array([0.0], dtype=np.float32)
+            ys = np.linspace(-1.0, 1.0, H, dtype=np.float32) if H > 1 else np.array([0.0], dtype=np.float32)
+            xs = np.linspace(-1.0, 1.0, W, dtype=np.float32) if W > 1 else np.array([0.0], dtype=np.float32)
+        else:
+            zs = (np.arange(D, dtype=np.float32) * 2.0 + 1.0) / D - 1.0 if D > 0 else np.zeros(0, dtype=np.float32)
+            ys = (np.arange(H, dtype=np.float32) * 2.0 + 1.0) / H - 1.0 if H > 0 else np.zeros(0, dtype=np.float32)
+            xs = (np.arange(W, dtype=np.float32) * 2.0 + 1.0) / W - 1.0 if W > 0 else np.zeros(0, dtype=np.float32)
+
+        grid_x, grid_y, grid_z = np.meshgrid(xs, ys, zs, indexing='xy')
+        # grid_x, grid_y, grid_z are (H, W, D) due to meshgrid 'xy' indexing
+        # Transpose to (D, H, W)
+        grid_x = np.transpose(grid_x, (2, 0, 1))
+        grid_y = np.transpose(grid_y, (2, 0, 1))
+        grid_z = np.transpose(grid_z, (2, 0, 1))
+        ones = np.ones_like(grid_x)
+
+        base_grid = np.stack([grid_x.ravel(), grid_y.ravel(), grid_z.ravel(), ones.ravel()], axis=1)  # (D*H*W, 4)
+        out = np.einsum('ij,nkj->nik', base_grid, theta_np)  # (N, D*H*W, 3)
+        out = out.reshape(N, D, H, W, 3)
+    else:
+        raise ValueError("affine_grid only supports 4-D (2-D spatial) and 5-D (3-D spatial) inputs")
+
+    return _from_numpy(np.ascontiguousarray(out), theta.dtype, theta.device)
+
+
+def _grid_sample_denormalize(coord, length, align_corners):
+    """Convert normalised coordinate [-1, 1] to pixel coordinate."""
+    if align_corners:
+        # -1 -> 0, 1 -> length-1
+        return ((coord + 1.0) / 2.0) * (length - 1)
+    else:
+        # -1 -> -0.5, 1 -> length - 0.5
+        return ((coord + 1.0) * length - 1.0) / 2.0
+
+
+def _grid_sample_compute_source(coord, length, padding_mode):
+    """Apply padding mode to source pixel coordinate.
+
+    Returns (index_array, in_bounds_mask).
+    For 'zeros': index is clamped but mask marks OOB.
+    For 'border': index is clamped.
+    For 'reflection': index is reflected.
+    """
+    if padding_mode == 'border':
+        coord = np.clip(coord, 0, length - 1)
+        return coord, None
+    elif padding_mode == 'reflection':
+        # Reflect: the range [0, length-1] is mirrored.
+        # Double the period and fold back.
+        if length > 1:
+            # Period = 2 * (length - 1)
+            period = 2.0 * (length - 1)
+            coord = np.abs(np.mod(coord, period))
+            coord = np.where(coord > length - 1, period - coord, coord)
+        else:
+            coord = np.zeros_like(coord)
+        coord = np.clip(coord, 0, length - 1)
+        return coord, None
+    else:
+        # zeros padding: mark out-of-bounds, clamp index
+        mask = (coord >= 0) & (coord < length)
+        coord = np.clip(coord, 0, length - 1)
+        return coord, mask
+
+
+def _cubic_interp_weight(t):
+    """Compute cubic convolution weights for distance t (|t| values).
+
+    Uses the Keys cubic with a = -0.75 (same as PyTorch).
+    Returns array of same shape as t.
+    """
+    t = np.abs(t)
+    w = np.where(
+        t <= 1.0,
+        (1.5 * t - 2.5) * t * t + 1.0,
+        np.where(
+            t < 2.0,
+            ((-0.5 * t + 2.5) * t - 4.0) * t + 2.0,
+            0.0,
+        ),
+    )
+    return w
+
+
+def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=None):
+    """Sample input tensor at grid coordinates.
+
+    Args:
+        input: (N, C, H_in, W_in) tensor.
+        grid:  (N, H_out, W_out, 2) tensor with values in [-1, 1].
+               The last dimension is (x, y) where x indexes W and y indexes H.
+        mode: 'bilinear', 'nearest', or 'bicubic'.
+        padding_mode: 'zeros', 'border', or 'reflection'.
+        align_corners: bool.
+    Returns:
+        (N, C, H_out, W_out) tensor.
+    """
+    if align_corners is None:
+        align_corners = False
+
+    inp = _to_numpy(input).astype(np.float64)  # (N, C, H_in, W_in)
+    g = _to_numpy(grid).astype(np.float64)      # (N, H_out, W_out, 2)
+
+    N, C, H_in, W_in = inp.shape
+    _, H_out, W_out, _ = g.shape
+
+    # De-normalise grid coordinates
+    gx = _grid_sample_denormalize(g[..., 0], W_in, align_corners)  # (N, H_out, W_out)
+    gy = _grid_sample_denormalize(g[..., 1], H_in, align_corners)  # (N, H_out, W_out)
+
+    if mode == 'nearest':
+        ix = np.round(gx).astype(np.int64)
+        iy = np.round(gy).astype(np.int64)
+
+        ix_src, mask_x = _grid_sample_compute_source(ix.astype(np.float64), W_in, padding_mode)
+        iy_src, mask_y = _grid_sample_compute_source(iy.astype(np.float64), H_in, padding_mode)
+        ix_src = ix_src.astype(np.int64)
+        iy_src = iy_src.astype(np.int64)
+
+        # Gather: out[n, c, h, w] = inp[n, c, iy_src[n,h,w], ix_src[n,h,w]]
+        n_idx = np.arange(N)[:, None, None]  # (N, 1, 1)
+        out = inp[n_idx, :, iy_src[:, :, :], ix_src[:, :, :]]  # (N, H_out, W_out, C)
+        out = out.transpose(0, 3, 1, 2)  # (N, C, H_out, W_out)
+
+        if padding_mode == 'zeros':
+            mask = mask_x & mask_y  # (N, H_out, W_out)
+            out = out * mask[:, np.newaxis, :, :]
+
+    elif mode == 'bilinear':
+        ix0 = np.floor(gx).astype(np.int64)
+        iy0 = np.floor(gy).astype(np.int64)
+
+        tx = gx - np.floor(gx)  # fractional part
+        ty = gy - np.floor(gy)
+
+        out = np.zeros((N, C, H_out, W_out), dtype=np.float64)
+
+        for dy in range(2):
+            for dx in range(2):
+                cy = iy0 + dy
+                cx = ix0 + dx
+
+                cx_src, mask_x = _grid_sample_compute_source(cx.astype(np.float64), W_in, padding_mode)
+                cy_src, mask_y = _grid_sample_compute_source(cy.astype(np.float64), H_in, padding_mode)
+                cx_src = cx_src.astype(np.int64)
+                cy_src = cy_src.astype(np.int64)
+
+                wx = (1.0 - tx) if dx == 0 else tx
+                wy = (1.0 - ty) if dy == 0 else ty
+                w = wx * wy  # (N, H_out, W_out)
+
+                n_idx = np.arange(N)[:, None, None]
+                val = inp[n_idx, :, cy_src, cx_src]  # (N, H_out, W_out, C)
+                val = val.transpose(0, 3, 1, 2)       # (N, C, H_out, W_out)
+
+                if padding_mode == 'zeros':
+                    mask = mask_x & mask_y
+                    val = val * mask[:, np.newaxis, :, :]
+
+                out += val * w[:, np.newaxis, :, :]
+
+    elif mode == 'bicubic':
+        ix0 = np.floor(gx).astype(np.int64)
+        iy0 = np.floor(gy).astype(np.int64)
+
+        tx = gx - np.floor(gx)
+        ty = gy - np.floor(gy)
+
+        out = np.zeros((N, C, H_out, W_out), dtype=np.float64)
+
+        for dy in range(-1, 3):
+            for dx in range(-1, 3):
+                cy = iy0 + dy
+                cx = ix0 + dx
+
+                cx_src, mask_x = _grid_sample_compute_source(cx.astype(np.float64), W_in, padding_mode)
+                cy_src, mask_y = _grid_sample_compute_source(cy.astype(np.float64), H_in, padding_mode)
+                cx_src = cx_src.astype(np.int64)
+                cy_src = cy_src.astype(np.int64)
+
+                wx = _cubic_interp_weight(tx - dx)
+                wy = _cubic_interp_weight(ty - dy)
+                w = wx * wy
+
+                n_idx = np.arange(N)[:, None, None]
+                val = inp[n_idx, :, cy_src, cx_src]
+                val = val.transpose(0, 3, 1, 2)
+
+                if padding_mode == 'zeros':
+                    mask = mask_x & mask_y
+                    val = val * mask[:, np.newaxis, :, :]
+
+                out += val * w[:, np.newaxis, :, :]
+
+    else:
+        raise ValueError(f"grid_sample mode must be 'bilinear', 'nearest', or 'bicubic', got '{mode}'")
+
+    out = out.astype(to_numpy_dtype(input.dtype))
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+# ---------------------------------------------------------------------------
+# F.unfold (im2col) / F.fold (col2im)
+# ---------------------------------------------------------------------------
+
+def im2col(a, kernel_size, dilation, padding, stride):
+    """F.unfold: Extract sliding local blocks from 4D input (N, C, H, W).
+
+    Returns tensor of shape (N, C*kH*kW, L) where L = number of valid blocks.
+    kernel_size, dilation, padding, stride are all 2-tuples.
+    """
+    arr = _to_numpy(a)
+    N, C, H, W = arr.shape
+    kH, kW = kernel_size
+    dH, dW = dilation
+    pH, pW = padding
+    sH, sW = stride
+
+    # Effective kernel size with dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    # Output spatial dimensions
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+    L = H_out * W_out
+
+    # Pad input if needed
+    if pH > 0 or pW > 0:
+        arr = np.pad(arr, ((0, 0), (0, 0), (pH, pH), (pW, pW)), mode='constant')
+
+    # Ensure contiguous for stride tricks
+    arr = np.ascontiguousarray(arr)
+
+    # Use stride tricks to extract patches efficiently
+    # Shape: (N, C, kH, kW, H_out, W_out)
+    shape = (N, C, kH, kW, H_out, W_out)
+    strides = (
+        arr.strides[0],          # batch
+        arr.strides[1],          # channel
+        arr.strides[2] * dH,     # kernel height (dilated)
+        arr.strides[3] * dW,     # kernel width (dilated)
+        arr.strides[2] * sH,     # output height (stride)
+        arr.strides[3] * sW,     # output width (stride)
+    )
+
+    patches = np.lib.stride_tricks.as_strided(arr, shape=shape, strides=strides)
+    # Reshape to (N, C*kH*kW, H_out*W_out)
+    out = patches.reshape(N, C * kH * kW, L)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def col2im(a, output_size, kernel_size, dilation, padding, stride):
+    """F.fold: Combine array of sliding local blocks into a 4D tensor.
+
+    Input shape: (N, C*kH*kW, L)
+    Returns tensor of shape (N, C, output_size[0], output_size[1]).
+    Overlapping regions are summed (matching PyTorch behavior).
+    """
+    arr = _to_numpy(a)
+    N, C_kk, L = arr.shape
+    kH, kW = kernel_size
+    dH, dW = dilation
+    pH, pW = padding
+    sH, sW = stride
+    H_out, W_out = output_size
+
+    # Effective kernel size with dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    # Number of output positions
+    H_col = (H_out + 2 * pH - ekH) // sH + 1
+    W_col = (W_out + 2 * pW - ekW) // sW + 1
+
+    if H_col * W_col != L:
+        raise ValueError(
+            f"Expected L={H_col * W_col} (H_col={H_col}, W_col={W_col}) but got L={L}"
+        )
+
+    C = C_kk // (kH * kW)
+    if C * kH * kW != C_kk:
+        raise ValueError(
+            f"C*kH*kW ({C}*{kH}*{kW}={C * kH * kW}) does not match input dim 1 ({C_kk})"
+        )
+
+    # Padded output dimensions
+    H_pad = H_out + 2 * pH
+    W_pad = W_out + 2 * pW
+
+    # Create output with padding
+    out = np.zeros((N, C, H_pad, W_pad), dtype=arr.dtype)
+
+    # Reshape input columns to (N, C, kH, kW, H_col, W_col)
+    cols = arr.reshape(N, C, kH, kW, H_col, W_col)
+
+    # Scatter-add patches back into output
+    for i in range(kH):
+        for j in range(kW):
+            h_start = i * dH
+            w_start = j * dW
+            for h_idx in range(H_col):
+                for w_idx in range(W_col):
+                    out[:, :, h_start + h_idx * sH, w_start + w_idx * sW] += cols[:, :, i, j, h_idx, w_idx]
+
+    # Remove padding
+    if pH > 0 or pW > 0:
+        out = out[:, :, pH:pH + H_out, pW:pW + W_out]
+
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# uniform (out-of-place) — needed by F.gumbel_softmax
+# ---------------------------------------------------------------------------
+def uniform(a):
+    """Return tensor of same shape filled with Uniform(0,1) samples."""
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.uniform(0.0, 1.0, _to_numpy(a).shape).astype(_to_numpy(a).dtype)
+    return _from_numpy(arr, a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Upsample ops — CPU numpy implementations
+# ---------------------------------------------------------------------------
+def upsample_nearest1d(a, output_size):
+    """Nearest-neighbor 1D upsampling. Input: (N, C, W_in) -> (N, C, W_out)."""
+    arr = _to_numpy(a)
+    W_out = output_size[0]
+    W_in = arr.shape[2]
+    indices = (np.arange(W_out, dtype=np.float64) * W_in / W_out).astype(np.intp)
+    np.clip(indices, 0, W_in - 1, out=indices)
+    out = arr[:, :, indices]
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def upsample_linear1d(a, output_size, align_corners=False, scales=None):
+    """Linear interpolation 1D upsampling. Input: (N, C, W_in) -> (N, C, W_out)."""
+    arr = _to_numpy(a).astype(np.float64)
+    W_out = output_size[0]
+    W_in = arr.shape[2]
+
+    if W_out == 1:
+        out = arr[:, :, :1]
+        return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+    if align_corners and W_in > 1 and W_out > 1:
+        x = np.linspace(0, W_in - 1, W_out)
+    else:
+        x = (np.arange(W_out, dtype=np.float64) + 0.5) * W_in / W_out - 0.5
+
+    x = np.clip(x, 0, W_in - 1)
+    x0 = np.floor(x).astype(np.intp)
+    x1 = np.minimum(x0 + 1, W_in - 1)
+    wx = (x - x0).reshape(1, 1, -1)
+
+    out = arr[:, :, x0] * (1.0 - wx) + arr[:, :, x1] * wx
+    return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+
+def upsample_nearest2d(a, output_size):
+    """Nearest-neighbor 2D upsampling. Input: (N, C, H_in, W_in) -> (N, C, H_out, W_out)."""
+    arr = _to_numpy(a)
+    H_out, W_out = output_size
+    H_in, W_in = arr.shape[2], arr.shape[3]
+    h_idx = (np.arange(H_out, dtype=np.float64) * H_in / H_out).astype(np.intp)
+    w_idx = (np.arange(W_out, dtype=np.float64) * W_in / W_out).astype(np.intp)
+    np.clip(h_idx, 0, H_in - 1, out=h_idx)
+    np.clip(w_idx, 0, W_in - 1, out=w_idx)
+    out = arr[:, :, h_idx[:, None], w_idx[None, :]]
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def upsample_bilinear2d(a, output_size, align_corners=False, scales_h=None, scales_w=None):
+    """Bilinear 2D upsampling. Input: (N, C, H_in, W_in) -> (N, C, H_out, W_out)."""
+    arr = _to_numpy(a).astype(np.float64)
+    H_out, W_out = output_size
+    H_in, W_in = arr.shape[2], arr.shape[3]
+
+    if align_corners and H_in > 1 and H_out > 1:
+        h = np.linspace(0, H_in - 1, H_out)
+    else:
+        h = (np.arange(H_out, dtype=np.float64) + 0.5) * H_in / H_out - 0.5
+    if align_corners and W_in > 1 and W_out > 1:
+        w = np.linspace(0, W_in - 1, W_out)
+    else:
+        w = (np.arange(W_out, dtype=np.float64) + 0.5) * W_in / W_out - 0.5
+
+    h = np.clip(h, 0, H_in - 1)
+    w = np.clip(w, 0, W_in - 1)
+
+    h0 = np.floor(h).astype(np.intp)
+    h1 = np.minimum(h0 + 1, H_in - 1)
+    w0 = np.floor(w).astype(np.intp)
+    w1 = np.minimum(w0 + 1, W_in - 1)
+
+    wh = (h - h0).reshape(1, 1, -1, 1)
+    ww = (w - w0).reshape(1, 1, 1, -1)
+
+    out = (arr[:, :, h0[:, None], w0[None, :]] * (1 - wh) * (1 - ww) +
+           arr[:, :, h0[:, None], w1[None, :]] * (1 - wh) * ww +
+           arr[:, :, h1[:, None], w0[None, :]] * wh * (1 - ww) +
+           arr[:, :, h1[:, None], w1[None, :]] * wh * ww)
+    return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+
+def upsample_bicubic2d(a, output_size, align_corners=False, scales_h=None, scales_w=None):
+    """Bicubic 2D upsampling. Input: (N, C, H_in, W_in) -> (N, C, H_out, W_out)."""
+    arr = _to_numpy(a).astype(np.float64)
+    H_out, W_out = output_size
+    H_in, W_in = arr.shape[2], arr.shape[3]
+
+    def _cubic_weight(t):
+        """Keys cubic kernel (a=-0.75)."""
+        at = np.abs(t)
+        return np.where(at <= 1, (1.5 * at - 2.5) * at * at + 1,
+               np.where(at < 2, ((-0.5 * at + 2.5) * at - 4) * at + 2, 0.0))
+
+    if align_corners and H_in > 1 and H_out > 1:
+        h = np.linspace(0, H_in - 1, H_out)
+    else:
+        h = (np.arange(H_out, dtype=np.float64) + 0.5) * H_in / H_out - 0.5
+    if align_corners and W_in > 1 and W_out > 1:
+        w = np.linspace(0, W_in - 1, W_out)
+    else:
+        w = (np.arange(W_out, dtype=np.float64) + 0.5) * W_in / W_out - 0.5
+
+    N, C = arr.shape[:2]
+    out = np.zeros((N, C, H_out, W_out), dtype=np.float64)
+    for j in range(H_out):
+        for i in range(W_out):
+            hy, wx = h[j], w[i]
+            hy0 = int(np.floor(hy)) - 1
+            wx0 = int(np.floor(wx)) - 1
+            for dh in range(4):
+                for dw in range(4):
+                    hh = min(max(hy0 + dh, 0), H_in - 1)
+                    ww = min(max(wx0 + dw, 0), W_in - 1)
+                    weight = _cubic_weight(hy - (hy0 + dh)) * _cubic_weight(wx - (wx0 + dw))
+                    out[:, :, j, i] += arr[:, :, hh, ww] * weight
+    return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
