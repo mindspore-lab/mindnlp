@@ -60,7 +60,24 @@ from ._functional import baddbmm, trace, cummin, logsumexp, renorm
 from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
 from ._functional import unflatten, broadcast_to, movedim, diagonal
 from ._functional import unique, searchsorted, kthvalue, median
-from ._functional import nansum
+# Category A: Export existing functions
+from ._functional import eq, ne, lt, le, gt, ge
+from ._functional import select, expand, masked_fill, unfold
+from ._functional import scatter_, scatter_add_
+from ._functional import index_add_, index_copy_, index_fill_
+from ._functional import index_put, index_put_
+from ._functional import masked_fill_, masked_scatter_
+# Category B: Wrapper + export
+from ._functional import nansum, nanmean, det, dist, matrix_power, argwhere
+# Category C1: Pure-Python functions
+from ._functional import meshgrid, atleast_1d, atleast_2d, atleast_3d
+from ._functional import broadcast_tensors, broadcast_shapes
+from ._functional import complex, polar
+# Category C2: Dispatch-based functions
+from ._functional import diff, bincount, cdist, aminmax
+from ._functional import quantile, nanquantile, nanmedian
+from ._functional import histc, histogram, bucketize
+from ._functional import isneginf, isposinf, isreal, isin, heaviside
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import (
     pipeline_context,
@@ -394,8 +411,59 @@ __all__ = [
     # new random ops
     "bernoulli",
     "multinomial",
-    # P2 new ops
+    # Category A: Comparison ops
+    "eq",
+    "ne",
+    "lt",
+    "le",
+    "gt",
+    "ge",
+    # Category A: Indexing/mutation ops
+    "select",
+    "expand",
+    "masked_fill",
+    "masked_fill_",
+    "unfold",
+    "scatter_",
+    "scatter_add_",
+    "index_add_",
+    "index_copy_",
+    "index_fill_",
+    "index_put",
+    "index_put_",
+    "masked_scatter_",
+    # Category B: Wrapper ops
     "nansum",
+    "nanmean",
+    "det",
+    "dist",
+    "matrix_power",
+    "argwhere",
+    # Category C1: Pure-Python ops
+    "meshgrid",
+    "atleast_1d",
+    "atleast_2d",
+    "atleast_3d",
+    "broadcast_tensors",
+    "broadcast_shapes",
+    "complex",
+    "polar",
+    # Category C2: Dispatch-based ops
+    "diff",
+    "bincount",
+    "cdist",
+    "aminmax",
+    "quantile",
+    "nanquantile",
+    "nanmedian",
+    "histc",
+    "histogram",
+    "bucketize",
+    "isneginf",
+    "isposinf",
+    "isreal",
+    "isin",
+    "heaviside",
     # submodules
     "linalg",
     "fft",

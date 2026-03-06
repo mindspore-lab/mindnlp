@@ -2358,6 +2358,210 @@ def cummin(a, dim):
 
 
 # ---------------------------------------------------------------------------
+# Top-level gap-fill ops (Category C2)
+# ---------------------------------------------------------------------------
+
+def diff(a, n=1, dim=-1, prepend=None, append=None):
+    """Compute the n-th discrete difference along the given dim."""
+    arr = _to_numpy(a)
+    if prepend is not None or append is not None:
+        pieces = []
+        if prepend is not None:
+            pieces.append(_to_numpy(prepend))
+        pieces.append(arr)
+        if append is not None:
+            pieces.append(_to_numpy(append))
+        arr = np.concatenate(pieces, axis=dim)
+    out = np.diff(arr, n=n, axis=dim)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def bincount(a, weights=None, minlength=0):
+    """Count number of occurrences of each value in a 1-D int tensor."""
+    arr = _to_numpy(a).astype(np.int64).ravel()
+    w = _to_numpy(weights).ravel() if weights is not None else None
+    out = np.bincount(arr, weights=w, minlength=minlength)
+    out_dtype = a.dtype if weights is None else weights.dtype
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(out_dtype))), out_dtype, a.device)
+
+
+def cdist(x1, x2, p=2.0):
+    """Batched pairwise distance between two sets of vectors."""
+    a = _to_numpy(x1).astype(np.float64)
+    b = _to_numpy(x2).astype(np.float64)
+    if a.ndim == 2:
+        a = a[np.newaxis]
+        b = b[np.newaxis]
+        squeeze = True
+    else:
+        squeeze = False
+    batch = a.shape[0]
+    results = []
+    for i in range(batch):
+        # Manual pairwise distance: (M, 1, D) - (1, N, D) -> (M, N, D)
+        diff = a[i][:, np.newaxis, :] - b[i][np.newaxis, :, :]
+        if p == 2.0:
+            d = np.sqrt(np.sum(diff ** 2, axis=-1))
+        elif p == 1.0:
+            d = np.sum(np.abs(diff), axis=-1)
+        elif p == float('inf'):
+            d = np.max(np.abs(diff), axis=-1)
+        elif p == 0.0:
+            d = np.sum(diff != 0, axis=-1).astype(np.float64)
+        else:
+            d = np.sum(np.abs(diff) ** p, axis=-1) ** (1.0 / p)
+        results.append(d)
+    out = np.stack(results)
+    if squeeze:
+        out = out[0]
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(x1.dtype))), x1.dtype, x1.device)
+
+
+def aminmax(a, dim=None, keepdim=False):
+    """Returns the min and max of a tensor."""
+    from collections import namedtuple
+    arr = _to_numpy(a)
+    if dim is None:
+        mn = np.min(arr)
+        mx = np.max(arr)
+        mn_t = _from_numpy(np.array(mn, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+        mx_t = _from_numpy(np.array(mx, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        mn = np.min(arr, axis=dim, keepdims=keepdim)
+        mx = np.max(arr, axis=dim, keepdims=keepdim)
+        mn_t = _from_numpy(np.ascontiguousarray(mn), a.dtype, a.device)
+        mx_t = _from_numpy(np.ascontiguousarray(mx), a.dtype, a.device)
+    AminmaxResult = namedtuple("aminmax", ["min", "max"])
+    return AminmaxResult(mn_t, mx_t)
+
+
+def quantile(a, q, dim=None, keepdim=False):
+    """Compute the q-th quantile of the input tensor."""
+    arr = _to_numpy(a).astype(np.float64)
+    q_val = _to_numpy(q) if hasattr(q, '_numpy_view') else np.asarray(q, dtype=np.float64)
+    if dim is None:
+        out = np.quantile(arr, q_val)
+    else:
+        out = np.quantile(arr, q_val, axis=dim, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def nanquantile(a, q, dim=None, keepdim=False):
+    """Compute the q-th quantile ignoring NaN values."""
+    arr = _to_numpy(a).astype(np.float64)
+    q_val = _to_numpy(q) if hasattr(q, '_numpy_view') else np.asarray(q, dtype=np.float64)
+    if dim is None:
+        out = np.nanquantile(arr, q_val)
+    else:
+        out = np.nanquantile(arr, q_val, axis=dim, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def nanmedian(a, dim=None, keepdim=False):
+    """Median ignoring NaN values. Returns (values, indices) when dim is given."""
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is None:
+        out = np.nanmedian(arr)
+        return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        values = np.nanmedian(arr, axis=dim, keepdims=keepdim)
+        # Compute indices: for each slice along dim, find index of the median value
+        n = arr.shape[dim]
+        sorted_arr = np.sort(arr, axis=dim)
+        # Count non-nan along dim
+        not_nan = ~np.isnan(arr)
+        count = np.sum(not_nan, axis=dim, keepdims=True)
+        # Median index in sorted order
+        med_idx_sorted = (count - 1) // 2
+        # For each position, find the index in the original array
+        sorted_indices = np.argsort(arr, axis=dim)
+        # Gather the median index from sorted_indices
+        indices = np.take_along_axis(sorted_indices, med_idx_sorted.astype(np.intp), axis=dim)
+        if not keepdim:
+            indices = np.squeeze(indices, axis=dim)
+        from collections import namedtuple
+        NanmedianResult = namedtuple("nanmedian", ["values", "indices"])
+        return NanmedianResult(
+            _from_numpy(np.ascontiguousarray(values.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+            _from_numpy(np.ascontiguousarray(indices.astype(np.int64)), int64_dtype, a.device),
+        )
+
+
+def histc(a, bins=100, min=0, max=0):
+    """Histogram with equal-width bins (1-D output count tensor)."""
+    arr = _to_numpy(a).ravel().astype(np.float64)
+    lo = float(min)
+    hi = float(max)
+    if lo == 0 and hi == 0:
+        lo = float(np.min(arr))
+        hi = float(np.max(arr))
+    out, _ = np.histogram(arr, bins=bins, range=(lo, hi))
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def histogram(a, bins, range=None, weight=None, density=False):
+    """Histogram returning (hist, bin_edges)."""
+    arr = _to_numpy(a).ravel().astype(np.float64)
+    bins_val = _to_numpy(bins) if hasattr(bins, '_numpy_view') else bins
+    w = _to_numpy(weight).ravel().astype(np.float64) if weight is not None else None
+    hist, edges = np.histogram(arr, bins=bins_val, range=range, weights=w, density=density)
+    return (
+        _from_numpy(np.ascontiguousarray(hist.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(edges.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+    )
+
+
+def bucketize(a, boundaries, out_int32=False, right=False):
+    """Maps values to bucket indices using boundaries."""
+    arr = _to_numpy(a)
+    b = _to_numpy(boundaries).ravel()
+    side = 'right' if not right else 'left'
+    out = np.searchsorted(b, arr, side=side)
+    out_np_dtype = np.int32 if out_int32 else np.int64
+    out_dtype = int64_dtype
+    return _from_numpy(np.ascontiguousarray(out.astype(out_np_dtype)), out_dtype, a.device)
+
+
+def isneginf(a):
+    """Returns a bool tensor indicating negative infinity."""
+    arr = _to_numpy(a)
+    out = np.isneginf(arr)
+    return _from_numpy(np.ascontiguousarray(out), bool_dtype, a.device)
+
+
+def isposinf(a):
+    """Returns a bool tensor indicating positive infinity."""
+    arr = _to_numpy(a)
+    out = np.isposinf(arr)
+    return _from_numpy(np.ascontiguousarray(out), bool_dtype, a.device)
+
+
+def isreal(a):
+    """Returns a bool tensor indicating real-valued elements."""
+    arr = _to_numpy(a)
+    out = np.isreal(arr)
+    if out.ndim == 0:
+        out = np.array(out)
+    return _from_numpy(np.ascontiguousarray(out.astype(np.bool_)), bool_dtype, a.device)
+
+
+def isin(elements, test_elements):
+    """Tests if each element is in test_elements."""
+    e = _to_numpy(elements)
+    te = _to_numpy(test_elements)
+    out = np.isin(e, te)
+    return _from_numpy(np.ascontiguousarray(out), bool_dtype, elements.device)
+
+
+def heaviside(a, values):
+    """Heaviside step function."""
+    a_np = _to_numpy(a)
+    v_np = _to_numpy(values)
+    out = np.heaviside(a_np, v_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
 # torch.linalg ops
 # ---------------------------------------------------------------------------
 

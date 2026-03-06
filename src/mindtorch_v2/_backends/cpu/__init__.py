@@ -521,6 +521,41 @@ registry.register("argwhere", "cpu", argwhere)  # Returns 2D tensor
 registry.register("baddbmm", "cpu", baddbmm, meta=meta_infer.infer_binary)
 registry.register("cummin", "cpu", cummin)  # Returns namedtuple
 
+# Top-level gap-fill ops (Category C2)
+from .ops import (
+    diff,
+    bincount,
+    cdist,
+    aminmax,
+    quantile,
+    nanquantile,
+    nanmedian,
+    histc,
+    histogram,
+    bucketize,
+    isneginf,
+    isposinf,
+    isreal,
+    isin,
+    heaviside,
+)
+
+registry.register("diff", "cpu", diff, meta=meta_infer.infer_unary)
+registry.register("bincount", "cpu", bincount)
+registry.register("cdist", "cpu", cdist)
+registry.register("aminmax", "cpu", aminmax)
+registry.register("quantile", "cpu", quantile)
+registry.register("nanquantile", "cpu", nanquantile)
+registry.register("nanmedian", "cpu", nanmedian)
+registry.register("histc", "cpu", histc)
+registry.register("histogram", "cpu", histogram)
+registry.register("bucketize", "cpu", bucketize)
+registry.register("isneginf", "cpu", isneginf, meta=meta_infer.infer_unary)
+registry.register("isposinf", "cpu", isposinf, meta=meta_infer.infer_unary)
+registry.register("isreal", "cpu", isreal, meta=meta_infer.infer_unary)
+registry.register("isin", "cpu", isin, meta=meta_infer.infer_binary)
+registry.register("heaviside", "cpu", heaviside, meta=meta_infer.infer_binary)
+
 # Optimizer step ops
 from .optim_ops import (
     _sgd_step,
