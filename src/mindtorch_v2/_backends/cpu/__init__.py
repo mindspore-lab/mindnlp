@@ -520,3 +520,29 @@ registry.register("nanmean", "cpu", nanmean, meta=meta_infer.infer_sum)
 registry.register("argwhere", "cpu", argwhere)  # Returns 2D tensor
 registry.register("baddbmm", "cpu", baddbmm, meta=meta_infer.infer_binary)
 registry.register("cummin", "cpu", cummin)  # Returns namedtuple
+
+# Optimizer step ops
+from .optim_ops import (
+    _sgd_step,
+    _adam_step,
+    _adamw_step,
+    _adagrad_step,
+    _rmsprop_step,
+    _adadelta_step,
+    _adamax_step,
+    _nadam_step,
+    _radam_step,
+    _asgd_step,
+    _rprop_step,
+)
+registry.register("_sgd_step", "cpu", _sgd_step)
+registry.register("_adam_step", "cpu", _adam_step)
+registry.register("_adamw_step", "cpu", _adamw_step)
+registry.register("_adagrad_step", "cpu", _adagrad_step)
+registry.register("_rmsprop_step", "cpu", _rmsprop_step)
+registry.register("_adadelta_step", "cpu", _adadelta_step)
+registry.register("_adamax_step", "cpu", _adamax_step)
+registry.register("_nadam_step", "cpu", _nadam_step)
+registry.register("_radam_step", "cpu", _radam_step)
+registry.register("_asgd_step", "cpu", _asgd_step)
+registry.register("_rprop_step", "cpu", _rprop_step)

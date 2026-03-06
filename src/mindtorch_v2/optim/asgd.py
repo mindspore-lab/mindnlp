@@ -1,7 +1,7 @@
 """
-SGD (Stochastic Gradient Descent) optimizer for mindtorch_v2.
+ASGD (Averaged SGD) optimizer for mindtorch_v2.
 
-Aligned with PyTorch's torch.optim.SGD.
+Aligned with PyTorch's torch.optim.ASGD.
 """
 
 from typing import Any, Callable, Dict, Iterable, Optional, Union
@@ -12,22 +12,25 @@ from .._dispatch import dispatch
 from .._functional import zeros_like
 
 
-class SGD(Optimizer):
-    """Implements stochastic gradient descent (optionally with momentum).
+class ASGD(Optimizer):
+    """Implements Averaged Stochastic Gradient Descent.
+
+    ASGD maintains a running average of the iterates that converges better
+    than standard SGD for some problems.
 
     Args:
         params: Iterable of parameters to optimize or dicts defining
             parameter groups
-        lr: Learning rate (default: 0.01)
-        momentum: Momentum factor (default: 0)
+        lr: Learning rate (default: 1e-2)
+        lambd: Decay term (default: 1e-4)
+        alpha: Power for eta update (default: 0.75)
+        t0: Point at which to start averaging (default: 1e6)
         weight_decay: Weight decay (L2 penalty) (default: 0)
-        dampening: Dampening for momentum (default: 0)
-        nesterov: Enables Nesterov momentum (default: False)
         maximize: Maximize the params based on the objective, instead of
             minimizing (default: False)
 
     Example:
-        >>> optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)
+        >>> optimizer = ASGD(model.parameters(), lr=0.01)
         >>> optimizer.zero_grad()
         >>> loss_fn(model(input), target).backward()
         >>> optimizer.step()
@@ -36,37 +39,32 @@ class SGD(Optimizer):
     def __init__(
         self,
         params: Iterable[Union[Tensor, Dict]],
-        lr: float = 0.01,
-        momentum: float = 0,
-        dampening: float = 0,
+        lr: float = 1e-2,
+        lambd: float = 1e-4,
+        alpha: float = 0.75,
+        t0: float = 1e6,
         weight_decay: float = 0,
-        nesterov: bool = False,
         *,
         maximize: bool = False,
     ):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
-        if momentum < 0.0:
-            raise ValueError(f"Invalid momentum value: {momentum}")
         if weight_decay < 0.0:
             raise ValueError(f"Invalid weight_decay value: {weight_decay}")
 
         defaults = dict(
             lr=lr,
-            momentum=momentum,
-            dampening=dampening,
+            lambd=lambd,
+            alpha=alpha,
+            t0=t0,
             weight_decay=weight_decay,
-            nesterov=nesterov,
             maximize=maximize,
         )
-        if nesterov and (momentum <= 0 or dampening != 0):
-            raise ValueError("Nesterov momentum requires a momentum and zero dampening")
         super().__init__(params, defaults)
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         super().__setstate__(state)
         for group in self.param_groups:
-            group.setdefault("nesterov", False)
             group.setdefault("maximize", False)
 
     def step(self, closure: Optional[Callable[[], float]] = None) -> Optional[float]:
@@ -76,11 +74,11 @@ class SGD(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            momentum = group["momentum"]
-            weight_decay = group["weight_decay"]
-            dampening = group["dampening"]
-            nesterov = group["nesterov"]
             lr = group["lr"]
+            lambd = group["lambd"]
+            alpha = group["alpha"]
+            t0 = group["t0"]
+            weight_decay = group["weight_decay"]
             maximize = group["maximize"]
 
             for p in group["params"]:
@@ -89,20 +87,20 @@ class SGD(Optimizer):
 
                 param_id = id(p)
 
-                if momentum != 0:
-                    if param_id not in self.state:
-                        self.state[param_id] = {
-                            "momentum_buffer": zeros_like(p),
-                        }
-                    buf = self.state[param_id]["momentum_buffer"]
-                else:
-                    buf = None
+                if param_id not in self.state:
+                    self.state[param_id] = {
+                        "step": 0,
+                        "ax": zeros_like(p),
+                    }
+
+                state = self.state[param_id]
+                state["step"] += 1
 
                 dispatch(
-                    "_sgd_step", None,
-                    p, p.grad, buf,
-                    lr, momentum, dampening, weight_decay,
-                    nesterov, maximize,
+                    "_asgd_step", None,
+                    p, p.grad, state["ax"],
+                    state["step"], lr, lambd, alpha, t0,
+                    weight_decay, maximize,
                 )
 
         return loss
