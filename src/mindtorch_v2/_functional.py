@@ -928,6 +928,14 @@ def rand_like(input, *, dtype=None, device=None, memory_format=None, generator=N
     return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
+def randint_like(input, low=0, high=None, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return randint(low, high, size=input.shape, dtype=dtype, device=device)
+
+
 def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     return dispatch("rms_norm", input.device.type, input, normalized_shape, weight, eps)
 
