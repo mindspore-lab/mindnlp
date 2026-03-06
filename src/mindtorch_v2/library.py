@@ -137,7 +137,6 @@ def register_autocast(op, device_type, cast_inputs, *, lib=None):
 
     register_custom_autocast_rule(op, device_type, cast_inputs)
     del lib
-    return None
 
 
 
