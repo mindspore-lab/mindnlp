@@ -1823,12 +1823,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
-        # Dot, Mv, Ger (outer product)
+        # Dot: aclnnDotGetWorkspaceSize(self, tensor, out, workspaceSize, executor)
         self.aclnn_dot_get_workspace = _optional_symbol(
             libs,
             "aclnnDotGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_dot = _optional_symbol(
             libs,
@@ -1836,11 +1836,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # Mv: aclnnMvGetWorkspaceSize(self, vec, out, cubeMathType, workspaceSize, executor)
         self.aclnn_mv_get_workspace = _optional_symbol(
             libs,
             "aclnnMvGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int8, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_mv = _optional_symbol(
             libs,
@@ -1848,11 +1849,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # Ger: aclnnGerGetWorkspaceSize(self, vec2, out, workspaceSize, executor)
         self.aclnn_ger_get_workspace = _optional_symbol(
             libs,
             "aclnnGerGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_ger = _optional_symbol(
             libs,
@@ -1860,12 +1862,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
-        # Median, Kthvalue
+        # Median (global): aclnnMedianGetWorkspaceSize(self, valuesOut, workspaceSize, executor)
         self.aclnn_median_get_workspace = _optional_symbol(
             libs,
             "aclnnMedianGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.c_int8, ctypes.c_int64, ctypes.c_int8, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_median = _optional_symbol(
             libs,
@@ -1873,11 +1875,25 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # MedianDim: aclnnMedianDimGetWorkspaceSize(self, dim, keepDim, valuesOut, indicesOut, workspaceSize, executor)
+        self.aclnn_median_dim_get_workspace = _optional_symbol(
+            libs,
+            "aclnnMedianDimGetWorkspaceSize",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_int64, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_median_dim = _optional_symbol(
+            libs,
+            "aclnnMedianDim",
+            ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+        # Kthvalue: aclnnKthvalueGetWorkspaceSize(self, k, dim, keepdim, valuesOut, indicesOut, workspaceSize, executor)
         self.aclnn_kthvalue_get_workspace = _optional_symbol(
             libs,
             "aclnnKthvalueGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.c_int64, ctypes.c_int8, ctypes.c_int8, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_int64, ctypes.c_int64, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_kthvalue = _optional_symbol(
             libs,
@@ -1885,12 +1901,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
-        # Searchsorted, Unique
+        # SearchSorted: aclnnSearchSortedGetWorkspaceSize(sortedSequence, self, outInt32, right, sorter, out, workspaceSize, executor)
         self.aclnn_search_sorted_get_workspace = _optional_symbol(
             libs,
             "aclnnSearchSortedGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int8, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_search_sorted = _optional_symbol(
             libs,
@@ -1898,11 +1914,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # Unique: aclnnUniqueGetWorkspaceSize(self, sorted, returnInverse, valueOut, inverseOut, workspaceSize, executor)
         self.aclnn_unique_get_workspace = _optional_symbol(
             libs,
             "aclnnUniqueGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_int8, ctypes.c_void_p, ctypes.c_int8, ctypes.c_int8, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_bool, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_unique = _optional_symbol(
             libs,
@@ -1910,12 +1927,12 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
-        # Randperm, Flatten
+        # Randperm: aclnnRandpermGetWorkspaceSize(n, seed, offset, out, workspaceSize, executor)
         self.aclnn_randperm_get_workspace = _optional_symbol(
             libs,
             "aclnnRandpermGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_int64, ctypes.c_int64, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_randperm = _optional_symbol(
             libs,
@@ -1923,11 +1940,13 @@ class AclnnBindings:
             ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # Flatten: aclnnFlattenGetWorkspaceSize(self, axis, out, workspaceSize, executor)
+        # NOTE: aclnnFlatten always produces 2D output, different from torch.flatten
         self.aclnn_flatten_get_workspace = _optional_symbol(
             libs,
             "aclnnFlattenGetWorkspaceSize",
             ctypes.c_int32,
-            [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+            [ctypes.c_void_p, ctypes.c_int64, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
         )
         self.aclnn_flatten = _optional_symbol(
             libs,
@@ -7034,6 +7053,14 @@ def median_symbols_ok():
         return False
 
 
+def median_dim_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_median_dim_get_workspace, bindings.aclnn_median_dim])
+    except Exception:
+        return False
+
+
 def kthvalue_symbols_ok():
     try:
         bindings = get_bindings()
@@ -11454,9 +11481,8 @@ def dot(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
-        # Note: For scalar output ops, GetWorkspaceSize doesn't take output tensor
         ret = bindings.aclnn_dot_get_workspace(
-            self_tensor, other_tensor,
+            self_tensor, other_tensor, out_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
         if ret != 0:
@@ -11486,7 +11512,7 @@ def dot(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
 
 # Matrix-vector multiplication
 def mv(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other_stride,
-       out_shape, out_stride, dtype, runtime, stream=None):
+       out_shape, out_stride, dtype, cube_math_type, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -11502,6 +11528,7 @@ def mv(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, other
     try:
         ret = bindings.aclnn_mv_get_workspace(
             self_tensor, other_tensor, out_tensor,
+            ctypes.c_int8(cube_math_type),
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
         if ret != 0:
@@ -11574,8 +11601,8 @@ def ger(self_ptr, other_ptr, out_ptr, self_shape, self_stride, other_shape, othe
         _ = (self_keep, other_keep, out_keep)
 
 
-# Median with optional dim
-def median(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim, runtime, stream=None):
+# Global median (reduces all elements to scalar)
+def median(self_ptr, out_ptr, shape, stride, dtype, out_shape, out_stride, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -11583,18 +11610,13 @@ def median(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim, r
     if bindings.aclnn_median_get_workspace is None or bindings.aclnn_median is None:
         raise RuntimeError("aclnnMedian symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)  # shape adjusted by ACLNN
-    indices_tensor, indices_keep = _create_tensor(bindings, shape, stride, "int64", indices_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
         ret = bindings.aclnn_median_get_workspace(
-            self_tensor,
-            ctypes.c_int8(dim) if dim is not None else ctypes.c_int8(-1),
-            ctypes.c_int64(_numel(shape)),
-            ctypes.c_int8(1 if keepdim else 0),
-            out_tensor,
+            self_tensor, out_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
         if ret != 0:
@@ -11616,6 +11638,56 @@ def median(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim, r
         _defer_executor(executor)
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, out_keep)
+
+
+# Median along a dimension
+def median_dim(self_ptr, out_ptr, indices_ptr,
+               shape, stride, dtype,
+               out_shape, out_stride,
+               dim, keepdim, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    if bindings.aclnn_median_dim_get_workspace is None or bindings.aclnn_median_dim is None:
+        raise RuntimeError("aclnnMedianDim symbols not available")
+    self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    indices_tensor, indices_keep = _create_tensor(bindings, out_shape, out_stride, "int64", indices_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_median_dim_get_workspace(
+            self_tensor,
+            ctypes.c_int64(dim),
+            ctypes.c_bool(keepdim),
+            out_tensor,
+            indices_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMedianDimGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_median_dim(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnMedianDim failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
         bindings.acl_destroy_tensor(indices_tensor)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
@@ -11623,7 +11695,10 @@ def median(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, dim, keepdim, r
 
 
 # Kthvalue
-def kthvalue(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, k, dim, keepdim, runtime, stream=None):
+def kthvalue(self_ptr, out_ptr, indices_ptr,
+             shape, stride, dtype,
+             out_shape, out_stride,
+             k, dim, keepdim, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -11631,8 +11706,8 @@ def kthvalue(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, k, dim, keepd
     if bindings.aclnn_kthvalue_get_workspace is None or bindings.aclnn_kthvalue is None:
         raise RuntimeError("aclnnKthvalue symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
-    indices_tensor, indices_keep = _create_tensor(bindings, shape, stride, "int64", indices_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    indices_tensor, indices_keep = _create_tensor(bindings, out_shape, out_stride, "int64", indices_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
@@ -11640,8 +11715,8 @@ def kthvalue(self_ptr, out_ptr, indices_ptr, shape, stride, dtype, k, dim, keepd
         ret = bindings.aclnn_kthvalue_get_workspace(
             self_tensor,
             ctypes.c_int64(k),
-            ctypes.c_int8(dim) if dim is not None else ctypes.c_int8(-1),
-            ctypes.c_int8(1 if keepdim else 0),
+            ctypes.c_int64(dim),
+            ctypes.c_bool(keepdim),
             out_tensor,
             indices_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
@@ -11686,13 +11761,17 @@ def search_sorted(sorted_sequence_ptr, values_ptr, out_ptr,
     values_tensor, values_keep = _create_tensor(bindings, values_shape, values_stride, dtype, values_ptr)
     out_dtype = "int32" if out_int32 else "int64"
     out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    # sorter is not used (nullptr)
+    sorter_ptr = ctypes.c_void_p(0)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
         ret = bindings.aclnn_search_sorted_get_workspace(
             sorted_tensor, values_tensor,
-            ctypes.c_int8(1 if right else 0),
+            ctypes.c_bool(out_int32),
+            ctypes.c_bool(right),
+            sorter_ptr,
             out_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
@@ -11722,8 +11801,11 @@ def search_sorted(sorted_sequence_ptr, values_ptr, out_ptr,
 
 
 # Unique
-def unique(self_ptr, out_ptr, inverse_indices_ptr, counts_ptr,
-           shape, stride, dtype, sorted, return_inverse, return_counts,
+def unique(self_ptr, out_ptr, inverse_indices_ptr,
+           shape, stride, dtype,
+           out_shape, out_stride,
+           inverse_shape, inverse_stride,
+           sorted, return_inverse,
            runtime, stream=None):
     global acl
     if acl is None:
@@ -11732,24 +11814,18 @@ def unique(self_ptr, out_ptr, inverse_indices_ptr, counts_ptr,
     if bindings.aclnn_unique_get_workspace is None or bindings.aclnn_unique is None:
         raise RuntimeError("aclnnUnique symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
-    out_tensor, out_keep = _create_tensor(bindings, shape, stride, dtype, out_ptr)
-    inverse_indices_tensor = None
-    counts_tensor = None
-    inverse_keep = None
-    counts_keep = None
-    if return_inverse:
-        inverse_indices_tensor, inverse_keep = _create_tensor(bindings, shape, stride, "int64", inverse_indices_ptr)
-    if return_counts:
-        counts_tensor, counts_keep = _create_tensor(bindings, shape, stride, "int64", counts_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    inverse_tensor, inverse_keep = _create_tensor(bindings, inverse_shape, inverse_stride, "int64", inverse_indices_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
         ret = bindings.aclnn_unique_get_workspace(
-            ctypes.c_int8(1 if sorted else 0),
             self_tensor,
-            ctypes.c_int8(1 if return_inverse else 0),
-            ctypes.c_int8(1 if return_counts else 0),
+            ctypes.c_bool(sorted),
+            ctypes.c_bool(return_inverse),
+            out_tensor,
+            inverse_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
         if ret != 0:
@@ -11771,13 +11847,10 @@ def unique(self_ptr, out_ptr, inverse_indices_ptr, counts_ptr,
         _defer_executor(executor)
         bindings.acl_destroy_tensor(self_tensor)
         bindings.acl_destroy_tensor(out_tensor)
-        if inverse_indices_tensor:
-            bindings.acl_destroy_tensor(inverse_indices_tensor)
-        if counts_tensor:
-            bindings.acl_destroy_tensor(counts_tensor)
+        bindings.acl_destroy_tensor(inverse_tensor)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
-        _ = (self_keep, out_keep, inverse_keep, counts_keep)
+        _ = (self_keep, out_keep, inverse_keep)
 
 
 # Randperm
@@ -11795,13 +11868,13 @@ def randperm(n, out_ptr, dtype, runtime, stream=None):
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
-        # Generate random seed
         import random
         seed = random.randint(0, 2**31 - 1)
         offset = 0
         ret = bindings.aclnn_randperm_get_workspace(
             ctypes.c_int64(n),
             ctypes.c_int64(seed),
+            ctypes.c_int64(offset),
             out_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
@@ -11828,8 +11901,8 @@ def randperm(n, out_ptr, dtype, runtime, stream=None):
         _ = (out_keep,)
 
 
-# Flatten (reshape to 1D)
-def flatten(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+# Flatten (ACLNN version always produces 2D output based on axis)
+def flatten(self_ptr, out_ptr, shape, stride, dtype, axis, out_shape, out_stride, runtime, stream=None):
     global acl
     if acl is None:
         acl = ensure_acl()
@@ -11837,19 +11910,13 @@ def flatten(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
     if bindings.aclnn_flatten_get_workspace is None or bindings.aclnn_flatten is None:
         raise RuntimeError("aclnnFlatten symbols not available")
     self_tensor, self_keep = _create_tensor(bindings, shape, stride, dtype, self_ptr)
-    # Output is always 1D with numel elements
-    numel = 1
-    for d in shape:
-        numel *= d
-    out_shape = (numel,)
-    out_stride = (1,)
     out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
     executor = ctypes.c_void_p()
     workspace_size = ctypes.c_uint64(0)
     workspace = None
     try:
         ret = bindings.aclnn_flatten_get_workspace(
-            self_tensor, out_tensor,
+            self_tensor, ctypes.c_int64(axis), out_tensor,
             ctypes.byref(workspace_size), ctypes.byref(executor),
         )
         if ret != 0:

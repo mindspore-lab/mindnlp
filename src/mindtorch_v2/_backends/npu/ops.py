@@ -571,9 +571,9 @@ def dot(a, b):
     a_ptr = int(a_storage.data_ptr()) + int(a.offset * itemsize)
     b_ptr = int(b_storage.data_ptr()) + int(b.offset * itemsize)
 
-    # Output is a 1-element tensor (not 0-dim, ACLNN expects 1D output)
-    out_shape = (1,)
-    out_stride = (1,)
+    # Output is a 0-dim scalar tensor
+    out_shape = ()
+    out_stride = ()
     out_ptr = npu_runtime._alloc_device(itemsize, runtime=runtime)
 
     aclnn.dot(
@@ -585,10 +585,7 @@ def dot(a, b):
     )
 
     storage = npu_typed_storage_from_ptr(out_ptr, 1, a.dtype, device=a.device)
-    result = _wrap_tensor(storage, out_shape, out_stride)
-    # Return as scalar (0-dim tensor)
-    from ..common import view as view_backend
-    return view_backend.reshape(result, ())
+    return _wrap_tensor(storage, out_shape, out_stride)
 
 
 def mv(a, b):
@@ -618,12 +615,13 @@ def mv(a, b):
     out_stride = npu_runtime._contiguous_stride(out_shape)
     out_ptr = npu_runtime._alloc_device(out_shape[0] * itemsize, runtime=runtime)
 
+    # cubeMathType=1 (ALLOW_FP32_DOWN_PRECISION) for Ascend910B
     aclnn.mv(
         a_ptr, b_ptr, out_ptr,
         a.shape, a.stride,
         b.shape, b.stride,
         out_shape, out_stride,
-        a.dtype, runtime, stream=stream.stream,
+        a.dtype, 1, runtime, stream=stream.stream,
     )
 
     storage = npu_typed_storage_from_ptr(out_ptr, out_shape[0], a.dtype, device=a.device)
@@ -962,8 +960,6 @@ def argmin(a, dim=None, keepdim=False):
 
 def median(a, dim=None, keepdim=False):
     """Median along a dimension or global median."""
-    if not aclnn.median_symbols_ok():
-        raise RuntimeError("aclnnMedian symbols not available")
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     if a.device.type != "npu":
@@ -973,31 +969,48 @@ def median(a, dim=None, keepdim=False):
     itemsize = _dtype_itemsize(a.dtype)
 
     if dim is None:
-        # Global median - reduce all
+        # Global median - returns scalar
+        if not aclnn.median_symbols_ok():
+            raise RuntimeError("aclnnMedian symbols not available")
+        out_shape = (1,)
+        out_stride = (1,)
+        out_ptr = npu_runtime._alloc_device(itemsize, runtime=runtime)
+
+        aclnn.median(
+            storage.data_ptr(),
+            out_ptr,
+            a.shape, a.stride, a.dtype,
+            out_shape, out_stride,
+            runtime, stream=stream.stream,
+        )
+
+        out_storage = npu_typed_storage_from_ptr(out_ptr, 1, a.dtype, device=a.device)
+        # Return as scalar (reshape from (1,) to ())
         from ..common import view as view_backend
-        flat = view_backend.reshape(a, (_numel(a.shape),))
-        return median(flat, dim=0, keepdim=False)
+        result = _wrap_tensor(out_storage, out_shape, out_stride)
+        return view_backend.reshape(result, ())
 
-    dims = _normalize_reduction_dims(dim, len(a.shape))
-    if len(dims) != 1:
-        raise ValueError("NPU median only supports single dimension")
+    # Median along a dimension
+    if not aclnn.median_dim_symbols_ok():
+        raise RuntimeError("aclnnMedianDim symbols not available")
 
-    out_shape = _reduce_out_shape(a.shape, dims, keepdim)
+    if dim < 0:
+        dim += len(a.shape)
+
+    out_shape = _reduce_out_shape(a.shape, [dim], keepdim)
     out_stride = npu_runtime._contiguous_stride(out_shape)
     out_numel = max(_numel(out_shape), 1)
 
     out_ptr = npu_runtime._alloc_device(out_numel * itemsize, runtime=runtime)
     idx_ptr = npu_runtime._alloc_device(out_numel * _dtype_itemsize(int64_dtype), runtime=runtime)
 
-    aclnn.median(
+    aclnn.median_dim(
         storage.data_ptr(),
         out_ptr,
         idx_ptr,
-        a.shape,
-        a.stride,
-        a.dtype,
-        dims[0],
-        keepdim,
+        a.shape, a.stride, a.dtype,
+        out_shape, out_stride,
+        dim, keepdim,
         runtime, stream=stream.stream,
     )
 
@@ -1022,11 +1035,12 @@ def kthvalue(a, k, dim=None, keepdim=False):
         dim = 0
         from ..common import view as view_backend
         flat = view_backend.reshape(a, (_numel(a.shape),))
-        # Recurse with flattened tensor
         if a.shape != flat.shape:
             return kthvalue(flat, k, dim=0, keepdim=False)
 
-    # Ensure k is valid
+    if dim < 0:
+        dim += len(a.shape)
+
     if k < 1 or k > a.shape[dim]:
         raise ValueError(f"k ({k}) out of range for dimension {dim} with size {a.shape[dim]}")
 
@@ -1041,12 +1055,9 @@ def kthvalue(a, k, dim=None, keepdim=False):
         storage.data_ptr(),
         out_ptr,
         idx_ptr,
-        a.shape,
-        a.stride,
-        a.dtype,
-        k,
-        dim,
-        keepdim,
+        a.shape, a.stride, a.dtype,
+        out_shape, out_stride,
+        k, dim, keepdim,
         runtime, stream=stream.stream,
     )
 
@@ -1055,8 +1066,10 @@ def kthvalue(a, k, dim=None, keepdim=False):
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
-def searchsorted(sorted_sequence, values, out_int32=False, right=False):
+def searchsorted(sorted_sequence, values, out_int32=False, right=False, side=None, sorter=None):
     """Find indices where elements should be inserted to maintain order."""
+    if side is not None:
+        right = (side == "right")
     if not aclnn.search_sorted_symbols_ok():
         raise RuntimeError("aclnnSearchSorted symbols not available")
     runtime = npu_runtime.get_runtime((sorted_sequence.device.index or 0))
@@ -1107,33 +1120,40 @@ def unique(a, sorted=True, return_inverse=False, return_counts=False, dim=None):
     itemsize = _dtype_itemsize(a.dtype)
     numel = _numel(a.shape)
 
-    # Output tensors - we don't know sizes ahead of time, so allocate same size as input
+    # Output tensors - allocate same size as input (ACLNN will fill up to actual unique count)
+    out_shape = (numel,)
+    out_stride = (1,)
     out_ptr = npu_runtime._alloc_device(numel * itemsize, runtime=runtime)
-    inverse_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize("int64"), runtime=runtime) if return_inverse else None
-    counts_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize("int64"), runtime=runtime) if return_counts else None
+    # inverse_indices always needed by ACLNN (even if not returned to user)
+    inverse_shape = (numel,)
+    inverse_stride = (1,)
+    inverse_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize("int64"), runtime=runtime)
 
     aclnn.unique(
         storage.data_ptr(),
         out_ptr,
         inverse_ptr,
-        counts_ptr,
-        a.shape, a.stride,
-        a.dtype,
-        sorted,
-        return_inverse,
-        return_counts,
+        a.shape, a.stride, a.dtype,
+        out_shape, out_stride,
+        inverse_shape, inverse_stride,
+        sorted, return_inverse,
         runtime, stream=stream.stream,
     )
 
-    # For now, return just the unique values (no inverse/counts)
-    # Full implementation would need to query actual output sizes
     out_storage = npu_typed_storage_from_ptr(out_ptr, numel, a.dtype, device=a.device)
-    out = _wrap_tensor(out_storage, (numel,), (1,))
-    if inverse_ptr:
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+
+    if return_inverse:
+        inv_storage = npu_typed_storage_from_ptr(inverse_ptr, numel, "int64", device=a.device)
+        inv = _wrap_tensor(inv_storage, inverse_shape, inverse_stride)
+        if return_counts:
+            return out, inv, None
+        return out, inv
+    else:
         runtime.defer_free(inverse_ptr)
-    if counts_ptr:
-        runtime.defer_free(counts_ptr)
-    return out
+        if return_counts:
+            return out, None
+        return out
 
 
 def randperm(n, dtype=None, device=None):
@@ -1164,52 +1184,22 @@ def randperm(n, dtype=None, device=None):
 
 
 def flatten_op(a, start_dim=0, end_dim=-1):
-    """Flatten tensor dimensions."""
-    if not aclnn.flatten_symbols_ok():
-        # Fallback to reshape-based flatten
-        from ..common import view as view_backend
-        ndim = len(a.shape)
-        if start_dim < 0:
-            start_dim += ndim
-        if end_dim < 0:
-            end_dim += ndim
-        if start_dim == end_dim:
-            return a
-        new_shape = a.shape[:start_dim] + (-1,) + a.shape[end_dim+1:]
-        return view_backend.reshape(a, new_shape)
-
-    runtime = npu_runtime.get_runtime((a.device.index or 0))
-    stream = npu_state.current_stream((a.device.index or 0))
-    if a.device.type != "npu":
-        raise ValueError("NPU flatten expects NPU tensors")
-
+    """Flatten tensor dimensions using reshape."""
+    from ..common import view as view_backend
     ndim = len(a.shape)
     if start_dim < 0:
         start_dim += ndim
     if end_dim < 0:
         end_dim += ndim
+    if start_dim == end_dim:
+        return a
     if start_dim > end_dim:
         raise ValueError(f"flatten: start_dim ({start_dim}) > end_dim ({end_dim})")
-
-    # If already contiguous and flattening all dims, use ACLNN
-    if start_dim == 0 and end_dim == ndim - 1:
-        storage = _unwrap_storage(a)
-        itemsize = _dtype_itemsize(a.dtype)
-        numel = _numel(a.shape)
-        out_ptr = npu_runtime._alloc_device(numel * itemsize, runtime=runtime)
-
-        aclnn.flatten(storage.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
-
-        out_storage = npu_typed_storage_from_ptr(out_ptr, numel, a.dtype, device=a.device)
-        return _wrap_tensor(out_storage, (numel,), (1,))
-    else:
-        # Partial flatten - use reshape
-        from ..common import view as view_backend
-        flat_size = 1
-        for i in range(start_dim, end_dim + 1):
-            flat_size *= a.shape[i]
-        new_shape = a.shape[:start_dim] + (flat_size,) + a.shape[end_dim+1:]
-        return view_backend.reshape(a, new_shape)
+    flat_size = 1
+    for i in range(start_dim, end_dim + 1):
+        flat_size *= a.shape[i]
+    new_shape = a.shape[:start_dim] + (flat_size,) + a.shape[end_dim+1:]
+    return view_backend.reshape(a, new_shape)
 
 
 def amax(a, dim=None, keepdim=False):
