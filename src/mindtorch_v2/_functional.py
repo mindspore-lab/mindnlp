@@ -3,6 +3,8 @@ from ._autograd.grad_mode import GradMode, no_grad
 from ._device import device as Device, get_default_device
 from ._dtype import to_numpy_dtype
 
+import builtins as _builtins
+
 
 def add(*args, **kwargs):
     alpha = kwargs.get("alpha", 1)
@@ -1084,13 +1086,234 @@ def renorm(a, p, dim, maxnorm):
     return dispatch("renorm", a.device.type, a, p, dim, maxnorm)
 
 
-def nansum(a, dim=None, keepdim=False):
-    return dispatch("nansum", None, a, dim=dim, keepdim=keepdim)
-
-
 def _as_device(dev):
     if dev is None:
         return get_default_device()
     if isinstance(dev, str):
         return Device(dev)
     return dev
+
+
+# ---------------------------------------------------------------------------
+# Category B: Wrappers for existing schema+kernel functions
+# ---------------------------------------------------------------------------
+
+def nansum(a, dim=None, keepdim=False):
+    return dispatch("nansum", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def nanmean(a, dim=None, keepdim=False):
+    return dispatch("nanmean", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def det(a):
+    return dispatch("det", a.device.type, a)
+
+
+def dist(a, other, p=2):
+    return dispatch("dist", a.device.type, a, other, p)
+
+
+def matrix_power(a, n):
+    return dispatch("matrix_power", a.device.type, a, n)
+
+
+def argwhere(a):
+    return dispatch("argwhere", a.device.type, a)
+
+
+# ---------------------------------------------------------------------------
+# Category C1: Pure-Python functions (no dispatch needed)
+# ---------------------------------------------------------------------------
+
+def meshgrid(*tensors, indexing='ij'):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        tensors = tuple(tensors[0])
+    if indexing not in ('ij', 'xy'):
+        raise ValueError(f"meshgrid: indexing must be 'ij' or 'xy', got '{indexing}'")
+    if len(tensors) == 0:
+        return []
+    # For 'xy' indexing, swap the first two inputs, build 'ij', then swap outputs
+    if indexing == 'xy' and len(tensors) >= 2:
+        swapped = (tensors[1], tensors[0]) + tensors[2:]
+        grids = meshgrid(*swapped, indexing='ij')
+        grids[0], grids[1] = grids[1], grids[0]
+        return grids
+    grids = []
+    ndim = len(tensors)
+    for i, t in enumerate(tensors):
+        shape = [1] * ndim
+        shape[i] = t.numel()
+        reshaped = t.reshape(shape)
+        expand_shape = [s.numel() for s in tensors]
+        grids.append(reshaped.expand(*expand_shape))
+    return grids
+
+
+def atleast_1d(*tensors):
+    if len(tensors) == 1:
+        t = tensors[0]
+        if t.ndim == 0:
+            return t.reshape(1)
+        return t
+    result = []
+    for t in tensors:
+        if t.ndim == 0:
+            result.append(t.reshape(1))
+        else:
+            result.append(t)
+    return result
+
+
+def atleast_2d(*tensors):
+    if len(tensors) == 1:
+        t = tensors[0]
+        if t.ndim == 0:
+            return t.reshape(1, 1)
+        elif t.ndim == 1:
+            return t.unsqueeze(0)
+        return t
+    result = []
+    for t in tensors:
+        if t.ndim == 0:
+            result.append(t.reshape(1, 1))
+        elif t.ndim == 1:
+            result.append(t.unsqueeze(0))
+        else:
+            result.append(t)
+    return result
+
+
+def atleast_3d(*tensors):
+    if len(tensors) == 1:
+        t = tensors[0]
+        if t.ndim == 0:
+            return t.reshape(1, 1, 1)
+        elif t.ndim == 1:
+            return t.unsqueeze(0).unsqueeze(-1)
+        elif t.ndim == 2:
+            return t.unsqueeze(-1)
+        return t
+    result = []
+    for t in tensors:
+        if t.ndim == 0:
+            result.append(t.reshape(1, 1, 1))
+        elif t.ndim == 1:
+            result.append(t.unsqueeze(0).unsqueeze(-1))
+        elif t.ndim == 2:
+            result.append(t.unsqueeze(-1))
+        else:
+            result.append(t)
+    return result
+
+
+def broadcast_shapes(*shapes):
+    if not shapes:
+        return ()
+    max_ndim = _builtins.max(len(s) for s in shapes)
+    result = [1] * max_ndim
+    for shape in shapes:
+        padded = [1] * (max_ndim - len(shape)) + list(shape)
+        for i in _builtins.range(max_ndim):
+            if padded[i] == 1:
+                continue
+            if result[i] == 1:
+                result[i] = padded[i]
+            elif result[i] != padded[i]:
+                raise RuntimeError(
+                    f"Shape mismatch: objects cannot be broadcast to a single shape. "
+                    f"Mismatch at dim {i}: {result[i]} vs {padded[i]}"
+                )
+    return tuple(result)
+
+
+def broadcast_tensors(*tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        tensors = tuple(tensors[0])
+    shapes = [t.shape for t in tensors]
+    target = broadcast_shapes(*shapes)
+    return [t.expand(*target) for t in tensors]
+
+
+def complex(real, imag):
+    import numpy as _np
+    r = real.numpy() if hasattr(real, 'numpy') else _np.asarray(real)
+    i = imag.numpy() if hasattr(imag, 'numpy') else _np.asarray(imag)
+    c = r.astype(_np.float64) + 1j * i.astype(_np.float64)
+    from ._dtype import complex128 as _cdouble
+    dev = _as_device(real.device if hasattr(real, 'device') else None)
+    return dispatch("tensor", dev, c.tolist(), dtype=_cdouble)
+
+
+def polar(abs, angle):
+    import numpy as _np
+    a = abs.numpy() if hasattr(abs, 'numpy') else _np.asarray(abs)
+    ang = angle.numpy() if hasattr(angle, 'numpy') else _np.asarray(angle)
+    c = a * _np.exp(1j * ang)
+    from ._dtype import complex128 as _cdouble
+    dev = _as_device(abs.device if hasattr(abs, 'device') else None)
+    return dispatch("tensor", dev, c.tolist(), dtype=_cdouble)
+
+
+# ---------------------------------------------------------------------------
+# Category C2: Dispatch-based functions (need schema + kernel)
+# ---------------------------------------------------------------------------
+
+def diff(a, n=1, dim=-1, prepend=None, append=None):
+    return dispatch("diff", a.device.type, a, n=n, dim=dim, prepend=prepend, append=append)
+
+
+def bincount(a, weights=None, minlength=0):
+    return dispatch("bincount", a.device.type, a, weights=weights, minlength=minlength)
+
+
+def cdist(x1, x2, p=2.0):
+    return dispatch("cdist", x1.device.type, x1, x2, p=p)
+
+
+def aminmax(a, *, dim=None, keepdim=False):
+    return dispatch("aminmax", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def quantile(a, q, dim=None, keepdim=False):
+    return dispatch("quantile", a.device.type, a, q, dim=dim, keepdim=keepdim)
+
+
+def nanquantile(a, q, dim=None, keepdim=False):
+    return dispatch("nanquantile", a.device.type, a, q, dim=dim, keepdim=keepdim)
+
+
+def nanmedian(a, dim=None, keepdim=False):
+    return dispatch("nanmedian", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def histc(a, bins=100, min=0, max=0):
+    return dispatch("histc", a.device.type, a, bins=bins, min=min, max=max)
+
+
+def histogram(a, bins, *, range=None, weight=None, density=False):
+    return dispatch("histogram", a.device.type, a, bins, range=range, weight=weight, density=density)
+
+
+def bucketize(a, boundaries, *, out_int32=False, right=False):
+    return dispatch("bucketize", a.device.type, a, boundaries, out_int32=out_int32, right=right)
+
+
+def isneginf(a):
+    return dispatch("isneginf", a.device.type, a)
+
+
+def isposinf(a):
+    return dispatch("isposinf", a.device.type, a)
+
+
+def isreal(a):
+    return dispatch("isreal", a.device.type, a)
+
+
+def isin(elements, test_elements):
+    return dispatch("isin", elements.device.type, elements, test_elements)
+
+
+def heaviside(a, values):
+    return dispatch("heaviside", a.device.type, a, values)

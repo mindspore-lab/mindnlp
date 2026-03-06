@@ -449,6 +449,25 @@ def register_schemas():
     registry.register_schema("_sparse_adam_step", "_sparse_adam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, int step, float lr, float beta1, float beta2, float eps) -> Tensor")
 
     # -----------------------------------------------------------------------
+    # Top-level gap-fill ops (Category C2)
+    # -----------------------------------------------------------------------
+    registry.register_schema("diff", "diff(Tensor input, int n=1, int dim=-1, Tensor? prepend=None, Tensor? append=None) -> Tensor")
+    registry.register_schema("bincount", "bincount(Tensor input, Tensor? weights=None, int minlength=0) -> Tensor")
+    registry.register_schema("cdist", "cdist(Tensor x1, Tensor x2, float p=2.0) -> Tensor")
+    registry.register_schema("aminmax", "aminmax(Tensor input, int? dim=None, bool keepdim=False) -> (Tensor, Tensor)")
+    registry.register_schema("quantile", "quantile(Tensor input, Any q, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("nanquantile", "nanquantile(Tensor input, Any q, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("nanmedian", "nanmedian(Tensor input, int? dim=None, bool keepdim=False) -> Any")
+    registry.register_schema("histc", "histc(Tensor input, int bins=100, Scalar min=0, Scalar max=0) -> Tensor")
+    registry.register_schema("histogram", "histogram(Tensor input, Any bins, Any? range=None, Tensor? weight=None, bool density=False) -> (Tensor, Tensor)")
+    registry.register_schema("bucketize", "bucketize(Tensor input, Tensor boundaries, bool out_int32=False, bool right=False) -> Tensor")
+    registry.register_schema("isneginf", "isneginf(Tensor input) -> Tensor")
+    registry.register_schema("isposinf", "isposinf(Tensor input) -> Tensor")
+    registry.register_schema("isreal", "isreal(Tensor input) -> Tensor")
+    registry.register_schema("isin", "isin(Tensor elements, Tensor test_elements) -> Tensor")
+    registry.register_schema("heaviside", "heaviside(Tensor input, Tensor values) -> Tensor")
+
+    # -----------------------------------------------------------------------
     # torch.linalg ops
     # -----------------------------------------------------------------------
     registry.register_schema("linalg_cholesky", "linalg_cholesky(Tensor input, bool upper=False) -> Tensor")
