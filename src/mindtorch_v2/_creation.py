@@ -56,19 +56,19 @@ def range(start, end, step=1, dtype=float32, device=None):
 
 
 def randn(*shape, dtype=float32, device=None, memory_format=None, generator=None):
-    return randn_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
+    return randn_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
 def rand(*shape, dtype=float32, device=None, memory_format=None, generator=None):
-    return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
+    return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
 def randint(low, high=None, size=None, *, dtype=None, device=None, generator=None):
-    return randint_dispatch(low, high=high, size=size, dtype=dtype, device=device)
+    return randint_dispatch(low, high=high, size=size, dtype=dtype, device=device, generator=generator)
 
 
 def randperm(n, *, dtype=None, device=None, generator=None):
-    return randperm_dispatch(n, dtype=dtype, device=device)
+    return randperm_dispatch(n, dtype=dtype, device=device, generator=generator)
 
 
 def from_numpy(ndarray):

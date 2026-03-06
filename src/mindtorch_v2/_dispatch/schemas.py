@@ -210,15 +210,15 @@ def register_schemas():
     registry.register_schema("logspace", "logspace(Scalar start, Scalar end, int steps, Dtype? dtype=None) -> Tensor")
     registry.register_schema("eye", "eye(int n, int? m=None, Dtype? dtype=None, Tensor? out=None) -> Tensor")
     registry.register_schema("range", "range(Scalar start, Scalar end, Scalar step=1, Dtype? dtype=None) -> Tensor")
-    registry.register_schema("randn", "randn(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None) -> Tensor")
-    registry.register_schema("rand", "rand(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None) -> Tensor")
+    registry.register_schema("randn", "randn(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None, Generator? generator=None) -> Tensor")
+    registry.register_schema("rand", "rand(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None, Generator? generator=None) -> Tensor")
 
     registry.register_schema("add_", "add_(Tensor(a!) self, Tensor other) -> Tensor")
     registry.register_schema("mul_", "mul_(Tensor(a!) self, Tensor other) -> Tensor")
     registry.register_schema("relu_", "relu_(Tensor(a!) self) -> Tensor")
     registry.register_schema("zero_", "zero_(Tensor(a!) self) -> Tensor")
-    registry.register_schema("uniform_", "uniform_(Tensor(a!) self, float low=0.0, float high=1.0) -> Tensor")
-    registry.register_schema("normal_", "normal_(Tensor(a!) self, float mean=0.0, float std=1.0) -> Tensor")
+    registry.register_schema("uniform_", "uniform_(Tensor(a!) self, float low=0.0, float high=1.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("normal_", "normal_(Tensor(a!) self, float mean=0.0, float std=1.0, *, Generator? generator=None) -> Tensor")
     registry.register_schema("fill_", "fill_(Tensor(a!) self, Scalar value) -> Tensor")
     registry.register_schema("clamp_", "clamp_(Tensor(a!) self, Scalar? min=None, Scalar? max=None) -> Tensor")
     registry.register_schema("copy_", "copy_(Tensor(a!) self, Tensor src) -> Tensor")
@@ -405,8 +405,8 @@ def register_schemas():
     registry.register_schema("randint_", "randint_(Tensor(a!) self, int low, int? high=None) -> Tensor")
 
     # New creation ops
-    registry.register_schema("randint", "randint(int low, int? high=None, int[]? size=None, Dtype? dtype=None, bool requires_grad=False) -> Tensor")
-    registry.register_schema("randperm", "randperm(int n, Dtype? dtype=None, bool requires_grad=False) -> Tensor")
+    registry.register_schema("randint", "randint(int low, int? high=None, int[]? size=None, Dtype? dtype=None, bool requires_grad=False, Generator? generator=None) -> Tensor")
+    registry.register_schema("randperm", "randperm(int n, Dtype? dtype=None, bool requires_grad=False, Generator? generator=None) -> Tensor")
 
     # New shape ops
     registry.register_schema("flatten", "flatten(Tensor input, int start_dim=0, int end_dim=-1) -> Tensor")
