@@ -4693,8 +4693,47 @@ def gelu(a):
     return _wrap_tensor(out_storage, out_shape, out_stride)
 
 
+
+def _layer_norm_310b_fallback(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if isinstance(normalized_shape, int):
+        normalized_shape = (normalized_shape,)
+
+    n_norm = len(normalized_shape)
+    if n_norm == 0:
+        return input
+
+    axis_dims = tuple(range(input.dim() - n_norm, input.dim()))
+    lead = input.dim() - n_norm
+    stats_shape = (1,) * lead + tuple(normalized_shape)
+
+    x = input if input.dtype == float_dtype else _cast_tensor_dtype(input, float_dtype)
+    mean_t = mean(x, dim=axis_dims, keepdim=True)
+    diff = sub(x, mean_t)
+    var = mean(mul(diff, diff), dim=axis_dims, keepdim=True)
+    eps_t = _scalar_to_npu_tensor(float(eps), var)
+    inv_std = rsqrt(add(var, eps_t))
+    out = mul(diff, inv_std)
+
+    if weight is not None:
+        w = weight if weight.dtype == float_dtype else _cast_tensor_dtype(weight, float_dtype)
+        w = reshape(w, stats_shape)
+        out = mul(out, w)
+    if bias is not None:
+        b = bias if bias.dtype == float_dtype else _cast_tensor_dtype(bias, float_dtype)
+        b = reshape(b, stats_shape)
+        out = add(out, b)
+
+    if input.dtype != float_dtype:
+        out = _cast_tensor_dtype(out, input.dtype)
+    return out
+
+
+
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     """Compute layer normalization using aclnnLayerNorm."""
+    if _is_310b_profile():
+        return _layer_norm_310b_fallback(input, normalized_shape, weight=weight, bias=bias, eps=eps)
+
     runtime = npu_runtime.get_runtime((input.device.index or 0))
     stream = npu_state.current_stream((input.device.index or 0))
 
