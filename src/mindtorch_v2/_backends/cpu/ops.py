@@ -2819,3 +2819,180 @@ def fft_ifftshift(a, dim=None):
     axes = None if dim is None else (tuple(dim) if isinstance(dim, (list, tuple)) else (dim,))
     out = np.fft.ifftshift(arr, axes=axes)
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# torch.special ops
+# ---------------------------------------------------------------------------
+
+def special_digamma(a):
+    """Logarithmic derivative of the gamma function (psi function)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.digamma(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_entr(a):
+    """Entropy: -x * ln(x), 0 for x=0, -inf for x<0."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.where(arr > 0, -arr * np.log(arr), np.where(arr == 0, 0.0, -np.inf))
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_erfcx(a):
+    """Scaled complementary error function: exp(x^2) * erfc(x)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.erfcx(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_erfinv(a):
+    """Inverse error function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.erfinv(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_gammainc(a, b):
+    """Regularized lower incomplete gamma function."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.gammainc(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_gammaincc(a, b):
+    """Regularized upper incomplete gamma function."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.gammaincc(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_gammaln(a):
+    """Log of the absolute value of the gamma function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.gammaln(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i0(a):
+    """Zeroth order modified Bessel function of the first kind."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i0(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i0e(a):
+    """Exponentially scaled zeroth order modified Bessel function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i0e(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i1(a):
+    """First order modified Bessel function of the first kind."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i1(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i1e(a):
+    """Exponentially scaled first order modified Bessel function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i1e(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_log_ndtr(a):
+    """Log of the area under the standard Gaussian PDF from -inf to x."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.log_ndtr(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_logit(a, eps=None):
+    """Logit function: log(x / (1 - x))."""
+    arr = _to_numpy(a).astype(np.float64)
+    if eps is not None:
+        arr = np.clip(arr, eps, 1.0 - eps)
+    from scipy import special as sp
+    out = sp.logit(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_multigammaln(a, p):
+    """Multivariate log-gamma function with dimension p."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.multigammaln(arr, p)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_ndtr(a):
+    """Area under the standard Gaussian PDF from -inf to x (normal CDF)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.ndtr(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_ndtri(a):
+    """Inverse of ndtr (quantile function of standard normal)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.ndtri(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_polygamma(n, a):
+    """N-th derivative of the digamma function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.polygamma(n, arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_sinc(a):
+    """Normalized sinc function: sin(pi*x) / (pi*x)."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.sinc(arr)  # np.sinc already computes sin(pi*x)/(pi*x)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_xlog1py(a, b):
+    """x * log1p(y), with 0 when x=0."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.xlog1py(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_xlogy(a, b):
+    """x * log(y), with 0 when x=0."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.xlogy(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_zeta(a, b):
+    """Hurwitz zeta function."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.zeta(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)

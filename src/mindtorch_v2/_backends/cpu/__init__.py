@@ -652,3 +652,52 @@ registry.register("fft_hfft", "cpu", fft_hfft)
 registry.register("fft_ihfft", "cpu", fft_ihfft)
 registry.register("fft_fftshift", "cpu", fft_fftshift)
 registry.register("fft_ifftshift", "cpu", fft_ifftshift)
+
+# ---------------------------------------------------------------------------
+# torch.special ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    special_digamma,
+    special_entr,
+    special_erfcx,
+    special_erfinv,
+    special_gammainc,
+    special_gammaincc,
+    special_gammaln,
+    special_i0,
+    special_i0e,
+    special_i1,
+    special_i1e,
+    special_log_ndtr,
+    special_logit,
+    special_multigammaln,
+    special_ndtr,
+    special_ndtri,
+    special_polygamma,
+    special_sinc,
+    special_xlog1py,
+    special_xlogy,
+    special_zeta,
+)
+
+registry.register("special_digamma", "cpu", special_digamma)
+registry.register("special_entr", "cpu", special_entr)
+registry.register("special_erfcx", "cpu", special_erfcx)
+registry.register("special_erfinv", "cpu", special_erfinv)
+registry.register("special_gammainc", "cpu", special_gammainc)
+registry.register("special_gammaincc", "cpu", special_gammaincc)
+registry.register("special_gammaln", "cpu", special_gammaln)
+registry.register("special_i0", "cpu", special_i0)
+registry.register("special_i0e", "cpu", special_i0e)
+registry.register("special_i1", "cpu", special_i1)
+registry.register("special_i1e", "cpu", special_i1e)
+registry.register("special_log_ndtr", "cpu", special_log_ndtr)
+registry.register("special_logit", "cpu", special_logit)
+registry.register("special_multigammaln", "cpu", special_multigammaln)
+registry.register("special_ndtr", "cpu", special_ndtr)
+registry.register("special_ndtri", "cpu", special_ndtri)
+registry.register("special_polygamma", "cpu", special_polygamma)
+registry.register("special_sinc", "cpu", special_sinc)
+registry.register("special_xlog1py", "cpu", special_xlog1py)
+registry.register("special_xlogy", "cpu", special_xlogy)
+registry.register("special_zeta", "cpu", special_zeta)
