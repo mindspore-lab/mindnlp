@@ -3,7 +3,73 @@ import math
 from ..module import Module
 from ..parameter import Parameter
 from ..._creation import zeros, randn
+from ..._functional import stack, cat
 from .. import functional as F
+
+
+def _rnn_cell_forward(input, hidden, weight_ih, weight_hh, bias_ih, bias_hh, nonlinearity='tanh'):
+    gate = F.linear(input, weight_ih, bias_ih) + F.linear(hidden, weight_hh, bias_hh)
+    if nonlinearity == 'tanh':
+        return F.tanh(gate)
+    else:
+        return F.relu(gate)
+
+
+def _lstm_cell_forward(input, hidden, weight_ih, weight_hh, bias_ih, bias_hh):
+    h, c = hidden
+    gates = F.linear(input, weight_ih, bias_ih) + F.linear(h, weight_hh, bias_hh)
+    i, f, g, o = gates.chunk(4, dim=1)
+    i = F.sigmoid(i)
+    f = F.sigmoid(f)
+    g = F.tanh(g)
+    o = F.sigmoid(o)
+    c_next = f * c + i * g
+    h_next = o * F.tanh(c_next)
+    return h_next, c_next
+
+
+def _gru_cell_forward(input, hidden, weight_ih, weight_hh, bias_ih, bias_hh):
+    gates_x = F.linear(input, weight_ih, bias_ih)
+    gates_h = F.linear(hidden, weight_hh, bias_hh)
+    r_x, z_x, n_x = gates_x.chunk(3, dim=1)
+    r_h, z_h, n_h = gates_h.chunk(3, dim=1)
+    r = F.sigmoid(r_x + r_h)
+    z = F.sigmoid(z_x + z_h)
+    n = F.tanh(n_x + r * n_h)
+    h_next = (1 - z) * n + z * hidden
+    return h_next
+
+
+def _run_rnn_layer(mode, input_seq, h_0, weight_ih, weight_hh, bias_ih, bias_hh,
+                   reverse=False, nonlinearity='tanh'):
+    """Run one RNN layer over a sequence. Returns (output_seq, h_n)."""
+    seq_len = input_seq.shape[0]
+    steps = range(seq_len - 1, -1, -1) if reverse else range(seq_len)
+    outputs = []
+    if mode == 'LSTM':
+        h, c = h_0
+        for t in steps:
+            x_t = input_seq[t]
+            h, c = _lstm_cell_forward(x_t, (h, c), weight_ih, weight_hh, bias_ih, bias_hh)
+            outputs.append(h)
+        if reverse:
+            outputs = outputs[::-1]
+        output = stack(outputs, dim=0)
+        return output, (h, c)
+    else:
+        h = h_0
+        cell_fn = _rnn_cell_forward if mode == 'RNN' else _gru_cell_forward
+        for t in steps:
+            x_t = input_seq[t]
+            if mode == 'RNN':
+                h = cell_fn(x_t, h, weight_ih, weight_hh, bias_ih, bias_hh, nonlinearity)
+            else:
+                h = cell_fn(x_t, h, weight_ih, weight_hh, bias_ih, bias_hh)
+            outputs.append(h)
+        if reverse:
+            outputs = outputs[::-1]
+        output = stack(outputs, dim=0)
+        return output, h
 
 
 class RNNBase(Module):
@@ -39,8 +105,90 @@ class RNNBase(Module):
                     setattr(self, f'bias_ih_l{layer}{suffix}', Parameter(b_ih))
                     setattr(self, f'bias_hh_l{layer}{suffix}', Parameter(b_hh))
 
+    def _get_weight(self, name):
+        return getattr(self, name)
+
     def forward(self, input, hx=None):
-        raise NotImplementedError(f"{self.mode} forward is not yet implemented")
+        is_batch_first = self.batch_first
+        if is_batch_first:
+            # (batch, seq, feature) -> (seq, batch, feature)
+            input = input.transpose(0, 1)
+
+        seq_len, batch_size, _ = input.shape
+        num_directions = self.num_directions
+
+        # Initialize hidden state
+        if hx is None:
+            if self.mode == 'LSTM':
+                h_zeros = zeros(self.num_layers * num_directions, batch_size, self.hidden_size)
+                hx = (h_zeros, zeros(self.num_layers * num_directions, batch_size, self.hidden_size))
+            else:
+                hx = zeros(self.num_layers * num_directions, batch_size, self.hidden_size)
+
+        # Split hidden state per layer and direction
+        if self.mode == 'LSTM':
+            h_0, c_0 = hx
+        else:
+            h_0 = hx
+
+        h_n_list = []
+        c_n_list = []
+        layer_input = input
+
+        for layer in range(self.num_layers):
+            dir_outputs = []
+            for direction in range(num_directions):
+                suffix = '_reverse' if direction == 1 else ''
+                idx = layer * num_directions + direction
+                w_ih = self._get_weight(f'weight_ih_l{layer}{suffix}')
+                w_hh = self._get_weight(f'weight_hh_l{layer}{suffix}')
+                b_ih = self._get_weight(f'bias_ih_l{layer}{suffix}') if self.bias else None
+                b_hh = self._get_weight(f'bias_hh_l{layer}{suffix}') if self.bias else None
+
+                if self.mode == 'LSTM':
+                    h_layer = (h_0[idx], c_0[idx])
+                else:
+                    h_layer = h_0[idx]
+
+                nonlinearity = getattr(self, 'nonlinearity', 'tanh')
+                output, h_final = _run_rnn_layer(
+                    self.mode, layer_input, h_layer,
+                    w_ih, w_hh, b_ih, b_hh,
+                    reverse=(direction == 1),
+                    nonlinearity=nonlinearity,
+                )
+                dir_outputs.append(output)
+
+                if self.mode == 'LSTM':
+                    h_n_list.append(h_final[0])
+                    c_n_list.append(h_final[1])
+                else:
+                    h_n_list.append(h_final)
+
+            # Concatenate directions
+            if num_directions == 2:
+                layer_input = cat(dir_outputs, dim=2)
+            else:
+                layer_input = dir_outputs[0]
+
+            # Apply dropout between layers (not after last layer)
+            if self.dropout > 0 and layer < self.num_layers - 1:
+                layer_input = F.dropout(layer_input, p=self.dropout, training=self.training)
+
+        output = layer_input
+
+        # Stack h_n (and c_n for LSTM)
+        h_n = stack(h_n_list, dim=0)
+        if self.mode == 'LSTM':
+            c_n = stack(c_n_list, dim=0)
+            hidden_out = (h_n, c_n)
+        else:
+            hidden_out = h_n
+
+        if is_batch_first:
+            output = output.transpose(0, 1)
+
+        return output, hidden_out
 
     def extra_repr(self):
         s = f'{self.input_size}, {self.hidden_size}'
