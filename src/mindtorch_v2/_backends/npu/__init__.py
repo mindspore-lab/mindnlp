@@ -251,6 +251,15 @@ from .ops import (
     # P2 new ops
     nansum,
     cross_op,
+    # P0: ACLNN large kernel ops
+    im2col_op,
+    grid_sample_op,
+    affine_grid_op,
+    # P1: View/reshape ops
+    broadcast_to_op,
+    movedim_op,
+    unflatten_op,
+    diagonal_op,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -537,6 +546,17 @@ registry.register("logical_xor", "npu", logical_xor, meta=meta_infer.infer_binar
 # P2 new ops
 registry.register("nansum", "npu", nansum, meta=meta_infer.infer_sum)
 registry.register("cross", "npu", cross_op, meta=meta_infer.infer_binary)
+
+# P0: ACLNN large kernel ops
+registry.register("im2col", "npu", im2col_op)
+registry.register("grid_sample", "npu", grid_sample_op)
+registry.register("affine_grid", "npu", affine_grid_op)
+
+# P1: View/reshape ops
+registry.register("broadcast_to", "npu", broadcast_to_op, meta=meta_infer.infer_broadcast_to)
+registry.register("movedim", "npu", movedim_op, meta=meta_infer.infer_movedim)
+registry.register("unflatten", "npu", unflatten_op, meta=meta_infer.infer_unflatten)
+registry.register("diagonal", "npu", diagonal_op, meta=meta_infer.infer_diagonal)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 
