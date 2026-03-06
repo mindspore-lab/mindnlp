@@ -588,6 +588,41 @@ class Tensor:
         out = dispatch("randint_", self.device.type, self, low, high, generator=generator)
         return out
 
+    def bernoulli_(self, p=0.5, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("bernoulli_", self.device.type, self, p, generator=generator)
+        return out
+
+    def exponential_(self, lambd=1.0, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("exponential_", self.device.type, self, lambd, generator=generator)
+        return out
+
+    def log_normal_(self, mean=1.0, std=2.0, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("log_normal_", self.device.type, self, mean, std, generator=generator)
+        return out
+
+    def cauchy_(self, median=0.0, sigma=1.0, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("cauchy_", self.device.type, self, median, sigma, generator=generator)
+        return out
+
+    def geometric_(self, p, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("geometric_", self.device.type, self, p, generator=generator)
+        return out
+
     def fill_(self, value):
         from ._dispatch.dispatcher import dispatch
 

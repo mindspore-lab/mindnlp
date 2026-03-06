@@ -3571,6 +3571,121 @@ def random_(a, from_=0, to=None, generator=None):
     return a
 
 
+def bernoulli_(a, p=0.5, generator=None):
+    """In-place Bernoulli — fills tensor with 0/1 from Bernoulli(p)."""
+    uniform_(a, 0.0, 1.0, generator=generator)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    numel = _numel(a.shape)
+    if hasattr(p, 'storage'):
+        p_storage = _unwrap_storage(p)
+        p_shape, p_stride = p.shape, p.stride
+    else:
+        p_tensor = _scalar_to_npu_tensor(float(p), a)
+        p_storage = _unwrap_storage(p_tensor)
+        p_shape, p_stride = p_tensor.shape, p_tensor.stride
+    bool_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize("bool"), runtime=runtime)
+    aclnn.lt(a_storage.data_ptr(), p_storage.data_ptr(), bool_ptr,
+             a.shape, a.stride, p_shape, p_stride, a.shape, a.stride,
+             a.dtype, runtime, stream=stream.stream)
+    aclnn.cast(bool_ptr, a_storage.data_ptr(), a.shape, a.stride, "bool", a.dtype, runtime, stream=stream.stream)
+    runtime.defer_free(bool_ptr)
+    return a
+
+
+def exponential_(a, lambd=1.0, generator=None):
+    """In-place exponential — fills with samples from Exp(lambd)."""
+    uniform_(a, 0.0, 1.0, generator=generator)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    aclnn.log(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    aclnn.neg(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    if lambd != 1.0:
+        scale = _scalar_to_npu_tensor(1.0 / lambd, a)
+        scale_storage = _unwrap_storage(scale)
+        numel = _numel(a.shape)
+        tmp_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+        aclnn.mul(a_storage.data_ptr(), scale_storage.data_ptr(), tmp_ptr,
+                  a.shape, a.stride, scale.shape, scale.stride, a.shape, a.stride,
+                  a.dtype, runtime, stream=stream.stream)
+        aclnn.inplace_copy(a_storage.data_ptr(), tmp_ptr, a.shape, a.stride, a.dtype, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+        runtime.defer_free(tmp_ptr)
+    return a
+
+
+def log_normal_(a, mean=1.0, std=2.0, generator=None):
+    """In-place log-normal — fills with exp(N(mean, std))."""
+    normal_(a, mean, std, generator=generator)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    aclnn.exp(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return a
+
+
+def cauchy_(a, median=0.0, sigma=1.0, generator=None):
+    """In-place Cauchy — fills with median + sigma * tan(pi * (U - 0.5))."""
+    import math
+    uniform_(a, 0.0, 1.0, generator=generator)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    numel = _numel(a.shape)
+    # sub 0.5
+    aclnn.sub_scalar(a_storage.data_ptr(), 0.5, a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    # mul pi
+    pi_tensor = _scalar_to_npu_tensor(math.pi, a)
+    pi_storage = _unwrap_storage(pi_tensor)
+    tmp_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+    aclnn.mul(a_storage.data_ptr(), pi_storage.data_ptr(), tmp_ptr,
+              a.shape, a.stride, pi_tensor.shape, pi_tensor.stride, a.shape, a.stride,
+              a.dtype, runtime, stream=stream.stream)
+    aclnn.inplace_copy(a_storage.data_ptr(), tmp_ptr, a.shape, a.stride, a.dtype, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    runtime.defer_free(tmp_ptr)
+    # tan in-place
+    aclnn.tan(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    # mul sigma
+    if sigma != 1.0:
+        sigma_tensor = _scalar_to_npu_tensor(sigma, a)
+        sigma_storage = _unwrap_storage(sigma_tensor)
+        tmp_ptr2 = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+        aclnn.mul(a_storage.data_ptr(), sigma_storage.data_ptr(), tmp_ptr2,
+                  a.shape, a.stride, sigma_tensor.shape, sigma_tensor.stride, a.shape, a.stride,
+                  a.dtype, runtime, stream=stream.stream)
+        aclnn.inplace_copy(a_storage.data_ptr(), tmp_ptr2, a.shape, a.stride, a.dtype, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+        runtime.defer_free(tmp_ptr2)
+    # add median
+    if median != 0.0:
+        aclnn.add_scalar(a_storage.data_ptr(), median, a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return a
+
+
+def geometric_(a, p, generator=None):
+    """In-place geometric — fills with ceil(ln(U) / ln(1-p))."""
+    import math
+    uniform_(a, 0.0, 1.0, generator=generator)
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    a_storage = _unwrap_storage(a)
+    aclnn.log(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    # divide by log(1-p)
+    log_1_minus_p = math.log(1.0 - float(p))
+    divisor = _scalar_to_npu_tensor(log_1_minus_p, a)
+    divisor_storage = _unwrap_storage(divisor)
+    numel = _numel(a.shape)
+    tmp_ptr = npu_runtime._alloc_device(numel * _dtype_itemsize(a.dtype), runtime=runtime)
+    aclnn.div(a_storage.data_ptr(), divisor_storage.data_ptr(), tmp_ptr,
+              a.shape, a.stride, divisor.shape, divisor.stride, a.shape, a.stride,
+              a.dtype, runtime, stream=stream.stream)
+    aclnn.inplace_copy(a_storage.data_ptr(), tmp_ptr, a.shape, a.stride, a.dtype, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    runtime.defer_free(tmp_ptr)
+    # ceil in-place
+    aclnn.ceil(a_storage.data_ptr(), a_storage.data_ptr(), a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return a
+
+
 def fill_(a, value):
     """In-place fill using aclnnInplaceFillScalar."""
     runtime = npu_runtime.get_runtime((a.device.index or 0))

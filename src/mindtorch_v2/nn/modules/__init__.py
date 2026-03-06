@@ -10,7 +10,7 @@ from .activation import (
 from .container import Sequential, ModuleList, ModuleDict, ParameterList, ParameterDict
 from .normalization import LayerNorm, BatchNorm1d, BatchNorm2d, BatchNorm3d, GroupNorm, RMSNorm, InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
 from .sparse import Embedding, EmbeddingBag
-from .dropout import Dropout, Dropout1d, Dropout2d, Dropout3d
+from .dropout import Dropout, Dropout1d, Dropout2d, Dropout3d, AlphaDropout
 from .conv import Conv1d, Conv2d, Conv3d, ConvTranspose1d, ConvTranspose2d
 from .pooling import (
     MaxPool1d, MaxPool2d, AvgPool1d, AvgPool2d,
