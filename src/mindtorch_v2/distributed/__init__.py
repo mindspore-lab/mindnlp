@@ -29,6 +29,7 @@ _pg_map = {}          # ProcessGroup -> (Backend, Store)
 _pg_names = {}        # ProcessGroup -> str
 _pg_group_ranks = {}  # ProcessGroup -> {global_rank: group_rank}
 _group_count = 0
+_split_group_seq = 0
 
 default_pg_timeout = timedelta(minutes=30)
 
@@ -740,7 +741,7 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
 
     # Reuse the default store with a prefix to avoid key collisions
     _, default_store = _pg_map[_default_pg]
-    prefix = f"pg{_group_count}"
+    prefix = group_desc or f"pg{_group_count}"
     prefixed_store = PrefixStore(prefix, default_store)
 
     # Inherit backend from parent PG if not specified
@@ -819,7 +820,56 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
 
 
 def split_group(parent_pg, color, key=None):
-    raise NotImplementedError("split_group is not yet supported")
+    global _split_group_seq
+
+    if _default_pg is None:
+        raise RuntimeError("Default process group not initialized")
+
+    pg = parent_pg or _default_pg
+    if pg not in _pg_map:
+        raise ValueError("The given group is not registered")
+
+    if key is None:
+        key = 0
+
+    world_rank = _default_pg.rank()
+    world_size = _default_pg.size()
+    _, default_store = _pg_map[_default_pg]
+    split_call_id = _split_group_seq
+    _split_group_seq += 1
+
+    prefix = f"split_group_{split_call_id}"
+    # Publish local request to world store.
+    default_store.set(
+        f"{prefix}/rank_{world_rank}",
+        f"{int(color)}:{int(key)}".encode("utf-8"),
+    )
+
+    keys = [f"{prefix}/rank_{r}" for r in range(world_size)]
+    default_store.wait(keys)
+
+    members = []
+    for global_rank in range(world_size):
+        raw = default_store.get(f"{prefix}/rank_{global_rank}")
+        text = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        rank_color, rank_key = text.split(":", 1)
+        if int(rank_color) == int(color) and int(rank_color) >= 0:
+            members.append((int(rank_key), global_rank))
+
+    if int(color) < 0:
+        return GroupMember.NON_GROUP_MEMBER
+
+    members.sort(key=lambda item: (item[0], item[1]))
+    ranks = [global_rank for _, global_rank in members]
+    if world_rank not in ranks:
+        return GroupMember.NON_GROUP_MEMBER
+
+    backend = str(_pg_map[pg][0])
+    return new_group(
+        ranks,
+        backend=backend,
+        group_desc=f"split_group_{split_call_id}_color_{int(color)}",
+    )
 
 
 def monitored_barrier(group=None, timeout=None, wait_all_ranks=False):
