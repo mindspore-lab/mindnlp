@@ -3315,6 +3315,9 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
     if a.device.type != "npu":
         raise ValueError("NPU sum expects NPU tensors")
 
+    if isinstance(dim, (list, tuple)) and len(dim) == 0:
+        dim = None
+
     a_storage = _unwrap_storage(a)
     out_shape = list(a.shape)
     if dim is None:

@@ -49,6 +49,8 @@ def infer_unary_bool(a, *args, **kwargs):
 
 def infer_sum(a, dim=None, keepdim=False):
     shape = list(a.shape)
+    if isinstance(dim, (list, tuple)) and len(dim) == 0:
+        dim = None
     if dim is None:
         dims = list(range(len(shape)))
     elif isinstance(dim, int):
