@@ -149,6 +149,27 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     if world_size < 0:
         world_size = _get_env_world_size()
 
+    dev_id = None
+    if device_id is not None:
+        dev_id = int(getattr(device_id, "index", device_id))
+
+    try:
+        if world_size <= 0:
+            raise ValueError("world_size must be a positive integer")
+        if rank < 0 or rank >= world_size:
+            raise ValueError("rank must be in range [0, world_size)")
+        if backend in ("hccl", "nccl") and dev_id is not None and dev_id < 0:
+            raise ValueError("device_id must be >= 0 for hccl backend")
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="init_process_group",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=dev_id,
+        )
+
     if store is None:
         if init_method is not None and init_method.startswith("tcp://"):
             parts = init_method[len("tcp://"):].split(":")
@@ -158,10 +179,6 @@ def init_process_group(backend=None, init_method=None, timeout=None,
                              is_master=(rank == 0), timeout=timeout_sec)
         else:
             store = _create_store_from_env(timeout_sec)
-
-    dev_id = None
-    if device_id is not None:
-        dev_id = int(getattr(device_id, "index", device_id))
 
     try:
         # Backend dispatch
