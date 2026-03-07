@@ -7,6 +7,7 @@ from ..._storage import npu_typed_storage_from_ptr
 from . import runtime as npu_runtime
 from . import aclnn
 from . import state as npu_state
+from . import ops_310b
 
 
 def _wrap_tensor(storage, shape, stride, requires_grad):
@@ -118,9 +119,6 @@ def _device_index(device):
     return (device.index if hasattr(device, "index") else None) or 0
 
 
-def _is_310b_profile():
-    return npu_runtime.soc_profile() == "310b"
-
 
 def _linspace_fallback_npu(start, end, steps, dtype, device):
     from . import ops as npu_ops
@@ -177,7 +175,7 @@ def linspace_create(start, end, steps, dtype=None, device=None):
         raise ValueError("number of steps must be non-negative")
     dtype = _resolve_dtype(dtype)
 
-    if _is_310b_profile():
+    if npu_runtime.soc_profile() == "310b" and ops_310b.use_fallback("linspace"):
         return _linspace_fallback_npu(start, end, steps, dtype=dtype, device=device)
 
     if not aclnn.linspace_symbols_ok():

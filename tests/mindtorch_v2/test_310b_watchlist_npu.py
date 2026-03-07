@@ -61,3 +61,34 @@ def test_310b_watchlist_random_stats_smoke():
     assert 0.6 < float(x.std()) < 1.4
     assert 0.0 <= float(u.min()) <= 1.0
     assert 0.0 <= float(u.max()) <= 1.0
+
+
+@pytest.mark.skipif(not NPU_AVAILABLE, reason="NPU not available")
+def test_310b_watchlist_uniform_quality_gate():
+    torch.npu.manual_seed(20260310)
+    u = torch.empty(8192, device="npu", dtype=torch.float32).uniform_(-1.0, 1.0).to("cpu").numpy()
+
+    assert np.all(u >= -1.0)
+    assert np.all(u <= 1.0)
+    assert abs(float(u.mean())) < 0.05
+    # Uniform(-1, 1): std = sqrt(1/3) ~= 0.577
+    assert 0.50 < float(u.std()) < 0.66
+
+    q01, q99 = np.quantile(u, [0.01, 0.99])
+    assert q01 < -0.90
+    assert q99 > 0.90
+
+
+@pytest.mark.skipif(not NPU_AVAILABLE, reason="NPU not available")
+def test_310b_watchlist_normal_quality_gate():
+    torch.npu.manual_seed(20260311)
+    n = torch.empty(16384, device="npu", dtype=torch.float32).normal_(0.0, 2.0).to("cpu").numpy()
+
+    assert abs(float(n.mean())) < 0.12
+    # N(0, 2): std = 2
+    assert 1.70 < float(n.std()) < 2.30
+
+    p16, p84 = np.quantile(n, [0.16, 0.84])
+    # For normal, these are close to +-1 std (~ +-2 here)
+    assert -2.3 < float(p16) < -1.5
+    assert 1.5 < float(p84) < 2.3
