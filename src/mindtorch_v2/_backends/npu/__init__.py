@@ -263,6 +263,29 @@ from .ops import (
     movedim_op,
     unflatten_op,
     diagonal_op,
+    # Missing forward ops — composites
+    aminmax_op,
+    nanmean_op,
+    argwhere_op,
+    det_op,
+    diff_op,
+    dist_op,
+    heaviside_op,
+    inner_op,
+    tensordot_op,
+    cdist_op,
+    uniform_op,
+    isreal_op,
+    isin_op,
+    bincount_op,
+    bucketize_op,
+    histc_op,
+    histogram_op,
+    quantile_op,
+    nanquantile_op,
+    nanmedian_op,
+    matrix_power_op,
+    col2im_op,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -563,6 +586,30 @@ registry.register("broadcast_to", "npu", broadcast_to_op, meta=meta_infer.infer_
 registry.register("movedim", "npu", movedim_op, meta=meta_infer.infer_movedim)
 registry.register("unflatten", "npu", unflatten_op, meta=meta_infer.infer_unflatten)
 registry.register("diagonal", "npu", diagonal_op, meta=meta_infer.infer_diagonal)
+
+# Missing forward ops — composites
+registry.register("aminmax", "npu", aminmax_op)
+registry.register("nanmean", "npu", nanmean_op, meta=meta_infer.infer_sum)
+registry.register("argwhere", "npu", argwhere_op)
+registry.register("det", "npu", det_op)
+registry.register("diff", "npu", diff_op, meta=meta_infer.infer_unary)
+registry.register("dist", "npu", dist_op)
+registry.register("heaviside", "npu", heaviside_op, meta=meta_infer.infer_binary)
+registry.register("inner", "npu", inner_op, meta=meta_infer.infer_binary)
+registry.register("tensordot", "npu", tensordot_op)
+registry.register("cdist", "npu", cdist_op)
+registry.register("uniform", "npu", uniform_op)
+registry.register("isreal", "npu", isreal_op, meta=meta_infer.infer_unary)
+registry.register("isin", "npu", isin_op, meta=meta_infer.infer_binary)
+registry.register("bincount", "npu", bincount_op)
+registry.register("bucketize", "npu", bucketize_op)
+registry.register("histc", "npu", histc_op)
+registry.register("histogram", "npu", histogram_op)
+registry.register("quantile", "npu", quantile_op)
+registry.register("nanquantile", "npu", nanquantile_op)
+registry.register("nanmedian", "npu", nanmedian_op)
+registry.register("matrix_power", "npu", matrix_power_op, meta=meta_infer.infer_unary)
+registry.register("col2im", "npu", col2im_op)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 
