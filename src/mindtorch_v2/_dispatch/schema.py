@@ -281,6 +281,138 @@ class OpSchema:
                 return
             _raise_invalid_combo_with_got(f"({_type_label(value)})", {"detail": _type_label(value)})
 
+        def _rank_of_input(input_tensor):
+            return len(getattr(input_tensor, "shape", ()) or ())
+
+        def _squeeze_dim_out_of_range(dim_value, rank):
+            return IndexError(
+                f"Dimension out of range (expected to be in range of [{-rank}, {rank - 1}], but got {dim_value})"
+            )
+
+        def _unsqueeze_dim_out_of_range(dim_value, rank):
+            return IndexError(
+                f"Dimension out of range (expected to be in range of [{-rank - 1}, {rank}], but got {dim_value})"
+            )
+
+        def _squeeze_invalid_combo(got_text, detail_text):
+            raise TypeError(
+                f"{name}() received an invalid combination of arguments - got {got_text}, but expected one of:\n"
+                " * (Tensor input)\n"
+                " * (Tensor input, int dim)\n"
+                f"      didn't match because some of the arguments have invalid types: (Tensor, !{detail_text}!)\n"
+                " * (Tensor input, tuple of ints dim)\n"
+                f"      didn't match because some of the arguments have invalid types: (Tensor, !{detail_text}!)\n"
+                " * (Tensor input, name dim)\n"
+                f"      didn't match because some of the arguments have invalid types: (Tensor, !{detail_text}!)\n"
+            )
+
+        def _validate_squeeze_dim(value, input_tensor):
+            rank = _rank_of_input(input_tensor)
+            if isinstance(value, bool):
+                _squeeze_invalid_combo("(Tensor, bool)", "bool")
+            if isinstance(value, int):
+                if value < -rank or value > rank - 1:
+                    raise _squeeze_dim_out_of_range(value, rank)
+                return
+            if isinstance(value, str):
+                if value.isidentifier():
+                    raise _dimname_not_found(value, input_tensor)
+                raise RuntimeError(
+                    "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                    f"and/or underscore and starts with a non-digit. got: '{value}'."
+                )
+            if value is None:
+                raise RuntimeError("Please look up dimensions by name, got: name = None.")
+            if isinstance(value, float):
+                _squeeze_invalid_combo("(Tensor, float)", "float")
+            if isinstance(value, (list, tuple)):
+                if not value:
+                    return
+                seq_kind = "list" if isinstance(value, list) else "tuple"
+                seq_types = ", ".join(type(v).__name__ for v in value)
+                if isinstance(value[0], bool):
+                    _squeeze_invalid_combo(f"(Tensor, {seq_kind})", f"{seq_kind} of [{seq_types}]")
+                seen = set()
+                for item in value:
+                    if not isinstance(item, int) or isinstance(item, bool):
+                        item_type = type(item).__name__
+                        if seq_kind == "list":
+                            _squeeze_invalid_combo(f"(Tensor, list)", f"list of [{seq_types}]")
+                        raise TypeError(
+                            f"{name}(): argument 'dim' failed to unpack the object at pos 2 "
+                            f"with error \"type must be tuple of ints,but got {item_type}\""
+                        )
+                    norm = _normalize_dim_index(item, rank)
+                    if norm < 0 or norm >= rank:
+                        raise _squeeze_dim_out_of_range(item, rank)
+                    if norm in seen:
+                        raise RuntimeError(f"dim {norm} appears multiple times in the list of dims")
+                    seen.add(norm)
+                return
+            _squeeze_invalid_combo(f"(Tensor, {_type_label(value)})", _type_label(value))
+
+        def _validate_unsqueeze_dim(value, input_tensor):
+            rank = _rank_of_input(input_tensor)
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError(
+                    f"{name}(): argument 'dim' (position 2) must be int, not {type(value).__name__}"
+                )
+            if value < -rank - 1 or value > rank:
+                raise _unsqueeze_dim_out_of_range(value, rank)
+
+        def _normalize_permute_dims(value):
+            if isinstance(value, tuple):
+                return list(value)
+            if isinstance(value, list):
+                return value
+            raise TypeError(
+                f"{name}(): argument 'dims' (position 2) must be tuple of ints, not {type(value).__name__}"
+            )
+
+        def _validate_permute_dims(value, input_tensor):
+            rank = _rank_of_input(input_tensor)
+            dims = _normalize_permute_dims(value)
+            if dims and isinstance(dims[0], bool):
+                raise TypeError(
+                    "permute(): argument 'dims' (position 2) must be tuple of ints, "
+                    "but found element of type bool at pos 0"
+                )
+            if not dims:
+                if rank != 0:
+                    raise RuntimeError(
+                        "permute(sparse_coo): number of dimensions in the tensor input does not match "
+                        "the length of the desired ordering of dimensions i.e. "
+                        f"input.dim() = {rank} is not equal to len(dims) = 0"
+                    )
+                return
+            if len(dims) != rank:
+                raise RuntimeError(
+                    "permute(sparse_coo): number of dimensions in the tensor input does not match "
+                    "the length of the desired ordering of dimensions i.e. "
+                    f"input.dim() = {rank} is not equal to len(dims) = {len(dims)}"
+                )
+            seen = set()
+            for idx, item in enumerate(dims):
+                if not isinstance(item, int) or isinstance(item, bool):
+                    item_type = type(item).__name__
+                    if idx == 0:
+                        raise TypeError(
+                            "permute(): argument 'dims' (position 2) must be tuple of ints, "
+                            f"but found element of type {item_type} at pos 0"
+                        )
+                    raise TypeError(
+                        f"permute(): argument 'dims' failed to unpack the object at pos 2 "
+                        f"with error \"type must be tuple of ints,but got {item_type}\""
+                    )
+                if item < -rank or item > rank - 1:
+                    raise IndexError(
+                        f"Dimension out of range (expected to be in range of [{-rank}, {rank - 1}], but got {item})"
+                    )
+                norm = _normalize_dim_index(item, rank)
+                if norm in seen:
+                    raise RuntimeError("permute(): duplicate dims are not allowed.")
+                seen.add(norm)
+
         def _validate_transpose_dims(dim0, dim1):
             valid0 = isinstance(dim0, int) and not isinstance(dim0, bool)
             valid1 = isinstance(dim1, int) and not isinstance(dim1, bool)
@@ -307,6 +439,18 @@ class OpSchema:
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
+                continue
+            if op_short_name == "squeeze" and param.name == "dim":
+                input_tensor = bound.get("input")
+                _validate_squeeze_dim(value, input_tensor)
+                continue
+            if op_short_name == "unsqueeze" and param.name == "dim":
+                input_tensor = bound.get("input")
+                _validate_unsqueeze_dim(value, input_tensor)
+                continue
+            if op_short_name == "permute" and param.name == "dims":
+                input_tensor = bound.get("input")
+                _validate_permute_dims(value, input_tensor)
                 continue
             if ptype == "bool" and not isinstance(value, bool):
                 _raise_invalid_combo()
