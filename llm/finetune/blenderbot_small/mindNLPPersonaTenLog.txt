@@ -1,0 +1,74 @@
+(MindSpore) [ma-user work]$python OldmindNLPBlenderbotsmall.py
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 1.252 seconds.
+Prefix dict has been built successfully.
+加载模型和分词器
+/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/tokenization_utils_base.py:1526: FutureWarning: `clean_up_tokenization_spaces` was not set. It will be set to `True` by default. This behavior will be depracted, and will be then set to `False` by default. 
+  warnings.warn(
+BlenderbotSmallForConditionalGeneration has generative capabilities, as `prepare_inputs_for_generation` is explicitly overwritten. However, it doesn't directly inherit from `GenerationMixin`.`PreTrainedModel` will NOT inherit from `GenerationMixin`, and this model will lose the ability to call `generate` and other related functions.
+  - If you are the owner of the model architecture code, please modify your model class such that it inherits from `GenerationMixin` (after `PreTrainedModel`, otherwise you'll get an exception).
+  - If you are not the owner of the model architecture class, please contact the model code owner to update it.
+模型和分词器加载完成
+input question: Nice to meet you too. What are you interested in?
+output answer: i ' m not really sure . i ' ve always wanted to go back to school , but i don ' t know what i want to do yet .
+加载数据集
+tokenizer数据集
+dataset_train_tokenized: Dataset({
+    features: ['input', 'target', 'input_ids', 'attention_mask', 'labels'],
+    num_rows: 23589
+})
+dataset_valid_tokenized: Dataset({
+    features: ['input', 'target', 'input_ids', 'attention_mask', 'labels'],
+    num_rows: 2687
+})
+开始训练
+0%|                                        | 0/8847 [00:00<?, ?it/s]  6%|█▌                          | 500/8847 [04:00<1:05:14,  2.13it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 11%|███                        | 1000/8847 [08:29<1:05:43,  1.99it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 17%|████▉                        | 1500/8847 [12:52<57:16,  2.14it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 23%|██████▌                      | 2000/8847 [17:22<56:59,  2.00it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 28%|████████▏                    | 2500/8847 [21:44<53:00,  2.00it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+{'loss': 0.1737, 'learning_rate': 3.371441637132731e-05, 'epoch': 1.0}
+ 33%|█████████▋                   | 2949/8847 [25:40<49:59,  1.97it/s]{'eval_loss': 0.16312436759471893, 'eval_runtime': 25.1526, 'eval_samples_per_second': 13.358, 'eval_steps_per_second': 1.67, 'epoch': 1.0} 
+ 34%|█████████▊                   | 3000/8847 [26:30<48:38,  2.00it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 40%|███████████▍                 | 3500/8847 [30:47<43:32,  2.05it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 45%|█████████████                | 4000/8847 [35:04<39:51,  2.03it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 51%|██████████████▊              | 4500/8847 [39:22<42:30,  1.70it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 57%|████████████████▍            | 5000/8847 [43:37<31:08,  2.06it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 62%|██████████████████           | 5500/8847 [47:54<27:22,  2.04it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+{'loss': 0.1336, 'learning_rate': 1.6857208185663656e-05, 'epoch': 2.0}
+{'eval_loss': 0.15773458778858185, 'eval_runtime': 22.8097, 'eval_samples_per_second': 14.731, 'eval_steps_per_second': 1.841, 'epoch': 2.0}
+  68%|███████████████████▋         | 6000/8847 [52:33<23:08,  2.05it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 73%|█████████████████████▎       | 6500/8847 [56:50<19:13,  2.03it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 79%|█████████████████████▎     | 7000/8847 [1:01:21<19:25,  1.58it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 85%|███████████████████████████████████████████████████████████████████████████████████████▎               | 7500/8847 [1:07:00<15:30,  1.45it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 90%|█████████████████████████████████████████████████████████████████████████████████████████████▏         | 8000/8847 [1:12:37<08:42,  1.62it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+ 96%|██████████████████████████████████████████████████████████████████████████████████████████████████▉    | 8500/8847 [1:18:12<03:45,  1.54it/s]Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+{'loss': 0.1099, 'learning_rate': 0.0, 'epoch': 3.0}                                                                                              
+{'eval_loss': 0.15398454666137695, 'eval_runtime': 32.5334, 'eval_samples_per_second': 10.328, 'eval_steps_per_second': 1.291, 'epoch': 3.0}      
+{'train_runtime': 4966.7027, 'train_samples_per_second': 14.25, 'train_steps_per_second': 1.781, 'train_loss': 0.1390861510368098, 'epoch': 3.0}  
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████| 8847/8847 [1:22:46<00:00,  1.78it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████| 336/336 [00:29<00:00, 11.44it/s]
+Evaluation results: {'eval_loss': 0.15398454666137695, 'eval_runtime': 29.6095, 'eval_samples_per_second': 11.348, 'eval_steps_per_second': 1.418, 'epoch': 3.0}
+Some non-default generation parameters are set in the model config. These should go into a GenerationConfig file instead.
+Non-default generation parameters: {'max_length': 128, 'min_length': 20, 'num_beams': 10, 'length_penalty': 0.65, 'no_repeat_ngram_size': 3, 'forced_eos_token_id': 2}
+再次测试对话
+input question: Nice to meet you too. What are you interested in?
+output answer: user 2: i'm interested in a lot of things, but my main interests are music, art, and music. i also like to play video games, go to the movies, and spend time with my friends and family. my favorite video games are the legend of zelda series, and my favorite game is the witcher 3. name) what breath my his their i they ] include yes when philip boarity
