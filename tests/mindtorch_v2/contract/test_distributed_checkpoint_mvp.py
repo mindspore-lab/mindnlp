@@ -1,5 +1,6 @@
 import socket
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -8,6 +9,8 @@ import mindtorch_v2.distributed as dist
 import mindtorch_v2.nn as nn
 from mindtorch_v2.distributed.checkpoint.state_dict import (
     get_state_dict,
+    load,
+    save,
     set_state_dict,
 )
 
@@ -298,3 +301,48 @@ def test_checkpoint_set_state_dict_allows_optimizer_group_mismatch_when_enabled(
 
     assert isinstance(result, dict)
     assert result["restored_optimizer_state_keys_count"] >= 0
+
+
+def test_checkpoint_save_and_load_payload_roundtrip(tmp_path: Path) -> None:
+    model = nn.Linear(3, 2)
+    opt = torch.optim.SGD(model.parameters(), lr=0.1)
+
+    ckpt_path = tmp_path / "dist_rank0.ckpt"
+    payload = save(
+        ckpt_path,
+        model,
+        optimizer=opt,
+        rank0_only=True,
+        rank=0,
+    )
+
+    assert isinstance(payload, dict)
+    assert ckpt_path.is_file()
+
+    with torch.no_grad():
+        model.weight.add_(5.0)
+        model.bias.add_(5.0)
+
+    result = load(
+        ckpt_path,
+        model,
+        optimizer=opt,
+    )
+
+    assert isinstance(result, dict)
+    assert result["loaded_keys_count"] == len(model.state_dict())
+
+
+def test_checkpoint_save_rank0_only_non_zero_rank_skips_writing(tmp_path: Path) -> None:
+    model = nn.Linear(3, 2)
+    ckpt_path = tmp_path / "dist_rank1.ckpt"
+
+    payload = save(
+        ckpt_path,
+        model,
+        rank0_only=True,
+        rank=1,
+    )
+
+    assert payload is None
+    assert not ckpt_path.exists()

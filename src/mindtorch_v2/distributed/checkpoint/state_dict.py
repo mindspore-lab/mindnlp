@@ -7,6 +7,8 @@ This MVP intentionally provides a narrow surface:
 It is designed for single-node DDP training recovery flows.
 """
 
+import mindtorch_v2 as torch
+
 def _unwrap_model(model):
     # DDP/DataParallel expose the wrapped module at `.module`.
     return getattr(model, "module", model)
@@ -133,3 +135,56 @@ def set_state_dict(
         "loaded_keys_count": loaded_keys_count,
         "restored_optimizer_state_keys_count": restored_optimizer_state_keys_count,
     }
+
+
+def save(
+    path,
+    model,
+    optimizer=None,
+    *,
+    payload=None,
+    rank0_only=False,
+    rank=None,
+):
+    """Save a distributed checkpoint payload to ``path``.
+
+    Returns the payload written to disk, or ``None`` when ``rank0_only`` is
+    enabled and current rank is non-zero.
+    """
+    if payload is None:
+        payload = get_state_dict(
+            model,
+            optimizer=optimizer,
+            rank0_only=rank0_only,
+            rank=rank,
+            as_payload=True,
+        )
+
+    if payload is None:
+        return None
+
+    torch.save(payload, path)
+    return payload
+
+
+def load(
+    path,
+    model,
+    optimizer=None,
+    *,
+    payload=None,
+    strict=True,
+    allow_partial_optimizer=False,
+    map_location="cpu",
+):
+    """Load a distributed checkpoint payload from ``path`` and restore state."""
+    if payload is None:
+        payload = torch.load(path, map_location=map_location)
+
+    return set_state_dict(
+        model,
+        optimizer=optimizer,
+        payload=payload,
+        strict=strict,
+        allow_partial_optimizer=allow_partial_optimizer,
+    )
