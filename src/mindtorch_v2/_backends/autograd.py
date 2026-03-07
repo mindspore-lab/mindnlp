@@ -4878,6 +4878,453 @@ def _col2im_backward(grad, a, _saved_a, keyset, args, kwargs):
         return (redispatch("im2col", keyset, grad, kernel_size, dilation, padding, stride),)
 
 
+# ---------------------------------------------------------------------------
+# Round 5 — P0 + P1 backward ops
+# ---------------------------------------------------------------------------
+
+# --- Task 2: Simple backward (frac, nansum, nanmean) ---
+
+def _frac_backward(grad, _a, _saved_a, keyset):
+    """Backward for frac: frac(x) = x - trunc(x), derivative = 1."""
+    return (grad,)
+
+
+def _nansum_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for nansum: like sum backward but zero gradient at NaN positions."""
+    dim = args[0] if args else kwargs.get("dim", None)
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        expanded_grad = redispatch("mul", keyset, grad, ones)
+        nan_mask = redispatch("ne", keyset, saved_a, saved_a)
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        return (redispatch("where", keyset, nan_mask, zero, expanded_grad),)
+
+
+def _nanmean_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for nanmean: like mean backward but divide by non-NaN count."""
+    dim = args[0] if args else kwargs.get("dim", None)
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        nan_mask = redispatch("ne", keyset, saved_a, saved_a)
+        not_nan = redispatch("where", keyset, nan_mask,
+                             _scalar_tensor_like(saved_a, 0.0),
+                             saved_a._ones_like())
+        if dim is None:
+            count = redispatch("sum", keyset, not_nan)
+        else:
+            count = redispatch("sum", keyset, not_nan, dim=dim, keepdim=True)
+        from .._creation import tensor
+        eps = tensor(1e-38, device=grad.device)
+        safe_count = redispatch("add", keyset, count, eps)
+        scaled_grad = redispatch("div", keyset, grad, safe_count)
+        ones = saved_a._ones_like()
+        expanded_grad = redispatch("mul", keyset, scaled_grad, ones)
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        return (redispatch("where", keyset, nan_mask, zero, expanded_grad),)
+
+
+# --- Task 3: masked_select — Custom wrapper ---
+
+def _autograd_masked_select(name):
+    """Autograd wrapper for masked_select(input, mask) -> 1D tensor."""
+    def wrapper(a, mask):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, mask)
+        if GradMode.enabled and getattr(a, "requires_grad", False):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _masked_select_backward(grad, a, mask, backward_keyset)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _masked_select_backward(grad, a, mask, keyset):
+    """Backward for masked_select: scatter grad back to selected positions."""
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        grad_np = _to_numpy(grad)
+        mask_np = _to_numpy(mask).astype(bool)
+        result_np = _to_numpy(grad_input)
+        result_np[mask_np] = grad_np
+        return (_from_numpy(np.ascontiguousarray(result_np), a.dtype, a.device),)
+
+
+# --- Task 4: Split variants (hsplit, vsplit, dsplit) ---
+
+def _compute_split_sizes(split_size_or_sections, dim_size):
+    """Compute section sizes from an int (num sections) or list of sizes."""
+    if isinstance(split_size_or_sections, int):
+        size, extra = divmod(dim_size, split_size_or_sections)
+        return [size + 1] * extra + [size] * (split_size_or_sections - extra)
+    return list(split_size_or_sections)
+
+
+def _xsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs, dim):
+    """Generic backward for hsplit/vsplit/dsplit."""
+    split_size_or_sections = args[0]
+    d = dim if dim >= 0 else dim + len(a.shape)
+    sizes = _compute_split_sizes(split_size_or_sections, a.shape[d])
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        start = sum(sizes[:idx])
+        slices = [slice(None)] * len(a.shape)
+        slices[d] = slice(start, start + grad.shape[d])
+        redispatch("setitem", keyset, grad_input, tuple(slices), grad)
+    return (grad_input,)
+
+
+def _hsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs):
+    dim = 0 if len(a.shape) == 1 else 1
+    return _xsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs, dim)
+
+
+def _vsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs):
+    return _xsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs, 0)
+
+
+def _dsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs):
+    return _xsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs, 2)
+
+
+# --- Task 5: Math/Algebra (inner, tensordot, matrix_power) ---
+
+def _inner_backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for inner: contracts last dim of both inputs."""
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    grad_np = _to_numpy(grad)
+    a_np = _to_numpy(saved_a)
+    b_np = _to_numpy(saved_b)
+    # inner(a, b) contracts last dim of a with last dim of b
+    # grad_a[..., i] = sum_j grad[..., j] * b[..., j, i] — use tensordot on last axes
+    # For 1D: grad_a = grad * b, grad_b = grad * a
+    if a_np.ndim == 1 and b_np.ndim == 1:
+        grad_a_np = grad_np * b_np if getattr(a, "requires_grad", False) else None
+        grad_b_np = grad_np * a_np if getattr(b, "requires_grad", False) else None
+    else:
+        # ND case: inner(a, b) output shape = a.shape[:-1] + b.shape[:-1]
+        # grad_a = np.tensordot(grad, b, axes=[range(-b.ndim+1, 0), range(0, b.ndim-1)])
+        # But simpler: grad_a[..., k] = sum over b's leading dims: grad[...i...j...] * b[j..., k]
+        # Use einsum-like approach with numpy tensordot
+        if getattr(a, "requires_grad", False):
+            b_axes = list(range(b_np.ndim - 1))
+            grad_axes = list(range(a_np.ndim - 1, a_np.ndim - 1 + b_np.ndim - 1))
+            grad_a_np = np.tensordot(grad_np, b_np, axes=[grad_axes, b_axes])
+        else:
+            grad_a_np = None
+        if getattr(b, "requires_grad", False):
+            a_axes = list(range(a_np.ndim - 1))
+            grad_axes = list(range(a_np.ndim - 1))
+            grad_b_np = np.tensordot(grad_np, a_np, axes=[grad_axes, a_axes])
+        else:
+            grad_b_np = None
+    grad_a = _from_numpy(np.ascontiguousarray(grad_a_np), a.dtype, a.device) if grad_a_np is not None else None
+    grad_b = _from_numpy(np.ascontiguousarray(grad_b_np), b.dtype, b.device) if grad_b_np is not None else None
+    return grad_a, grad_b
+
+
+def _autograd_tensordot(name):
+    """Autograd wrapper for tensordot(a, b, dims)."""
+    def wrapper(a, b, dims=2):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, b, dims)
+        a_rg = getattr(a, "requires_grad", False)
+        b_rg = getattr(b, "requires_grad", False)
+        if GradMode.enabled and (a_rg or b_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _tensordot_backward(grad, a, b, dims, backward_keyset)
+
+            inputs = [t for t in (a, b) if hasattr(t, "requires_grad")]
+            node = Node(_backward, tuple(inputs))
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _tensordot_backward(grad, a, b, dims, keyset):
+    """Backward for tensordot."""
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    grad_np = _to_numpy(grad)
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b)
+
+    # Normalize dims to ([dims_a], [dims_b])
+    if isinstance(dims, int):
+        dims_a = list(range(a_np.ndim - dims, a_np.ndim))
+        dims_b = list(range(dims))
+    else:
+        dims_a, dims_b = [list(d) for d in dims]
+
+    # Free axes (not contracted)
+    free_a = [i for i in range(a_np.ndim) if i not in dims_a]
+    free_b = [i for i in range(b_np.ndim) if i not in dims_b]
+
+    grad_a = None
+    grad_b = None
+    if getattr(a, "requires_grad", False):
+        # grad_a = tensordot(grad, b, axes=[free_b_in_output, free_b])
+        out_axes_for_b = list(range(len(free_a), len(free_a) + len(free_b)))
+        grad_a_np = np.tensordot(grad_np, b_np, axes=[out_axes_for_b, free_b])
+        # Need to transpose back to original axis order
+        # Current axis order: free_a + dims_b -> need to get to original a order
+        # The result has axes: free_a dims (from grad) + contracted_b dims (from b)
+        # We need axes in original a order: put dims_a axes back where they were
+        target_order = [0] * a_np.ndim
+        for new_idx, orig_idx in enumerate(free_a):
+            target_order[orig_idx] = new_idx
+        for new_idx, orig_b_idx in enumerate(dims_b):
+            # The contracted axes of b correspond to contracted axes of a
+            target_order[dims_a[new_idx]] = len(free_a) + new_idx
+        grad_a_np = np.transpose(grad_a_np, target_order)
+        grad_a = _from_numpy(np.ascontiguousarray(grad_a_np), a.dtype, a.device)
+
+    if getattr(b, "requires_grad", False):
+        out_axes_for_a = list(range(len(free_a)))
+        grad_b_np = np.tensordot(grad_np, a_np, axes=[out_axes_for_a, free_a])
+        # Result axes: free_b dims (from grad) + contracted_a dims (from a)
+        # Need to get to original b order
+        target_order = [0] * b_np.ndim
+        for new_idx, orig_idx in enumerate(free_b):
+            target_order[orig_idx] = new_idx
+        for new_idx, orig_a_idx in enumerate(dims_a):
+            target_order[dims_b[new_idx]] = len(free_b) + new_idx
+        grad_b_np = np.transpose(grad_b_np, target_order)
+        grad_b = _from_numpy(np.ascontiguousarray(grad_b_np), b.dtype, b.device)
+
+    return grad_a, grad_b
+
+
+def _matrix_power_backward(grad, _a, saved_a, keyset, args, kwargs):
+    """Backward for matrix_power: A^n.
+    d(A^n)/dA = sum_{k=0}^{n-1} (A^T)^{n-1-k} @ grad @ (A^T)^k
+    """
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    n = args[0]
+    if n == 0:
+        # A^0 = I, gradient is zero
+        grad_input = redispatch("zeros", keyset, saved_a.shape, dtype=saved_a.dtype, device=saved_a.device)
+        return (grad_input,)
+    a_np = _to_numpy(saved_a)
+    grad_np = _to_numpy(grad)
+    # Compute A^T
+    at_np = np.swapaxes(a_np, -2, -1)
+    abs_n = abs(n)
+    if n < 0:
+        # A^(-n) = (A^-1)^n, use inverse
+        a_inv = np.linalg.inv(a_np)
+        at_np = np.swapaxes(a_inv, -2, -1)
+    # Precompute powers of A^T: at_powers[k] = (A^T)^k
+    at_powers = [None] * abs_n
+    at_powers[0] = np.eye(a_np.shape[-1], dtype=a_np.dtype)
+    if a_np.ndim > 2:
+        at_powers[0] = np.broadcast_to(at_powers[0], a_np.shape).copy()
+    for k in range(1, abs_n):
+        at_powers[k] = np.matmul(at_powers[k - 1], at_np)
+    # grad_a = sum_{k=0}^{n-1} (A^T)^{n-1-k} @ grad @ (A^T)^k
+    result = np.zeros_like(a_np)
+    for k in range(abs_n):
+        left = at_powers[abs_n - 1 - k]
+        right = at_powers[k]
+        result = result + np.matmul(np.matmul(left, grad_np), right)
+    if n < 0:
+        # Chain rule correction for inverse: negate
+        result = -result
+    return (_from_numpy(np.ascontiguousarray(result), saved_a.dtype, saved_a.device),)
+
+
+# --- Task 6: Reduce-with-indices (median, kthvalue, aminmax) ---
+
+def _autograd_median(name):
+    """Autograd wrapper for median — scalar (dim=None) or (values, indices) tuple."""
+    def wrapper(a, dim=None, keepdim=False):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, dim=dim, keepdim=keepdim)
+        if GradMode.enabled and getattr(a, "requires_grad", False):
+            if dim is None:
+                # Scalar case: single output tensor
+                node_holder = {}
+
+                def _backward_scalar(grad):
+                    backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                    return _median_scalar_backward(grad, a, out, backward_keyset)
+
+                node = Node(_backward_scalar, (a,))
+                node_holder["node"] = node
+                out.grad_fn = node
+                out.requires_grad = True
+            else:
+                # Tuple case: (values, indices)
+                values, indices = out
+                node_holder = {}
+
+                def _backward_dim(grad):
+                    backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                    return _median_dim_backward(grad, a, indices, backward_keyset, dim, keepdim)
+
+                node = Node(_backward_dim, (a,))
+                node_holder["node"] = node
+                values.grad_fn = node
+                values.requires_grad = True
+                out = (values, indices)
+        return out
+
+    return wrapper
+
+
+def _median_scalar_backward(grad, a, out_val, keyset):
+    """Backward for median when dim=None (scalar output)."""
+    with _grad_context(keyset):
+        ones = a._ones_like()
+        zero = _scalar_tensor_like(a, 0.0)
+        eps = _scalar_tensor_like(a, 1e-12)
+        mask = redispatch("eq", keyset, a, out_val)
+        mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+        total = redispatch("sum", keyset, mask_f)
+        safe_total = redispatch("add", keyset, total, eps)
+        return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad),)
+
+
+def _median_dim_backward(grad, a, indices, keyset, dim, keepdim):
+    """Backward for median when dim is specified (tuple output)."""
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        if not keepdim:
+            grad_expanded = redispatch("unsqueeze", keyset, grad, dim)
+            indices_expanded = redispatch("unsqueeze", keyset, indices, dim)
+        else:
+            grad_expanded = grad
+            indices_expanded = indices
+        redispatch("scatter_", keyset, grad_input, dim, indices_expanded, grad_expanded)
+        return (grad_input,)
+
+
+def _kthvalue_backward(grad, a, indices, keyset, args, kwargs):
+    """Backward for kthvalue: scatter gradient at kth index positions."""
+    dim = args[1] if len(args) > 1 else kwargs.get("dim", -1)
+    keepdim = kwargs.get("keepdim", False)
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        if not keepdim:
+            grad_expanded = redispatch("unsqueeze", keyset, grad, dim)
+            indices_expanded = redispatch("unsqueeze", keyset, indices, dim)
+        else:
+            grad_expanded = grad
+            indices_expanded = indices
+        redispatch("scatter_", keyset, grad_input, dim, indices_expanded, grad_expanded)
+        return (grad_input,)
+
+
+def _autograd_aminmax(name):
+    """Autograd wrapper for aminmax — returns namedtuple (min, max)."""
+    def wrapper(a, dim=None, keepdim=False):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, dim=dim, keepdim=keepdim)
+        min_val, max_val = out
+        if GradMode.enabled and getattr(a, "requires_grad", False):
+            node_holder_min = {}
+            node_holder_max = {}
+
+            def _backward_min(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _aminmax_min_backward(grad, a, min_val, backward_keyset, dim, keepdim)
+
+            def _backward_max(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _aminmax_max_backward(grad, a, max_val, backward_keyset, dim, keepdim)
+
+            node_min = Node(_backward_min, (a,))
+            node_holder_min["node"] = node_min
+            min_val.grad_fn = node_min
+            min_val.requires_grad = True
+
+            node_max = Node(_backward_max, (a,))
+            node_holder_max["node"] = node_max
+            max_val.grad_fn = node_max
+            max_val.requires_grad = True
+
+            from collections import namedtuple
+            AminmaxResult = namedtuple("aminmax", ["min", "max"])
+            out = AminmaxResult(min_val, max_val)
+        return out
+
+    return wrapper
+
+
+def _aminmax_min_backward(grad, a, min_val, keyset, dim, keepdim):
+    """Backward for aminmax min output: gradient at min positions."""
+    with _grad_context(keyset):
+        ones = a._ones_like()
+        zero = _scalar_tensor_like(a, 0.0)
+        eps = _scalar_tensor_like(a, 1e-12)
+        if dim is None:
+            mask = redispatch("eq", keyset, a, min_val)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad),)
+        else:
+            if not keepdim:
+                grad_expanded = redispatch("unsqueeze", keyset, grad, dim)
+                min_expanded = redispatch("unsqueeze", keyset, min_val, dim)
+            else:
+                grad_expanded = grad
+                min_expanded = min_val
+            mask = redispatch("eq", keyset, a, min_expanded)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f, dim=dim, keepdim=True)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad_expanded),)
+
+
+def _aminmax_max_backward(grad, a, max_val, keyset, dim, keepdim):
+    """Backward for aminmax max output: gradient at max positions."""
+    with _grad_context(keyset):
+        ones = a._ones_like()
+        zero = _scalar_tensor_like(a, 0.0)
+        eps = _scalar_tensor_like(a, 1e-12)
+        if dim is None:
+            mask = redispatch("eq", keyset, a, max_val)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad),)
+        else:
+            if not keepdim:
+                grad_expanded = redispatch("unsqueeze", keyset, grad, dim)
+                max_expanded = redispatch("unsqueeze", keyset, max_val, dim)
+            else:
+                grad_expanded = grad
+                max_expanded = max_val
+            mask = redispatch("eq", keyset, a, max_expanded)
+            mask_f = redispatch("where", keyset, mask, ones, redispatch("mul", keyset, ones, zero))
+            total = redispatch("sum", keyset, mask_f, dim=dim, keepdim=True)
+            safe_total = redispatch("add", keyset, total, eps)
+            return (redispatch("mul", keyset, redispatch("div", keyset, mask_f, safe_total), grad_expanded),)
+
+
 def _register_autograd_op(name, factory, *, npu_factory=None, include_meta=True):
     kwargs = {
         "default": factory(),
@@ -5113,6 +5560,27 @@ for _entry in (
     # Round 4 — Task 6: im2col/col2im backward
     ("im2col", lambda: _autograd_unary_args("im2col", _im2col_backward, save_input=False)),
     ("col2im", lambda: _autograd_unary_args("col2im", _col2im_backward, save_input=False)),
+    # Round 5 — P0: Aliases
+    ("concat", lambda: _autograd_multi_input("concat", _cat_backward, save_inputs=False)),
+    ("concatenate", lambda: _autograd_multi_input("concatenate", _cat_backward, save_inputs=False)),
+    # Round 5 — P0: Simple backward
+    ("frac", lambda: _autograd_unary("frac", _frac_backward, save_input=False)),
+    ("nansum", lambda: _autograd_unary_args("nansum", _nansum_backward)),
+    ("nanmean", lambda: _autograd_unary_args("nanmean", _nanmean_backward)),
+    ("masked_select", lambda: _autograd_masked_select("masked_select")),
+    # Round 5 — P1: Split variants
+    ("hsplit", lambda: _autograd_multi_output("hsplit", _hsplit_backward, save_input=False)),
+    ("vsplit", lambda: _autograd_multi_output("vsplit", _vsplit_backward, save_input=False)),
+    ("dsplit", lambda: _autograd_multi_output("dsplit", _dsplit_backward, save_input=False)),
+    # Round 5 — P1: Math/Algebra
+    ("inner", lambda: _autograd_binary("inner", _inner_backward)),
+    ("tensordot", lambda: _autograd_tensordot("tensordot")),
+    ("matrix_power", lambda: _autograd_unary_args("matrix_power", _matrix_power_backward)),
+    ("linalg_matrix_power", lambda: _autograd_unary_args("linalg_matrix_power", _matrix_power_backward)),
+    # Round 5 — P1: Reduce-with-indices
+    ("median", lambda: _autograd_median("median")),
+    ("kthvalue", lambda: _autograd_sort_like("kthvalue", _kthvalue_backward)),
+    ("aminmax", lambda: _autograd_aminmax("aminmax")),
 ):
     if len(_entry) == 2:
         _name, _factory = _entry
