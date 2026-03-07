@@ -835,7 +835,8 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
         if device_id is not None:
             dev_id = int(getattr(device_id, "index", device_id))
         else:
-            dev_id = world_rank % 8
+            parent_dev = getattr(_default_pg, "_device_id", None)
+            dev_id = int(parent_dev) if parent_dev is not None else world_rank % 8
         pg = ProcessGroupHCCL(
             prefixed_store, group_rank, group_size,
             device_id=dev_id,
