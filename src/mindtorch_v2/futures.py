@@ -10,6 +10,7 @@ class Future:
 
     def __init__(self):
         self._result = None
+        self._exception = None
         self._done = False
         self._callbacks = []
 
@@ -23,7 +24,14 @@ class Future:
 
     def wait(self):
         """Wait for the future to complete and return result."""
+        if self._exception is not None:
+            raise self._exception
         return self._result
+
+    def set_exception(self, exc):
+        """Set an exception result and mark as done."""
+        self._exception = exc
+        self._done = True
 
     def value(self):
         """Return result as a list (PyTorch compatibility)."""

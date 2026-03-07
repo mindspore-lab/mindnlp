@@ -52,8 +52,7 @@ class Work:
         try:
             self.wait()
         except Exception as exc:
-            # Minimal compatibility: surface wait failure through future value.
-            fut.set_result(exc)
+            fut.set_exception(exc)
             return fut
 
         fut.set_result(self.result())

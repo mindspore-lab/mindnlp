@@ -27,3 +27,21 @@ def test_work_get_future_returns_resolved_future_after_wait() -> None:
     assert fut.done() is True
     assert fut.wait() == w.result()
 
+
+def test_work_get_future_propagates_wait_exception() -> None:
+    w = Work()
+
+    def _boom() -> None:
+        raise RuntimeError("boom from on_wait")
+
+    w._on_wait = _boom
+
+    fut = w.get_future()
+    assert fut.done() is True
+    # Future wait path should re-raise the original failure.
+    try:
+        fut.wait()
+        raise AssertionError("expected fut.wait() to raise")
+    except RuntimeError as exc:
+        assert "boom from on_wait" in str(exc)
+
