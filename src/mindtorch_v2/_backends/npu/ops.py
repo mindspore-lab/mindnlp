@@ -3315,6 +3315,23 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
     if a.device.type != "npu":
         raise ValueError("NPU sum expects NPU tensors")
 
+    if isinstance(dim, (list, tuple)) and len(dim) == 0:
+        dim = None
+
+    ndim = len(a.shape)
+
+    def _check_dim_range(d):
+        if d < -ndim or d >= ndim:
+            raise IndexError(
+                f"Dimension out of range (expected to be in range of [{-ndim}, {ndim - 1}], but got {d})"
+            )
+
+    if isinstance(dim, int):
+        _check_dim_range(dim)
+    elif isinstance(dim, (list, tuple)):
+        for d in dim:
+            _check_dim_range(d)
+
     a_storage = _unwrap_storage(a)
     out_shape = list(a.shape)
     if dim is None:

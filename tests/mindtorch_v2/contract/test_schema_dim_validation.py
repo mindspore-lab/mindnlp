@@ -37,6 +37,30 @@ def test_sum_accepts_empty_dim_sequence_like_torch():
     assert mt_out.item() == pt_out.item()
 
 
+def test_dispatch_sum_rejects_out_of_range_dim_matches_torch():
+    a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    def mt_call():
+        dispatch("sum", a.device.type, a, dim=2)
+
+    def th_call():
+        pt.sum(pt.tensor([[1.0, 2.0], [3.0, 4.0]]), dim=2)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_sum_rejects_out_of_range_dim_list_matches_torch():
+    a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    def mt_call():
+        dispatch("sum", a.device.type, a, dim=[0, 2])
+
+    def th_call():
+        pt.sum(pt.tensor([[1.0, 2.0], [3.0, 4.0]]), dim=[0, 2])
+
+    assert_torch_error(mt_call, th_call)
+
+
 def test_sum_accepts_list_dim_with_trailing_bool_like_torch():
     mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
     pt_x = pt.tensor([[1.0, 2.0], [3.0, 4.0]])
