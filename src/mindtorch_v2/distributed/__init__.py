@@ -339,7 +339,27 @@ def _split_flat_to_list(flat_tensor, tensor_list, numel, dtype):
 
 def barrier(group=None, async_op=False, device_ids=None):
     pg = group or _default_pg
-    work = pg.barrier()
+    backend = "uninitialized"
+    rank = 0
+    world_size = 1
+    device_id = None
+    if pg is not None:
+        backend = str(get_backend(pg))
+        rank = pg.rank()
+        world_size = pg.size()
+        device_id = getattr(pg, "_device_id", None)
+    try:
+        work = pg.barrier()
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="barrier",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=device_id,
+            op="barrier",
+        )
     if not async_op:
         work.wait()
         return None
@@ -389,11 +409,31 @@ def all_reduce_coalesced(tensors, op=ReduceOp.SUM, group=None, async_op=False):
 
 def broadcast(tensor, src=None, group=None, async_op=False, group_src=None):
     pg = group or _default_pg
+    backend = "uninitialized"
+    rank = 0
+    world_size = 1
+    device_id = None
+    if pg is not None:
+        backend = str(get_backend(pg))
+        rank = pg.rank()
+        world_size = pg.size()
+        device_id = getattr(pg, "_device_id", None)
     if src is None and group_src is None:
         src = 0
     elif src is None:
         src = group_src
-    work = pg.broadcast(tensor, root=src)
+    try:
+        work = pg.broadcast(tensor, root=src)
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="broadcast",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=device_id,
+            op="broadcast",
+        )
     if not async_op:
         work.wait()
         return None

@@ -139,7 +139,7 @@ jobs:
   #       bash scripts/build_and_reinstall.sh
   #       python tests/run_test.py -vs tests/transformers/tests/models/${{ matrix.alpha }}*/test_modeling*
 
-  mindtorch-v2-test:
+  mindtorch-v2-core-test:
     needs: pylint-check
     runs-on: ubuntu-latest
     steps:
@@ -160,7 +160,7 @@ jobs:
         PYTHON: 3.11
       run: |
         pip install mindspore
-    - name: Test mindtorch_v2
+    - name: Test mindtorch_v2 core
       run: |
         cd tests/mindtorch_v2
         pytest . -v --tb=short \
@@ -173,7 +173,47 @@ jobs:
           --ignore=test_ddp_static_graph.py \
           --ignore=test_ddp_bucket_view.py \
           --ignore=test_gloo_ddp.py \
+          --ignore=test_hccl_mvp_multicard.py \
+          --ignore=test_hccl_ddp_advanced_multicard.py \
+          --ignore=test_hccl_sampler_ddp_multicard.py \
+          --ignore=test_hccl_mvp_resilience.py \
+          --ignore=test_hccl_mvp_longrun.py \
           --ignore=test_hccl_all_to_all_multicard.py
+
+  mindtorch-v2-hccl-serial-test:
+    needs: pylint-check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.repository_owner == 'mindspore-lab' && env.MINDTORCH_RUN_HCCL_SERIAL == '1'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip==24.0
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install -r requirements/requirements.txt
+    - name: Install MindSpore
+      shell: bash
+      env:
+        OS: ubuntu-latest
+        PYTHON: 3.11
+      run: |
+        pip install mindspore
+    - name: Test mindtorch_v2 HCCL serial lane
+      env:
+        MINDTORCH_RUN_HCCL_SERIAL: "1"
+      run: |
+        cd tests/mindtorch_v2
+        pytest -q test_hccl_mvp_multicard.py
+        pytest -q test_hccl_ddp_advanced_multicard.py
+        pytest -q test_hccl_sampler_ddp_multicard.py
+        pytest -q test_hccl_mvp_resilience.py
+        pytest -q test_hccl_mvp_longrun.py
+        cd ../..
+        PYTHONPATH=src python tests/mindtorch_v2/test_hccl_all_to_all_multicard.py
 
   kaggle-gpu-test:
     needs: pylint-check

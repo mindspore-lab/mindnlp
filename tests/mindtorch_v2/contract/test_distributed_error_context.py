@@ -47,3 +47,28 @@ def test_collective_error_includes_runtime_context() -> None:
     assert "rank=0" in msg
     assert "world_size=1" in msg
     assert "op=all_reduce" in msg
+
+
+def test_barrier_error_includes_runtime_context() -> None:
+    _cleanup_pg()
+    with pytest.raises(Exception, match=r"stage=barrier") as ei:
+        dist.barrier()
+
+    msg = str(ei.value)
+    assert "backend=uninitialized" in msg
+    assert "rank=0" in msg
+    assert "world_size=1" in msg
+    assert "op=barrier" in msg
+
+
+def test_broadcast_error_includes_runtime_context() -> None:
+    _cleanup_pg()
+    t = torch.tensor([1.0])
+    with pytest.raises(Exception, match=r"stage=broadcast") as ei:
+        dist.broadcast(t, src=0)
+
+    msg = str(ei.value)
+    assert "backend=uninitialized" in msg
+    assert "rank=0" in msg
+    assert "world_size=1" in msg
+    assert "op=broadcast" in msg
