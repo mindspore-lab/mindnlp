@@ -127,9 +127,12 @@ class OpSchema:
 
         op_short_name = name.split("::", 1)[-1]
 
-        def _raise_invalid_combo():
+        def _raise_invalid_combo(extra=None):
             if error_overrides and error_overrides.get("unexpected") is not None:
-                raise TypeError(error_overrides["unexpected"].format(name=name, got=got))
+                payload = {"name": name, "got": got}
+                if extra:
+                    payload.update(extra)
+                raise TypeError(error_overrides["unexpected"].format(**payload))
             raise TypeError(f"{name}() received an invalid combination of arguments - got {got}")
 
         params = self.params
@@ -140,9 +143,12 @@ class OpSchema:
                 bound[positional[idx].name] = value
         bound.update(kwargs)
 
-        def _raise_invalid_combo_with_got(custom_got):
+        def _raise_invalid_combo_with_got(custom_got, extra=None):
             if error_overrides and error_overrides.get("unexpected") is not None:
-                raise TypeError(error_overrides["unexpected"].format(name=name, got=custom_got))
+                payload = {"name": name, "got": custom_got}
+                if extra:
+                    payload.update(extra)
+                raise TypeError(error_overrides["unexpected"].format(**payload))
             raise TypeError(f"{name}() received an invalid combination of arguments - got {custom_got}")
 
         def _dimname_not_found(name_str, input_tensor):
@@ -154,6 +160,13 @@ class OpSchema:
             if dim < 0:
                 dim += rank
             return dim
+
+        def _transpose_sigs(dim0, dim1):
+            t0 = _type_label(dim0)
+            t1 = _type_label(dim1)
+            int_sig = f"int, !{t1}!" if isinstance(dim0, int) and not isinstance(dim0, bool) else f"!{t0}!, int"
+            name_sig = f"!int!, !{t1}!" if isinstance(dim0, int) and not isinstance(dim0, bool) else f"!{t0}!, !int!"
+            return int_sig, name_sig
 
         def _validate_sum_dim(value, input_tensor):
             # Match torch call-site validation for sum(dim=...).
@@ -236,21 +249,37 @@ class OpSchema:
 
         def _validate_view_shape(value):
             if isinstance(value, bool):
-                _raise_invalid_combo_with_got("(bool)")
+                _raise_invalid_combo_with_got("(bool)", {"detail": "bool"})
+                return
             if isinstance(value, int):
                 return
             if isinstance(value, list):
                 if all(isinstance(v, int) and not isinstance(v, bool) for v in value):
                     return
-                _raise_invalid_combo_with_got("(list)")
+                if any(isinstance(v, str) for v in value):
+                    raise TypeError(
+                        f"{name}(): argument 'size' failed to unpack the object at pos 2 "
+                        f"with error \"type must be tuple of ints,but got str\""
+                    )
+                _raise_invalid_combo_with_got("(list)", {"detail": _type_label(value)})
+                return
             if isinstance(value, tuple):
                 if all(isinstance(v, int) and not isinstance(v, bool) for v in value):
                     return
-                _raise_invalid_combo_with_got("(tuple)")
+                if any(isinstance(v, str) for v in value):
+                    raise TypeError(
+                        f"{name}(): argument 'size' failed to unpack the object at pos 2 "
+                        f"with error \"type must be tuple of ints,but got str\""
+                    )
+                _raise_invalid_combo_with_got("(tuple)", {"detail": _type_label(value)})
+                return
             if isinstance(value, str):
-                _raise_invalid_combo_with_got("(str)")
+                _raise_invalid_combo_with_got("(str)", {"detail": "str"})
+                return
             if isinstance(value, float):
-                _raise_invalid_combo_with_got("(float)")
+                _raise_invalid_combo_with_got("(float)", {"detail": "float"})
+                return
+            _raise_invalid_combo_with_got(f"({_type_label(value)})", {"detail": _type_label(value)})
 
         def _validate_transpose_dims(dim0, dim1):
             valid0 = isinstance(dim0, int) and not isinstance(dim0, bool)
@@ -258,7 +287,14 @@ class OpSchema:
             if valid0 and valid1:
                 return
             got_text = f"({_type_label(dim0)}, {_type_label(dim1)})"
-            _raise_invalid_combo_with_got(got_text)
+            int_sig, name_sig = _transpose_sigs(dim0, dim1)
+            _raise_invalid_combo_with_got(
+                got_text,
+                {
+                    "transpose_int_sig": int_sig,
+                    "transpose_name_sig": name_sig,
+                },
+            )
 
         for param in params:
             if param.name not in bound:

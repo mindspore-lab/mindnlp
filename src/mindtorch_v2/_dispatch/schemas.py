@@ -186,7 +186,7 @@ def register_schemas():
         "view",
         {
             "missing": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (torch.dtype dtype)\n * (tuple of ints size)\n",
-            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (torch.dtype dtype)\n      didn't match because some of the arguments have invalid types: (!str!)\n * (tuple of ints size)\n      didn't match because some of the arguments have invalid types: (!str!)\n",
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (torch.dtype dtype)\n      didn't match because some of the arguments have invalid types: (!{detail}!)\n * (tuple of ints size)\n      didn't match because some of the arguments have invalid types: (!{detail}!)\n",
         },
     )
     registry.register_schema("transpose", "transpose(Tensor(a) input, int dim0, int dim1) -> Tensor(a)")
@@ -194,7 +194,7 @@ def register_schemas():
         "transpose",
         {
             "missing": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim0, int dim1)\n * (Tensor input, name dim0, name dim1)\n",
-            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (int dim0, int dim1)\n      didn't match because some of the arguments have invalid types: (!str!, int)\n * (name dim0, name dim1)\n      didn't match because some of the arguments have invalid types: (!str!, !int!)\n",
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (int dim0, int dim1)\n      didn't match because some of the arguments have invalid types: ({transpose_int_sig})\n * (name dim0, name dim1)\n      didn't match because some of the arguments have invalid types: ({transpose_name_sig})\n",
         },
     )
     registry.register_schema("squeeze", "squeeze(Tensor(a) input, int? dim=None) -> Tensor(a)")
