@@ -13438,3 +13438,264 @@ def saffine_grid(theta_ptr, out_ptr,
         bindings.acl_destroy_int_array(size_int_array)
         if workspace is not None:
             runtime.defer_raw_free(workspace)
+
+# ===========================================================================
+# Activation / softmax backward wrapper functions
+# ===========================================================================
+
+
+def threshold_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_threshold_backward_get_workspace, b.aclnn_threshold_backward])
+    except Exception:
+        return False
+
+
+def threshold_backward(grad_ptr, self_ptr, out_ptr, shape, grad_stride, self_stride, out_stride,
+                       dtype, threshold, runtime, stream=None):
+    """aclnnThresholdBackward(gradOutput, self, threshold, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    threshold_scalar, threshold_keep = _create_scalar(bindings, threshold, dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_threshold_backward_get_workspace(
+            grad_tensor, self_tensor, threshold_scalar, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnThresholdBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_threshold_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnThresholdBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_scalar(threshold_scalar)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, self_keep, out_keep, threshold_keep)
+
+
+def sigmoid_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_sigmoid_backward_get_workspace, b.aclnn_sigmoid_backward])
+    except Exception:
+        return False
+
+
+def sigmoid_backward(grad_ptr, output_ptr, out_ptr, shape, grad_stride, output_stride, out_stride,
+                     dtype, runtime, stream=None):
+    """aclnnSigmoidBackward(gradOutput, output, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    output_tensor, output_keep = _create_tensor(bindings, shape, output_stride, dtype, output_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_sigmoid_backward_get_workspace(
+            grad_tensor, output_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSigmoidBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_sigmoid_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSigmoidBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(output_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, output_keep, out_keep)
+
+
+def tanh_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_tanh_backward_get_workspace, b.aclnn_tanh_backward])
+    except Exception:
+        return False
+
+
+def tanh_backward(grad_ptr, output_ptr, out_ptr, shape, grad_stride, output_stride, out_stride,
+                  dtype, runtime, stream=None):
+    """aclnnTanhBackward(gradOutput, output, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    output_tensor, output_keep = _create_tensor(bindings, shape, output_stride, dtype, output_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_tanh_backward_get_workspace(
+            grad_tensor, output_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnTanhBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_tanh_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnTanhBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(output_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, output_keep, out_keep)
+
+
+def silu_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_silu_backward_get_workspace, b.aclnn_silu_backward])
+    except Exception:
+        return False
+
+
+def silu_backward(grad_ptr, self_ptr, out_ptr, shape, grad_stride, self_stride, out_stride,
+                  dtype, runtime, stream=None):
+    """aclnnSiluBackward(gradOutput, self, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_silu_backward_get_workspace(
+            grad_tensor, self_tensor, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSiluBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_silu_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSiluBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, self_keep, out_keep)
+
+
+def log_softmax_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_log_softmax_backward_get_workspace, b.aclnn_log_softmax_backward])
+    except Exception:
+        return False
+
+
+def log_softmax_backward(grad_ptr, output_ptr, out_ptr, shape, grad_stride, output_stride, out_stride,
+                         dtype, dim, runtime, stream=None):
+    """aclnnLogSoftmaxBackward(gradOutput, output, dim, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    output_tensor, output_keep = _create_tensor(bindings, shape, output_stride, dtype, output_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_log_softmax_backward_get_workspace(
+            grad_tensor, output_tensor, ctypes.c_int64(dim), out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLogSoftmaxBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_log_softmax_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLogSoftmaxBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(output_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, output_keep, out_keep)
