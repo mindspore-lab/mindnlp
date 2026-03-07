@@ -46,4 +46,15 @@ class Work:
         self.wait()
 
     def get_future(self):
-        raise NotImplementedError("get_future is not supported")
+        from ..futures import Future
+
+        fut = Future()
+        try:
+            self.wait()
+        except Exception as exc:
+            # Minimal compatibility: surface wait failure through future value.
+            fut.set_result(exc)
+            return fut
+
+        fut.set_result(self.result())
+        return fut
