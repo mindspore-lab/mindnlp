@@ -2923,6 +2923,19 @@ def allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
 def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     if isinstance(b, (int, float, bool)):
         b = _scalar_to_npu_tensor(b, a)
+
+    if _is_310b_profile():
+        diff = abs(sub(a, b))
+        tol = add(_scalar_to_npu_tensor(float(atol), diff), mul(_scalar_to_npu_tensor(float(rtol), diff), abs(b)))
+        close = le(diff, tol)
+        if equal_nan:
+            nan_both = logical_and(isnan(a), isnan(b))
+            close = logical_or(close, nan_both)
+        else:
+            nan_any = logical_or(isnan(a), isnan(b))
+            close = logical_and(close, logical_not(nan_any))
+        return close
+
     runtime = npu_runtime.get_runtime((a.device.index or 0))
     stream = npu_state.current_stream((a.device.index or 0))
     out_shape = _broadcast_shape(a.shape, b.shape)
@@ -7810,4 +7823,3 @@ def diagonal_op(a, offset=0, dim1=0, dim2=1):
 
     result = gather(t_flat, -1, idx_tensor)
     return result
-
