@@ -116,6 +116,17 @@ def test_view_accepts_single_int_shape_like_torch():
     assert mt_out.tolist() == pt_out.tolist()
 
 
+def test_view_accepts_negative_one_shape_like_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    pt_x = pt.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    mt_out = mt_x.view(-1)
+    pt_out = pt_x.view(-1)
+
+    assert mt_out.shape == pt_out.shape
+    assert mt_out.tolist() == pt_out.tolist()
+
+
 def test_dispatch_view_rejects_none_shape_matches_torch():
     mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
 

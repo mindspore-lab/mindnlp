@@ -47,14 +47,34 @@ def view(a, shape):
         shape = (shape,)
     else:
         shape = tuple(shape)
+
     size = 1
     for d in a.shape:
         size *= d
+
+    infer_idx = None
+    known_size = 1
+    shape_list = list(shape)
+    for idx, dim in enumerate(shape_list):
+        if dim == -1:
+            if infer_idx is not None:
+                raise RuntimeError("only one dimension can be inferred")
+            infer_idx = idx
+            continue
+        known_size *= dim
+
+    if infer_idx is not None:
+        if known_size == 0 or size % known_size != 0:
+            raise RuntimeError(f"shape '{list(shape)}' is invalid for input of size {size}")
+        shape_list[infer_idx] = size // known_size
+
+    shape = tuple(shape_list)
     new_size = 1
     for d in shape:
         new_size *= d
     if size != new_size:
         raise ValueError("view size mismatch")
+
     stride = _contiguous_stride(shape)
     base = _get_base(a)
     return _make_view(base, shape, stride, a.offset, "view")
