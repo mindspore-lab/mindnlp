@@ -146,6 +146,8 @@ def init_process_group(backend=None, init_method=None, timeout=None,
 
     rank_from_env = rank < 0
     world_from_env = world_size < 0
+    rank_source = "env" if rank_from_env else "arg"
+    world_size_source = "env" if world_from_env else "arg"
 
     if rank_from_env:
         rank = _get_env_rank()
@@ -155,6 +157,9 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     dev_id = None
     if device_id is not None:
         dev_id = int(getattr(device_id, "index", device_id))
+
+    master_addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
+    master_port = os.environ.get("MASTER_PORT", "29500")
 
     try:
         if backend in ("hccl", "nccl") and rank_from_env and os.environ.get("RANK") is None:
@@ -168,6 +173,10 @@ def init_process_group(backend=None, init_method=None, timeout=None,
         if backend in ("hccl", "nccl") and dev_id is not None and dev_id < 0:
             raise ValueError("device_id must be >= 0 for hccl backend")
     except Exception as exc:
+        extra = (
+            f"master_addr={master_addr}, master_port={master_port}, "
+            f"rank_source={rank_source}, world_size_source={world_size_source}"
+        )
         _raise_with_context(
             exc,
             stage="init_process_group",
@@ -175,6 +184,7 @@ def init_process_group(backend=None, init_method=None, timeout=None,
             rank=rank,
             world_size=world_size,
             device_id=dev_id,
+            extra=extra,
         )
 
     if store is None:
