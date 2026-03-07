@@ -76,6 +76,21 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
         dim = tuple(dim)
     if isinstance(dim, tuple) and len(dim) == 0:
         dim = None
+
+    ndim = len(a.shape)
+
+    def _check_dim_range(d):
+        if d < -ndim or d >= ndim:
+            raise IndexError(
+                f"Dimension out of range (expected to be in range of [{-ndim}, {ndim - 1}], but got {d})"
+            )
+
+    if isinstance(dim, int):
+        _check_dim_range(dim)
+    elif isinstance(dim, tuple):
+        for d in dim:
+            _check_dim_range(d)
+
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 
