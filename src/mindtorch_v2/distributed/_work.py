@@ -5,6 +5,7 @@ class Work:
         self._device_id = device_id
         self._exception = None
         self._source_rank = source_rank
+        self._on_wait = None
 
     def wait(self, timeout=None):
         if not self._completed and self._stream is not None:
@@ -15,6 +16,14 @@ class Work:
             except Exception as e:
                 self._exception = e
                 raise
+        if self._on_wait is not None:
+            try:
+                self._on_wait()
+            except Exception as e:
+                self._exception = e
+                raise
+            finally:
+                self._on_wait = None
         self._completed = True
         return True
 

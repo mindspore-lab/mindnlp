@@ -430,6 +430,13 @@ def all_gather(tensor_list, tensor, group=None, async_op=False):
         work.wait()
         _split_flat_to_list(flat_output, tensor_list, numel, tensor.dtype)
         return None
+    # Async path still needs post-processing after transport completion.
+    work._on_wait = lambda: _split_flat_to_list(
+        flat_output,
+        tensor_list,
+        numel,
+        tensor.dtype,
+    )
     return work
 
 
