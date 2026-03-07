@@ -72,6 +72,8 @@ def gelu(a):
 def sum_(a, dim=None, keepdim=False, dtype=None):
     if dtype is not None:
         raise NotImplementedError("sum dtype not supported yet")
+    if isinstance(dim, list):
+        dim = tuple(dim)
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 
