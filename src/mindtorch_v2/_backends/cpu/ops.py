@@ -1071,6 +1071,50 @@ def hardtanh(a, min_val=-1.0, max_val=1.0):
     return _from_numpy(out, a.dtype, a.device)
 
 
+def selu(a):
+    ALPHA = 1.6732632423543772
+    SCALE = 1.0507009873554805
+    arr = _to_numpy(a)
+    out = SCALE * np.where(arr > 0, arr, ALPHA * (np.exp(arr) - 1))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def celu(a, alpha=1.0):
+    arr = _to_numpy(a)
+    out = np.maximum(arr, 0.0) + np.minimum(0.0, alpha * (np.exp(arr / alpha) - 1))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def threshold(a, threshold_val, value):
+    arr = _to_numpy(a)
+    out = np.where(arr > threshold_val, arr, value)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def hardshrink(a, lambd=0.5):
+    arr = _to_numpy(a)
+    out = np.where(np.abs(arr) > lambd, arr, 0.0)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def softshrink(a, lambd=0.5):
+    arr = _to_numpy(a)
+    out = np.sign(arr) * np.maximum(np.abs(arr) - lambd, 0.0)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def rrelu(a, lower=1.0 / 8, upper=1.0 / 3, training=False):
+    arr = _to_numpy(a)
+    if training:
+        slope = np.random.uniform(lower, upper, size=arr.shape).astype(arr.dtype)
+    else:
+        slope = np.full_like(arr, (lower + upper) / 2.0)
+    out = np.where(arr >= 0, arr, arr * slope)
+    result = _from_numpy(out, a.dtype, a.device)
+    result._rrelu_slope = _from_numpy(slope, a.dtype, a.device)
+    return result
+
+
 def min_(a, b):
     return _from_numpy(np.minimum(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
@@ -4189,3 +4233,94 @@ def adaptive_max_pool1d(input, output_size, return_indices=False):
         out[:, :, ol] = region.max(axis=2)
 
     return _from_numpy(out, input.dtype, input.device)
+
+
+def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
+    """CTC Loss forward via numpy alpha (forward variable) algorithm.
+
+    Args:
+        log_probs: (T, N, C) log probabilities
+        targets: (N, S) or (sum(target_lengths),) target sequences
+        input_lengths: (N,) lengths of inputs
+        target_lengths: (N,) lengths of targets
+        blank: blank label index
+        reduction: 'none', 'mean', or 'sum'
+        zero_infinity: if True, zero out infinite losses
+    """
+    lp = _to_numpy(log_probs).astype(np.float64)
+    T, N, C = lp.shape
+
+    if isinstance(targets, Tensor):
+        tgt = _to_numpy(targets)
+    else:
+        tgt = np.array(targets)
+
+    if isinstance(input_lengths, Tensor):
+        inp_lens = _to_numpy(input_lengths).astype(np.int64)
+    else:
+        inp_lens = np.array(input_lengths, dtype=np.int64)
+
+    if isinstance(target_lengths, Tensor):
+        tgt_lens = _to_numpy(target_lengths).astype(np.int64)
+    else:
+        tgt_lens = np.array(target_lengths, dtype=np.int64)
+
+    NEG_INF = -1e30
+    losses = np.zeros(N, dtype=np.float64)
+
+    # Determine if targets is 1D (concatenated) or 2D
+    is_1d = (tgt.ndim == 1)
+    offset = 0
+
+    for b in range(N):
+        T_b = int(inp_lens[b])
+        S_b = int(tgt_lens[b])
+
+        if is_1d:
+            labels_b = tgt[offset:offset + S_b]
+            offset += S_b
+        else:
+            labels_b = tgt[b, :S_b]
+
+        # Build extended labels with blanks: [blank, l0, blank, l1, blank, ...]
+        L = 2 * S_b + 1
+        ext = np.full(L, blank, dtype=np.int64)
+        for s in range(S_b):
+            ext[2 * s + 1] = labels_b[s]
+
+        # Alpha (forward variables): alpha[t, s] = log-prob of emitting ext[:s+1] up to time t
+        alpha = np.full((T_b, L), NEG_INF, dtype=np.float64)
+        alpha[0, 0] = lp[0, b, ext[0]]
+        if L > 1:
+            alpha[0, 1] = lp[0, b, ext[1]]
+
+        for t in range(1, T_b):
+            for s in range(L):
+                a = alpha[t - 1, s]
+                if s > 0:
+                    a = np.logaddexp(a, alpha[t - 1, s - 1])
+                if s > 1 and ext[s] != blank and ext[s] != ext[s - 2]:
+                    a = np.logaddexp(a, alpha[t - 1, s - 2])
+                alpha[t, s] = a + lp[t, b, ext[s]]
+
+        # Loss = -log(alpha[T-1, L-1] + alpha[T-1, L-2])
+        log_likelihood = alpha[T_b - 1, L - 1]
+        if L > 1:
+            log_likelihood = np.logaddexp(log_likelihood, alpha[T_b - 1, L - 2])
+        loss = -log_likelihood
+
+        if zero_infinity and np.isinf(loss):
+            loss = 0.0
+        losses[b] = loss
+
+    if reduction == 'none':
+        result = losses
+    elif reduction == 'sum':
+        result = np.array(losses.sum(), dtype=np.float64)
+    else:  # 'mean'
+        tgt_lens_f = tgt_lens.astype(np.float64)
+        tgt_lens_f = np.maximum(tgt_lens_f, 1.0)
+        result = np.array((losses / tgt_lens_f).mean(), dtype=np.float64)
+
+    out_dtype = log_probs.dtype
+    return _from_numpy(result.astype(to_numpy_dtype(out_dtype)), out_dtype, log_probs.device)
