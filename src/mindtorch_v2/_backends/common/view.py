@@ -43,7 +43,10 @@ def reshape(a, shape):
 
 
 def view(a, shape):
-    shape = tuple(shape)
+    if isinstance(shape, int):
+        shape = (shape,)
+    else:
+        shape = tuple(shape)
     size = 1
     for d in a.shape:
         size *= d

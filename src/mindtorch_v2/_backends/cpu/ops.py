@@ -74,6 +74,8 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
         raise NotImplementedError("sum dtype not supported yet")
     if isinstance(dim, list):
         dim = tuple(dim)
+    if isinstance(dim, tuple) and len(dim) == 0:
+        dim = None
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 

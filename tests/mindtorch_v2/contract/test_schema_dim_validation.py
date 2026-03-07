@@ -27,6 +27,16 @@ def test_sum_accepts_list_dim_like_torch():
     assert mt_out.item() == pt_out.item()
 
 
+def test_sum_accepts_empty_dim_sequence_like_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    pt_x = pt.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    mt_out = torch.sum(mt_x, dim=[])
+    pt_out = pt.sum(pt_x, dim=[])
+
+    assert mt_out.item() == pt_out.item()
+
+
 def test_sum_accepts_list_dim_with_trailing_bool_like_torch():
     mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
     pt_x = pt.tensor([[1.0, 2.0], [3.0, 4.0]])
@@ -69,6 +79,17 @@ def test_dispatch_sum_named_dim_error_matches_torch_on_rank2():
         pt.sum(pt.tensor([[1.0, 2.0], [3.0, 4.0]]), dim="x")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_view_accepts_single_int_shape_like_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    pt_x = pt.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    mt_out = mt_x.view(4)
+    pt_out = pt_x.view(4)
+
+    assert mt_out.shape == pt_out.shape
+    assert mt_out.tolist() == pt_out.tolist()
 
 
 def test_dispatch_view_rejects_none_shape_matches_torch():
