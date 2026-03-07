@@ -4262,6 +4262,622 @@ def _masked_fill_inplace_backward(grad, _a, saved_a, args, keyset):
         return (grad_input,)
 
 
+# ---------------------------------------------------------------------------
+# Round 4: In-place + P1 Math/Manipulation backward ops
+# ---------------------------------------------------------------------------
+
+# --- 2a: sub_ backward ---
+def _inplace_sub_backward(grad, a, _saved_a, args, keyset):
+    b = args[0]
+    with _grad_context(keyset):
+        neg_grad = redispatch("neg", keyset, grad)
+    grad_a = reduce_grad(grad, a.shape) if getattr(a, "requires_grad", False) else None
+    grad_b = reduce_grad(neg_grad, b.shape) if getattr(b, "requires_grad", False) else None
+    return grad_a, grad_b
+
+
+# --- 2b: div_ backward ---
+def _inplace_div_backward(grad, a, saved_a, args, keyset):
+    b = args[0]
+    with _grad_context(keyset):
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("div", keyset, grad, b)
+            grad_a = reduce_grad(grad_a, a.shape)
+        if getattr(b, "requires_grad", False):
+            denom = redispatch("mul", keyset, b, b)
+            num = redispatch("mul", keyset, grad, saved_a)
+            grad_b = redispatch("neg", keyset, redispatch("div", keyset, num, denom))
+            grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
+# --- 2c: clamp_ backward ---
+def _inplace_clamp_backward(grad, a, saved_a, args, keyset):
+    return _clamp_backward(grad, a, saved_a, keyset, args, {})
+
+
+# --- 2d: copy_ backward ---
+def _inplace_copy_backward(grad, a, _saved_a, args, _keyset):
+    src = args[0]
+    grad_a = grad if getattr(a, "requires_grad", False) else None
+    grad_src = reduce_grad(grad, src.shape) if getattr(src, "requires_grad", False) else None
+    return grad_a, grad_src
+
+
+# --- 2e: setitem backward (custom wrapper) ---
+def _autograd_setitem(name):
+    def wrapper(a, key, value):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, key, value)
+        a_rg = getattr(a, "requires_grad", False)
+        v_rg = getattr(value, "requires_grad", False)
+        if GradMode.enabled and (a_rg or v_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _setitem_backward(grad, a, value, key, backward_keyset)
+
+            inputs = tuple(t for t in (a, value) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _setitem_backward(grad, a, value, key, keyset):
+    with _grad_context(keyset):
+        grad_a = None
+        if getattr(a, "requires_grad", False):
+            grad_a = grad.clone()
+            zeros = redispatch("zeros", keyset, grad_a[key].shape, dtype=grad.dtype, device=grad.device)
+            redispatch("setitem", keyset, grad_a, key, zeros)
+        grad_val = None
+        if getattr(value, "requires_grad", False):
+            grad_val = reduce_grad(grad[key], value.shape)
+    return grad_a, grad_val
+
+
+# --- 2f: index_copy_ backward (custom wrapper) ---
+def _autograd_index_copy_inplace(name):
+    def wrapper(a, dim, index, source):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, dim, index, source)
+        a_rg = getattr(a, "requires_grad", False)
+        src_rg = getattr(source, "requires_grad", False)
+        if GradMode.enabled and (a_rg or src_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _index_copy_inplace_backward(grad, a, source, dim, index, backward_keyset)
+
+            inputs = tuple(t for t in (a, source) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _index_copy_inplace_backward(grad, a, source, dim, index, keyset):
+    with _grad_context(keyset):
+        grad_a = None
+        if getattr(a, "requires_grad", False):
+            grad_a = grad.clone()
+            zeros = redispatch("zeros", keyset, source.shape, dtype=grad.dtype, device=grad.device)
+            redispatch("index_copy_", keyset, grad_a, dim, index, zeros)
+        grad_src = None
+        if getattr(source, "requires_grad", False):
+            grad_src = redispatch("index_select", keyset, grad, dim, index)
+    return grad_a, grad_src
+
+
+# --- 2g: index_fill_ backward (custom wrapper) ---
+def _autograd_index_fill_inplace(name):
+    def wrapper(a, dim, index, value):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, dim, index, value)
+        a_rg = getattr(a, "requires_grad", False)
+        if GradMode.enabled and a_rg:
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _index_fill_inplace_backward(grad, a, dim, index, backward_keyset)
+
+            node = Node(_backward, (a,))
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _index_fill_inplace_backward(grad, a, dim, index, keyset):
+    with _grad_context(keyset):
+        grad_a = grad.clone()
+        redispatch("index_fill_", keyset, grad_a, dim, index, 0.0)
+    return (grad_a,)
+
+
+# --- 2h: scatter_ backward (custom wrapper) ---
+def _autograd_scatter_inplace(name):
+    def wrapper(a, dim, index, src):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, dim, index, src)
+        a_rg = getattr(a, "requires_grad", False)
+        src_rg = getattr(src, "requires_grad", False) if hasattr(src, "requires_grad") else False
+        if GradMode.enabled and (a_rg or src_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _scatter_backward(grad, a, src, dim, index, backward_keyset)
+
+            inputs = tuple(t for t in (a, src) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+# --- 2i: masked_scatter_ backward (custom wrapper) ---
+def _autograd_masked_scatter_inplace(name):
+    def wrapper(a, mask, source):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, mask, source)
+        a_rg = getattr(a, "requires_grad", False)
+        src_rg = getattr(source, "requires_grad", False)
+        if GradMode.enabled and (a_rg or src_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _masked_scatter_inplace_backward(grad, a, source, mask, backward_keyset)
+
+            inputs = tuple(t for t in (a, source) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _masked_scatter_inplace_backward(grad, a, source, mask, keyset):
+    with _grad_context(keyset):
+        grad_a = None
+        if getattr(a, "requires_grad", False):
+            zeros = redispatch("zeros", keyset, grad.shape, dtype=grad.dtype, device=grad.device)
+            grad_a = redispatch("where", keyset, mask, zeros, grad)
+        grad_src = None
+        if getattr(source, "requires_grad", False):
+            grad_src = redispatch("masked_select", keyset, grad, mask)
+    return grad_a, grad_src
+
+
+# --- Task 3: Tensor Manipulation backward ---
+
+# 3a: chunk backward (multi_output)
+def _chunk_backward(grad, idx, a, _saved_a, keyset, args, _kwargs):
+    chunks_arg = args[0]
+    dim = args[1] if len(args) > 1 else _kwargs.get("dim", 0)
+    d = dim if dim >= 0 else dim + len(a.shape)
+    with _grad_context(keyset):
+        grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        total = a.shape[d]
+        chunk_size = (total + chunks_arg - 1) // chunks_arg
+        start = idx * chunk_size
+        slices = [slice(None)] * len(a.shape)
+        slices[d] = slice(start, start + grad.shape[d])
+        redispatch("setitem", keyset, grad_input, tuple(slices), grad)
+    return (grad_input,)
+
+
+# 3b: hstack backward (multi_input)
+def _hstack_backward(grad, tensors, _saved, keyset, _args, _kwargs):
+    with _grad_context(keyset):
+        dim = 0 if tensors[0].ndim == 1 else 1
+        sizes = [t.shape[dim] if t.ndim > dim else t.shape[0] for t in tensors]
+        grads = redispatch("split", keyset, grad, sizes, dim)
+        result = []
+        for i, t in enumerate(tensors):
+            if getattr(t, "requires_grad", False):
+                g = grads[i]
+                if t.ndim == 1 and grad.ndim > 1:
+                    g = redispatch("reshape", keyset, g, (g.numel(),))
+                result.append(g)
+            else:
+                result.append(None)
+        return tuple(result)
+
+
+# 3c: vstack backward (multi_input) — also used for row_stack
+def _vstack_backward(grad, tensors, _saved, keyset, _args, _kwargs):
+    with _grad_context(keyset):
+        sizes = [t.shape[0] if t.ndim >= 2 else 1 for t in tensors]
+        grads = redispatch("split", keyset, grad, sizes, 0)
+        result = []
+        for i, t in enumerate(tensors):
+            if getattr(t, "requires_grad", False):
+                g = grads[i]
+                if t.ndim == 1:
+                    g = redispatch("reshape", keyset, g, (t.shape[0],))
+                result.append(g)
+            else:
+                result.append(None)
+        return tuple(result)
+
+
+# 3d: dstack backward (multi_input)
+def _dstack_backward(grad, tensors, _saved, keyset, _args, _kwargs):
+    with _grad_context(keyset):
+        sizes = []
+        for t in tensors:
+            if t.ndim <= 2:
+                sizes.append(1)
+            else:
+                sizes.append(t.shape[2])
+        grads = redispatch("split", keyset, grad, sizes, 2)
+        result = []
+        for i, t in enumerate(tensors):
+            if getattr(t, "requires_grad", False):
+                g = grads[i]
+                if t.ndim == 1:
+                    g = redispatch("reshape", keyset, g, (t.shape[0],))
+                elif t.ndim == 2:
+                    g = redispatch("reshape", keyset, g, t.shape)
+                result.append(g)
+            else:
+                result.append(None)
+        return tuple(result)
+
+
+# 3e: column_stack backward (multi_input)
+def _column_stack_backward(grad, tensors, _saved, keyset, _args, _kwargs):
+    with _grad_context(keyset):
+        sizes = [1 if t.ndim == 1 else t.shape[1] for t in tensors]
+        grads = redispatch("split", keyset, grad, sizes, 1)
+        result = []
+        for i, t in enumerate(tensors):
+            if getattr(t, "requires_grad", False):
+                g = grads[i]
+                if t.ndim == 1:
+                    g = redispatch("reshape", keyset, g, (t.shape[0],))
+                result.append(g)
+            else:
+                result.append(None)
+        return tuple(result)
+
+
+# 3f: diag backward (unary_args)
+def _diag_backward(grad, a, _saved_a, keyset, args, kwargs):
+    diagonal = args[0] if args else kwargs.get("diagonal", 0)
+    with _grad_context(keyset):
+        return (redispatch("diag", keyset, grad, diagonal),)
+
+
+# --- Task 4: Shape/View backward ---
+
+# 4a: broadcast_to backward
+def _broadcast_to_backward(grad, a, _saved_a, keyset, _args, _kwargs):
+    return (reduce_grad(grad, a.shape),)
+
+
+# 4b: unfold backward
+def _unfold_backward(grad, a, _saved_a, keyset, args, kwargs):
+    dim = args[0] if len(args) > 0 else kwargs.get("dimension", 0)
+    size = args[1] if len(args) > 1 else kwargs.get("size")
+    step = args[2] if len(args) > 2 else kwargs.get("step")
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    grad_np = _to_numpy(grad)
+    result = np.zeros(a.shape, dtype=grad_np.dtype)
+    d = dim if dim >= 0 else dim + len(a.shape)
+    n_windows = grad_np.shape[d]
+    for i in range(n_windows):
+        src_slices = [slice(None)] * len(grad_np.shape)
+        src_slices[d] = i
+        window_grad = grad_np[tuple(src_slices)]
+        for j in range(size):
+            dst_slices = [slice(None)] * len(a.shape)
+            dst_slices[d] = i * step + j
+            src_inner = [slice(None)] * len(window_grad.shape)
+            src_inner[-1] = j
+            result[tuple(dst_slices)] += window_grad[tuple(src_inner)]
+    return (_from_numpy(np.ascontiguousarray(result), a.dtype, a.device),)
+
+
+# --- Task 5: Math backward ---
+
+# 5a: square backward
+def _square_backward(grad, _a, saved_a, keyset):
+    with _grad_context(keyset):
+        two = _scalar_tensor_like(saved_a, 2.0)
+        return (redispatch("mul", keyset, grad, redispatch("mul", keyset, two, saved_a)),)
+
+
+# 5b: diff backward
+def _diff_backward(grad, a, _saved_a, keyset, args, kwargs):
+    n = args[0] if args else kwargs.get("n", 1)
+    dim = args[1] if len(args) > 1 else kwargs.get("dim", -1)
+    d = dim if dim >= 0 else dim + len(a.shape)
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    g = _to_numpy(grad)
+    for _ in range(n):
+        pad_before = [(0, 0)] * len(g.shape)
+        pad_before[d] = (1, 0)
+        pad_after = [(0, 0)] * len(g.shape)
+        pad_after[d] = (0, 1)
+        padded_after = np.pad(g, pad_after, mode='constant')
+        padded_before = np.pad(g, pad_before, mode='constant')
+        g = padded_before - padded_after
+    return (_from_numpy(np.ascontiguousarray(g), a.dtype, a.device),)
+
+
+# 5c: heaviside backward
+def _heaviside_backward(grad, a, b, _saved_a, _saved_b, _keyset):
+    grad_a = redispatch("mul", _keyset, grad, _scalar_tensor_like(a, 0.0)) if getattr(a, "requires_grad", False) else None
+    grad_b = redispatch("mul", _keyset, grad, _scalar_tensor_like(b, 0.0)) if getattr(b, "requires_grad", False) else None
+    return grad_a, grad_b
+
+
+# 5d: trace backward
+def _trace_backward(grad, a, _saved_a, keyset, _args, _kwargs):
+    with _grad_context(keyset):
+        n = a.shape[0]
+        eye = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+        import numpy as np
+        from .cpu.ops import _to_numpy, _from_numpy
+        eye_np = np.eye(n, a.shape[1] if len(a.shape) > 1 else n, dtype=_to_numpy(grad).dtype)
+        eye = _from_numpy(eye_np, a.dtype, a.device)
+        grad_scalar = _to_numpy(grad).item() if grad.ndim == 0 else _to_numpy(grad).item()
+        result = eye_np * grad_scalar
+        return (_from_numpy(np.ascontiguousarray(result), a.dtype, a.device),)
+
+
+# 5e: det backward
+def _det_backward(grad, a, saved_a, keyset, _args, _kwargs):
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    a_np = _to_numpy(saved_a)
+    grad_np = _to_numpy(grad)
+    if a_np.ndim == 2:
+        det_val = np.linalg.det(a_np)
+        if abs(det_val) < 1e-30:
+            result = np.zeros_like(a_np)
+        else:
+            inv_t = np.linalg.inv(a_np).T
+            result = (grad_np * det_val) * inv_t
+    else:
+        result = np.zeros_like(a_np)
+        for idx in np.ndindex(a_np.shape[:-2]):
+            mat = a_np[idx]
+            det_val = np.linalg.det(mat)
+            g = grad_np[idx] if grad_np.ndim > 0 else grad_np
+            if abs(det_val) < 1e-30:
+                result[idx] = np.zeros_like(mat)
+            else:
+                inv_t = np.linalg.inv(mat).T
+                result[idx] = (g * det_val) * inv_t
+    return (_from_numpy(np.ascontiguousarray(result.astype(_to_numpy(saved_a).dtype)), saved_a.dtype, saved_a.device),)
+
+
+# 5f: dist backward (custom wrapper)
+def _autograd_dist(name):
+    def wrapper(a, b, p=2):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, a, b, p)
+        a_rg = getattr(a, "requires_grad", False)
+        b_rg = getattr(b, "requires_grad", False)
+        if GradMode.enabled and (a_rg or b_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _dist_backward(grad, a, b, p, backward_keyset)
+
+            inputs = tuple(t for t in (a, b) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            node.save_for_backward(a, b)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _dist_backward(grad, a, b, p, keyset):
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    g_np = _to_numpy(grad).astype(np.float64)
+    diff = a_np - b_np
+    if p == 2:
+        d = np.sqrt(np.sum(diff ** 2))
+        if d < 1e-30:
+            grad_dir = np.zeros_like(diff)
+        else:
+            grad_dir = diff / d
+    elif p == 1:
+        grad_dir = np.sign(diff)
+    elif p == float('inf'):
+        abs_diff = np.abs(diff)
+        max_val = abs_diff.max()
+        grad_dir = np.where(abs_diff == max_val, np.sign(diff), 0.0)
+    else:
+        d = np.sum(np.abs(diff) ** p) ** (1.0 / p)
+        if d < 1e-30:
+            grad_dir = np.zeros_like(diff)
+        else:
+            grad_dir = np.sign(diff) * (np.abs(diff) ** (p - 1)) / (d ** (p - 1))
+    result = g_np * grad_dir
+    result = result.astype(_to_numpy(a).dtype)
+    grad_a = _from_numpy(np.ascontiguousarray(result), a.dtype, a.device) if getattr(a, "requires_grad", False) else None
+    grad_b = _from_numpy(np.ascontiguousarray(-result), b.dtype, b.device) if getattr(b, "requires_grad", False) else None
+    return grad_a, grad_b
+
+
+# 5g: renorm backward
+def _renorm_backward(grad, a, saved_a, keyset, args, kwargs):
+    p_val = args[0] if len(args) > 0 else kwargs.get("p", 2)
+    dim = args[1] if len(args) > 1 else kwargs.get("dim", 0)
+    maxnorm = args[2] if len(args) > 2 else kwargs.get("maxnorm", 1.0)
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    a_np = _to_numpy(saved_a).astype(np.float64)
+    grad_np = _to_numpy(grad).astype(np.float64)
+    d = dim if dim >= 0 else dim + a_np.ndim
+    reduce_axes = tuple(i for i in range(a_np.ndim) if i != d)
+    norms = np.sum(np.abs(a_np) ** p_val, axis=reduce_axes, keepdims=True) ** (1.0 / p_val)
+    scale = np.where(norms > maxnorm, maxnorm / (norms + 1e-30), 1.0)
+    needs_renorm = (norms > maxnorm).astype(np.float64)
+    pass_through = 1.0 - needs_renorm
+    scaled_grad = pass_through * grad_np
+    if np.any(needs_renorm):
+        # Chain rule through maxnorm / norm(x)
+        # d/dx_i [maxnorm * x_i / norm] = maxnorm * (1/norm - x_i^2 / norm^3) for L2
+        if p_val == 2:
+            norm_sq = np.sum(a_np ** 2, axis=reduce_axes, keepdims=True)
+            norm_val = np.sqrt(norm_sq + 1e-30)
+            # grad * maxnorm/norm - a * maxnorm * dot(grad, a) / norm^3
+            term1 = grad_np * maxnorm / (norm_val + 1e-30)
+            dot_ga = np.sum(grad_np * a_np, axis=reduce_axes, keepdims=True)
+            term2 = a_np * maxnorm * dot_ga / (norm_val ** 3 + 1e-30)
+            renorm_grad = term1 - term2
+        else:
+            renorm_grad = grad_np * scale
+        scaled_grad += needs_renorm * renorm_grad
+    result = scaled_grad.astype(_to_numpy(saved_a).dtype)
+    return (_from_numpy(np.ascontiguousarray(result), saved_a.dtype, saved_a.device),)
+
+
+# 5h: cdist backward (custom wrapper)
+def _autograd_cdist(name):
+    def wrapper(x1, x2, p=2.0):
+        active_keyset = current_dispatch_keyset()
+        raw_keyset = _strip_autograd_keys(active_keyset)
+        out = redispatch(name, raw_keyset, x1, x2, p)
+        x1_rg = getattr(x1, "requires_grad", False)
+        x2_rg = getattr(x2, "requires_grad", False)
+        if GradMode.enabled and (x1_rg or x2_rg):
+            node_holder = {}
+
+            def _backward(grad):
+                backward_keyset = _backward_dispatch_keyset(raw_keyset, active_keyset)
+                return _cdist_backward(grad, x1, x2, p, backward_keyset)
+
+            inputs = tuple(t for t in (x1, x2) if hasattr(t, "requires_grad"))
+            node = Node(_backward, inputs)
+            node_holder["node"] = node
+            node.save_for_backward(x1, x2)
+            out.grad_fn = node
+            out.requires_grad = True
+        return out
+
+    return wrapper
+
+
+def _cdist_backward(grad, x1, x2, p, keyset):
+    import numpy as np
+    from .cpu.ops import _to_numpy, _from_numpy
+    x1_np = _to_numpy(x1).astype(np.float64)
+    x2_np = _to_numpy(x2).astype(np.float64)
+    grad_np = _to_numpy(grad).astype(np.float64)
+    grad_x1 = np.zeros_like(x1_np) if getattr(x1, "requires_grad", False) else None
+    grad_x2 = np.zeros_like(x2_np) if getattr(x2, "requires_grad", False) else None
+    if x1_np.ndim == 2:
+        x1_np = x1_np[np.newaxis]
+        x2_np = x2_np[np.newaxis]
+        grad_np = grad_np[np.newaxis]
+        if grad_x1 is not None:
+            grad_x1 = grad_x1[np.newaxis]
+        if grad_x2 is not None:
+            grad_x2 = grad_x2[np.newaxis]
+        squeezed = True
+    else:
+        squeezed = False
+    B, P, M = x1_np.shape
+    _, R, _ = x2_np.shape
+    for b in range(B):
+        for i in range(P):
+            for j in range(R):
+                diff = x1_np[b, i] - x2_np[b, j]
+                g = grad_np[b, i, j]
+                if p == 2.0:
+                    d = np.sqrt(np.sum(diff ** 2))
+                    if d < 1e-30:
+                        direction = np.zeros_like(diff)
+                    else:
+                        direction = diff / d
+                elif p == 1.0:
+                    direction = np.sign(diff)
+                else:
+                    d = np.sum(np.abs(diff) ** p) ** (1.0 / p)
+                    if d < 1e-30:
+                        direction = np.zeros_like(diff)
+                    else:
+                        direction = np.sign(diff) * (np.abs(diff) ** (p - 1)) / (d ** (p - 1))
+                if grad_x1 is not None:
+                    grad_x1[b, i] += g * direction
+                if grad_x2 is not None:
+                    grad_x2[b, j] -= g * direction
+    if squeezed:
+        if grad_x1 is not None:
+            grad_x1 = grad_x1[0]
+        if grad_x2 is not None:
+            grad_x2 = grad_x2[0]
+    out_x1 = _from_numpy(np.ascontiguousarray(grad_x1.astype(_to_numpy(x1).dtype)), x1.dtype, x1.device) if grad_x1 is not None else None
+    out_x2 = _from_numpy(np.ascontiguousarray(grad_x2.astype(_to_numpy(x2).dtype)), x2.dtype, x2.device) if grad_x2 is not None else None
+    return out_x1, out_x2
+
+
+# --- Task 6: im2col/col2im backward ---
+
+# 6a: im2col backward (= col2im)
+def _im2col_backward(grad, a, _saved_a, keyset, args, kwargs):
+    kernel_size = args[0] if len(args) > 0 else kwargs.get("kernel_size")
+    dilation = args[1] if len(args) > 1 else kwargs.get("dilation", 1)
+    padding = args[2] if len(args) > 2 else kwargs.get("padding", 0)
+    stride = args[3] if len(args) > 3 else kwargs.get("stride", 1)
+    output_size = (a.shape[2], a.shape[3]) if len(a.shape) == 4 else (a.shape[-2], a.shape[-1])
+    with _grad_context(keyset):
+        return (redispatch("col2im", keyset, grad, output_size, kernel_size, dilation, padding, stride),)
+
+
+# 6b: col2im backward (= im2col)
+def _col2im_backward(grad, a, _saved_a, keyset, args, kwargs):
+    output_size = args[0] if len(args) > 0 else kwargs.get("output_size")
+    kernel_size = args[1] if len(args) > 1 else kwargs.get("kernel_size")
+    dilation = args[2] if len(args) > 2 else kwargs.get("dilation", 1)
+    padding = args[3] if len(args) > 3 else kwargs.get("padding", 0)
+    stride = args[4] if len(args) > 4 else kwargs.get("stride", 1)
+    with _grad_context(keyset):
+        return (redispatch("im2col", keyset, grad, kernel_size, dilation, padding, stride),)
+
+
 def _register_autograd_op(name, factory, *, npu_factory=None, include_meta=True):
     kwargs = {
         "default": factory(),
@@ -4464,6 +5080,39 @@ for _entry in (
     ("grid_sample", lambda: _autograd_grid_sample("grid_sample")),
     ("affine_grid", lambda: _autograd_affine_grid("affine_grid")),
     ("masked_fill_", lambda: _autograd_inplace("masked_fill_", _masked_fill_inplace_backward, save_input=False)),
+    # Round 4 — Task 2: In-place backward
+    ("sub_", lambda: _autograd_inplace("sub_", _inplace_sub_backward, save_input=False)),
+    ("div_", lambda: _autograd_inplace("div_", _inplace_div_backward, save_input=True)),
+    ("clamp_", lambda: _autograd_inplace("clamp_", _inplace_clamp_backward, save_input=True)),
+    ("copy_", lambda: _autograd_inplace("copy_", _inplace_copy_backward, save_input=False)),
+    ("setitem", lambda: _autograd_setitem("setitem"), False),
+    ("index_copy_", lambda: _autograd_index_copy_inplace("index_copy_")),
+    ("index_fill_", lambda: _autograd_index_fill_inplace("index_fill_")),
+    ("scatter_", lambda: _autograd_scatter_inplace("scatter_")),
+    ("masked_scatter_", lambda: _autograd_masked_scatter_inplace("masked_scatter_")),
+    # Round 4 — Task 3: Tensor manipulation backward
+    ("chunk", lambda: _autograd_multi_output("chunk", _chunk_backward, save_input=False)),
+    ("hstack", lambda: _autograd_multi_input("hstack", _hstack_backward, save_inputs=False)),
+    ("vstack", lambda: _autograd_multi_input("vstack", _vstack_backward, save_inputs=False)),
+    ("row_stack", lambda: _autograd_multi_input("row_stack", _vstack_backward, save_inputs=False)),
+    ("dstack", lambda: _autograd_multi_input("dstack", _dstack_backward, save_inputs=False)),
+    ("column_stack", lambda: _autograd_multi_input("column_stack", _column_stack_backward, save_inputs=False)),
+    ("diag", lambda: _autograd_unary_args("diag", _diag_backward, save_input=False)),
+    # Round 4 — Task 4: Shape/View backward
+    ("broadcast_to", lambda: _autograd_unary_args("broadcast_to", _broadcast_to_backward, save_input=False)),
+    ("unfold", lambda: _autograd_unary_args("unfold", _unfold_backward, save_input=False)),
+    # Round 4 — Task 5: Math backward
+    ("square", lambda: _autograd_unary("square", _square_backward)),
+    ("diff", lambda: _autograd_unary_args("diff", _diff_backward, save_input=False)),
+    ("heaviside", lambda: _autograd_binary("heaviside", _heaviside_backward, save_inputs=False)),
+    ("trace", lambda: _autograd_unary_args("trace", _trace_backward, save_input=False)),
+    ("det", lambda: _autograd_unary_args("det", _det_backward)),
+    ("dist", lambda: _autograd_dist("dist")),
+    ("renorm", lambda: _autograd_unary_args("renorm", _renorm_backward)),
+    ("cdist", lambda: _autograd_cdist("cdist")),
+    # Round 4 — Task 6: im2col/col2im backward
+    ("im2col", lambda: _autograd_unary_args("im2col", _im2col_backward, save_input=False)),
+    ("col2im", lambda: _autograd_unary_args("col2im", _col2im_backward, save_input=False)),
 ):
     if len(_entry) == 2:
         _name, _factory = _entry

@@ -21,6 +21,8 @@ from .creation import (
 from .ops import (
     add,
     matmul,
+    mm,
+    bmm,
     mul,
     div,
     true_divide,
@@ -260,6 +262,8 @@ registry.register("mul", "cpu", mul, meta=meta_infer.infer_binary)
 registry.register("div", "cpu", div, meta=meta_infer.infer_binary)
 registry.register("true_divide", "cpu", true_divide, meta=meta_infer.infer_binary)
 registry.register("matmul", "cpu", matmul, meta=meta_infer.infer_matmul)
+registry.register("mm", "cpu", mm, meta=meta_infer.infer_matmul)
+registry.register("bmm", "cpu", bmm, meta=meta_infer.infer_matmul)
 registry.register("relu", "cpu", relu, meta=meta_infer.infer_unary)
 registry.register("abs", "cpu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "cpu", neg, meta=meta_infer.infer_unary)

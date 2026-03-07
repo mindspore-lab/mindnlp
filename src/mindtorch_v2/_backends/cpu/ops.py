@@ -51,6 +51,14 @@ def matmul(a, b):
     return _from_numpy(_to_numpy(a) @ _to_numpy(b), a.dtype, a.device)
 
 
+def mm(a, b):
+    return matmul(a, b)
+
+
+def bmm(a, b):
+    return matmul(a, b)
+
+
 def relu(a):
     return _from_numpy(np.maximum(_to_numpy(a), 0), a.dtype, a.device)
 
