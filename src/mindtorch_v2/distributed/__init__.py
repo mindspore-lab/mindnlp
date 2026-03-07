@@ -95,6 +95,37 @@ def _parse_timeout(timeout):
     return timeout
 
 
+def _format_error_context(*, stage, backend, rank, world_size, device_id=None,
+                          op=None, extra=None):
+    parts = [
+        f"stage={stage}",
+        f"backend={backend}",
+        f"rank={rank}",
+        f"world_size={world_size}",
+    ]
+    if device_id is not None:
+        parts.append(f"device_id={device_id}")
+    if op is not None:
+        parts.append(f"op={op}")
+    if extra is not None:
+        parts.append(str(extra))
+    return ", ".join(parts)
+
+
+def _raise_with_context(exc, *, stage, backend, rank, world_size, device_id=None,
+                        op=None, extra=None):
+    ctx = _format_error_context(
+        stage=stage,
+        backend=backend,
+        rank=rank,
+        world_size=world_size,
+        device_id=device_id,
+        op=op,
+        extra=extra,
+    )
+    raise type(exc)(f"{exc} [{ctx}]") from exc
+
+
 def init_process_group(backend=None, init_method=None, timeout=None,
                        world_size=-1, rank=-1, store=None,
                        group_name="", pg_options=None, device_id=None):
@@ -131,17 +162,27 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     if device_id is not None:
         dev_id = int(getattr(device_id, "index", device_id))
 
-    # Backend dispatch
-    if backend == "gloo":
-        pg = ProcessGroupGloo(store, rank, world_size,
-                              group_name=group_name,
-                              group_ranks=list(range(world_size)))
-    elif backend in ("hccl", "nccl"):
-        pg = ProcessGroupHCCL(store, rank, world_size, device_id=dev_id,
-                              group_name=group_name,
-                              group_ranks=list(range(world_size)))
-    else:
-        raise ValueError(f"Unsupported backend: {backend}")
+    try:
+        # Backend dispatch
+        if backend == "gloo":
+            pg = ProcessGroupGloo(store, rank, world_size,
+                                  group_name=group_name,
+                                  group_ranks=list(range(world_size)))
+        elif backend in ("hccl", "nccl"):
+            pg = ProcessGroupHCCL(store, rank, world_size, device_id=dev_id,
+                                  group_name=group_name,
+                                  group_ranks=list(range(world_size)))
+        else:
+            raise ValueError(f"Unsupported backend: {backend}")
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="init_process_group",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=dev_id,
+        )
 
     _default_pg = pg
     GroupMember.WORLD = pg
@@ -307,7 +348,27 @@ def barrier(group=None, async_op=False, device_ids=None):
 
 def all_reduce(tensor, op=ReduceOp.SUM, group=None, async_op=False):
     pg = group or _default_pg
-    work = pg.allreduce(tensor, op)
+    backend = "uninitialized"
+    rank = 0
+    world_size = 1
+    device_id = None
+    if pg is not None:
+        backend = str(get_backend(pg))
+        rank = pg.rank()
+        world_size = pg.size()
+        device_id = getattr(pg, "_device_id", None)
+    try:
+        work = pg.allreduce(tensor, op)
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="all_reduce",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=device_id,
+            op="all_reduce",
+        )
     if not async_op:
         work.wait()
         return None
