@@ -178,3 +178,67 @@ def test_hccl_init_preflight_requires_world_size_env_with_context() -> None:
             os.environ.pop("MASTER_PORT", None)
         else:
             os.environ["MASTER_PORT"] = old_port
+
+
+def test_hccl_preflight_error_includes_master_endpoint_context() -> None:
+    _cleanup_pg()
+    old_addr = os.environ.get("MASTER_ADDR")
+    old_port = os.environ.get("MASTER_PORT")
+    try:
+        os.environ["MASTER_ADDR"] = "127.0.0.9"
+        os.environ["MASTER_PORT"] = "29677"
+        with pytest.raises(ValueError, match=r"stage=init_process_group") as ei:
+            dist.init_process_group(
+                backend="hccl",
+                rank=3,
+                world_size=2,
+            )
+
+        msg = str(ei.value)
+        assert "master_addr=127.0.0.9" in msg
+        assert "master_port=29677" in msg
+    finally:
+        if old_addr is None:
+            os.environ.pop("MASTER_ADDR", None)
+        else:
+            os.environ["MASTER_ADDR"] = old_addr
+        if old_port is None:
+            os.environ.pop("MASTER_PORT", None)
+        else:
+            os.environ["MASTER_PORT"] = old_port
+
+
+def test_hccl_preflight_error_includes_rank_world_source_context() -> None:
+    _cleanup_pg()
+    old_rank = os.environ.get("RANK")
+    old_world = os.environ.get("WORLD_SIZE")
+    old_addr = os.environ.get("MASTER_ADDR")
+    old_port = os.environ.get("MASTER_PORT")
+    try:
+        os.environ["RANK"] = "7"
+        os.environ["WORLD_SIZE"] = "4"
+        os.environ["MASTER_ADDR"] = "127.0.0.1"
+        os.environ["MASTER_PORT"] = str(_free_port())
+        with pytest.raises(ValueError, match=r"stage=init_process_group") as ei:
+            dist.init_process_group(backend="hccl", rank=-1, world_size=-1)
+
+        msg = str(ei.value)
+        assert "rank_source=env" in msg
+        assert "world_size_source=env" in msg
+    finally:
+        if old_rank is None:
+            os.environ.pop("RANK", None)
+        else:
+            os.environ["RANK"] = old_rank
+        if old_world is None:
+            os.environ.pop("WORLD_SIZE", None)
+        else:
+            os.environ["WORLD_SIZE"] = old_world
+        if old_addr is None:
+            os.environ.pop("MASTER_ADDR", None)
+        else:
+            os.environ["MASTER_ADDR"] = old_addr
+        if old_port is None:
+            os.environ.pop("MASTER_PORT", None)
+        else:
+            os.environ["MASTER_PORT"] = old_port
