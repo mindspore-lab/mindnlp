@@ -202,7 +202,19 @@ jobs:
         PYTHON: 3.11
       run: |
         pip install mindspore
+    - name: Check Ascend device availability
+      id: ascend_check
+      shell: bash
+      run: |
+        if command -v npu-smi >/dev/null 2>&1; then
+          npu-smi info || true
+          echo "has_ascend=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "No Ascend device found on runner; skip HCCL serial lane."
+          echo "has_ascend=false" >> "$GITHUB_OUTPUT"
+        fi
     - name: Test mindtorch_v2 HCCL serial lane
+      if: steps.ascend_check.outputs.has_ascend == 'true'
       env:
         MINDTORCH_RUN_HCCL_SERIAL: "1"
       run: |
@@ -214,6 +226,10 @@ jobs:
         pytest -q test_hccl_mvp_longrun.py
         cd ../..
         PYTHONPATH=src python tests/mindtorch_v2/test_hccl_all_to_all_multicard.py
+    - name: HCCL lane skipped (no Ascend)
+      if: steps.ascend_check.outputs.has_ascend != 'true'
+      run: |
+        echo "HCCL serial tests skipped: Ascend devices are unavailable on this runner."
 
   kaggle-gpu-test:
     needs: pylint-check
