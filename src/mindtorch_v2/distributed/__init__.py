@@ -144,9 +144,12 @@ def init_process_group(backend=None, init_method=None, timeout=None,
         backend = "hccl" if is_hccl_available() else "gloo"
     backend = str(backend).lower()
 
-    if rank < 0:
+    rank_from_env = rank < 0
+    world_from_env = world_size < 0
+
+    if rank_from_env:
         rank = _get_env_rank()
-    if world_size < 0:
+    if world_from_env:
         world_size = _get_env_world_size()
 
     dev_id = None
@@ -154,6 +157,10 @@ def init_process_group(backend=None, init_method=None, timeout=None,
         dev_id = int(getattr(device_id, "index", device_id))
 
     try:
+        if backend in ("hccl", "nccl") and rank_from_env and os.environ.get("RANK") is None:
+            raise ValueError("hccl backend requires RANK env when rank is not provided")
+        if backend in ("hccl", "nccl") and world_from_env and os.environ.get("WORLD_SIZE") is None:
+            raise ValueError("hccl backend requires WORLD_SIZE env when world_size is not provided")
         if world_size <= 0:
             raise ValueError("world_size must be a positive integer")
         if rank < 0 or rank >= world_size:
