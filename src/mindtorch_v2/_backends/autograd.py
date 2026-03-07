@@ -1364,7 +1364,7 @@ def _autograd_conv(name, *, has_bias=True):
     return wrapper
 
 
-def _conv_backward(name, grad, input, weight, bias, saved_input, saved_weight, saved_bias, keyset, args, kwargs):
+def _conv_backward(name, grad, input, weight, bias, saved_input, saved_weight, saved_bias, keyset, args, kwargs):  # pylint: disable=too-many-branches,too-many-nested-blocks
     with _grad_context(keyset):
         # Use numpy for backward — simpler and always correct on CPU
         import numpy as np
@@ -4345,4 +4345,3 @@ for _entry in (
     else:
         _name, _factory, _include_meta = _entry
         _register_autograd_op(_name, _factory, include_meta=_include_meta)
-
