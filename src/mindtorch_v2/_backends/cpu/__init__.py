@@ -800,8 +800,18 @@ registry.register("avg_pool1d", "cpu", avg_pool1d)
 registry.register("adaptive_avg_pool1d", "cpu", adaptive_avg_pool1d)
 
 # 3D conv/pool ops
-from .ops import conv_transpose3d, max_pool3d, avg_pool3d, adaptive_avg_pool3d
+from .ops import conv_transpose3d, max_pool3d, avg_pool3d, adaptive_avg_pool3d, conv3d
+registry.register("conv3d", "cpu", conv3d)
 registry.register("conv_transpose3d", "cpu", conv_transpose3d)
 registry.register("max_pool3d", "cpu", max_pool3d)
 registry.register("avg_pool3d", "cpu", avg_pool3d)
 registry.register("adaptive_avg_pool3d", "cpu", adaptive_avg_pool3d)
+
+# addmm
+from .ops import addmm
+registry.register("addmm", "cpu", addmm)
+
+# adaptive_max_pool ops
+from .ops import adaptive_max_pool2d, adaptive_max_pool1d
+registry.register("adaptive_max_pool2d", "cpu", adaptive_max_pool2d)
+registry.register("adaptive_max_pool1d", "cpu", adaptive_max_pool1d)

@@ -577,3 +577,4 @@ def register_schemas():
     registry.register_schema("max_pool3d", "max_pool3d(Tensor input, Any kernel_size, Any stride, Any padding=None, Any dilation=None, bool ceil_mode=False, bool return_indices=False) -> Tensor")
     registry.register_schema("avg_pool3d", "avg_pool3d(Tensor input, Any kernel_size, Any stride, Any padding=None, bool ceil_mode=False, bool count_include_pad=True) -> Tensor")
     registry.register_schema("adaptive_avg_pool3d", "adaptive_avg_pool3d(Tensor input, Any output_size) -> Tensor")
+    registry.register_schema("adaptive_max_pool1d", "adaptive_max_pool1d(Tensor input, Any output_size, bool return_indices=False) -> Tensor")

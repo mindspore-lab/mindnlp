@@ -2023,6 +2023,8 @@ def tensordot(a, b, dims=2):
 
 
 def einsum(equation, *operands):
+    if len(operands) == 1 and isinstance(operands[0], (list, tuple)):
+        operands = operands[0]
     ops_np = [_to_numpy(op) for op in operands]
     out = np.einsum(equation, *ops_np)
     return _from_numpy(np.ascontiguousarray(out), operands[0].dtype, operands[0].device)
@@ -4032,3 +4034,118 @@ def adaptive_avg_pool3d(input, output_size):
                 out[:, :, od, oh, ow] = a[:, :, d_start:d_end, h_start:h_end, w_start:w_end].mean(axis=(2, 3, 4))
 
     return _from_numpy(out, input.dtype, input.device)
+
+
+def addmm(input, mat1, mat2, beta=1, alpha=1):
+    """addmm: beta * input + alpha * (mat1 @ mat2)."""
+    inp = _to_numpy(input)
+    m1 = _to_numpy(mat1)
+    m2 = _to_numpy(mat2)
+    out = beta * inp + alpha * np.dot(m1, m2)
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def conv3d(input, weight, bias=None, stride=(1, 1, 1), padding=(0, 0, 0), dilation=(1, 1, 1), groups=1):
+    """Conv3d forward using numpy. Input: (N,C,D,H,W), Weight: (O,C/g,kD,kH,kW)."""
+    inp = _to_numpy(input)
+    w = _to_numpy(weight)
+    N, C_in, D, H, W = inp.shape
+    C_out, C_in_g, kD, kH, kW = w.shape
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+    dD, dH, dW = dilation
+
+    ekD = (kD - 1) * dD + 1
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    D_out = (D + 2 * pD - ekD) // sD + 1
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+
+    if pD > 0 or pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)), mode='constant')
+
+    out = np.zeros((N, C_out, D_out, H_out, W_out), dtype=inp.dtype)
+
+    for g in range(groups):
+        c_out_per_g = C_out // groups
+        c_out_s = g * c_out_per_g
+        c_in_s = g * C_in_g
+        for co_local in range(c_out_per_g):
+            co = c_out_s + co_local
+            for ci_local in range(C_in_g):
+                ci = c_in_s + ci_local
+                kernel = w[co, ci_local]
+                for od in range(D_out):
+                    for oh in range(H_out):
+                        for ow in range(W_out):
+                            for kd in range(kD):
+                                for kh in range(kH):
+                                    for kw in range(kW):
+                                        id_ = od * sD + kd * dD
+                                        ih = oh * sH + kh * dH
+                                        iw = ow * sW + kw * dW
+                                        out[:, co, od, oh, ow] += inp[:, ci, id_, ih, iw] * kernel[kd, kh, kw]
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out += b.reshape(1, C_out, 1, 1, 1)
+
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def adaptive_max_pool2d(input, output_size, return_indices=False):
+    """Adaptive max pooling 2D via numpy."""
+    a = _to_numpy(input)
+    N, C, H, W = a.shape
+    if isinstance(output_size, int):
+        oH = oW = output_size
+    else:
+        oH, oW = output_size
+
+    out = np.empty((N, C, oH, oW), dtype=a.dtype)
+    indices = np.empty((N, C, oH, oW), dtype=np.int64) if return_indices else None
+    for oh in range(oH):
+        h_start = oh * H // oH
+        h_end = (oh + 1) * H // oH
+        for ow in range(oW):
+            w_start = ow * W // oW
+            w_end = (ow + 1) * W // oW
+            region = a[:, :, h_start:h_end, w_start:w_end]
+            region_flat = region.reshape(N, C, -1)
+            out[:, :, oh, ow] = region_flat.max(axis=2)
+            if return_indices:
+                local_idx = region_flat.argmax(axis=2)
+                rH = h_end - h_start
+                rW = w_end - w_start
+                local_h = local_idx // rW + h_start
+                local_w = local_idx % rW + w_start
+                indices[:, :, oh, ow] = local_h * W + local_w
+
+    result = _from_numpy(out, input.dtype, input.device)
+    if return_indices:
+        return result, _from_numpy(indices, int64_dtype, input.device)
+    return result
+
+
+def adaptive_max_pool1d(input, output_size, return_indices=False):
+    """Adaptive max pooling 1D via numpy."""
+    a = _to_numpy(input)
+    N, C, L = a.shape
+    oL = output_size if isinstance(output_size, int) else output_size[0]
+
+    out = np.empty((N, C, oL), dtype=a.dtype)
+    indices = np.empty((N, C, oL), dtype=np.int64) if return_indices else None
+    for ol in range(oL):
+        l_start = ol * L // oL
+        l_end = (ol + 1) * L // oL
+        region = a[:, :, l_start:l_end]
+        out[:, :, ol] = region.max(axis=2)
+        if return_indices:
+            indices[:, :, ol] = region.argmax(axis=2) + l_start
+
+    result = _from_numpy(out, input.dtype, input.device)
+    if return_indices:
+        return result, _from_numpy(indices, int64_dtype, input.device)
+    return result
