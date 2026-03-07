@@ -7,7 +7,9 @@ import sys
 
 SCRIPT = r'''
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+src_dir = os.environ.get("MINDTORCH_V2_SRC")
+if src_dir:
+    sys.path.insert(0, src_dir)
 
 import mindtorch_v2.distributed as dist
 
@@ -47,7 +49,9 @@ def test_split_group_gloo_world2():
     env["MASTER_ADDR"] = "127.0.0.1"
     env["MASTER_PORT"] = "29541"
     env["WORLD_SIZE"] = "2"
-    env["PYTHONPATH"] = os.path.join(os.path.dirname(__file__), "src") + \
+    src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    env["MINDTORCH_V2_SRC"] = src_dir
+    env["PYTHONPATH"] = src_dir + \
         ((":" + env["PYTHONPATH"]) if "PYTHONPATH" in env else "")
 
     worker_file = "/tmp/_split_group_gloo_worker.py"
