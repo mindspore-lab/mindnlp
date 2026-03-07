@@ -392,6 +392,9 @@ def register_schemas():
     registry.register_schema("selu", "selu(Tensor input) -> Tensor")
     registry.register_schema("celu", "celu(Tensor input, float alpha=1.0) -> Tensor")
     registry.register_schema("threshold", "threshold(Tensor input, Scalar threshold, Scalar value) -> Tensor")
+    registry.register_schema("hardshrink", "hardshrink(Tensor input, float lambd=0.5) -> Tensor")
+    registry.register_schema("softshrink", "softshrink(Tensor input, float lambd=0.5) -> Tensor")
+    registry.register_schema("rrelu", "rrelu(Tensor input, float lower=0.125, float upper=0.3333333333333333, bool training=False) -> Tensor")
     registry.register_schema("instance_norm", "instance_norm(Tensor input, Any weight=None, Any bias=None, Any running_mean=None, Any running_var=None, bool use_input_stats=True, float momentum=0.1, float eps=1e-5, bool cudnn_enabled=False) -> Tensor")
     registry.register_schema("normalize", "normalize(Tensor input, float p=2.0, int dim=1, float eps=1e-12) -> Tensor")
 

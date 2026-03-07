@@ -819,3 +819,16 @@ registry.register("addmm", "cpu", addmm)
 from .ops import adaptive_max_pool2d, adaptive_max_pool1d
 registry.register("adaptive_max_pool2d", "cpu", adaptive_max_pool2d)
 registry.register("adaptive_max_pool1d", "cpu", adaptive_max_pool1d)
+
+# Round 6: missing activation CPU forwards
+from .ops import selu, celu, threshold, hardshrink, softshrink, rrelu
+registry.register("selu", "cpu", selu, meta=meta_infer.infer_unary)
+registry.register("celu", "cpu", celu, meta=meta_infer.infer_unary)
+registry.register("threshold", "cpu", threshold, meta=meta_infer.infer_unary)
+registry.register("hardshrink", "cpu", hardshrink, meta=meta_infer.infer_unary)
+registry.register("softshrink", "cpu", softshrink, meta=meta_infer.infer_unary)
+registry.register("rrelu", "cpu", rrelu, meta=meta_infer.infer_unary)
+
+# CTC loss
+from .ops import ctc_loss
+registry.register("ctc_loss", "cpu", ctc_loss)
