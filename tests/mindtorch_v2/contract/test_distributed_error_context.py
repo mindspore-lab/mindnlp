@@ -242,3 +242,56 @@ def test_hccl_preflight_error_includes_rank_world_source_context() -> None:
             os.environ.pop("MASTER_PORT", None)
         else:
             os.environ["MASTER_PORT"] = old_port
+
+
+def test_hccl_new_group_inherits_parent_device_id_by_default(monkeypatch) -> None:
+    _cleanup_pg()
+
+    class _FakeStore:
+        def __init__(self):
+            self.data = {}
+
+        def set(self, key, value):
+            self.data[key] = value
+
+        def get(self, key):
+            return self.data.get(key, b"")
+
+        def wait(self, keys, timeout=None):
+            return None
+
+    class _FakeHCCLPG:
+        def __init__(self, rank, size, device_id):
+            self._rank = rank
+            self._size = size
+            self._device_id = device_id
+
+        def rank(self):
+            return self._rank
+
+        def size(self):
+            return self._size
+
+        def destroy(self):
+            return None
+
+    created = {}
+
+    def _fake_hccl_ctor(store, rank, size, device_id=None, group_name="", group_ranks=None):
+        created["device_id"] = device_id
+        return _FakeHCCLPG(rank, size, device_id)
+
+    fake_world = _FakeHCCLPG(rank=3, size=8, device_id=5)
+    fake_store = _FakeStore()
+
+    monkeypatch.setattr(dist, "_default_pg", fake_world)
+    monkeypatch.setattr(dist, "_group_count", 1)
+    monkeypatch.setitem(dist._pg_map, fake_world, (dist.Backend("hccl"), fake_store))
+    monkeypatch.setitem(dist._pg_names, fake_world, "default_pg")
+    monkeypatch.setitem(dist._pg_group_ranks, fake_world, {i: i for i in range(8)})
+    monkeypatch.setattr(dist, "GroupMember", type("_GM", (), {"WORLD": fake_world, "NON_GROUP_MEMBER": object()}))
+    monkeypatch.setattr("mindtorch_v2.distributed.ProcessGroupHCCL", _fake_hccl_ctor)
+
+    subgroup = dist.new_group(ranks=[3, 5], backend="hccl")
+    assert subgroup is not None
+    assert created["device_id"] == 5
