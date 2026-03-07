@@ -3145,6 +3145,44 @@ def _fmax_backward(grad, a, b, saved_a, saved_b, keyset):
     return grad_a, grad_b
 
 
+def _min__backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for element-wise min: grad goes to a where a <= b, else to b."""
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        le_mask = redispatch("le", keyset, saved_a, saved_b)
+        mask_a = redispatch("where", keyset, le_mask, ones, redispatch("mul", keyset, ones, zero))
+        mask_b = redispatch("where", keyset, le_mask, redispatch("mul", keyset, ones, zero), ones)
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("mul", keyset, grad, mask_a)
+            grad_a = reduce_grad(grad_a, a.shape)
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("mul", keyset, grad, mask_b)
+            grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
+def _max__backward(grad, a, b, saved_a, saved_b, keyset):
+    """Backward for element-wise max: grad goes to a where a >= b, else to b."""
+    with _grad_context(keyset):
+        ones = saved_a._ones_like()
+        zero = _scalar_tensor_like(saved_a, 0.0)
+        ge_mask = redispatch("ge", keyset, saved_a, saved_b)
+        mask_a = redispatch("where", keyset, ge_mask, ones, redispatch("mul", keyset, ones, zero))
+        mask_b = redispatch("where", keyset, ge_mask, redispatch("mul", keyset, ones, zero), ones)
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            grad_a = redispatch("mul", keyset, grad, mask_a)
+            grad_a = reduce_grad(grad_a, a.shape)
+        if getattr(b, "requires_grad", False):
+            grad_b = redispatch("mul", keyset, grad, mask_b)
+            grad_b = reduce_grad(grad_b, b.shape)
+    return grad_a, grad_b
+
+
 def _fmod_backward(grad, a, b, saved_a, saved_b, keyset):
     """Backward for fmod: grad_a = grad, grad_b = -grad * trunc(a/b)."""
     with _grad_context(keyset):
@@ -7453,6 +7491,9 @@ for _entry in (
     ("block_diag", lambda: _autograd_block_diag("block_diag")),
     ("pad_sequence", lambda: _autograd_pad_sequence("pad_sequence")),
     ("uniform", lambda: _autograd_unary("uniform", _uniform_backward, save_input=False)),
+    # Round 12 — in-place min/max backward
+    ("min_", lambda: _autograd_binary("min_", _min__backward)),
+    ("max_", lambda: _autograd_binary("max_", _max__backward)),
 ):
     if len(_entry) == 2:
         _name, _factory = _entry
