@@ -513,20 +513,37 @@ def gather(tensor, gather_list=None, dst=None, group=None, async_op=False,
     elif dst is None:
         dst = group_dst
 
-    # Implement gather via all_gather + discard
+    # Implement gather via all_gather + discard.
+    # Keep async semantics aligned with torch: materialize gather_list on wait().
     import mindtorch_v2 as torch
     world_size = pg.size()
     rank = pg.rank()
     temp_list = [torch.zeros_like(tensor) for _ in range(world_size)]
-    all_gather(temp_list, tensor, group=pg)
-    if rank == dst and gather_list is not None:
-        for i in range(world_size):
-            gather_list[i].storage().copy_(temp_list[i].storage())
+
+    def _writeback_gather_list():
+        if rank == dst and gather_list is not None:
+            for i in range(world_size):
+                gather_list[i].storage().copy_(temp_list[i].storage())
+
     if not async_op:
+        all_gather(temp_list, tensor, group=pg, async_op=False)
+        _writeback_gather_list()
         return None
-    # For async, return a completed Work since we already waited in all_gather
-    w = Work()
-    w._completed = True
+
+    w = all_gather(temp_list, tensor, group=pg, async_op=True)
+    if w is None:
+        # Defensive fallback: all_gather(async) should return Work.
+        w = Work()
+        w._completed = False
+
+    prev_on_wait = getattr(w, "_on_wait", None)
+
+    def _on_wait_chain():
+        if prev_on_wait is not None:
+            prev_on_wait()
+        _writeback_gather_list()
+
+    w._on_wait = _on_wait_chain
     return w
 
 
