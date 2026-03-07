@@ -9,6 +9,7 @@ reshape = view_backend.reshape
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
+from . import ops_310b
 
 
 def _unwrap_storage(tensor):
@@ -127,31 +128,8 @@ def _is_310b_profile():
     return npu_runtime.soc_profile() == "310b"
 
 
-_310B_FALLBACK_OPS = {
-    "atan2",
-    "where",
-    "flip",
-    "argsort",
-    "sort",
-    "topk",
-    "diag",
-    "lerp",
-    "remainder",
-    "isclose",
-    "softplus",
-    "uniform_",
-    "normal_",
-    "layer_norm",
-    "mish",
-    "batch_norm",
-    "dropout",
-    "take_along_dim",
-    "gather",
-}
-
-
 def _use_310b_fallback(op_name):
-    return _is_310b_profile() and op_name in _310B_FALLBACK_OPS
+    return _is_310b_profile() and ops_310b.use_fallback(op_name)
 
 
 def _npu_add_scalar_(tensor, scalar):
@@ -3583,9 +3561,10 @@ def uniform_(a, low=0.0, high=1.0, generator=None):
         else:
             seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
+        # Keep seed term in a compact range to avoid float32 precision collapse on 310B.
+        seed_mod = float((int(seed) + int(offset)) % 1000003)
         idx = _cast_tensor_dtype(_npu_arange_1d(_numel(a.shape), a.device), float_dtype)
-        idx = add(idx, float(seed + offset))
-        u = sin(add(mul(idx, 12.9898), float(seed) * 78.233))
+        u = sin(add(mul(idx, 12.9898), seed_mod * 78.233))
         u = frac(abs(mul(u, 43758.5453)))
         u = reshape(u, a.shape)
 
@@ -3628,7 +3607,7 @@ def normal_(a, mean=0.0, std=1.0, generator=None):
         raise ValueError("NPU normal_ expects NPU tensors")
 
     if _use_310b_fallback("normal_"):
-        # Deterministic hash-based normal approximation on NPU to avoid unstable ACLNN random ops.
+        # Deterministic NPU-only fallback built from small ops.
         from ... import npu as npu_mod
 
         if generator is not None and hasattr(generator, 'philox_engine_inputs'):
@@ -3636,15 +3615,23 @@ def normal_(a, mean=0.0, std=1.0, generator=None):
         else:
             seed, offset = npu_mod._get_and_advance_offset(device_index=(a.device.index or 0), increment=10)
 
+        seed_mod = float((int(seed) + int(offset)) % 1000003)
         idx = _cast_tensor_dtype(_npu_arange_1d(_numel(a.shape), a.device), float_dtype)
-        idx = add(idx, float(seed + offset))
 
-        # u = frac(abs(sin(idx * 12.9898 + seed * 78.233) * 43758.5453))
-        u = sin(add(mul(idx, 12.9898), float(seed) * 78.233))
-        u = frac(abs(mul(u, 43758.5453)))
+        # Two decorrelated pseudo-uniform streams in (0, 1) for Box-Muller.
+        u1 = sin(add(mul(idx, 12.9898), seed_mod * 78.233))
+        u1 = frac(abs(mul(u1, 43758.5453)))
+        u2 = sin(add(mul(add(idx, 0.5), 93.9898), seed_mod * 67.345))
+        u2 = frac(abs(mul(u2, 24634.6345)))
 
-        # map to roughly standard normal via centered scaling
-        z = mul(sub(u, 0.5), 3.4641016151377544)
+        eps = 1e-6
+        u1 = clamp(u1, eps, 1.0 - eps)
+        u2 = clamp(u2, eps, 1.0 - eps)
+
+        # Box-Muller transform: z ~ N(0, 1).
+        r = sqrt(mul(neg(log(u1)), 2.0))
+        phi = mul(u2, 6.283185307179586)
+        z = mul(r, cos(phi))
         z = reshape(z, a.shape)
 
         if float(std) != 1.0:
