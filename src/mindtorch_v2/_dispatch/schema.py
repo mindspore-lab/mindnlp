@@ -75,6 +75,7 @@ class OpSchema:
                 return False
             message = template.format(name=name, got=_format_got())
             raise TypeError(message)
+
         if len(args) > len(positional_params):
             expected = len(positional_params)
             plural = "s" if expected != 1 else ""
@@ -82,6 +83,7 @@ class OpSchema:
             raise TypeError(
                 f"{name}() takes {expected} positional argument{plural} but {len(args)} were given"
             )
+
         for key in kwargs:
             if key == "device" and key not in {p.name for p in params}:
                 _maybe_override("unexpected")
@@ -89,13 +91,17 @@ class OpSchema:
             if key not in {p.name for p in params}:
                 _maybe_override("unexpected")
                 raise TypeError(f"{name}() got an unexpected keyword argument '{key}'")
-        for idx, value in enumerate(args):
+
+        for idx, _ in enumerate(args):
             param = positional_params[idx]
             if param.name in kwargs:
                 arg_name = _torch_param_name(param.name)
                 _maybe_override("duplicate")
                 raise TypeError(f"{name}() got multiple values for argument '{arg_name}'")
-        provided = {p.name for p in positional_params[: len(args)]} | {k for k in kwargs.keys() if k != "device" or k in {p.name for p in params}}
+
+        provided = {p.name for p in positional_params[: len(args)]} | {
+            k for k in kwargs.keys() if k != "device" or k in {p.name for p in params}
+        }
         missing = [p.name for p in params if p.name not in provided and not p.has_default]
         if missing:
             _maybe_override("missing")
@@ -106,7 +112,13 @@ class OpSchema:
 
         # Minimal type checks for high-frequency schema mismatches that must
         # match torch call-site validation paths.
-        self._validate_types(args, kwargs, name=name, error_overrides=error_overrides, got=_format_got())
+        self._validate_types(
+            args,
+            kwargs,
+            name=name,
+            error_overrides=error_overrides,
+            got=_format_got(),
+        )
         return True
 
     def _validate_types(self, args, kwargs, *, name, error_overrides, got):
@@ -133,7 +145,17 @@ class OpSchema:
                 raise TypeError(error_overrides["unexpected"].format(name=name, got=custom_got))
             raise TypeError(f"{name}() received an invalid combination of arguments - got {custom_got}")
 
-        def _validate_sum_dim(value):
+        def _dimname_not_found(name_str, input_tensor):
+            rank = len(getattr(input_tensor, "shape", ()) or ())
+            dimnames = ", ".join(["None"] * rank)
+            return RuntimeError(f"Name '{name_str}' not found in Tensor[{dimnames}].")
+
+        def _normalize_dim_index(dim, rank):
+            if dim < 0:
+                dim += rank
+            return dim
+
+        def _validate_sum_dim(value, input_tensor):
             # Match torch call-site validation for sum(dim=...).
             if value is None:
                 return
@@ -142,22 +164,50 @@ class OpSchema:
             if isinstance(value, int):
                 return
             if isinstance(value, str):
-                raise RuntimeError(f"Name '{value}' not found in Tensor[None].")
+                raise _dimname_not_found(value, input_tensor)
             if isinstance(value, (list, tuple)):
                 if not value:
                     return
                 if len(value) == 1 and isinstance(value[0], str):
-                    raise RuntimeError(f"Name '{value[0]}' not found in Tensor[None].")
+                    raise _dimname_not_found(value[0], input_tensor)
+                if isinstance(value[0], str):
+                    for item in value[1:]:
+                        if not (item is None or isinstance(item, str)):
+                            item_type = type(item).__name__
+                            raise TypeError(f"expected None or string for Dimname but got {item_type}")
+                    # Let backend handle real dimname semantics.
+                    return
+
+                first = value[0]
+                if isinstance(first, bool):
+                    _raise_invalid_combo()
+
+                rank = len(getattr(input_tensor, "shape", ()) or ())
+                seen = set()
+                normalized = []
+
                 for item in value:
+                    if not isinstance(item, int):
+                        item_type = type(item).__name__
+                        raise TypeError(
+                            f"{name}(): argument 'dim' failed to unpack the object at pos 2 "
+                            f"with error \"type must be tuple of ints,but got {item_type}\""
+                        )
                     if isinstance(item, bool):
-                        _raise_invalid_combo()
-                    if isinstance(item, int):
-                        continue
-                    item_type = type(item).__name__
-                    raise TypeError(
-                        f"{name}(): argument 'dim' failed to unpack the object at pos 2 "
-                        f"with error \"type must be tuple of ints,but got {item_type}\""
-                    )
+                        # bool inside dim sequence is treated as an integer dim value.
+                        item = int(item)
+                    dim_idx = _normalize_dim_index(item, rank)
+                    if dim_idx in seen:
+                        raise RuntimeError(f"dim {dim_idx} appears multiple times in the list of dims")
+                    seen.add(dim_idx)
+                    normalized.append(item)
+
+                # Mutate kwargs so backend kernels receive integer dims for bool entries.
+                if isinstance(value, list):
+                    value[:] = normalized
+                elif "dim" in kwargs:
+                    kwargs["dim"] = tuple(normalized)
+                    bound["dim"] = kwargs["dim"]
                 return
             _raise_invalid_combo()
 
@@ -207,8 +257,8 @@ class OpSchema:
             valid1 = isinstance(dim1, int) and not isinstance(dim1, bool)
             if valid0 and valid1:
                 return
-            got = f"({_type_label(dim0)}, {_type_label(dim1)})"
-            _raise_invalid_combo_with_got(got)
+            got_text = f"({_type_label(dim0)}, {_type_label(dim1)})"
+            _raise_invalid_combo_with_got(got_text)
 
         for param in params:
             if param.name not in bound:
@@ -216,7 +266,8 @@ class OpSchema:
             value = bound[param.name]
             ptype = getattr(param, "type_name", None)
             if op_short_name == "sum" and param.name == "dim":
-                _validate_sum_dim(value)
+                input_tensor = bound.get("input")
+                _validate_sum_dim(value, input_tensor)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
