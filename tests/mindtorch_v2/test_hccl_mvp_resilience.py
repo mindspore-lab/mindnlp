@@ -6,6 +6,8 @@ import socket
 import subprocess
 from collections import Counter
 
+import pytest
+
 import mindtorch_v2 as torch
 import mindtorch_v2.distributed as dist
 from mindtorch_v2.utils.data import Dataset, DistributedSampler
@@ -27,6 +29,14 @@ def _cleanup_pg():
         dist.destroy_process_group()
 
 
+def _require_npu_cards(min_cards):
+    if not torch.npu.is_available():
+        pytest.skip("NPU unavailable")
+    count = torch.npu.device_count()
+    if count < min_cards:
+        pytest.skip(f"Need {min_cards} NPUs, found {count}")
+
+
 class RangeDataset(Dataset):
     def __init__(self, n):
         self.n = n
@@ -40,6 +50,7 @@ class RangeDataset(Dataset):
 
 def test_hccl_reinit_after_destroy_same_process():
     _cleanup_pg()
+    _require_npu_cards(2)
 
     # First init/destroy
     p1 = _free_port()
@@ -83,7 +94,7 @@ def test_distributed_sampler_rank_partition_2way():
 
 SCRIPT_FAIL_FAST = r'''
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import mindtorch_v2 as torch
 import mindtorch_v2.distributed as dist
@@ -106,11 +117,14 @@ print("rank0 clean exit")
 
 
 def test_hccl_rank_failure_does_not_hang_parent():
+    _require_npu_cards(2)
+
     env = os.environ.copy()
     env["MASTER_ADDR"] = "127.0.0.1"
     env["MASTER_PORT"] = "29631"
     env["WORLD_SIZE"] = "2"
-    env["PYTHONPATH"] = os.path.join(os.path.dirname(__file__), "src") + ((":" + env["PYTHONPATH"]) if "PYTHONPATH" in env else "")
+    env["PYTHONNOUSERSITE"] = "1"
+    env["PYTHONPATH"] = os.path.join(os.path.dirname(__file__), "..", "..", "src")
 
     worker = "/tmp/_hccl_rank_fail_fast.py"
     with open(worker, "w") as f:

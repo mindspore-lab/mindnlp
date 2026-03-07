@@ -4,10 +4,24 @@ import os
 import sys
 import subprocess
 
+import pytest
+
+
+def _require_npu_cards(min_cards):
+    try:
+        import mindtorch_v2 as torch
+    except Exception as exc:
+        pytest.skip(f"mindtorch_v2 import failed: {exc}")
+    if not torch.npu.is_available():
+        pytest.skip("NPU unavailable")
+    count = torch.npu.device_count()
+    if count < min_cards:
+        pytest.skip(f"Need {min_cards} NPUs, found {count}")
+
 
 SCRIPT_MULTI_STEP = r'''
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import mindtorch_v2 as torch
 import mindtorch_v2.nn as nn
@@ -67,7 +81,7 @@ print(f"[rank {rank}] HCCL multi-step PASS")
 
 SCRIPT_TIMEOUT_GUARD = r'''
 import os, sys, time
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import mindtorch_v2 as torch
 import mindtorch_v2.distributed as dist
@@ -93,8 +107,9 @@ def _run_two_rank_worker(script_text, worker_name, timeout_sec=240):
     env = os.environ.copy()
     env["MASTER_ADDR"] = "127.0.0.1"
     env["MASTER_PORT"] = "29651"
+    env["PYTHONNOUSERSITE"] = "1"
     env["WORLD_SIZE"] = "2"
-    env["PYTHONPATH"] = os.path.join(os.path.dirname(__file__), "src") + ((":" + env["PYTHONPATH"]) if "PYTHONPATH" in env else "")
+    env["PYTHONPATH"] = os.path.join(os.path.dirname(__file__), "..", "..", "src")
 
     worker_file = f"/tmp/{worker_name}.py"
     with open(worker_file, "w") as f:
@@ -133,5 +148,6 @@ def test_hccl_ddp_multi_step_consistency_2card():
 
 
 def test_hccl_rank_early_exit_no_parent_hang():
+    _require_npu_cards(2)
     failed = _run_two_rank_worker(SCRIPT_TIMEOUT_GUARD, "_hccl_timeout_guard_worker", timeout_sec=120)
     assert not failed, "HCCL timeout guard scenario failed"
