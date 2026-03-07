@@ -832,3 +832,13 @@ registry.register("rrelu", "cpu", rrelu, meta=meta_infer.infer_unary)
 # CTC loss
 from .ops import ctc_loss
 registry.register("ctc_loss", "cpu", ctc_loss)
+
+# Round 12: remaining CPU forward gaps
+from .ops import hardswish, hardsigmoid, softsign, normalize, movedim, min_, max_
+registry.register("hardswish", "cpu", hardswish, meta=meta_infer.infer_unary)
+registry.register("hardsigmoid", "cpu", hardsigmoid, meta=meta_infer.infer_unary)
+registry.register("softsign", "cpu", softsign, meta=meta_infer.infer_unary)
+registry.register("normalize", "cpu", normalize, meta=meta_infer.infer_unary)
+registry.register("moveaxis", "cpu", movedim, meta=meta_infer.infer_movedim)
+registry.register("min_", "cpu", min_, meta=meta_infer.infer_binary)
+registry.register("max_", "cpu", max_, meta=meta_infer.infer_binary)

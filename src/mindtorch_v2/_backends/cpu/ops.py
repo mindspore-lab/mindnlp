@@ -1123,6 +1123,32 @@ def max_(a, b):
     return _from_numpy(np.maximum(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
 
+def hardswish(a):
+    arr = _to_numpy(a).astype(np.float64)
+    out = arr * np.clip(arr + 3.0, 0.0, 6.0) / 6.0
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def hardsigmoid(a):
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.clip(arr + 3.0, 0.0, 6.0) / 6.0
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def softsign(a):
+    arr = _to_numpy(a).astype(np.float64)
+    out = arr / (1.0 + np.abs(arr))
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def normalize(a, p=2.0, dim=1, eps=1e-12):
+    arr = _to_numpy(a).astype(np.float64)
+    norm = np.linalg.norm(arr, ord=p, axis=dim, keepdims=True)
+    norm = np.maximum(norm, eps)
+    out = arr / norm
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
 def amin(a, dim=None, keepdim=False):
     arr = _to_numpy(a)
     out = np.amin(arr, axis=dim, keepdims=keepdim)
