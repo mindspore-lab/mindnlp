@@ -9,7 +9,7 @@ reshape = view_backend.reshape
 from . import aclnn
 from . import runtime as npu_runtime
 from . import state as npu_state
-from . import ops_310b
+from . import ops_soc
 
 
 def _unwrap_storage(tensor):
@@ -124,12 +124,8 @@ def _npu_arange_1d(size, device):
     return _wrap_tensor(storage, shape, stride)
 
 
-def _is_310b_profile():
-    return npu_runtime.soc_profile() == "310b"
-
-
-def _use_310b_fallback(op_name):
-    return _is_310b_profile() and ops_310b.use_fallback(op_name)
+def _use_soc_fallback(op_name):
+    return ops_soc.use_fallback(op_name)
 
 
 def _npu_add_scalar_(tensor, scalar):
@@ -1767,7 +1763,7 @@ def acos(a):
 
 
 def atan2(a, b):
-    if _use_310b_fallback("atan2"):
+    if _use_soc_fallback("atan2"):
         z = div(a, b)
         out = atan(z)
 
@@ -1849,7 +1845,7 @@ def where(cond, x, y):
     if out_shape != cond.shape:
         cond = _npu_broadcast_to(cond, out_shape)
 
-    if _use_310b_fallback("where"):
+    if _use_soc_fallback("where"):
         out = contiguous(y)
         idx = nonzero(cond, as_tuple=True)
         if len(idx) == 0 or idx[0].numel() == 0:
@@ -2078,7 +2074,7 @@ def flip(a, dims):
     if len(dims) == 0:
         return a
 
-    if _use_310b_fallback("flip"):
+    if _use_soc_fallback("flip"):
         return _flip_310b_fallback(a, dims)
 
     if not aclnn.flip_symbols_ok():
@@ -2224,7 +2220,7 @@ def argsort(a, dim=-1, descending=False, stable=False):
         raise ValueError("NPU argsort expects NPU tensors")
     dim = _normalize_dim(dim, a.dim())
 
-    if _use_310b_fallback("argsort"):
+    if _use_soc_fallback("argsort"):
         _, indices = _topk_310b_fallback(a, k=a.shape[dim], dim=dim, largest=bool(descending), sorted_flag=True)
         return indices
 
@@ -2262,7 +2258,7 @@ def sort(a, dim=-1, descending=False, stable=False):
         raise ValueError("NPU sort expects NPU tensors")
     dim = _normalize_dim(dim, a.dim())
 
-    if _use_310b_fallback("sort"):
+    if _use_soc_fallback("sort"):
         return _topk_310b_fallback(a, k=a.shape[dim], dim=dim, largest=bool(descending), sorted_flag=True)
 
     # Keep runtime stable for default unstable sort path.
@@ -2305,7 +2301,7 @@ def topk(a, k, dim=-1, largest=True, sorted=True):
     if k < 0 or k > dim_size:
         raise RuntimeError("selected index k out of range")
 
-    if _use_310b_fallback("topk"):
+    if _use_soc_fallback("topk"):
         return _topk_310b_fallback(a, k=k, dim=dim, largest=bool(largest), sorted_flag=bool(sorted))
 
     if not aclnn.topk_symbols_ok():
@@ -2673,7 +2669,7 @@ def diag(a, diagonal=0):
     if a.dim() not in (1, 2):
         raise ValueError("diag expects 1D or 2D tensor")
 
-    if _use_310b_fallback("diag"):
+    if _use_soc_fallback("diag"):
         return _diag_310b_fallback(a, diagonal=diagonal)
 
     if not aclnn.diag_symbols_ok():
@@ -2818,7 +2814,7 @@ def nonzero(a, as_tuple=False):
 
 
 def lerp(a, b, weight):
-    if _use_310b_fallback("lerp"):
+    if _use_soc_fallback("lerp"):
         # Static small-op fallback on 310B to avoid aclnnLerp 561103.
         delta = sub(b, a)
         scaled = mul(delta, weight)
@@ -2928,7 +2924,7 @@ def _remainder_310b_fallback(a, b):
 def remainder(a, b):
     if isinstance(b, (int, float)):
         b = _scalar_to_npu_tensor(b, a)
-    if _use_310b_fallback("remainder"):
+    if _use_soc_fallback("remainder"):
         return _remainder_310b_fallback(a, b)
     return _binary_op(a, b, aclnn.sremainder, "remainder")
 
@@ -2956,7 +2952,7 @@ def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     if isinstance(b, (int, float, bool)):
         b = _scalar_to_npu_tensor(b, a)
 
-    if _use_310b_fallback("isclose"):
+    if _use_soc_fallback("isclose"):
         diff = abs(sub(a, b))
         tol = add(_scalar_to_npu_tensor(float(atol), diff), mul(_scalar_to_npu_tensor(float(rtol), diff), abs(b)))
         close = le(diff, tol)
@@ -3009,7 +3005,7 @@ def softplus(a, beta=1.0, threshold=20.0):
     if a.device.type != "npu":
         raise ValueError("NPU softplus expects NPU tensors")
 
-    if _use_310b_fallback("softplus"):
+    if _use_soc_fallback("softplus"):
         beta = float(beta)
         threshold = float(threshold)
         bx = mul(a, beta)
@@ -3570,7 +3566,7 @@ def uniform_(a, low=0.0, high=1.0, generator=None):
     if a.device.type != "npu":
         raise ValueError("NPU uniform_ expects NPU tensors")
 
-    if _use_310b_fallback("uniform_"):
+    if _use_soc_fallback("uniform_"):
         from ... import npu as npu_mod
 
         if generator is not None and hasattr(generator, 'philox_engine_inputs'):
@@ -3623,7 +3619,7 @@ def normal_(a, mean=0.0, std=1.0, generator=None):
     if a.device.type != "npu":
         raise ValueError("NPU normal_ expects NPU tensors")
 
-    if _use_310b_fallback("normal_"):
+    if _use_soc_fallback("normal_"):
         # Deterministic NPU-only fallback built from small ops.
         from ... import npu as npu_mod
 
@@ -5103,7 +5099,7 @@ def _layer_norm_310b_fallback(input, normalized_shape, weight=None, bias=None, e
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     """Compute layer normalization using aclnnLayerNorm."""
-    if _use_310b_fallback("layer_norm"):
+    if _use_soc_fallback("layer_norm"):
         return _layer_norm_310b_fallback(input, normalized_shape, weight=weight, bias=bias, eps=eps)
 
     runtime = npu_runtime.get_runtime((input.device.index or 0))
@@ -5274,7 +5270,7 @@ def elu(a, alpha=1.0):
 
 def mish(a):
     """Compute Mish activation using aclnnMish."""
-    if _use_310b_fallback("mish"):
+    if _use_soc_fallback("mish"):
         return mul(a, tanh(softplus(a)))
     if not aclnn.mish_symbols_ok():
         raise RuntimeError("aclnnMish not available")
@@ -5353,7 +5349,7 @@ def _batch_norm_310b_fallback(input, running_mean, running_var, weight=None, bia
 def batch_norm(input, running_mean, running_var, weight=None, bias=None,
                training=False, momentum=0.1, eps=1e-5):
     """Compute batch normalization using aclnnBatchNorm."""
-    if _use_310b_fallback("batch_norm"):
+    if _use_soc_fallback("batch_norm"):
         return _batch_norm_310b_fallback(input, running_mean, running_var, weight=weight, bias=bias,
                                          training=training, momentum=momentum, eps=eps)
 
@@ -5498,7 +5494,7 @@ def dropout(a, p=0.5, training=True):
     if not training or p == 0:
         return a
 
-    if _use_310b_fallback("dropout"):
+    if _use_soc_fallback("dropout"):
         if p >= 1:
             from .creation import zeros_create
             return zeros_create(a.shape, dtype=a.dtype, device=a.device)
@@ -5937,7 +5933,7 @@ def _normalize_negative_indices(indices, dim_size):
         return indices
 
     # 310B static path: avoid SWhere by converting mask to int64 and blending arithmetically.
-    if _use_310b_fallback("take_along_dim"):
+    if _use_soc_fallback("take_along_dim"):
         if not aclnn.cast_symbols_ok():
             raise RuntimeError("aclnnCast symbols not available")
         runtime = npu_runtime.get_runtime((indices.device.index or 0))
@@ -6009,7 +6005,7 @@ def gather(a, dim, index):
             raise ValueError("index shape mismatch")
     _validate_index_bounds(index, a.shape[dim], allow_negative=False, name="gather")
 
-    if _use_310b_fallback("gather"):
+    if _use_soc_fallback("gather"):
         return _gather_310b_fallback(a, dim, index)
 
     runtime = npu_runtime.get_runtime((a.device.index or 0))
