@@ -427,6 +427,128 @@ def npu_layer_norm_backward(grad, saved_input, backward_data, normalized_shape,
     return grad_input, grad_weight, grad_bias
 
 
+def npu_group_norm_backward(grad, saved_input, num_groups, weight=None, eps=1e-5):
+    """Group norm backward via aclnnGroupNormBackward.
+
+    Computes mean and rstd from *saved_input* since the composite forward
+    does not save them.  These are small [N, num_groups] tensors so the
+    overhead of recomputing them is minimal.
+
+    Returns ``(grad_input,)``.
+    """
+    from ..._dispatch.dispatcher import redispatch, current_dispatch_keyset
+    from ..._dispatch.keys import DispatchKey
+    from ..._creation import tensor as _create_tensor
+
+    runtime, stream = _get_runtime_stream(grad)
+
+    N = saved_input.shape[0]
+    C = saved_input.shape[1]
+    spatial = saved_input.shape[2:]
+    HxW = 1
+    for s in spatial:
+        HxW *= s
+    channels_per_group = C // num_groups
+
+    # Compute mean and rstd per group from saved_input.
+    # Reshape to [N, num_groups, channels_per_group * HxW] then reduce last dim.
+    keyset = current_dispatch_keyset().without(
+        (DispatchKey.Autograd, DispatchKey.AutogradCPU, DispatchKey.AutogradNPU)
+    )
+
+    reshaped = redispatch("reshape", keyset, saved_input,
+                          (N, num_groups, channels_per_group * HxW))
+    mean = redispatch("mean", keyset, reshaped, dim=2, keepdim=False)  # [N, num_groups]
+
+    # var = E[(x - mean)^2]
+    diff = redispatch("add", keyset, reshaped,
+                      redispatch("neg", keyset, redispatch("unsqueeze", keyset, mean, dim=-1)))
+    var = redispatch("mean", keyset, redispatch("mul", keyset, diff, diff),
+                     dim=2, keepdim=False)  # [N, num_groups]
+
+    eps_t = _create_tensor(eps, dtype=saved_input.dtype, device=saved_input.device)
+    rstd = redispatch("rsqrt", keyset,
+                      redispatch("add", keyset, var, eps_t))  # [N, num_groups]
+
+    # Cast mean/rstd to float32 if needed (ACLNN expects float32 stats)
+    stats_dtype = mean.dtype
+    if str(stats_dtype) != "float32":
+        from ..._dtype import float32 as f32_dtype
+        mean_f32_ptr = npu_runtime._alloc_device(
+            max(_numel(mean.shape), 1) * 4, runtime=runtime)
+        aclnn.cast(
+            _unwrap_storage(mean).data_ptr(), mean_f32_ptr,
+            mean.shape, mean.stride, stats_dtype, f32_dtype,
+            runtime, stream=stream.stream,
+        )
+        mean_storage = npu_typed_storage_from_ptr(
+            mean_f32_ptr, max(_numel(mean.shape), 1), f32_dtype, device=mean.device)
+        from ..._tensor import Tensor as _Tensor
+        mean = _Tensor(mean_storage, mean.shape, npu_runtime._contiguous_stride(mean.shape))
+
+        rstd_f32_ptr = npu_runtime._alloc_device(
+            max(_numel(rstd.shape), 1) * 4, runtime=runtime)
+        aclnn.cast(
+            _unwrap_storage(rstd).data_ptr(), rstd_f32_ptr,
+            rstd.shape, rstd.stride, stats_dtype, f32_dtype,
+            runtime, stream=stream.stream,
+        )
+        rstd_storage = npu_typed_storage_from_ptr(
+            rstd_f32_ptr, max(_numel(rstd.shape), 1), f32_dtype, device=rstd.device)
+        rstd = _Tensor(rstd_storage, rstd.shape, npu_runtime._contiguous_stride(rstd.shape))
+
+    # Allocate output grad_input (same shape as input)
+    gi_ptr, gi_shape, gi_stride, gi_numel = _alloc_like(saved_input, runtime)
+
+    # Allocate grad_gamma, grad_beta (shape = [C]) only if weight exists
+    has_weight = weight is not None
+    dgamma_ptr = None
+    dgamma_shape = (C,)
+    dgamma_stride = (1,)
+    dgamma_numel = C
+    dbeta_ptr = None
+    dbeta_shape = (C,)
+    dbeta_stride = (1,)
+    dbeta_numel = C
+    if has_weight:
+        dgamma_ptr, dgamma_shape, dgamma_stride, dgamma_numel = _alloc_like(
+            weight, runtime, shape=weight.shape)
+        dbeta_ptr, dbeta_shape, dbeta_stride, dbeta_numel = _alloc_like(
+            weight, runtime, shape=weight.shape)
+
+    output_mask = (True, has_weight, has_weight)
+
+    aclnn.group_norm_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        _unwrap_storage(mean).data_ptr(),
+        _unwrap_storage(rstd).data_ptr(),
+        _unwrap_storage(weight).data_ptr() if has_weight else 0,
+        gi_ptr,
+        dgamma_ptr,
+        dbeta_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        mean.shape, mean.stride,
+        rstd.shape, rstd.stride,
+        weight.shape if has_weight else (C,),
+        weight.stride if has_weight else (1,),
+        gi_shape, gi_stride,
+        dgamma_shape, dgamma_stride,
+        dbeta_shape, dbeta_stride,
+        N, C, HxW, num_groups,
+        output_mask,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    grad_input = _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride,
+                              grad.dtype, grad.device)
+
+    return (grad_input,)
+
+
 def npu_batch_norm_backward(grad, saved_input, backward_data, weight=None,
                             running_mean=None, running_var=None):
     """Batch norm backward via aclnnBatchNormBackward.
@@ -754,3 +876,394 @@ def npu_avg_pool2d_backward(grad, saved_input, kernel_size, stride, padding,
     )
 
     return _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Activation backward — hardswish, hardsigmoid, mish (simple)
+# ---------------------------------------------------------------
+
+def npu_hardswish_backward(grad, saved_input):
+    """Hardswish backward via aclnnHardswishBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.hardswish_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_hardsigmoid_backward(grad, saved_input):
+    """Hardsigmoid backward via aclnnHardsigmoidBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.hardsigmoid_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_mish_backward(grad, saved_input):
+    """Mish backward via aclnnMishBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.mish_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Activation backward — softplus, hardtanh (with scalar params)
+# ---------------------------------------------------------------
+
+def npu_softplus_backward(grad, saved_input, beta=1.0, threshold=20.0):
+    """Softplus backward via aclnnSoftplusBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.softplus_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        beta,
+        threshold,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_hardtanh_backward(grad, saved_input, min_val=-1.0, max_val=1.0):
+    """Hardtanh backward via aclnnHardtanhBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.hardtanh_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        min_val,
+        max_val,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Parameterized activation backward (leaky_relu, elu, prelu)
+# ---------------------------------------------------------------
+
+def npu_leaky_relu_backward(grad, saved_input, negative_slope=0.01):
+    """Leaky ReLU backward via aclnnLeakyReluBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.leaky_relu_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        negative_slope,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_elu_backward(grad, saved_input, alpha=1.0, scale=1.0, input_scale=1.0):
+    """ELU backward via aclnnEluBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.elu_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        alpha,
+        scale,
+        input_scale,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_prelu_backward(grad, saved_input, saved_weight):
+    """PReLU backward via aclnnPreluBackward -- returns (grad_input, grad_weight)."""
+    runtime, stream = _get_runtime_stream(grad)
+    gi_ptr, gi_shape, gi_stride, gi_numel = _alloc_like(grad, runtime)
+    gw_ptr, gw_shape, gw_stride, gw_numel = _alloc_like(saved_weight, runtime, shape=saved_weight.shape)
+
+    aclnn.prelu_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        _unwrap_storage(saved_weight).data_ptr(),
+        gi_ptr,
+        gw_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        saved_weight.shape,
+        saved_weight.stride,
+        gi_stride,
+        gw_stride,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    grad_input = _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
+    grad_weight = _wrap_output(gw_ptr, gw_numel, gw_shape, gw_stride, grad.dtype, grad.device)
+    return grad_input, grad_weight
+
+
+# ---------------------------------------------------------------
+# Upsample backward (5 ops)
+# ---------------------------------------------------------------
+
+def npu_upsample_nearest2d_backward(grad, saved_input, output_size):
+    """Upsample nearest 2d backward via aclnnUpsampleNearest2dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    H_out, W_out = output_size
+    N, C, H_in, W_in = saved_input.shape
+    scales_h = float(H_out) / float(H_in)
+    scales_w = float(W_out) / float(W_in)
+    aclnn.upsample_nearest2d_backward(
+        _unwrap_storage(grad).data_ptr(), out_ptr,
+        grad.shape, grad.stride, saved_input.shape, out_stride,
+        (H_out, W_out), (N, C, H_in, W_in),
+        scales_h, scales_w,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_upsample_bilinear2d_backward(grad, saved_input, output_size, align_corners=False):
+    """Upsample bilinear 2d backward via aclnnUpsampleBilinear2dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    H_out, W_out = output_size
+    N, C, H_in, W_in = saved_input.shape
+    scales_h = float(H_out) / float(H_in)
+    scales_w = float(W_out) / float(W_in)
+    aclnn.upsample_bilinear2d_backward(
+        _unwrap_storage(grad).data_ptr(), out_ptr,
+        grad.shape, grad.stride, saved_input.shape, out_stride,
+        (H_out, W_out), (N, C, H_in, W_in),
+        align_corners, scales_h, scales_w,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_upsample_bicubic2d_backward(grad, saved_input, output_size, align_corners=False):
+    """Upsample bicubic 2d backward via aclnnUpsampleBicubic2dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    H_out, W_out = output_size
+    N, C, H_in, W_in = saved_input.shape
+    scales_h = float(H_out) / float(H_in)
+    scales_w = float(W_out) / float(W_in)
+    aclnn.upsample_bicubic2d_backward(
+        _unwrap_storage(grad).data_ptr(), out_ptr,
+        grad.shape, grad.stride, saved_input.shape, out_stride,
+        (H_out, W_out), (N, C, H_in, W_in),
+        align_corners, scales_h, scales_w,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_upsample_nearest1d_backward(grad, saved_input, output_size):
+    """Upsample nearest 1d backward via aclnnUpsampleNearest1dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    (L_out,) = output_size
+    N, C, L_in = saved_input.shape
+    scales = float(L_out) / float(L_in)
+    aclnn.upsample_nearest1d_backward(
+        _unwrap_storage(grad).data_ptr(), out_ptr,
+        grad.shape, grad.stride, saved_input.shape, out_stride,
+        (L_out,), (N, C, L_in), scales,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_upsample_linear1d_backward(grad, saved_input, output_size, align_corners=False):
+    """Upsample linear 1d backward via aclnnUpsampleLinear1dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    (L_out,) = output_size
+    N, C, L_in = saved_input.shape
+    scales = float(L_out) / float(L_in)
+    aclnn.upsample_linear1d_backward(
+        _unwrap_storage(grad).data_ptr(), out_ptr,
+        grad.shape, grad.stride, saved_input.shape, out_stride,
+        (L_out,), (N, C, L_in),
+        align_corners, scales,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Pool backward
+# ---------------------------------------------------------------
+
+def npu_adaptive_avg_pool2d_backward(grad, saved_input):
+    """Adaptive avg pool 2d backward via aclnnAdaptiveAvgPool2dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    aclnn.adaptive_avg_pool2d_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        saved_input.shape, out_stride,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_adaptive_avg_pool3d_backward(grad, saved_input):
+    """Adaptive avg pool 3d backward via aclnnAdaptiveAvgPool3dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    aclnn.adaptive_avg_pool3d_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        saved_input.shape, out_stride,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+def npu_avg_pool3d_backward(grad, saved_input, kernel_size, stride, padding,
+                             ceil_mode=False, count_include_pad=True,
+                             divisor_override=None):
+    """Avg pool 3d backward via aclnnAvgPool3dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+
+    # grad_input (same shape as saved_input)
+    gi_ptr, gi_shape, gi_stride, gi_numel = _alloc_like(saved_input, runtime)
+
+    kD, kH, kW = (kernel_size, kernel_size, kernel_size) if isinstance(kernel_size, int) else tuple(kernel_size)
+    sD, sH, sW = (stride, stride, stride) if isinstance(stride, int) else tuple(stride)
+    pD, pH, pW = (padding, padding, padding) if isinstance(padding, int) else tuple(padding)
+
+    aclnn.avg_pool3d_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        gi_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        gi_shape, gi_stride,
+        [kD, kH, kW], [sD, sH, sW], [pD, pH, pW],
+        ceil_mode, count_include_pad,
+        divisor_override,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Grid sample backward
+# ---------------------------------------------------------------
+
+def npu_grid_sample_backward(grad, saved_input, saved_grid,
+                              interpolation_mode=0, padding_mode=0, align_corners=False):
+    """Grid sample backward via aclnnGridSampler2DBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+
+    # Allocate inputGrad (same shape as input)
+    ig_ptr, ig_shape, ig_stride, ig_numel = _alloc_like(saved_input, runtime, shape=saved_input.shape)
+    # Allocate gridGrad (same shape as grid)
+    gg_ptr, gg_shape, gg_stride, gg_numel = _alloc_like(saved_grid, runtime, shape=saved_grid.shape)
+
+    compute_input_grad = getattr(saved_input, "requires_grad", True)
+    compute_grid_grad = getattr(saved_grid, "requires_grad", True)
+
+    aclnn.grid_sampler2d_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        _unwrap_storage(saved_grid).data_ptr(),
+        ig_ptr, gg_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        saved_grid.shape, saved_grid.stride,
+        ig_shape, ig_stride,
+        gg_shape, gg_stride,
+        interpolation_mode, padding_mode, align_corners,
+        compute_input_grad, compute_grid_grad,
+        grad.dtype, runtime, stream=stream.stream,
+    )
+
+    grad_input = _wrap_output(ig_ptr, ig_numel, ig_shape, ig_stride, grad.dtype, grad.device)
+    grad_grid = _wrap_output(gg_ptr, gg_numel, gg_shape, gg_stride, grad.dtype, grad.device)
+    return grad_input, grad_grid

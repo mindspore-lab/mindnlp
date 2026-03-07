@@ -374,6 +374,9 @@ def _silu_backward(grad, _a, saved_a, keyset):
 
 def _leaky_relu_backward(grad, _a, saved_a, keyset, args, kwargs):
     negative_slope = args[0] if args else kwargs.get("negative_slope", 0.01)
+    if grad.device.type == "npu":
+        from .npu.backward import npu_leaky_relu_backward
+        return (npu_leaky_relu_backward(grad, saved_a, float(negative_slope)),)
     with _grad_context(keyset):
         pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
         ones = saved_a._ones_like()
@@ -390,6 +393,9 @@ def _leaky_relu_backward(grad, _a, saved_a, keyset, args, kwargs):
 
 def _elu_backward(grad, _a, saved_a, keyset, args, kwargs):
     alpha = args[0] if args else kwargs.get("alpha", 1.0)
+    if grad.device.type == "npu":
+        from .npu.backward import npu_elu_backward
+        return (npu_elu_backward(grad, saved_a, float(alpha)),)
     with _grad_context(keyset):
         pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
         ones = saved_a._ones_like()
@@ -407,6 +413,9 @@ def _elu_backward(grad, _a, saved_a, keyset, args, kwargs):
 
 
 def _mish_backward(grad, _a, saved_a, keyset):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_mish_backward
+        return (npu_mish_backward(grad, saved_a),)
     with _grad_context(keyset):
         ones = saved_a._ones_like()
         sp = redispatch("softplus", keyset, saved_a)
@@ -420,6 +429,10 @@ def _mish_backward(grad, _a, saved_a, keyset):
 
 
 def _prelu_backward(grad, a, b, saved_a, saved_b, keyset):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_prelu_backward
+        grad_input, grad_weight = npu_prelu_backward(grad, saved_a, saved_b)
+        return (grad_input, grad_weight)
     with _grad_context(keyset):
         pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
         ones = saved_a._ones_like()
@@ -553,6 +566,9 @@ def _erf_backward(grad, _a, saved_a, keyset):
 
 
 def _softplus_backward(grad, _a, saved_a, keyset):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_softplus_backward
+        return (npu_softplus_backward(grad, saved_a),)
     with _grad_context(keyset):
         sig = redispatch("sigmoid", keyset, saved_a)
         return (redispatch("mul", keyset, grad, sig),)
@@ -867,6 +883,11 @@ def _clamp_backward(grad, _a, saved_a, keyset, args, _kwargs):
 
 
 def _hardtanh_backward(grad, _a, saved_a, keyset, args, _kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_hardtanh_backward
+        min_val = args[0] if len(args) > 0 else _kwargs.get("min_val", -1.0)
+        max_val = args[1] if len(args) > 1 else _kwargs.get("max_val", 1.0)
+        return (npu_hardtanh_backward(grad, saved_a, float(min_val), float(max_val)),)
     min_val = args[0] if len(args) > 0 else _kwargs.get("min_val", -1.0)
     max_val = args[1] if len(args) > 1 else _kwargs.get("max_val", 1.0)
     with _grad_context(keyset):
@@ -957,6 +978,9 @@ def _autograd_dropout():
 
 
 def _relu6_backward(grad, _a, saved_a, keyset):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_hardtanh_backward
+        return (npu_hardtanh_backward(grad, saved_a, 0.0, 6.0),)
     with _grad_context(keyset):
         six = _scalar_tensor_like(saved_a, 6.0)
         pos_mask = redispatch("sign", keyset, redispatch("relu", keyset, saved_a))
@@ -1249,6 +1273,12 @@ def _group_norm_backward(grad, _a, saved_a, keyset, args, kwargs):
     weight = args[1] if len(args) > 1 else kwargs.get("weight", None)
     bias = args[2] if len(args) > 2 else kwargs.get("bias", None)
     eps = args[3] if len(args) > 3 else kwargs.get("eps", 1e-5)
+
+    # NPU path: use ACLNN large kernel
+    if grad.device.type == "npu":
+        from .npu.backward import npu_group_norm_backward
+        return npu_group_norm_backward(grad, saved_a, num_groups,
+                                       weight=weight, eps=eps)
 
     with _grad_context(keyset):
         N = saved_a.shape[0]
@@ -1950,6 +1980,9 @@ def _avg_pool2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
 
 
 def _adaptive_avg_pool2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_adaptive_avg_pool2d_backward
+        return (npu_adaptive_avg_pool2d_backward(grad, saved_input),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -2447,6 +2480,9 @@ def _diagonal_backward(grad, _a, saved_a, keyset, args, kwargs):
 
 def _hardswish_backward(grad, _a, saved_a, keyset):
     """Backward for hardswish: d/dx[x * hardsigmoid(x)]."""
+    if grad.device.type == "npu":
+        from .npu.backward import npu_hardswish_backward
+        return (npu_hardswish_backward(grad, saved_a),)
     with _grad_context(keyset):
         three = _scalar_tensor_like(saved_a, 3.0)
         sixth = _scalar_tensor_like(saved_a, 1.0 / 6.0)
@@ -2480,6 +2516,9 @@ def _hardswish_backward(grad, _a, saved_a, keyset):
 
 def _hardsigmoid_backward(grad, _a, saved_a, keyset):
     """Backward for hardsigmoid: max(0, min(1, (x+3)/6))."""
+    if grad.device.type == "npu":
+        from .npu.backward import npu_hardsigmoid_backward
+        return (npu_hardsigmoid_backward(grad, saved_a),)
     with _grad_context(keyset):
         three = _scalar_tensor_like(saved_a, 3.0)
         sixth = _scalar_tensor_like(saved_a, 1.0 / 6.0)
@@ -3262,6 +3301,10 @@ def _autograd_addmm(name="addmm"):
 # ---- Task 2: Upsample backward (5 ops) ----
 
 def _upsample_nearest2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_upsample_nearest2d_backward
+        output_size = args[0]
+        return (npu_upsample_nearest2d_backward(grad, saved_input, output_size),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3278,6 +3321,10 @@ def _upsample_nearest2d_backward(grad, input, saved_input, _out, keyset, args, k
 
 
 def _upsample_nearest1d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_upsample_nearest1d_backward
+        output_size = args[0]
+        return (npu_upsample_nearest1d_backward(grad, saved_input, output_size),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3292,6 +3339,11 @@ def _upsample_nearest1d_backward(grad, input, saved_input, _out, keyset, args, k
 
 
 def _upsample_bilinear2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_upsample_bilinear2d_backward
+        output_size = args[0]
+        align_corners = args[1] if len(args) > 1 else kwargs.get("align_corners", False)
+        return (npu_upsample_bilinear2d_backward(grad, saved_input, output_size, align_corners),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3338,6 +3390,11 @@ def _upsample_bilinear2d_backward(grad, input, saved_input, _out, keyset, args, 
 
 
 def _upsample_linear1d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_upsample_linear1d_backward
+        output_size = args[0]
+        align_corners = args[1] if len(args) > 1 else kwargs.get("align_corners", False)
+        return (npu_upsample_linear1d_backward(grad, saved_input, output_size, align_corners),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3369,6 +3426,11 @@ def _upsample_linear1d_backward(grad, input, saved_input, _out, keyset, args, kw
 
 
 def _upsample_bicubic2d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_upsample_bicubic2d_backward
+        output_size = args[0]
+        align_corners = args[1] if len(args) > 1 else kwargs.get("align_corners", False)
+        return (npu_upsample_bicubic2d_backward(grad, saved_input, output_size, align_corners),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3565,6 +3627,22 @@ def _avg_pool1d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
 
 
 def _avg_pool3d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_avg_pool3d_backward
+        kernel_size = args[0] if args else kwargs.get("kernel_size")
+        stride = args[1] if len(args) > 1 else kwargs.get("stride", kernel_size)
+        padding = args[2] if len(args) > 2 else kwargs.get("padding", (0, 0, 0))
+        ceil_mode = args[3] if len(args) > 3 else kwargs.get("ceil_mode", False)
+        count_include_pad = args[4] if len(args) > 4 else kwargs.get("count_include_pad", True)
+        divisor_override = args[5] if len(args) > 5 else kwargs.get("divisor_override", None)
+        if isinstance(kernel_size, int):
+            kernel_size = (kernel_size, kernel_size, kernel_size)
+        if isinstance(stride, int):
+            stride = (stride, stride, stride)
+        if isinstance(padding, int):
+            padding = (padding, padding, padding)
+        return (npu_avg_pool3d_backward(grad, saved_input, kernel_size, stride, padding,
+                                        ceil_mode, count_include_pad, divisor_override),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3638,6 +3716,9 @@ def _adaptive_avg_pool1d_backward(grad, input, saved_input, _out, keyset, args, 
 
 
 def _adaptive_avg_pool3d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    if grad.device.type == "npu":
+        from .npu.backward import npu_adaptive_avg_pool3d_backward
+        return (npu_adaptive_avg_pool3d_backward(grad, saved_input),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -4098,6 +4179,25 @@ def _autograd_grid_sample(name="grid_sample"):
 
 def _grid_sample_backward(grad, input, grid, saved_input, saved_grid, keyset, args, kwargs):
     """Backward for grid_sample using numpy — bilinear mode only."""
+    mode = args[0] if args else kwargs.get("mode", "bilinear")
+    padding_mode = args[1] if len(args) > 1 else kwargs.get("padding_mode", "zeros")
+    align_corners = args[2] if len(args) > 2 else kwargs.get("align_corners", False)
+
+    if grad.device.type == "npu":
+        from .npu.backward import npu_grid_sample_backward
+        mode_map = {"bilinear": 0, "nearest": 1, "bicubic": 2}
+        pad_map = {"zeros": 0, "border": 1, "reflection": 2}
+        interp_mode = mode_map.get(mode, 0) if isinstance(mode, str) else int(mode)
+        pad_mode = pad_map.get(padding_mode, 0) if isinstance(padding_mode, str) else int(padding_mode)
+        grad_input, grad_grid = npu_grid_sample_backward(
+            grad, saved_input, saved_grid, interp_mode, pad_mode, align_corners)
+        results = []
+        if getattr(input, "requires_grad", False):
+            results.append(grad_input)
+        if getattr(grid, "requires_grad", False):
+            results.append(grad_grid)
+        return tuple(results) if results else (grad_input, grad_grid)
+
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -4105,10 +4205,6 @@ def _grid_sample_backward(grad, input, grid, saved_input, saved_grid, keyset, ar
         grad_np = _to_numpy(grad)
         input_np = _to_numpy(saved_input)
         grid_np = _to_numpy(saved_grid)
-
-        mode = args[0] if args else kwargs.get("mode", "bilinear")
-        padding_mode = args[1] if len(args) > 1 else kwargs.get("padding_mode", "zeros")
-        align_corners = args[2] if len(args) > 2 else kwargs.get("align_corners", False)
 
         N, C, H, W = input_np.shape
         _, H_out, W_out, _ = grid_np.shape
