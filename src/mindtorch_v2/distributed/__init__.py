@@ -674,6 +674,19 @@ def all_to_all_single(output, input, output_split_sizes=None,
                         raise RuntimeError(f"D2D memcpy failed: {ret}")
                     offset += nbytes
                 return None
+            def _writeback_npu_output():
+                dst_base = output.storage().data_ptr()
+                offset = 0
+                for t in output_list:
+                    nbytes = t.numel() * itemsize
+                    ret = npu_runtime.acl.rt.memcpy(
+                        dst_base + offset, nbytes,
+                        t.storage().data_ptr(), nbytes, ACL_MEMCPY_D2D,
+                    )
+                    if ret != 0:
+                        raise RuntimeError(f"D2D memcpy failed: {ret}")
+                    offset += nbytes
+            work._on_wait = _writeback_npu_output
             return work
     else:
         # Gloo / CPU path: use numpy views
@@ -700,6 +713,15 @@ def all_to_all_single(output, input, output_split_sizes=None,
                 output_np[offset:offset + n] = t_np
                 offset += n
             return None
+        def _writeback_cpu_output():
+            output_np = output._numpy_view().ravel()
+            offset = 0
+            for t in output_list:
+                t_np = t._numpy_view().ravel()
+                n = t_np.size
+                output_np[offset:offset + n] = t_np
+                offset += n
+        work._on_wait = _writeback_cpu_output
         return work
 
 

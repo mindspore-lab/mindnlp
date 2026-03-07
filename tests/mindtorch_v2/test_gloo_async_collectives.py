@@ -65,6 +65,16 @@ if rank == 0:
     assert glist[0].numpy().tolist() == [5.0, 15.0]
     assert glist[1].numpy().tolist() == [6.0, 16.0]
 
+# 6) all_to_all_single(async)
+a2a_in = torch.tensor([1.0, 2.0]) if rank == 0 else torch.tensor([10.0, 20.0])
+a2a_out = torch.zeros(2)
+w = dist.all_to_all_single(a2a_out, a2a_in, async_op=True)
+w.wait()
+if rank == 0:
+    assert a2a_out.numpy().tolist() == [1.0, 10.0]
+else:
+    assert a2a_out.numpy().tolist() == [2.0, 20.0]
+
 dist.destroy_process_group()
 print(f"[rank {rank}] async collective checks passed")
 '''
