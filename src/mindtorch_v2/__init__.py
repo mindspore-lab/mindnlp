@@ -60,7 +60,7 @@ from ._functional import dot, outer, inner, mv, cross, tensordot
 from ._functional import logical_xor
 from ._functional import baddbmm, trace, cummin, logsumexp, renorm
 from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
-from ._functional import unflatten, broadcast_to, movedim, diagonal
+from ._functional import unflatten, broadcast_to, movedim, moveaxis, diagonal
 from ._functional import unique, searchsorted, kthvalue, median
 # Category A: Export existing functions
 from ._functional import eq, ne, lt, le, gt, ge
@@ -402,6 +402,7 @@ __all__ = [
     "unflatten",
     "broadcast_to",
     "movedim",
+    "moveaxis",
     "diagonal",
     # new search ops
     "unique",

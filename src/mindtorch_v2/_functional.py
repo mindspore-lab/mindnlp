@@ -1062,6 +1062,10 @@ def movedim(a, source, destination):
     return dispatch("movedim", a.device.type, a, source, destination)
 
 
+def moveaxis(a, source, destination):
+    return dispatch("moveaxis", a.device.type, a, source, destination)
+
+
 def diagonal(a, offset=0, dim1=0, dim2=1):
     return dispatch("diagonal", a.device.type, a, offset, dim1, dim2)
 
