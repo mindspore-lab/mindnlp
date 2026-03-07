@@ -71,6 +71,30 @@ def test_dispatch_sum_named_dim_error_matches_torch_on_rank2():
     assert_torch_error(mt_call, th_call)
 
 
+def test_dispatch_view_rejects_none_shape_matches_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    def mt_call():
+        dispatch("view", mt_x.device.type, mt_x, None)
+
+    def th_call():
+        pt.tensor([[1.0, 2.0], [3.0, 4.0]]).view(None)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_view_rejects_mixed_tuple_shape_matches_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    def mt_call():
+        dispatch("view", mt_x.device.type, mt_x, (4, "x"))
+
+    def th_call():
+        pt.tensor([[1.0, 2.0], [3.0, 4.0]]).view((4, "x"))
+
+    assert_torch_error(mt_call, th_call)
+
+
 def test_dispatch_view_rejects_str_shape_matches_torch():
     mt_x = torch.tensor([1.0])
 
@@ -79,6 +103,30 @@ def test_dispatch_view_rejects_str_shape_matches_torch():
 
     def th_call():
         pt.tensor([1.0]).view("x")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_transpose_rejects_mixed_int_str_dims_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("transpose", mt_x.device.type, mt_x, 0, "1")
+
+    def th_call():
+        pt.tensor([1.0, 2.0]).transpose(0, "1")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_transpose_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("transpose", mt_x.device.type, mt_x, True, 0)
+
+    def th_call():
+        pt.tensor([1.0, 2.0]).transpose(True, 0)
 
     assert_torch_error(mt_call, th_call)
 
