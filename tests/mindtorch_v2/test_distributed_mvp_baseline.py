@@ -142,6 +142,8 @@ def test_gather_async_wait_world1_cpu():
 
         work = dist.gather(source, gather_list=gathered, dst=0, async_op=True)
         assert work is not None
+        # Async contract: output should not be materialized before wait().
+        assert gathered[0].numpy().tolist() == [0.0, 0.0]
         work.wait()
 
         assert gathered[0].numpy().tolist() == [3.0, 5.0]
