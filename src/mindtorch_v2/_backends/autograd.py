@@ -1377,7 +1377,7 @@ def _conv_backward(name, grad, input, weight, bias, saved_input, saved_weight, s
         is_1d = name in ("conv1d", "conv_transpose1d")
         is_3d = name in ("conv3d", "conv_transpose3d")
         is_transpose = name in ("conv_transpose2d", "conv_transpose1d", "conv_transpose3d")
-
+        # pylint: disable=too-many-nested-blocks
         if is_3d:
             stride = kwargs.get("stride", args[0] if args else (1, 1, 1))
             padding = kwargs.get("padding", args[1] if len(args) > 1 else (0, 0, 0))

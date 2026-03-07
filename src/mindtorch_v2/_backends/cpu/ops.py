@@ -4105,7 +4105,25 @@ def adaptive_max_pool2d(input, output_size, return_indices=False):
         oH, oW = output_size
 
     out = np.empty((N, C, oH, oW), dtype=a.dtype)
-    out_indices = np.empty((N, C, oH, oW), dtype=np.int64) if return_indices else None
+    if return_indices:
+        out_indices = np.empty((N, C, oH, oW), dtype=np.int64)
+        for oh in range(oH):
+            h_start = oh * H // oH
+            h_end = (oh + 1) * H // oH
+            for ow in range(oW):
+                w_start = ow * W // oW
+                w_end = (ow + 1) * W // oW
+                region = a[:, :, h_start:h_end, w_start:w_end]
+                region_flat = region.reshape(N, C, -1)
+                out[:, :, oh, ow] = region_flat.max(axis=2)
+                local_idx = region_flat.argmax(axis=2)
+                rW = w_end - w_start
+                local_h = local_idx // rW + h_start
+                local_w = local_idx % rW + w_start
+                out_indices[:, :, oh, ow] = local_h * W + local_w
+        result = _from_numpy(out, input.dtype, input.device)
+        return result, _from_numpy(out_indices, int64_dtype, input.device)
+
     for oh in range(oH):
         h_start = oh * H // oH
         h_end = (oh + 1) * H // oH
@@ -4115,18 +4133,8 @@ def adaptive_max_pool2d(input, output_size, return_indices=False):
             region = a[:, :, h_start:h_end, w_start:w_end]
             region_flat = region.reshape(N, C, -1)
             out[:, :, oh, ow] = region_flat.max(axis=2)
-            if return_indices:
-                local_idx = region_flat.argmax(axis=2)
-                rH = h_end - h_start
-                rW = w_end - w_start
-                local_h = local_idx // rW + h_start
-                local_w = local_idx % rW + w_start
-                out_indices[:, :, oh, ow] = local_h * W + local_w
 
-    result = _from_numpy(out, input.dtype, input.device)
-    if return_indices:
-        return result, _from_numpy(out_indices, int64_dtype, input.device)
-    return result
+    return _from_numpy(out, input.dtype, input.device)
 
 
 def adaptive_max_pool1d(input, output_size, return_indices=False):
@@ -4136,16 +4144,21 @@ def adaptive_max_pool1d(input, output_size, return_indices=False):
     oL = output_size if isinstance(output_size, int) else output_size[0]
 
     out = np.empty((N, C, oL), dtype=a.dtype)
-    out_indices = np.empty((N, C, oL), dtype=np.int64) if return_indices else None
+    if return_indices:
+        out_indices = np.empty((N, C, oL), dtype=np.int64)
+        for ol in range(oL):
+            l_start = ol * L // oL
+            l_end = (ol + 1) * L // oL
+            region = a[:, :, l_start:l_end]
+            out[:, :, ol] = region.max(axis=2)
+            out_indices[:, :, ol] = region.argmax(axis=2) + l_start
+        result = _from_numpy(out, input.dtype, input.device)
+        return result, _from_numpy(out_indices, int64_dtype, input.device)
+
     for ol in range(oL):
         l_start = ol * L // oL
         l_end = (ol + 1) * L // oL
         region = a[:, :, l_start:l_end]
         out[:, :, ol] = region.max(axis=2)
-        if return_indices:
-            out_indices[:, :, ol] = region.argmax(axis=2) + l_start
 
-    result = _from_numpy(out, input.dtype, input.device)
-    if return_indices:
-        return result, _from_numpy(out_indices, int64_dtype, input.device)
-    return result
+    return _from_numpy(out, input.dtype, input.device)
