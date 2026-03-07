@@ -947,8 +947,32 @@ def split_group(parent_pg, color, key=None):
 
 
 def monitored_barrier(group=None, timeout=None, wait_all_ranks=False):
-    # HCCL does not support monitored barrier. Fall back to regular barrier.
-    barrier(group=group)
+    pg = group or _default_pg
+    if pg is None:
+        raise RuntimeError("Default process group not initialized")
+
+    backend = str(get_backend(pg))
+    _, store = _pg_map.get(pg, (Backend("gloo"), None))
+
+    if backend in ("hccl", "nccl") and wait_all_ranks:
+        raise NotImplementedError(
+            "monitored_barrier(wait_all_ranks=True) is not supported for hccl backend"
+        )
+
+    wait_timeout = None
+    if timeout is not None:
+        parsed = _parse_timeout(timeout)
+        wait_timeout = parsed.total_seconds() if isinstance(parsed, timedelta) else float(parsed)
+
+    if store is not None and pg.size() > 1:
+        rank = pg.rank()
+        world_size = pg.size()
+        key = f"monitored_barrier/arrive/{rank}"
+        store.set(key, b"1")
+        keys = [f"monitored_barrier/arrive/{r}" for r in range(world_size)]
+        store.wait(keys, timeout=wait_timeout)
+
+    barrier(group=pg)
 
 
 def supports_complex(op):
