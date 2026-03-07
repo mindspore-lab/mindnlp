@@ -3430,6 +3430,17 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnSquare (unary: out = x * x)
+        self.aclnn_square_get_workspace = _optional_symbol(
+            libs, "aclnnSquareGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_square = _optional_symbol(
+            libs, "aclnnSquare", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 _ACL_DTYPE = {
     "float32": 0,
@@ -13699,3 +13710,20 @@ def log_softmax_backward(grad_ptr, output_ptr, out_ptr, shape, grad_stride, outp
         if workspace is not None:
             runtime.defer_raw_free(workspace)
         _ = (grad_keep, output_keep, out_keep)
+
+
+def square_symbols_ok():
+    try:
+        bindings = get_bindings()
+        return all([bindings.aclnn_square_get_workspace, bindings.aclnn_square])
+    except Exception:
+        return False
+
+
+def square(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnSquare", bindings.aclnn_square_get_workspace, bindings.aclnn_square,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)

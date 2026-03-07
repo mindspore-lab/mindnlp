@@ -20,7 +20,7 @@ from ._functional import floor as floor_dispatch, ceil as ceil_dispatch, round a
 from ._functional import trunc as trunc_dispatch, frac as frac_dispatch
 from ._functional import pow as pow_dispatch, log2 as log2_dispatch, log10 as log10_dispatch
 from ._functional import exp2 as exp2_dispatch, rsqrt as rsqrt_dispatch
-from ._functional import sign as sign_dispatch, signbit as signbit_dispatch
+from ._functional import sign as sign_dispatch, signbit as signbit_dispatch, square as square_dispatch
 from ._functional import isnan as isnan_dispatch, isinf as isinf_dispatch, isfinite as isfinite_dispatch
 from ._functional import sinh as sinh_dispatch, cosh as cosh_dispatch
 from ._functional import asinh as asinh_dispatch, acosh as acosh_dispatch, atanh as atanh_dispatch
@@ -1154,6 +1154,9 @@ class Tensor:
 
     def signbit(self):
         return signbit_dispatch(self)
+
+    def square(self):
+        return square_dispatch(self)
 
     def isnan(self):
         return isnan_dispatch(self)

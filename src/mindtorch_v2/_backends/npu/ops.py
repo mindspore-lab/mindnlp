@@ -781,6 +781,33 @@ def signbit(a):
     return _unary_op(a, aclnn.signbit, "signbit", out_dtype=bool_dtype)
 
 
+def square(a):
+    if aclnn.square_symbols_ok():
+        try:
+            return _unary_op(a, aclnn.square, "square")
+        except RuntimeError:
+            pass
+    return mul(a, a)
+
+
+def isposinf(a):
+    if aclnn.isposinf_symbols_ok():
+        try:
+            return _unary_op(a, aclnn.isposinf, "isposinf", out_dtype=bool_dtype)
+        except RuntimeError:
+            pass
+    return logical_and(isinf(a), gt(a, _scalar_to_npu_tensor(0, a)))
+
+
+def isneginf(a):
+    if aclnn.isneginf_symbols_ok():
+        try:
+            return _unary_op(a, aclnn.isneginf, "isneginf", out_dtype=bool_dtype)
+        except RuntimeError:
+            pass
+    return logical_and(isinf(a), lt(a, _scalar_to_npu_tensor(0, a)))
+
+
 def isfinite(a):
     return _unary_op(a, aclnn.isfinite, "isfinite", out_dtype=bool_dtype)
 

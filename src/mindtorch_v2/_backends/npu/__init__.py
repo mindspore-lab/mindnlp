@@ -34,6 +34,8 @@ from .ops import (
     isfinite,
     isinf,
     isnan,
+    isneginf,
+    isposinf,
     log,
     log10,
     log2,
@@ -43,6 +45,7 @@ from .ops import (
     relu6,
     sign,
     signbit,
+    square,
     pow,
     relu,
     round,
@@ -299,9 +302,12 @@ registry.register("abs", "npu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "npu", neg, meta=meta_infer.infer_unary)
 registry.register("sign", "npu", sign, meta=meta_infer.infer_unary)
 registry.register("signbit", "npu", signbit, meta=meta_infer.infer_unary_bool)
+registry.register("square", "npu", square, meta=meta_infer.infer_unary)
 registry.register("isfinite", "npu", isfinite, meta=meta_infer.infer_unary_bool)
 registry.register("isinf", "npu", isinf, meta=meta_infer.infer_unary_bool)
 registry.register("isnan", "npu", isnan, meta=meta_infer.infer_unary_bool)
+registry.register("isneginf", "npu", isneginf, meta=meta_infer.infer_unary_bool)
+registry.register("isposinf", "npu", isposinf, meta=meta_infer.infer_unary_bool)
 registry.register("exp", "npu", exp, meta=meta_infer.infer_unary)
 registry.register("log", "npu", log, meta=meta_infer.infer_unary)
 registry.register("sqrt", "npu", sqrt, meta=meta_infer.infer_unary)
