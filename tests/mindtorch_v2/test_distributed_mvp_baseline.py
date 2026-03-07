@@ -90,3 +90,79 @@ def test_all_gather_async_wait_populates_tensor_list_world1_cpu():
         assert gathered[0].numpy().tolist() == [2.0, 4.0]
     finally:
         _cleanup_pg()
+
+
+def test_all_gather_into_tensor_async_wait_world1_cpu():
+    _cleanup_pg()
+    port = _free_port()
+    _set_env(port)
+
+    dist.init_process_group("gloo", rank=0, world_size=1, init_method=f"tcp://127.0.0.1:{port}")
+    try:
+        source = torch.tensor([9.0, 11.0])
+        output = torch.zeros(2)
+
+        work = dist.all_gather_into_tensor(output, source, async_op=True)
+        assert work is not None
+        work.wait()
+
+        assert output.numpy().tolist() == [9.0, 11.0]
+    finally:
+        _cleanup_pg()
+
+
+def test_reduce_scatter_async_wait_world1_cpu():
+    _cleanup_pg()
+    port = _free_port()
+    _set_env(port)
+
+    dist.init_process_group("gloo", rank=0, world_size=1, init_method=f"tcp://127.0.0.1:{port}")
+    try:
+        output = torch.zeros(2)
+        input_list = [torch.tensor([1.0, 2.0])]
+
+        work = dist.reduce_scatter(output, input_list, async_op=True)
+        assert work is not None
+        work.wait()
+
+        assert output.numpy().tolist() == [1.0, 2.0]
+    finally:
+        _cleanup_pg()
+
+
+def test_gather_async_wait_world1_cpu():
+    _cleanup_pg()
+    port = _free_port()
+    _set_env(port)
+
+    dist.init_process_group("gloo", rank=0, world_size=1, init_method=f"tcp://127.0.0.1:{port}")
+    try:
+        source = torch.tensor([3.0, 5.0])
+        gathered = [torch.zeros_like(source)]
+
+        work = dist.gather(source, gather_list=gathered, dst=0, async_op=True)
+        assert work is not None
+        work.wait()
+
+        assert gathered[0].numpy().tolist() == [3.0, 5.0]
+    finally:
+        _cleanup_pg()
+
+
+def test_scatter_async_wait_world1_cpu():
+    _cleanup_pg()
+    port = _free_port()
+    _set_env(port)
+
+    dist.init_process_group("gloo", rank=0, world_size=1, init_method=f"tcp://127.0.0.1:{port}")
+    try:
+        output = torch.zeros(2)
+        scatter_list = [torch.tensor([7.0, 8.0])]
+
+        work = dist.scatter(output, scatter_list=scatter_list, src=0, async_op=True)
+        assert work is not None
+        work.wait()
+
+        assert output.numpy().tolist() == [7.0, 8.0]
+    finally:
+        _cleanup_pg()

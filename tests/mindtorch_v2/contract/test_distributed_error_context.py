@@ -1,4 +1,5 @@
 import socket
+import os
 
 import pytest
 
@@ -47,3 +48,57 @@ def test_collective_error_includes_runtime_context() -> None:
     assert "rank=0" in msg
     assert "world_size=1" in msg
     assert "op=all_reduce" in msg
+
+
+def test_hccl_init_preflight_rejects_negative_device_id_with_context() -> None:
+    _cleanup_pg()
+    port = _free_port()
+    with pytest.raises(ValueError, match=r"stage=init_process_group") as ei:
+        dist.init_process_group(
+            backend="hccl",
+            rank=0,
+            world_size=1,
+            init_method=f"tcp://127.0.0.1:{port}",
+            device_id=-1,
+        )
+
+    msg = str(ei.value)
+    assert "backend=hccl" in msg
+    assert "device_id=-1" in msg
+
+
+def test_hccl_init_preflight_rejects_rank_out_of_range_with_context() -> None:
+    _cleanup_pg()
+    old_rank = os.environ.get("RANK")
+    old_world = os.environ.get("WORLD_SIZE")
+    old_addr = os.environ.get("MASTER_ADDR")
+    old_port = os.environ.get("MASTER_PORT")
+    try:
+        os.environ["RANK"] = "3"
+        os.environ["WORLD_SIZE"] = "2"
+        os.environ["MASTER_ADDR"] = "127.0.0.1"
+        os.environ["MASTER_PORT"] = str(_free_port())
+        with pytest.raises(ValueError, match=r"stage=init_process_group") as ei:
+            dist.init_process_group(backend="hccl")
+
+        msg = str(ei.value)
+        assert "backend=hccl" in msg
+        assert "rank=3" in msg
+        assert "world_size=2" in msg
+    finally:
+        if old_rank is None:
+            os.environ.pop("RANK", None)
+        else:
+            os.environ["RANK"] = old_rank
+        if old_world is None:
+            os.environ.pop("WORLD_SIZE", None)
+        else:
+            os.environ["WORLD_SIZE"] = old_world
+        if old_addr is None:
+            os.environ.pop("MASTER_ADDR", None)
+        else:
+            os.environ["MASTER_ADDR"] = old_addr
+        if old_port is None:
+            os.environ.pop("MASTER_PORT", None)
+        else:
+            os.environ["MASTER_PORT"] = old_port
