@@ -197,3 +197,51 @@ def test_dispatch_transpose_rejects_str_dim_matches_torch():
         pt.tensor([1.0]).transpose("0", 0)
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_squeeze_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("squeeze", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.squeeze(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_unsqueeze_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("unsqueeze", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.unsqueeze(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_permute_rejects_bool_dim_sequence_matches_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    def mt_call():
+        dispatch("permute", mt_x.device.type, mt_x, [True, 0])
+
+    def th_call():
+        pt.permute(pt.tensor([[1.0, 2.0], [3.0, 4.0]]), [True, 0])
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_permute_rejects_duplicate_dims_matches_torch():
+    mt_x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+
+    def mt_call():
+        dispatch("permute", mt_x.device.type, mt_x, [0, 0])
+
+    def th_call():
+        pt.permute(pt.tensor([[1.0, 2.0], [3.0, 4.0]]), [0, 0])
+
+    assert_torch_error(mt_call, th_call)
