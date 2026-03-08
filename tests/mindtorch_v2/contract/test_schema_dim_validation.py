@@ -267,3 +267,15 @@ def test_dispatch_squeeze_accepts_tuple_dim_like_torch():
 
     assert mt_out.shape == pt_out.shape
     assert mt_out.tolist() == pt_out.tolist()
+
+
+def test_dispatch_topk_rejects_bool_k_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("topk", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.topk(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
