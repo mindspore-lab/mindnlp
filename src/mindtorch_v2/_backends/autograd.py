@@ -2547,6 +2547,9 @@ def _softsign_backward(grad, _a, saved_a, keyset):
 
 def _selu_backward(grad, _a, saved_a, keyset):
     """Backward for selu: scale * (x if x > 0 else alpha*(exp(x)-1))."""
+    if grad.device.type == "npu":
+        from .npu.backward import npu_selu_backward
+        return (npu_selu_backward(grad, saved_a),)
     SCALE = 1.0507009873554804934193349852946
     ALPHA = 1.6732631921893986195596513061800
     with _grad_context(keyset):
@@ -2589,6 +2592,9 @@ def _celu_backward(grad, _a, saved_a, keyset, args, kwargs):
 def _threshold_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for threshold: out = x if x > threshold else value."""
     threshold = args[0] if args else kwargs.get("threshold", 0.0)
+    if grad.device.type == "npu":
+        from .npu.backward import npu_threshold_backward
+        return (npu_threshold_backward(grad, saved_a, threshold),)
     with _grad_context(keyset):
         threshold_t = _scalar_tensor_like(saved_a, float(threshold))
         ones = saved_a._ones_like()
@@ -3577,6 +3583,43 @@ def _upsample_bicubic2d_backward(grad, input, saved_input, _out, keyset, args, k
 # ---- Task 3: Pool 1d/3d backward (8 ops) ----
 
 def _max_pool1d_backward(grad, input, saved_input, out, keyset, args, kwargs):
+    # NPU path: use redispatch composites to stay on device
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            out_val = out[0] if isinstance(out, tuple) else out
+            kernel_size = args[0]
+            stride = args[1]
+            padding = args[2] if len(args) > 2 else kwargs.get("padding", 0)
+            dilation = args[3] if len(args) > 3 else kwargs.get("dilation", 1)
+
+            kW = kernel_size if isinstance(kernel_size, int) else kernel_size[0]
+            sW = stride if isinstance(stride, int) else stride[0]
+            pW = padding if isinstance(padding, int) else padding[0]
+            dW = dilation if isinstance(dilation, int) else dilation[0]
+
+            N, C, W = saved_input.shape
+            _, _, W_out = grad.shape
+            padW = W + 2 * pW
+
+            if pW > 0:
+                input_padded = redispatch("pad", keyset, saved_input, (pW, pW), 'constant', float('-inf'))
+            else:
+                input_padded = saved_input
+
+            grad_padded = redispatch("zeros", keyset, (N, C, padW), dtype=grad.dtype, device=grad.device)
+            for ow in range(W_out):
+                for kw in range(kW):
+                    iw = ow * sW + kw * dW
+                    if iw < padW:
+                        mask = redispatch("eq", keyset, input_padded[:, :, iw:iw+1], out_val[:, :, ow:ow+1])
+                        contrib = redispatch("mul", keyset, grad[:, :, ow:ow+1], mask)
+                        old = grad_padded[:, :, iw:iw+1]
+                        redispatch("setitem", keyset, grad_padded, (slice(None), slice(None), slice(iw, iw+1)),
+                                   redispatch("add", keyset, old, contrib))
+            if pW > 0:
+                return (redispatch("contiguous", keyset, grad_padded[:, :, pW:pW+W]),)
+            return (redispatch("contiguous", keyset, grad_padded),)
+    # CPU path: existing numpy implementation
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3622,6 +3665,14 @@ def _max_pool1d_backward(grad, input, saved_input, out, keyset, args, kwargs):
 
 
 def _max_pool3d_backward(grad, input, saved_input, out, keyset, args, kwargs):
+    # NPU path: use aclnnMaxPool3dWithArgmaxBackward large kernel
+    if grad.device.type == "npu":
+        pool_out = out[0] if isinstance(out, tuple) else out
+        backward_data = getattr(pool_out, "_backward_data", None)
+        if backward_data is not None and "indices_ptr" in backward_data:
+            from .npu.backward import npu_max_pool3d_backward
+            return (npu_max_pool3d_backward(grad, saved_input, backward_data),)
+    # CPU path: existing numpy implementation below
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3672,6 +3723,40 @@ def _max_pool3d_backward(grad, input, saved_input, out, keyset, args, kwargs):
 
 
 def _avg_pool1d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    # NPU path: use redispatch composites to stay on device
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            kernel_size = args[0]
+            stride = args[1]
+            padding = args[2] if len(args) > 2 else kwargs.get("padding", 0)
+            count_include_pad = args[4] if len(args) > 4 else kwargs.get("count_include_pad", True)
+
+            kW = kernel_size if isinstance(kernel_size, int) else kernel_size[0]
+            sW = stride if isinstance(stride, int) else stride[0]
+            pW = padding if isinstance(padding, int) else padding[0]
+
+            N, C, W = saved_input.shape
+            _, _, W_out = grad.shape
+            padW = W + 2 * pW
+
+            grad_input_padded = redispatch("zeros", keyset, (N, C, padW), dtype=grad.dtype, device=grad.device)
+            for ow in range(W_out):
+                ws = ow * sW
+                we = min(ws + kW, padW)
+                if count_include_pad:
+                    cnt = kW
+                else:
+                    cnt = max(min(we, W + pW) - max(ws, pW), 1)
+                cnt_t = _scalar_tensor_like(grad, float(cnt))
+                scaled = redispatch("div", keyset, grad[:, :, ow:ow+1], cnt_t)
+                expanded = redispatch("expand", keyset, scaled, (N, C, we - ws))
+                old = grad_input_padded[:, :, ws:we]
+                redispatch("setitem", keyset, grad_input_padded, (slice(None), slice(None), slice(ws, we)),
+                           redispatch("add", keyset, old, expanded))
+            if pW > 0:
+                return (redispatch("contiguous", keyset, grad_input_padded[:, :, pW:pW+W]),)
+            return (redispatch("contiguous", keyset, grad_input_padded),)
+    # CPU path: existing numpy implementation
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3783,6 +3868,26 @@ def _avg_pool3d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
 
 
 def _adaptive_avg_pool1d_backward(grad, input, saved_input, _out, keyset, args, kwargs):
+    # NPU path: use redispatch composites to stay on device
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            N, C, L = saved_input.shape
+            output_size = args[0]
+            oL = output_size if isinstance(output_size, int) else output_size[0]
+
+            grad_input = redispatch("zeros", keyset, (N, C, L), dtype=grad.dtype, device=grad.device)
+            for ol in range(oL):
+                l_start = ol * L // oL
+                l_end = (ol + 1) * L // oL
+                cnt = l_end - l_start
+                cnt_t = _scalar_tensor_like(grad, float(cnt))
+                scaled = redispatch("div", keyset, grad[:, :, ol:ol+1], cnt_t)
+                expanded = redispatch("expand", keyset, scaled, (N, C, cnt))
+                old = grad_input[:, :, l_start:l_end]
+                redispatch("setitem", keyset, grad_input, (slice(None), slice(None), slice(l_start, l_end)),
+                           redispatch("add", keyset, old, expanded))
+            return (redispatch("contiguous", keyset, grad_input),)
+    # CPU path: existing numpy implementation
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3838,6 +3943,26 @@ def _adaptive_avg_pool3d_backward(grad, input, saved_input, _out, keyset, args, 
 
 
 def _adaptive_max_pool1d_backward(grad, input, saved_input, out, keyset, args, kwargs):
+    # NPU path: use redispatch composites to stay on device
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            out_val = out[0] if isinstance(out, tuple) else out
+            N, C, L = saved_input.shape
+            output_size = args[0]
+            oL = output_size if isinstance(output_size, int) else output_size[0]
+
+            grad_input = redispatch("zeros", keyset, (N, C, L), dtype=grad.dtype, device=grad.device)
+            for ol in range(oL):
+                l_start = ol * L // oL
+                l_end = (ol + 1) * L // oL
+                for il in range(l_start, l_end):
+                    mask = redispatch("eq", keyset, saved_input[:, :, il:il+1], out_val[:, :, ol:ol+1])
+                    contrib = redispatch("mul", keyset, grad[:, :, ol:ol+1], mask)
+                    old = grad_input[:, :, il:il+1]
+                    redispatch("setitem", keyset, grad_input, (slice(None), slice(None), slice(il, il+1)),
+                               redispatch("add", keyset, old, contrib))
+            return (redispatch("contiguous", keyset, grad_input),)
+    # CPU path: existing numpy implementation
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -3861,6 +3986,14 @@ def _adaptive_max_pool1d_backward(grad, input, saved_input, out, keyset, args, k
 
 
 def _adaptive_max_pool2d_backward(grad, input, saved_input, out, keyset, args, kwargs):
+    # NPU path: use aclnnAdaptiveMaxPool2dBackward large kernel
+    if grad.device.type == "npu":
+        pool_out = out[0] if isinstance(out, tuple) else out
+        backward_data = getattr(pool_out, "_backward_data", None)
+        if backward_data is not None and "indices_ptr" in backward_data:
+            from .npu.backward import npu_adaptive_max_pool2d_backward
+            return (npu_adaptive_max_pool2d_backward(grad, saved_input, backward_data),)
+    # CPU path: existing numpy implementation below
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -4771,6 +4904,9 @@ def _unfold_backward(grad, a, _saved_a, keyset, args, kwargs):
     dim = args[0] if len(args) > 0 else kwargs.get("dimension", 0)
     size = args[1] if len(args) > 1 else kwargs.get("size")
     step = args[2] if len(args) > 2 else kwargs.get("step")
+    if grad.device.type == "npu":
+        from .npu.backward import npu_unfold_backward
+        return (npu_unfold_backward(grad, list(a.shape), dim, size, step),)
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     grad_np = _to_numpy(grad)
@@ -4804,6 +4940,25 @@ def _diff_backward(grad, a, _saved_a, keyset, args, kwargs):
     n = args[0] if args else kwargs.get("n", 1)
     dim = args[1] if len(args) > 1 else kwargs.get("dim", -1)
     d = dim if dim >= 0 else dim + len(a.shape)
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            g = grad
+            for _ in range(n):
+                ndim = len(g.shape)
+                # PyTorch pad spec: pairs from last dim to first
+                pad_before = []
+                pad_after = []
+                for i in range(ndim - 1, -1, -1):
+                    if i == d:
+                        pad_before.extend([1, 0])  # 1 on left, 0 on right
+                        pad_after.extend([0, 1])    # 0 on left, 1 on right
+                    else:
+                        pad_before.extend([0, 0])
+                        pad_after.extend([0, 0])
+                padded_before = redispatch("pad", keyset, g, pad_before, 'constant', 0.0)
+                padded_after = redispatch("pad", keyset, g, pad_after, 'constant', 0.0)
+                g = redispatch("sub", keyset, padded_before, padded_after)
+            return (g,)
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     g = _to_numpy(grad)
@@ -4827,6 +4982,12 @@ def _heaviside_backward(grad, a, b, _saved_a, _saved_b, _keyset):
 
 # 5d: trace backward
 def _trace_backward(grad, a, _saved_a, keyset, _args, _kwargs):
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            n = a.shape[0]
+            m = a.shape[1] if len(a.shape) > 1 else n
+            eye = redispatch("eye", keyset, n, m, dtype=a.dtype, device=a.device)
+            return (redispatch("mul", keyset, eye, grad),)
     with _grad_context(keyset):
         n = a.shape[0]
         eye = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
@@ -5134,6 +5295,11 @@ def _autograd_masked_select(name):
 
 def _masked_select_backward(grad, a, mask, keyset):
     """Backward for masked_select: scatter grad back to selected positions."""
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            grad_input = redispatch("zeros", keyset, a.shape, dtype=a.dtype, device=a.device)
+            redispatch("masked_scatter_", keyset, grad_input, mask, grad)
+            return (grad_input,)
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     with _grad_context(keyset):

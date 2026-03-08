@@ -7070,6 +7070,61 @@ def max_pool2d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=Fals
     return out
 
 
+def max_pool3d(input, kernel_size, stride, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+    """MaxPool3d forward using aclnnMaxPool3dWithArgmax (supports fp32/fp16 on Ascend)."""
+    import math as _math
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    kD, kH, kW = (kernel_size,) * 3 if isinstance(kernel_size, int) else tuple(kernel_size)
+    sD, sH, sW = (stride,) * 3 if isinstance(stride, int) else tuple(stride)
+    pD, pH, pW = (padding,) * 3 if isinstance(padding, int) else tuple(padding)
+    dD, dH, dW = (dilation,) * 3 if isinstance(dilation, int) else tuple(dilation)
+
+    N, C, D, H, W = input.shape
+    ekD = (kD - 1) * dD + 1
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+    if ceil_mode:
+        D_out = _math.ceil((D + 2 * pD - ekD) / sD) + 1
+        H_out = _math.ceil((H + 2 * pH - ekH) / sH) + 1
+        W_out = _math.ceil((W + 2 * pW - ekW) / sW) + 1
+    else:
+        D_out = (D + 2 * pD - ekD) // sD + 1
+        H_out = (H + 2 * pH - ekH) // sH + 1
+        W_out = (W + 2 * pW - ekW) // sW + 1
+
+    out_shape = (N, C, D_out, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    # aclnnMaxPool3dWithArgmax returns argmax indices as int32 with same shape as output
+    indices_shape = out_shape
+    indices_stride = out_stride
+    indices_numel = out_numel
+    indices_ptr = npu_runtime._alloc_device(max(indices_numel, 1) * 4, runtime=runtime)  # int32 = 4 bytes
+
+    aclnn.max_pool3d_with_argmax(
+        _unwrap_storage(input).data_ptr(), out_ptr, indices_ptr,
+        input.shape, input.stride, input.dtype,
+        [kD, kH, kW], [sD, sH, sW], [pD, pH, pW], [dD, dH, dW], ceil_mode,
+        out_shape, out_stride, indices_shape, indices_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+    out._backward_data = {
+        "indices_ptr": indices_ptr, "indices_shape": indices_shape,
+        "indices_stride": indices_stride,
+        "kernel_size": (kD, kH, kW), "strides": (sD, sH, sW),
+        "padding": (pD, pH, pW), "dilation": (dD, dH, dW),
+        "ceil_mode": ceil_mode,
+    }
+    return out
+
 def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False,
                count_include_pad=True, divisor_override=None):
     """AvgPool2d forward using aclnnAvgPool2d."""
@@ -7172,6 +7227,67 @@ def adaptive_avg_pool2d(input, output_size):
 
     out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
     return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def adaptive_max_pool2d(input, output_size, return_indices=False):
+    """AdaptiveMaxPool2d forward using aclnnAdaptiveMaxPool2d (supports fp32/fp16 on Ascend)."""
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+
+    if isinstance(output_size, int):
+        oH = oW = output_size
+    else:
+        oH, oW = output_size
+
+    # Handle both 3D (C, H, W) and 4D (N, C, H, W) input
+    unsqueezed = False
+    if len(input.shape) == 3:
+        unsqueezed = True
+        C, H, W = input.shape
+        input = input.unsqueeze(0)  # (1, C, H, W)
+        N = 1
+    else:
+        N, C, H, W = input.shape
+
+    out_shape = (N, C, oH, oW)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    # indices are int64 (8 bytes each)
+    indices_shape = out_shape
+    indices_stride = out_stride
+    indices_numel = out_numel
+    indices_ptr = npu_runtime._alloc_device(max(indices_numel, 1) * 8, runtime=runtime)
+
+    aclnn.adaptive_max_pool2d(
+        _unwrap_storage(input).data_ptr(), out_ptr, indices_ptr,
+        input.shape, input.stride, input.dtype,
+        [oH, oW],
+        out_shape, out_stride,
+        indices_shape, indices_stride,
+        runtime, stream=stream.stream,
+    )
+
+    out_storage = npu_typed_storage_from_ptr(out_ptr, max(out_numel, 1), input.dtype, device=input.device)
+    out = _wrap_tensor(out_storage, out_shape, out_stride)
+    out._backward_data = {
+        "indices_ptr": indices_ptr, "indices_shape": indices_shape,
+        "indices_stride": indices_stride,
+    }
+
+    if unsqueezed:
+        out = out.squeeze(0)
+
+    if return_indices:
+        indices_storage = npu_typed_storage_from_ptr(indices_ptr, max(indices_numel, 1), int64_dtype, device=input.device)
+        indices_tensor = _wrap_tensor(indices_storage, indices_shape, indices_stride)
+        if unsqueezed:
+            indices_tensor = indices_tensor.squeeze(0)
+        return out, indices_tensor
+
+    return out
 
 
 # ---------------------------------------------------------------
