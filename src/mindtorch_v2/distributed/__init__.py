@@ -904,6 +904,9 @@ def split_group(parent_pg, color, key=None):
     if _default_pg is None:
         raise RuntimeError("Default process group not initialized")
 
+    if parent_pg is GroupMember.NON_GROUP_MEMBER:
+        return GroupMember.NON_GROUP_MEMBER
+
     pg = parent_pg or _default_pg
     if pg not in _pg_map:
         raise ValueError("The given group is not registered")
