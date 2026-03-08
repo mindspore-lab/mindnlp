@@ -279,3 +279,27 @@ def test_dispatch_topk_rejects_bool_k_matches_torch():
         pt.topk(pt.tensor([1.0, 2.0]), True)
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_topk_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("topk", mt_x.device.type, mt_x, 1, True)
+
+    def th_call():
+        pt.topk(pt.tensor([1.0, 2.0]), 1, True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_topk_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("topk", mt_x.device.type, mt_x, 1, "0")
+
+    def th_call():
+        pt.topk(pt.tensor([1.0, 2.0]), 1, "0")
+
+    assert_torch_error(mt_call, th_call)

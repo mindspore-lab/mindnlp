@@ -366,6 +366,12 @@ class OpSchema:
                     f"{name}(): argument 'k' (position 2) must be int, not {type(value).__name__}"
                 )
 
+        def _validate_topk_dim(value):
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError(
+                    f"{name}(): argument 'dim' (position 3) must be int, not {type(value).__name__}"
+                )
+
         def _normalize_permute_dims(value):
             if isinstance(value, tuple):
                 return list(value)
@@ -460,6 +466,9 @@ class OpSchema:
                 continue
             if op_short_name == "topk" and param.name == "k":
                 _validate_topk_k(value)
+                continue
+            if op_short_name == "topk" and param.name == "dim":
+                _validate_topk_dim(value)
                 continue
             if ptype == "bool" and not isinstance(value, bool):
                 _raise_invalid_combo()
