@@ -682,29 +682,29 @@ def all_to_all_single(output, input, output_split_sizes=None,
             if not async_op:
                 work.wait()
                 dst_base = output.storage().data_ptr()
-                offset = 0
-                for t in output_list:
-                    nbytes = t.numel() * itemsize
+                dst_offset = 0
+                for t, out_size in zip(output_list, output_split_sizes):
+                    nbytes = out_size * output.dtype.itemsize
                     ret = npu_runtime.acl.rt.memcpy(
-                        dst_base + offset, nbytes,
+                        dst_base + dst_offset, nbytes,
                         t.storage().data_ptr(), nbytes, ACL_MEMCPY_D2D,
                     )
                     if ret != 0:
                         raise RuntimeError(f"D2D memcpy failed: {ret}")
-                    offset += nbytes
+                    dst_offset += nbytes
                 return None
             def _writeback_npu_output():
                 dst_base = output.storage().data_ptr()
-                offset = 0
-                for t in output_list:
-                    nbytes = t.numel() * itemsize
+                dst_offset = 0
+                for t, out_size in zip(output_list, output_split_sizes):
+                    nbytes = out_size * output.dtype.itemsize
                     ret = npu_runtime.acl.rt.memcpy(
-                        dst_base + offset, nbytes,
+                        dst_base + dst_offset, nbytes,
                         t.storage().data_ptr(), nbytes, ACL_MEMCPY_D2D,
                     )
                     if ret != 0:
                         raise RuntimeError(f"D2D memcpy failed: {ret}")
-                    offset += nbytes
+                    dst_offset += nbytes
             work._on_wait = _writeback_npu_output
             return work
     else:

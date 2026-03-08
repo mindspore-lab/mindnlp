@@ -308,57 +308,63 @@ class ProcessGroupHCCL(ProcessGroup):
         stream = self._stream()
         ACL_MEMCPY_D2D = 3
 
-        # Fast path for 2 ranks: use native HcclAlltoAll
+        # Fast path for 2 ranks + equal split: use native HcclAlltoAll.
+        # Unequal split must use per-peer P2P so each shard keeps its own size.
         if self._size == 2:
-            import mindtorch_v2 as torch
-            count_per_rank = input_tensors[0].numel()
-            dtype = input_tensors[0].dtype
-            itemsize = dtype.itemsize
+            equal_split = (
+                len({t.numel() for t in input_tensors}) == 1 and
+                len({t.numel() for t in output_tensors}) == 1
+            )
+            if equal_split:
+                import mindtorch_v2 as torch
+                count_per_rank = input_tensors[0].numel()
+                dtype = input_tensors[0].dtype
+                itemsize = dtype.itemsize
 
-            # Pack into contiguous buffers
-            total_count = count_per_rank * 2
-            send_flat = torch.empty(total_count, dtype=dtype, device=input_tensors[0].device)
-            recv_flat = torch.empty(total_count, dtype=dtype, device=output_tensors[0].device)
+                # Pack into contiguous buffers
+                total_count = count_per_rank * 2
+                send_flat = torch.empty(total_count, dtype=dtype, device=input_tensors[0].device)
+                recv_flat = torch.empty(total_count, dtype=dtype, device=output_tensors[0].device)
 
-            dst_base = send_flat.storage().data_ptr()
-            for i, t in enumerate(input_tensors):
-                ret = npu_runtime.acl.rt.memcpy(
-                    dst_base + i * count_per_rank * itemsize,
-                    count_per_rank * itemsize,
-                    t.storage().data_ptr(),
-                    count_per_rank * itemsize,
-                    ACL_MEMCPY_D2D)
-                if ret != 0:
-                    raise RuntimeError(f"D2D memcpy pack failed: {ret}")
+                dst_base = send_flat.storage().data_ptr()
+                for i, t in enumerate(input_tensors):
+                    ret = npu_runtime.acl.rt.memcpy(
+                        dst_base + i * count_per_rank * itemsize,
+                        count_per_rank * itemsize,
+                        t.storage().data_ptr(),
+                        count_per_rank * itemsize,
+                        ACL_MEMCPY_D2D)
+                    if ret != 0:
+                        raise RuntimeError(f"D2D memcpy pack failed: {ret}")
 
-            # Call HcclAlltoAll
-            ret = bindings.all_to_all(
-                ctypes.c_void_p(send_flat.storage().data_ptr()),
-                ctypes.c_uint64(count_per_rank),
-                ctypes.c_int32(dtype_to_hccl(dtype)),
-                ctypes.c_void_p(recv_flat.storage().data_ptr()),
-                ctypes.c_uint64(count_per_rank),
-                ctypes.c_int32(dtype_to_hccl(dtype)),
-                self._comm,
-                ctypes.c_void_p(int(stream)))
-            _check(ret, "HcclAlltoAll")
+                # Call HcclAlltoAll
+                ret = bindings.all_to_all(
+                    ctypes.c_void_p(send_flat.storage().data_ptr()),
+                    ctypes.c_uint64(count_per_rank),
+                    ctypes.c_int32(dtype_to_hccl(dtype)),
+                    ctypes.c_void_p(recv_flat.storage().data_ptr()),
+                    ctypes.c_uint64(count_per_rank),
+                    ctypes.c_int32(dtype_to_hccl(dtype)),
+                    self._comm,
+                    ctypes.c_void_p(int(stream)))
+                _check(ret, "HcclAlltoAll")
 
-            # Sync and unpack
-            dev_id = self._device_id if self._device_id is not None else 0
-            npu_runtime.get_runtime(dev_id).synchronize_stream(stream)
+                # Sync and unpack
+                dev_id = self._device_id if self._device_id is not None else 0
+                npu_runtime.get_runtime(dev_id).synchronize_stream(stream)
 
-            src_base = recv_flat.storage().data_ptr()
-            for i, t in enumerate(output_tensors):
-                ret = npu_runtime.acl.rt.memcpy(
-                    t.storage().data_ptr(),
-                    count_per_rank * itemsize,
-                    src_base + i * count_per_rank * itemsize,
-                    count_per_rank * itemsize,
-                    ACL_MEMCPY_D2D)
-                if ret != 0:
-                    raise RuntimeError(f"D2D memcpy unpack failed: {ret}")
+                src_base = recv_flat.storage().data_ptr()
+                for i, t in enumerate(output_tensors):
+                    ret = npu_runtime.acl.rt.memcpy(
+                        t.storage().data_ptr(),
+                        count_per_rank * itemsize,
+                        src_base + i * count_per_rank * itemsize,
+                        count_per_rank * itemsize,
+                        ACL_MEMCPY_D2D)
+                    if ret != 0:
+                        raise RuntimeError(f"D2D memcpy unpack failed: {ret}")
 
-            return self._make_work(stream)
+                return self._make_work(stream)
 
         # Fallback for >2 ranks: use P2P
         for peer in range(self._size):
