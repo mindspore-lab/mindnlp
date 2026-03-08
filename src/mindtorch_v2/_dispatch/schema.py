@@ -372,6 +372,20 @@ class OpSchema:
                     f"{name}(): argument 'dim' (position 3) must be int, not {type(value).__name__}"
                 )
 
+        def _validate_cum_dim(value, input_tensor):
+            if isinstance(value, bool):
+                _raise_invalid_combo_with_got("(Tensor, bool)")
+            if isinstance(value, int):
+                return
+            if isinstance(value, str):
+                if value.isidentifier():
+                    raise _dimname_not_found(value, input_tensor)
+                raise RuntimeError(
+                    "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                    f"and/or underscore and starts with a non-digit. got: '{value}'."
+                )
+            _raise_invalid_combo_with_got(f"(Tensor, {_type_label(value)})")
+
         def _normalize_permute_dims(value):
             if isinstance(value, tuple):
                 return list(value)
@@ -469,6 +483,10 @@ class OpSchema:
                 continue
             if op_short_name == "topk" and param.name == "dim":
                 _validate_topk_dim(value)
+                continue
+            if op_short_name in {"cumsum", "cumprod"} and param.name == "dim":
+                input_tensor = bound.get("input")
+                _validate_cum_dim(value, input_tensor)
                 continue
             if ptype == "bool" and not isinstance(value, bool):
                 _raise_invalid_combo()
