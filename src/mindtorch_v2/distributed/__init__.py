@@ -628,7 +628,7 @@ def all_to_all(output_tensor_list, input_tensor_list, group=None,
     return work
 
 
-def _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes):
+def _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes, input_numel, output_numel):
     if len(input_split_sizes) != pg.size():
         raise ValueError(
             f"input_split_sizes length {len(input_split_sizes)} must equal world_size {pg.size()}"
@@ -639,6 +639,17 @@ def _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes
         )
     if any(int(s) < 0 for s in input_split_sizes + output_split_sizes):
         raise ValueError("all_to_all_single split sizes must be non-negative")
+
+    input_split_sum = sum(int(s) for s in input_split_sizes)
+    output_split_sum = sum(int(s) for s in output_split_sizes)
+    if input_split_sum != int(input_numel):
+        raise ValueError(
+            f"all_to_all_single input numel {int(input_numel)} must equal sum(input_split_sizes) {input_split_sum}"
+        )
+    if output_split_sum != int(output_numel):
+        raise ValueError(
+            f"all_to_all_single output numel {int(output_numel)} must equal sum(output_split_sizes) {output_split_sum}"
+        )
 
 
 def _validate_hccl_all_to_all_single_pairwise(pg, input_split_sizes, output_split_sizes):
@@ -699,7 +710,7 @@ def all_to_all_single(output, input, output_split_sizes=None,
         chunk_size = output.numel() // world_size
         output_split_sizes = [chunk_size] * world_size
 
-    _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes)
+    _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes, input.numel(), output.numel())
 
     if isinstance(pg, ProcessGroupHCCL):
         _validate_hccl_all_to_all_single_pairwise(pg, input_split_sizes, output_split_sizes)
