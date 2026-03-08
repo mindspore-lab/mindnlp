@@ -9103,3 +9103,797 @@ def _adamw_step_op(param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
                    step, lr, beta1, beta2, eps, weight_decay, amsgrad, maximize):
     return _adam_step_op(param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
                          step, lr, beta1, beta2, eps, weight_decay, amsgrad, maximize)
+
+
+# ===========================================================================
+# Phase 2: Activation function composites
+# ===========================================================================
+
+def selu_op(a):
+    """SELU activation: scale * (max(0,x) + min(0, alpha*(exp(x)-1)))."""
+    _alpha = 1.6732632423543772848170429916717
+    _scale = 1.0507009873554804934193349852946
+    return mul(elu(a, alpha=_alpha), _scalar_to_npu_tensor(_scale, a))
+
+
+def celu_op(a, alpha=1.0):
+    """CELU activation: max(0,x) + min(0, alpha*(exp(x/alpha)-1))."""
+    inv_alpha = _scalar_to_npu_tensor(1.0 / alpha, a)
+    alpha_t = _scalar_to_npu_tensor(alpha, a)
+    one = _scalar_to_npu_tensor(1.0, a)
+    zero = _scalar_to_npu_tensor(0.0, a)
+    # exp(x / alpha) - 1
+    exp_part = sub(exp(mul(a, inv_alpha)), one)
+    neg_part = mul(alpha_t, minimum(exp_part, zero))
+    pos_part = maximum(a, zero)
+    return add(pos_part, neg_part)
+
+
+def threshold_op(a, threshold_val, value):
+    """Threshold: x if x > threshold else value."""
+    thresh_t = _scalar_to_npu_tensor(threshold_val, a)
+    value_t = _scalar_to_npu_tensor(value, a)
+    mask = gt(a, thresh_t)
+    return where(mask, a, value_t)
+
+
+def hardshrink_op(a, lambd=0.5):
+    """Hard shrink: x if |x| > lambd else 0."""
+    zero = _scalar_to_npu_tensor(0.0, a)
+    lambd_t = _scalar_to_npu_tensor(lambd, a)
+    mask = gt(abs(a), lambd_t)
+    return where(mask, a, zero)
+
+
+def softshrink_op(a, lambd=0.5):
+    """Soft shrink: x-lambd if x>lambd, x+lambd if x<-lambd, else 0."""
+    zero = _scalar_to_npu_tensor(0.0, a)
+    lambd_t = _scalar_to_npu_tensor(lambd, a)
+    neg_lambd_t = _scalar_to_npu_tensor(-lambd, a)
+    pos_mask = gt(a, lambd_t)
+    neg_mask = lt(a, neg_lambd_t)
+    result = where(pos_mask, sub(a, lambd_t), zero)
+    return where(neg_mask, add(a, lambd_t), result)
+
+
+def hardswish_op(a):
+    """HardSwish: x * clamp(x + 3, 0, 6) / 6."""
+    three = _scalar_to_npu_tensor(3.0, a)
+    six = _scalar_to_npu_tensor(6.0, a)
+    return div(mul(a, clamp(add(a, three), min_val=0.0, max_val=6.0)), six)
+
+
+def hardsigmoid_op(a):
+    """HardSigmoid: clamp(x + 3, 0, 6) / 6."""
+    six = _scalar_to_npu_tensor(6.0, a)
+    three = _scalar_to_npu_tensor(3.0, a)
+    return div(clamp(add(a, three), min_val=0.0, max_val=6.0), six)
+
+
+def softsign_op(a):
+    """Softsign: x / (1 + |x|)."""
+    one = _scalar_to_npu_tensor(1.0, a)
+    return div(a, add(one, abs(a)))
+
+
+def rrelu_op(a, lower=0.125, upper=0.3333333333333333, training=False):
+    """RReLU: if training, random slope from [lower, upper]; else fixed (lower+upper)/2."""
+    zero = _scalar_to_npu_tensor(0.0, a)
+    slope = (lower + upper) / 2.0
+    slope_t = _scalar_to_npu_tensor(slope, a)
+    mask = gt(a, zero)
+    return where(mask, a, mul(a, slope_t))
+
+
+def normalize_op(a, p=2.0, dim=1, eps=1e-12):
+    """Normalize along dim: x / max(norm(x, p, dim, keepdim=True), eps)."""
+    norm_val = norm_(a, p=p, dim=dim, keepdim=True)
+    eps_t = _scalar_to_npu_tensor(eps, norm_val)
+    denom = maximum(norm_val, eps_t)
+    return div(a, denom)
+
+
+def moveaxis_op(a, source, destination):
+    """Move axes of tensor to new positions (alias for movedim)."""
+    from ..._dispatch.dispatcher import dispatch
+    return dispatch("movedim", "npu", a, source, destination)
+
+
+# ===========================================================================
+# Phase 3: 1D pooling composites (unsqueeze → 2D pool → squeeze)
+# ===========================================================================
+
+def adaptive_avg_pool1d_op(input, output_size):
+    """Adaptive average pooling 1D via lifting to 2D."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..common import view as view_backend
+    # (N, C, W) → (N, C, 1, W) → adaptive_avg_pool2d → (N, C, 1, oW) → (N, C, oW)
+    N, C, W = input.shape
+    oW = output_size[0] if isinstance(output_size, (list, tuple)) else output_size
+    input_4d = view_backend.reshape(input, (N, C, 1, W))
+    out_4d = dispatch("adaptive_avg_pool2d", "npu", input_4d, [1, oW])
+    return view_backend.reshape(out_4d, (N, C, oW))
+
+
+def avg_pool1d_op(input, kernel_size, stride, padding=0, ceil_mode=False,
+                  count_include_pad=True):
+    """Average pooling 1D via lifting to 2D."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..common import view as view_backend
+    kW = kernel_size[0] if isinstance(kernel_size, (list, tuple)) else kernel_size
+    sW = stride[0] if isinstance(stride, (list, tuple)) else stride
+    pW = padding[0] if isinstance(padding, (list, tuple)) else padding
+    N, C, W = input.shape
+    input_4d = view_backend.reshape(input, (N, C, 1, W))
+    out_4d = dispatch("avg_pool2d", "npu", input_4d, [1, kW], [1, sW], [0, pW],
+                      ceil_mode, count_include_pad)
+    oW = out_4d.shape[3]
+    return view_backend.reshape(out_4d, (N, C, oW))
+
+
+def max_pool1d_op(input, kernel_size, stride, padding=0, dilation=1,
+                  ceil_mode=False, return_indices=False):
+    """Max pooling 1D via lifting to 2D."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..common import view as view_backend
+    kW = kernel_size[0] if isinstance(kernel_size, (list, tuple)) else kernel_size
+    sW = stride[0] if isinstance(stride, (list, tuple)) else stride
+    pW = padding[0] if isinstance(padding, (list, tuple)) else padding
+    dW = dilation[0] if isinstance(dilation, (list, tuple)) else dilation
+    N, C, W = input.shape
+    input_4d = view_backend.reshape(input, (N, C, 1, W))
+    result = dispatch("max_pool2d", "npu", input_4d, [1, kW], [1, sW], [0, pW],
+                      [1, dW], ceil_mode, return_indices)
+    if return_indices:
+        out_4d, idx_4d = result
+        oW = out_4d.shape[3]
+        return view_backend.reshape(out_4d, (N, C, oW)), view_backend.reshape(idx_4d, (N, C, oW))
+    oW = result.shape[3]
+    return view_backend.reshape(result, (N, C, oW))
+
+
+def adaptive_max_pool1d_op(input, output_size, return_indices=False):
+    """Adaptive max pooling 1D via computed kernel/stride + max_pool1d."""
+    from ..._dispatch.dispatcher import dispatch
+    N, C, W = input.shape
+    oW = output_size[0] if isinstance(output_size, (list, tuple)) else output_size
+    # Compute equivalent kernel/stride for adaptive pooling
+    kW = (W + oW - 1) // oW
+    sW = W // oW
+    pW = 0
+    return max_pool1d_op(input, [kW], [sW], [pW], [1], False, return_indices)
+
+
+# ===========================================================================
+# Phase 4: Optimizer composites
+# ===========================================================================
+
+def _sgd_step_op(param, grad, buf, lr, momentum, dampening, weight_decay,
+                 nesterov, maximize):
+    """SGD step as composite of NPU arithmetic ops."""
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        wd_t = _scalar_to_npu_tensor(weight_decay, param)
+        g = add(g, mul(wd_t, param))
+    if momentum != 0:
+        mom_t = _scalar_to_npu_tensor(momentum, buf)
+        damp_t = _scalar_to_npu_tensor(1.0 - dampening, buf)
+        # buf = momentum * buf + (1-dampening) * g
+        new_buf = add(mul(mom_t, buf), mul(damp_t, g))
+        copy_(buf, new_buf)
+        if nesterov:
+            g = add(g, mul(mom_t, buf))
+        else:
+            g = buf
+    lr_t = _scalar_to_npu_tensor(lr, param)
+    new_param = sub(param, mul(lr_t, g))
+    copy_(param, new_param)
+    return param
+
+
+def _adagrad_step_op(param, grad, state_sum, step, lr, lr_decay,
+                     weight_decay, eps, maximize):
+    """Adagrad step."""
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    # state_sum += g * g
+    copy_(state_sum, add(state_sum, mul(g, g)))
+    # clr = lr / (1 + (step-1) * lr_decay)
+    clr = lr / (1.0 + (step - 1) * lr_decay)
+    clr_t = _scalar_to_npu_tensor(clr, param)
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    # param -= clr * g / (sqrt(state_sum) + eps)
+    new_param = sub(param, mul(clr_t, div(g, add(sqrt(state_sum), eps_t))))
+    copy_(param, new_param)
+    return param
+
+
+def _rmsprop_step_op(param, grad, square_avg, grad_avg, buf,
+                     step, lr, alpha, eps, weight_decay, momentum,
+                     centered, maximize):
+    """RMSprop step."""
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    alpha_t = _scalar_to_npu_tensor(alpha, square_avg)
+    one_minus_alpha_t = _scalar_to_npu_tensor(1.0 - alpha, square_avg)
+    # square_avg = alpha * square_avg + (1-alpha) * g * g
+    copy_(square_avg, add(mul(alpha_t, square_avg), mul(one_minus_alpha_t, mul(g, g))))
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    if centered:
+        # grad_avg = alpha * grad_avg + (1-alpha) * g
+        copy_(grad_avg, add(mul(alpha_t, grad_avg), mul(one_minus_alpha_t, g)))
+        avg = sub(square_avg, mul(grad_avg, grad_avg))
+        denom = add(sqrt(avg), eps_t)
+    else:
+        denom = add(sqrt(square_avg), eps_t)
+    lr_t = _scalar_to_npu_tensor(lr, param)
+    if momentum > 0:
+        mom_t = _scalar_to_npu_tensor(momentum, buf)
+        copy_(buf, add(mul(mom_t, buf), div(g, denom)))
+        copy_(param, sub(param, mul(lr_t, buf)))
+    else:
+        copy_(param, sub(param, mul(lr_t, div(g, denom))))
+    return param
+
+
+def _adadelta_step_op(param, grad, square_avg, acc_delta, lr, rho, eps,
+                      weight_decay, maximize):
+    """Adadelta step."""
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    rho_t = _scalar_to_npu_tensor(rho, square_avg)
+    one_rho_t = _scalar_to_npu_tensor(1.0 - rho, square_avg)
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    # square_avg = rho * square_avg + (1-rho) * g^2
+    copy_(square_avg, add(mul(rho_t, square_avg), mul(one_rho_t, mul(g, g))))
+    # delta = sqrt(acc_delta + eps) / sqrt(square_avg + eps) * g
+    std = sqrt(add(acc_delta, eps_t))
+    delta = mul(div(std, sqrt(add(square_avg, eps_t))), g)
+    # acc_delta = rho * acc_delta + (1-rho) * delta^2
+    copy_(acc_delta, add(mul(rho_t, acc_delta), mul(one_rho_t, mul(delta, delta))))
+    lr_t = _scalar_to_npu_tensor(lr, param)
+    copy_(param, sub(param, mul(lr_t, delta)))
+    return param
+
+
+def _adamax_step_op(param, grad, exp_avg, exp_inf, step, lr, beta1, beta2,
+                    eps, weight_decay, maximize):
+    """Adamax step."""
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    b1_t = _scalar_to_npu_tensor(beta1, exp_avg)
+    one_b1_t = _scalar_to_npu_tensor(1.0 - beta1, exp_avg)
+    b2_t = _scalar_to_npu_tensor(beta2, exp_inf)
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    # exp_avg = beta1 * exp_avg + (1-beta1) * g
+    copy_(exp_avg, add(mul(b1_t, exp_avg), mul(one_b1_t, g)))
+    # exp_inf = max(beta2 * exp_inf, abs(g) + eps)
+    copy_(exp_inf, maximum(mul(b2_t, exp_inf), add(abs(g), eps_t)))
+    # bias correction
+    bc1 = 1.0 - beta1 ** step
+    step_size = lr / bc1
+    step_t = _scalar_to_npu_tensor(step_size, param)
+    copy_(param, sub(param, mul(step_t, div(exp_avg, exp_inf))))
+    return param
+
+
+def _asgd_step_op(param, grad, ax, step, lr, lambd, alpha, t0,
+                  weight_decay, maximize):
+    """Averaged SGD step."""
+    import math
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    eta = lr / ((1.0 + lambd * lr * step) ** alpha)
+    eta_t = _scalar_to_npu_tensor(eta, param)
+    new_param = sub(param, mul(eta_t, g))
+    copy_(param, new_param)
+    if step >= t0:
+        mu_t_val = 1.0 / max(1, step - t0 + 1)
+        mu_t = _scalar_to_npu_tensor(mu_t_val, ax)
+        # ax = ax + mu * (param - ax)
+        copy_(ax, add(ax, mul(mu_t, sub(param, ax))))
+    else:
+        copy_(ax, param)
+    return param
+
+
+def _nadam_step_op(param, grad, exp_avg, exp_avg_sq, step,
+                   lr, beta1, beta2, eps, weight_decay,
+                   mu, mu_next, mu_product, mu_product_next, maximize):
+    """NAdam step."""
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    b1_t = _scalar_to_npu_tensor(beta1, exp_avg)
+    one_b1_t = _scalar_to_npu_tensor(1.0 - beta1, exp_avg)
+    b2_t = _scalar_to_npu_tensor(beta2, exp_avg_sq)
+    one_b2_t = _scalar_to_npu_tensor(1.0 - beta2, exp_avg_sq)
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    # Update moments
+    copy_(exp_avg, add(mul(b1_t, exp_avg), mul(one_b1_t, g)))
+    copy_(exp_avg_sq, add(mul(b2_t, exp_avg_sq), mul(one_b2_t, mul(g, g))))
+    # Bias correction for v
+    bc2 = 1.0 - beta2 ** step
+    # Nesterov-corrected first moment
+    c1 = mu_next / (1.0 - mu_product_next)
+    c2 = mu / (1.0 - mu_product)
+    ea_hat = add(mul(_scalar_to_npu_tensor(c1, exp_avg), exp_avg),
+                 mul(_scalar_to_npu_tensor(c2, g), g))
+    eas_hat_t = _scalar_to_npu_tensor(1.0 / bc2, exp_avg_sq)
+    eas_hat = mul(exp_avg_sq, eas_hat_t)
+    lr_t = _scalar_to_npu_tensor(lr, param)
+    copy_(param, sub(param, mul(lr_t, div(ea_hat, add(sqrt(eas_hat), eps_t)))))
+    return param
+
+
+def _radam_step_op(param, grad, exp_avg, exp_avg_sq, step, lr, beta1, beta2,
+                   eps, weight_decay, maximize):
+    """RAdam step."""
+    import math
+    g = neg(grad) if maximize else grad
+    if weight_decay != 0:
+        g = add(g, mul(_scalar_to_npu_tensor(weight_decay, param), param))
+    b1_t = _scalar_to_npu_tensor(beta1, exp_avg)
+    one_b1_t = _scalar_to_npu_tensor(1.0 - beta1, exp_avg)
+    b2_t = _scalar_to_npu_tensor(beta2, exp_avg_sq)
+    one_b2_t = _scalar_to_npu_tensor(1.0 - beta2, exp_avg_sq)
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    # Update moments
+    copy_(exp_avg, add(mul(b1_t, exp_avg), mul(one_b1_t, g)))
+    copy_(exp_avg_sq, add(mul(b2_t, exp_avg_sq), mul(one_b2_t, mul(g, g))))
+    bc1 = 1.0 - beta1 ** step
+    bc2 = 1.0 - beta2 ** step
+    ea_corrected_t = _scalar_to_npu_tensor(1.0 / bc1, exp_avg)
+    ea_corrected = mul(exp_avg, ea_corrected_t)
+    rho_inf = 2.0 / (1.0 - beta2) - 1.0
+    rho_t = rho_inf - 2.0 * step * (beta2 ** step) / bc2
+    lr_t = _scalar_to_npu_tensor(lr, param)
+    if rho_t > 5:
+        eas_corrected_t = _scalar_to_npu_tensor(1.0 / bc2, exp_avg_sq)
+        eas_corrected = mul(exp_avg_sq, eas_corrected_t)
+        rect = math.sqrt((rho_t - 4) * (rho_t - 2) * rho_inf /
+                         ((rho_inf - 4) * (rho_inf - 2) * rho_t))
+        rect_t = _scalar_to_npu_tensor(rect, param)
+        copy_(param, sub(param, mul(lr_t, mul(rect_t, div(ea_corrected,
+                                                          add(sqrt(eas_corrected), eps_t))))))
+    else:
+        copy_(param, sub(param, mul(lr_t, ea_corrected)))
+    return param
+
+
+def _rprop_step_op(param, grad, prev, step_sizes, lr, etaminus, etaplus,
+                   step_size_min, step_size_max, maximize):
+    """Rprop step."""
+    g = neg(grad) if maximize else grad
+    # sign = g * prev
+    sign_prod = mul(g, prev)
+    zero = _scalar_to_npu_tensor(0.0, param)
+    pos_mask = gt(sign_prod, zero)
+    neg_mask = lt(sign_prod, zero)
+    etaplus_t = _scalar_to_npu_tensor(etaplus, step_sizes)
+    etaminus_t = _scalar_to_npu_tensor(etaminus, step_sizes)
+    max_t = _scalar_to_npu_tensor(step_size_max, step_sizes)
+    min_t = _scalar_to_npu_tensor(step_size_min, step_sizes)
+    # Adapt step sizes
+    new_steps = where(pos_mask, minimum(mul(step_sizes, etaplus_t), max_t),
+                      where(neg_mask, maximum(mul(step_sizes, etaminus_t), min_t),
+                            step_sizes))
+    copy_(step_sizes, new_steps)
+    # Update params: param -= sign(g) * step_sizes
+    g_sign = sign(g)
+    update = mul(g_sign, step_sizes)
+    # Zero out gradient where sign was negative (for prev update)
+    g_for_prev = where(neg_mask, zero, g)
+    copy_(param, sub(param, update))
+    copy_(prev, g_for_prev)
+    return param
+
+
+def _sparse_adam_step_op(param, grad, exp_avg, exp_avg_sq, step, lr, beta1,
+                         beta2, eps):
+    """Sparse Adam step (simplified: updates all elements)."""
+    b1_t = _scalar_to_npu_tensor(beta1, exp_avg)
+    one_b1_t = _scalar_to_npu_tensor(1.0 - beta1, exp_avg)
+    b2_t = _scalar_to_npu_tensor(beta2, exp_avg_sq)
+    one_b2_t = _scalar_to_npu_tensor(1.0 - beta2, exp_avg_sq)
+    eps_t = _scalar_to_npu_tensor(eps, param)
+    # Update moments
+    copy_(exp_avg, add(mul(b1_t, exp_avg), mul(one_b1_t, grad)))
+    copy_(exp_avg_sq, add(mul(b2_t, exp_avg_sq), mul(one_b2_t, mul(grad, grad))))
+    bc1 = 1.0 - beta1 ** step
+    bc2 = 1.0 - beta2 ** step
+    m_hat_t = _scalar_to_npu_tensor(1.0 / bc1, exp_avg)
+    v_hat_t = _scalar_to_npu_tensor(1.0 / bc2, exp_avg_sq)
+    m_hat = mul(exp_avg, m_hat_t)
+    v_hat = mul(exp_avg_sq, v_hat_t)
+    lr_t = _scalar_to_npu_tensor(lr, param)
+    copy_(param, sub(param, mul(lr_t, div(m_hat, add(sqrt(v_hat), eps_t)))))
+    return param
+
+
+# ===========================================================================
+# Phase 5: Special function composites
+# ===========================================================================
+
+def special_entr_op(a):
+    """Entropy: -x * log(x) for x > 0, 0 for x == 0, -inf for x < 0."""
+    zero = _scalar_to_npu_tensor(0.0, a)
+    neg_inf = _scalar_to_npu_tensor(float('-inf'), a)
+    pos_mask = gt(a, zero)
+    eq_mask = eq(a, zero)
+    # -x * log(x) where x > 0
+    entr_val = neg(mul(a, log(maximum(a, _scalar_to_npu_tensor(1e-38, a)))))
+    result = where(pos_mask, entr_val, neg_inf)
+    return where(eq_mask, zero, result)
+
+
+def special_erfcx_op(a):
+    """Scaled complementary error function: exp(x^2) * erfc(x)."""
+    return mul(exp(mul(a, a)), erfc(a))
+
+
+def special_logit_op(a, eps=None):
+    """Logit function: log(x / (1 - x))."""
+    one = _scalar_to_npu_tensor(1.0, a)
+    if eps is not None:
+        a = clamp(a, min_val=eps, max_val=1.0 - eps)
+    return log(div(a, sub(one, a)))
+
+
+def special_ndtr_op(a):
+    """Normal CDF: 0.5 * erfc(-x / sqrt(2))."""
+    import math
+    half = _scalar_to_npu_tensor(0.5, a)
+    inv_sqrt2 = _scalar_to_npu_tensor(-1.0 / math.sqrt(2.0), a)
+    return mul(half, erfc(mul(a, inv_sqrt2)))
+
+
+def special_log_ndtr_op(a):
+    """Log of normal CDF: log(0.5 * erfc(-x / sqrt(2)))."""
+    return log(special_ndtr_op(a))
+
+
+def special_xlogy_op(a, b):
+    """x * log(y), with 0 where x == 0."""
+    zero = _scalar_to_npu_tensor(0.0, a)
+    eq_mask = eq(a, zero)
+    result = mul(a, log(maximum(b, _scalar_to_npu_tensor(1e-38, b))))
+    return where(eq_mask, zero, result)
+
+
+def special_xlog1py_op(a, b):
+    """x * log1p(y), with 0 where x == 0."""
+    zero = _scalar_to_npu_tensor(0.0, a)
+    eq_mask = eq(a, zero)
+    result = mul(a, log1p(b))
+    return where(eq_mask, zero, result)
+
+
+def special_multigammaln_op(a, p):
+    """Multivariate log-gamma: sum_{i=0}^{p-1} lgamma(a - i/2) + p*(p-1)/4*log(pi)."""
+    import math
+    result = _scalar_to_npu_tensor(p * (p - 1) / 4.0 * math.log(math.pi), a)
+    for i in range(p):
+        offset = _scalar_to_npu_tensor(i / 2.0, a)
+        result = add(result, special_gammaln(sub(a, offset)))
+    return result
+
+
+# ===========================================================================
+# Phase 6: Linalg composites
+# ===========================================================================
+
+def linalg_norm_op(a, ord=None, dim=None, keepdim=False):
+    """Combined vector/matrix norm."""
+    from ..._dispatch.dispatcher import dispatch
+    if dim is not None and isinstance(dim, (list, tuple)) and len(dim) == 2:
+        return linalg_matrix_norm_op(a, ord=ord if ord is not None else 'fro',
+                                     dim=dim, keepdim=keepdim)
+    if ord is None:
+        ord = 2
+    return dispatch("linalg_vector_norm", "npu", a, ord, dim, keepdim)
+
+
+def linalg_matrix_norm_op(a, ord='fro', dim=(-2, -1), keepdim=False):
+    """Matrix norm via vector_norm for Frobenius, or SVD-based for others."""
+    from ..._dispatch.dispatcher import dispatch
+    if ord == 'fro' or ord == 'f':
+        # Frobenius = sqrt(sum(x^2)) = vector_norm(x.flatten(), 2)
+        return dispatch("linalg_vector_norm", "npu", a, 2, list(dim), keepdim)
+    if ord == float('inf'):
+        # max row sum of absolute values
+        return dispatch("amax", "npu", dispatch("sum", "npu",
+                        dispatch("abs", "npu", a), dim=dim[1], keepdim=True),
+                        dim=dim[0], keepdim=keepdim)
+    if ord == float('-inf'):
+        return dispatch("amin", "npu", dispatch("sum", "npu",
+                        dispatch("abs", "npu", a), dim=dim[1], keepdim=True),
+                        dim=dim[0], keepdim=keepdim)
+    if ord == 1:
+        return dispatch("amax", "npu", dispatch("sum", "npu",
+                        dispatch("abs", "npu", a), dim=dim[0], keepdim=True),
+                        dim=dim[1], keepdim=keepdim)
+    if ord == -1:
+        return dispatch("amin", "npu", dispatch("sum", "npu",
+                        dispatch("abs", "npu", a), dim=dim[0], keepdim=True),
+                        dim=dim[1], keepdim=keepdim)
+    # nuc or other: CPU fallback via _npu_to_cpu_fallback
+    return _npu_to_cpu_fallback("linalg_matrix_norm", a, ord=ord, dim=dim,
+                                keepdim=keepdim)
+
+
+def linalg_multi_dot_op(tensors):
+    """Chain of matrix multiplications."""
+    from ..._dispatch.dispatcher import dispatch
+    result = tensors[0]
+    for t in tensors[1:]:
+        result = dispatch("mm", "npu", contiguous(result), contiguous(t))
+    return result
+
+
+def linalg_matrix_power_op(a, n):
+    """Matrix raised to integer power n via repeated multiplication."""
+    from ..._dispatch.dispatcher import dispatch
+    if n == 0:
+        # Identity matrix
+        return dispatch("eye", "npu", a.shape[-1], dtype=a.dtype, device=a.device)
+    if n < 0:
+        a = dispatch("linalg_inv", "npu", a)
+        n = -n
+    result = a
+    for _ in range(n - 1):
+        result = dispatch("mm", "npu", contiguous(result), contiguous(a))
+    return result
+
+
+def linalg_vander_op(x, N=None):
+    """Vandermonde matrix: each row is [1, x, x^2, ..., x^(N-1)]."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..common import view as view_backend
+    n = N if N is not None else len(x.shape) and x.shape[0]
+    # Build column by column: col_i = x^i
+    one = _scalar_to_npu_tensor(1.0, x)
+    cols = [dispatch("full_like", "npu", x, 1.0)]
+    current = x
+    for i in range(1, n):
+        cols.append(current)
+        current = mul(current, x)
+    # Stack columns
+    return dispatch("stack", "npu", cols, dim=-1)
+
+
+# ===========================================================================
+# CPU fallback helper + CPU fallback ops
+# ===========================================================================
+
+def _npu_to_cpu_fallback(op_name, *args, **kwargs):
+    """Move tensors to CPU, run CPU op, move result back to NPU.
+
+    This is used for ops that have no ACLNN kernel and are too complex
+    to implement as composites (e.g. FFT, eigendecomposition).
+    """
+    from ..._dispatch.dispatcher import dispatch
+    import numpy as _np
+
+    device_idx = None
+    cpu_args = []
+    for arg in args:
+        if hasattr(arg, 'device') and hasattr(arg, 'data_ptr'):
+            if device_idx is None:
+                device_idx = arg.device.index or 0
+            # Read NPU tensor to numpy
+            runtime = npu_runtime.get_runtime(device_idx)
+            runtime.synchronize()
+            nbytes = _numel(arg.shape) * _dtype_itemsize(arg.dtype)
+            if nbytes == 0:
+                np_data = _np.empty([int(s) for s in arg.shape],
+                                    dtype=_to_numpy_dtype(arg.dtype))
+            else:
+                np_data = _np.empty(int(nbytes), dtype=_np.uint8)
+                from . import acl_loader
+                acl = acl_loader.ensure_acl()
+                host_ptr, ret = acl.rt.malloc_host(int(nbytes))
+                if ret != 0:
+                    raise RuntimeError(f"malloc_host failed: {ret}")
+                ret = acl.rt.memcpy(host_ptr, int(nbytes),
+                                    _unwrap_storage(arg).data_ptr(),
+                                    int(nbytes), 2)  # D2H
+                if ret != 0:
+                    raise RuntimeError(f"memcpy D2H failed: {ret}")
+                import ctypes
+                ctypes.memmove(np_data.ctypes.data, host_ptr, int(nbytes))
+                acl.rt.free_host(host_ptr)
+                np_data = _np.frombuffer(np_data.tobytes(),
+                                         dtype=_to_numpy_dtype(arg.dtype))
+                np_data = np_data.reshape([int(s) for s in arg.shape])
+            cpu_args.append(np_data)
+        elif isinstance(arg, (list, tuple)) and len(arg) > 0 and hasattr(arg[0], 'data_ptr'):
+            # List of tensors
+            cpu_list = []
+            for t in arg:
+                if device_idx is None:
+                    device_idx = t.device.index or 0
+                runtime = npu_runtime.get_runtime(device_idx)
+                runtime.synchronize()
+                nbytes = _numel(t.shape) * _dtype_itemsize(t.dtype)
+                np_d = _np.empty(int(nbytes), dtype=_np.uint8)
+                from . import acl_loader
+                acl = acl_loader.ensure_acl()
+                host_ptr, ret = acl.rt.malloc_host(int(nbytes))
+                if ret != 0:
+                    raise RuntimeError(f"malloc_host failed: {ret}")
+                ret = acl.rt.memcpy(host_ptr, int(nbytes),
+                                    _unwrap_storage(t).data_ptr(),
+                                    int(nbytes), 2)
+                if ret != 0:
+                    raise RuntimeError(f"memcpy D2H failed: {ret}")
+                import ctypes
+                ctypes.memmove(np_d.ctypes.data, host_ptr, int(nbytes))
+                acl.rt.free_host(host_ptr)
+                np_d = _np.frombuffer(np_d.tobytes(),
+                                       dtype=_to_numpy_dtype(t.dtype))
+                np_d = np_d.reshape([int(s) for s in t.shape])
+                cpu_list.append(np_d)
+            cpu_args.append(cpu_list)
+        else:
+            cpu_args.append(arg)
+
+    # Run CPU op
+    result = dispatch(op_name, "cpu", *cpu_args, **kwargs)
+
+    # Move result back to NPU
+    if device_idx is None:
+        device_idx = 0
+    return _numpy_result_to_npu(result, device_idx)
+
+
+def _to_numpy_dtype(dtype):
+    """Convert internal dtype string to numpy dtype."""
+    import numpy as _np
+    _map = {
+        'float32': _np.float32, 'float64': _np.float64, 'float16': _np.float16,
+        'int32': _np.int32, 'int64': _np.int64, 'int16': _np.int16, 'int8': _np.int8,
+        'uint8': _np.uint8, 'bool': _np.bool_,
+    }
+    return _map.get(str(dtype), _np.float32)
+
+
+def _numpy_result_to_npu(result, device_idx):
+    """Convert numpy result to NPU tensor."""
+    import numpy as _np
+    if isinstance(result, _np.ndarray):
+        runtime = npu_runtime.get_runtime(device_idx)
+        ptr, _ = npu_runtime._copy_cpu_to_npu(result, runtime=runtime)
+        shape = tuple(result.shape)
+        stride = npu_runtime._contiguous_stride(shape)
+        # Map numpy dtype back to internal dtype
+        dtype = _from_numpy_dtype(result.dtype)
+        storage = npu_typed_storage_from_ptr(ptr, _numel(shape), dtype,
+                                             device=type('D', (), {'type': 'npu', 'index': device_idx})())
+        return _wrap_tensor(storage, shape, stride)
+    if isinstance(result, tuple):
+        return tuple(_numpy_result_to_npu(r, device_idx) for r in result)
+    return result
+
+
+def _from_numpy_dtype(np_dtype):
+    """Convert numpy dtype to internal dtype string."""
+    import numpy as _np
+    _map = {
+        _np.float32: 'float32', _np.float64: 'float64', _np.float16: 'float16',
+        _np.int32: 'int32', _np.int64: 'int64', _np.int16: 'int16', _np.int8: 'int8',
+        _np.uint8: 'uint8', _np.bool_: 'bool',
+    }
+    return _map.get(type(np_dtype.type(0)), 'float32')
+
+
+# ---------- FFT CPU fallbacks ----------
+
+def fft_fft_op(*a, **kw): return _npu_to_cpu_fallback("fft_fft", *a, **kw)
+def fft_ifft_op(*a, **kw): return _npu_to_cpu_fallback("fft_ifft", *a, **kw)
+def fft_rfft_op(*a, **kw): return _npu_to_cpu_fallback("fft_rfft", *a, **kw)
+def fft_irfft_op(*a, **kw): return _npu_to_cpu_fallback("fft_irfft", *a, **kw)
+def fft_fft2_op(*a, **kw): return _npu_to_cpu_fallback("fft_fft2", *a, **kw)
+def fft_ifft2_op(*a, **kw): return _npu_to_cpu_fallback("fft_ifft2", *a, **kw)
+def fft_rfft2_op(*a, **kw): return _npu_to_cpu_fallback("fft_rfft2", *a, **kw)
+def fft_irfft2_op(*a, **kw): return _npu_to_cpu_fallback("fft_irfft2", *a, **kw)
+def fft_fftn_op(*a, **kw): return _npu_to_cpu_fallback("fft_fftn", *a, **kw)
+def fft_ifftn_op(*a, **kw): return _npu_to_cpu_fallback("fft_ifftn", *a, **kw)
+def fft_rfftn_op(*a, **kw): return _npu_to_cpu_fallback("fft_rfftn", *a, **kw)
+def fft_irfftn_op(*a, **kw): return _npu_to_cpu_fallback("fft_irfftn", *a, **kw)
+def fft_hfft_op(*a, **kw): return _npu_to_cpu_fallback("fft_hfft", *a, **kw)
+def fft_ihfft_op(*a, **kw): return _npu_to_cpu_fallback("fft_ihfft", *a, **kw)
+
+
+def fft_fftshift_op(a, dim=None):
+    """fftshift via roll — pure tensor op, no ACLNN needed."""
+    from ..._dispatch.dispatcher import dispatch
+    if dim is None:
+        dim = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        dim = [dim]
+    result = a
+    for d in dim:
+        n = a.shape[d]
+        shift = n // 2
+        result = dispatch("roll", "npu", result, shift, d)
+    return result
+
+
+def fft_ifftshift_op(a, dim=None):
+    """ifftshift via roll."""
+    from ..._dispatch.dispatcher import dispatch
+    if dim is None:
+        dim = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        dim = [dim]
+    result = a
+    for d in dim:
+        n = a.shape[d]
+        shift = -(n // 2)
+        result = dispatch("roll", "npu", result, shift, d)
+    return result
+
+
+# ---------- Linalg CPU fallbacks ----------
+
+def linalg_cholesky_op(*a, **kw): return _npu_to_cpu_fallback("linalg_cholesky", *a, **kw)
+def linalg_cond_op(*a, **kw): return _npu_to_cpu_fallback("linalg_cond", *a, **kw)
+def linalg_det_op(*a, **kw): return _npu_to_cpu_fallback("linalg_det", *a, **kw)
+def linalg_eig_op(*a, **kw): return _npu_to_cpu_fallback("linalg_eig", *a, **kw)
+def linalg_eigh_op(*a, **kw): return _npu_to_cpu_fallback("linalg_eigh", *a, **kw)
+def linalg_eigvals_op(*a, **kw): return _npu_to_cpu_fallback("linalg_eigvals", *a, **kw)
+def linalg_eigvalsh_op(*a, **kw): return _npu_to_cpu_fallback("linalg_eigvalsh", *a, **kw)
+def linalg_householder_product_op(*a, **kw): return _npu_to_cpu_fallback("linalg_householder_product", *a, **kw)
+def linalg_lstsq_op(*a, **kw): return _npu_to_cpu_fallback("linalg_lstsq", *a, **kw)
+def linalg_lu_op(*a, **kw): return _npu_to_cpu_fallback("linalg_lu", *a, **kw)
+def linalg_lu_factor_op(*a, **kw): return _npu_to_cpu_fallback("linalg_lu_factor", *a, **kw)
+def linalg_lu_solve_op(*a, **kw): return _npu_to_cpu_fallback("linalg_lu_solve", *a, **kw)
+def linalg_matrix_exp_op(*a, **kw): return _npu_to_cpu_fallback("linalg_matrix_exp", *a, **kw)
+def linalg_matrix_rank_op(*a, **kw): return _npu_to_cpu_fallback("linalg_matrix_rank", *a, **kw)
+def linalg_pinv_op(*a, **kw): return _npu_to_cpu_fallback("linalg_pinv", *a, **kw)
+def linalg_slogdet_op(*a, **kw): return _npu_to_cpu_fallback("linalg_slogdet", *a, **kw)
+def linalg_solve_op(*a, **kw): return _npu_to_cpu_fallback("linalg_solve", *a, **kw)
+def linalg_solve_triangular_op(*a, **kw): return _npu_to_cpu_fallback("linalg_solve_triangular", *a, **kw)
+def linalg_svd_op(*a, **kw): return _npu_to_cpu_fallback("linalg_svd", *a, **kw)
+def linalg_svdvals_op(*a, **kw): return _npu_to_cpu_fallback("linalg_svdvals", *a, **kw)
+def linalg_tensorinv_op(*a, **kw): return _npu_to_cpu_fallback("linalg_tensorinv", *a, **kw)
+def linalg_tensorsolve_op(*a, **kw): return _npu_to_cpu_fallback("linalg_tensorsolve", *a, **kw)
+
+# ---------- Special function CPU fallbacks ----------
+
+def special_gammainc_op(*a, **kw): return _npu_to_cpu_fallback("special_gammainc", *a, **kw)
+def special_gammaincc_op(*a, **kw): return _npu_to_cpu_fallback("special_gammaincc", *a, **kw)
+def special_i0_op(*a, **kw): return _npu_to_cpu_fallback("special_i0", *a, **kw)
+def special_i0e_op(*a, **kw): return _npu_to_cpu_fallback("special_i0e", *a, **kw)
+def special_i1_op(*a, **kw): return _npu_to_cpu_fallback("special_i1", *a, **kw)
+def special_i1e_op(*a, **kw): return _npu_to_cpu_fallback("special_i1e", *a, **kw)
+def special_ndtri_op(*a, **kw): return _npu_to_cpu_fallback("special_ndtri", *a, **kw)
+def special_polygamma_op(*a, **kw): return _npu_to_cpu_fallback("special_polygamma", *a, **kw)
+def special_zeta_op(*a, **kw): return _npu_to_cpu_fallback("special_zeta", *a, **kw)
+
+# ---------- 3D conv/pool CPU fallbacks ----------
+
+def conv3d_op(*a, **kw): return _npu_to_cpu_fallback("conv3d", *a, **kw)
+def conv_transpose3d_op(*a, **kw): return _npu_to_cpu_fallback("conv_transpose3d", *a, **kw)
+def avg_pool3d_op(*a, **kw): return _npu_to_cpu_fallback("avg_pool3d", *a, **kw)
+
+# ---------- Other missing ops ----------
+
+def upsample_nearest1d_op(a, output_size, scales=None):
+    """Upsample nearest 1D via 2D upsample (ACLNN broken on 910B)."""
+    from ..._dispatch.dispatcher import dispatch
+    from ..common import view as view_backend
+    N, C, W = a.shape
+    oW = output_size[0] if isinstance(output_size, (list, tuple)) else output_size
+    a_4d = view_backend.reshape(a, (N, C, 1, W))
+    out_4d = dispatch("upsample_nearest2d", "npu", a_4d, [1, oW], None, scales)
+    return view_backend.reshape(out_4d, (N, C, oW))
+
+
+def ctc_loss_op(*a, **kw): return _npu_to_cpu_fallback("ctc_loss", *a, **kw)
