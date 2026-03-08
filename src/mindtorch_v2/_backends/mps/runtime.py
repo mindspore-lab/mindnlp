@@ -97,6 +97,40 @@ class MetalRuntime:
         cb = self.create_command_buffer()
         self.commit_and_wait(cb)
 
+    def compile_library(self, source_code):
+        """Compile MSL source string into a MTLLibrary."""
+        self._ensure_init()
+        if _HAS_PYOBJC:
+            lib, err = self._device.newLibraryWithSource_options_error_(
+                source_code, None, None)
+            if err is not None:
+                raise RuntimeError(f"Metal shader compilation failed: {err}")
+            return lib
+        return _compile_library_ctypes(self._device, source_code)
+
+    def make_compute_pipeline(self, function):
+        """Create MTLComputePipelineState from a MTLFunction."""
+        self._ensure_init()
+        if _HAS_PYOBJC:
+            pipeline, err = self._device.newComputePipelineStateWithFunction_error_(
+                function, None)
+            if err is not None:
+                raise RuntimeError(f"Failed to create compute pipeline: {err}")
+            return pipeline
+        return _make_compute_pipeline_ctypes(self._device, function)
+
+    def get_compute_encoder(self, cmd_buffer):
+        """Create a MTLComputeCommandEncoder from a command buffer."""
+        if _HAS_PYOBJC:
+            return cmd_buffer.computeCommandEncoder()
+        return _get_compute_encoder_ctypes(cmd_buffer)
+
+    def buffer_length(self, metal_buffer):
+        """Return the length in bytes of a Metal buffer."""
+        if _HAS_PYOBJC:
+            return int(metal_buffer.length())
+        return _buffer_length_ctypes(metal_buffer)
+
     def device_name(self):
         """Return the Metal device name."""
         self._ensure_init()
@@ -228,3 +262,68 @@ def buffer_contents(metal_buffer):
     if _HAS_PYOBJC:
         return int(metal_buffer.contents())
     return int(_get_buffer_contents_ctypes(metal_buffer))
+
+
+# ---------------------------------------------------------------------------
+# ctypes fallback: compute pipeline helpers
+# ---------------------------------------------------------------------------
+
+def _compile_library_ctypes(device, source_code):
+    """Compile MSL source via objc_msgSend(device, newLibraryWithSource:options:error:)."""
+    _load_objc_libs()
+    # Create NSString from source_code
+    ns_string_class = _libobjc.objc_getClass(b"NSString")
+    sel_alloc = _libobjc.sel_registerName(b"alloc")
+    sel_init = _libobjc.sel_registerName(b"initWithUTF8String:")
+    ns_str = _libobjc.objc_msgSend(ns_string_class, sel_alloc)
+    src_bytes = source_code.encode("utf-8")
+    _libobjc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    _libobjc.objc_msgSend.restype = ctypes.c_void_p
+    ns_str = _libobjc.objc_msgSend(ns_str, sel_init, src_bytes)
+    _libobjc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+    # Call newLibraryWithSource:options:error:
+    sel = _libobjc.sel_registerName(b"newLibraryWithSource:options:error:")
+    err = ctypes.c_void_p(0)
+    _libobjc.objc_msgSend.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p),
+    ]
+    _libobjc.objc_msgSend.restype = ctypes.c_void_p
+    lib = _libobjc.objc_msgSend(device, sel, ns_str, None, ctypes.byref(err))
+    _libobjc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    if lib is None or lib == 0:
+        raise RuntimeError("Metal shader compilation failed (ctypes path)")
+    return lib
+
+
+def _make_compute_pipeline_ctypes(device, function):
+    """Create compute pipeline state from a MTLFunction via ctypes."""
+    _load_objc_libs()
+    sel = _libobjc.sel_registerName(b"newComputePipelineStateWithFunction:error:")
+    err = ctypes.c_void_p(0)
+    _libobjc.objc_msgSend.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p),
+    ]
+    _libobjc.objc_msgSend.restype = ctypes.c_void_p
+    pipeline = _libobjc.objc_msgSend(device, sel, function, ctypes.byref(err))
+    _libobjc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    if pipeline is None or pipeline == 0:
+        raise RuntimeError("Failed to create compute pipeline (ctypes path)")
+    return pipeline
+
+
+def _get_compute_encoder_ctypes(cmd_buffer):
+    """Create compute command encoder via ctypes."""
+    return _objc_msg(cmd_buffer, "computeCommandEncoder")
+
+
+def _buffer_length_ctypes(metal_buffer):
+    """Get Metal buffer length via ctypes."""
+    _load_objc_libs()
+    _libobjc.objc_msgSend.restype = ctypes.c_uint64
+    length = _libobjc.objc_msgSend(
+        metal_buffer, _libobjc.sel_registerName(b"length"))
+    _libobjc.objc_msgSend.restype = ctypes.c_void_p
+    return int(length)

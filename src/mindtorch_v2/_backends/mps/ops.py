@@ -1,14 +1,88 @@
 import math
+import ctypes
+import struct
 import numpy as np
 
 from ..._dtype import bool as bool_dtype
 from ..._dtype import int64 as int64_dtype
+from ..._dtype import float16 as float16_dtype
 from ..._dtype import float32 as float32_dtype
 from ..._dtype import float64 as float64_dtype
 from ..._dtype import to_numpy_dtype
-from ..._storage import mps_typed_storage_from_numpy
+from ..._storage import mps_typed_storage_from_numpy, _MPSUntypedStorage, TypedStorage
 from ..._tensor import Tensor
 from . import accelerate as _accel
+
+# ---------------------------------------------------------------------------
+# GPU dispatch helpers
+# ---------------------------------------------------------------------------
+_GPU_FLOAT_DTYPES = frozenset({float32_dtype, float16_dtype})
+
+
+def _can_use_gpu(t):
+    """Check if tensor can use Metal GPU kernels."""
+    return (t.dtype in _GPU_FLOAT_DTYPES
+            and t.is_contiguous()
+            and t.numel() > 0
+            and hasattr(t._storage, '_untyped')
+            and hasattr(t._storage._untyped, '_metal_buffer')
+            and t._storage._untyped._metal_buffer is not None)
+
+
+def _metal_buf(t):
+    """Get the raw Metal buffer from a tensor."""
+    return t._storage._untyped._metal_buffer
+
+
+def _kernel_suffix(dtype):
+    """Return MSL kernel suffix for dtype."""
+    return "f16" if dtype == float16_dtype else "f32"
+
+
+def _scalar_fmt(dtype):
+    """Return struct format char for scalar encoding."""
+    return "e" if dtype == float16_dtype else "f"
+
+
+def _itemsize(dtype):
+    """Return byte size per element."""
+    return 2 if dtype == float16_dtype else 4
+
+
+def _alloc_output_buf(numel, dtype):
+    """Allocate a Metal buffer for output."""
+    from .runtime import get_runtime
+    rt = get_runtime()
+    return rt.create_buffer(numel * _itemsize(dtype))
+
+
+def _from_metal_buffer(metal_buf, shape, stride, dtype, device):
+    """Wrap an existing Metal buffer into a Tensor without copying data."""
+    from .runtime import buffer_contents
+    nbytes = 1
+    for s in shape:
+        nbytes *= s
+    nbytes *= _itemsize(dtype)
+    nbytes = max(nbytes, 1)
+    untyped = _MPSUntypedStorage(metal_buf, nbytes, device=device)
+    ptr = buffer_contents(metal_buf)
+    numel = 1
+    for s in shape:
+        numel *= s
+    data = np.frombuffer(
+        (ctypes.c_uint8 * nbytes).from_address(ptr),
+        dtype=to_numpy_dtype(dtype),
+        count=max(numel, 1),
+    )
+    size = max(numel, 1)
+    storage = TypedStorage(untyped, dtype, size, data=data)
+    return Tensor(storage, shape, stride)
+
+
+def _get_dispatcher():
+    """Lazy import of the Metal kernel dispatcher singleton."""
+    from .metal_compute import get_dispatcher
+    return get_dispatcher()
 
 
 def _to_numpy(t):
@@ -28,18 +102,60 @@ def _from_numpy(arr, dtype, device):
 
 
 def add(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"add_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"add_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     return _from_numpy(a_np + b_np, a.dtype, a.device)
 
 
 def mul(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"mul_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"mul_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     return _from_numpy(a_np * b_np, a.dtype, a.device)
 
 
 def div(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"div_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"div_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     out = np.true_divide(a_np, b_np)
@@ -74,15 +190,33 @@ def _blas_gemm(a_np, b_np, dtype):
 
 
 def matmul(a, b):
+    # GPU path: MPSMatrixMultiplication for 2D contiguous float32/float16
+    if (_can_use_gpu(a) and _can_use_gpu(b)
+            and len(a.shape) == 2 and len(b.shape) == 2):
+        from .mps_kernels import mps_matmul_gpu, _mps_dtype_code
+        np_dt = to_numpy_dtype(a.dtype)
+        dtype_code = _mps_dtype_code(np_dt)
+        if dtype_code is not None:
+            M, K = a.shape
+            K2, N = b.shape
+            if K == K2:
+                out_buf = mps_matmul_gpu(
+                    _metal_buf(a), _metal_buf(b),
+                    M, K, N, dtype_code, _itemsize(a.dtype))
+                if out_buf is not None:
+                    from ..._tensor import _compute_strides
+                    out_shape = (M, N)
+                    out_stride = _compute_strides(out_shape)
+                    return _from_metal_buffer(out_buf, out_shape, out_stride,
+                                             a.dtype, a.device)
+    # CPU path (Accelerate BLAS or numpy)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b)
-    # 2D x 2D: use BLAS if possible
     if a_np.ndim == 2 and b_np.ndim == 2:
         a_c = np.ascontiguousarray(a_np)
         b_c = np.ascontiguousarray(b_np)
         if _can_use_blas(a_c) and _can_use_blas(b_c):
             return _from_numpy(_blas_gemm(a_c, b_c, a.dtype), a.dtype, a.device)
-    # Batched: try per-batch BLAS for 3D
     if a_np.ndim == 3 and b_np.ndim == 3:
         a_c = np.ascontiguousarray(a_np)
         b_c = np.ascontiguousarray(b_np)
@@ -94,7 +228,6 @@ def matmul(a, b):
             for i in range(batch):
                 out[i] = _blas_gemm(a_c[i], b_c[i], a.dtype)
             return _from_numpy(out, a.dtype, a.device)
-    # Fallback to numpy
     return _from_numpy(a_np @ b_np, a.dtype, a.device)
 
 
@@ -107,10 +240,24 @@ def bmm(a, b):
 
 
 def relu(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"relu_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.maximum(_to_numpy(a), 0), a.dtype, a.device)
 
 
 def gelu(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"gelu_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     arr = _to_numpy(a)
     out = 0.5 * arr * (1.0 + np.vectorize(math.erf)(arr / math.sqrt(2.0)))
     return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
@@ -138,10 +285,30 @@ def sum_(a, dim=None, keepdim=False, dtype=None):
         for d in dim:
             _check_dim_range(d)
 
+    # GPU path: full-tensor reduction (dim=None)
+    if dim is None and not keepdim and _can_use_gpu(a) and a.dtype == float32_dtype:
+        d = _get_dispatcher()
+        out_buf = _alloc_output_buf(1, a.dtype)
+        d.dispatch_reduction("sum_partial_f32", "sum_final_f32",
+                             _metal_buf(a), out_buf, a.numel())
+        from ..._tensor import _compute_strides
+        return _from_metal_buffer(out_buf, (), (), a.dtype, a.device)
+
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 
 def mean_(a, dim=None, keepdim=False):
+    # GPU path: full-tensor mean (dim=None)
+    if dim is None and not keepdim and _can_use_gpu(a) and a.dtype == float32_dtype:
+        d = _get_dispatcher()
+        # mean = sum / N
+        sum_buf = _alloc_output_buf(1, a.dtype)
+        d.dispatch_reduction("sum_partial_f32", "sum_final_f32",
+                             _metal_buf(a), sum_buf, a.numel())
+        out_buf = _alloc_output_buf(1, a.dtype)
+        n = float(a.numel())
+        d.dispatch_binary_scalar("div_scalar_f32", sum_buf, n, out_buf, 1)
+        return _from_metal_buffer(out_buf, (), (), a.dtype, a.device)
     return _from_numpy(_to_numpy(a).mean(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 
@@ -162,6 +329,18 @@ def any_(a, dim=None, keepdim=False):
 
 
 def argmax(a, dim=None, keepdim=False):
+    # GPU path: full-tensor argmax (dim=None)
+    if dim is None and _can_use_gpu(a) and a.dtype == float32_dtype:
+        d = _get_dispatcher()
+        out_buf = _alloc_output_buf(1, int64_dtype)  # uint output
+        d.dispatch_arg_reduction("argmax_partial_f32", "argmax_final_f32",
+                                 _metal_buf(a), out_buf, a.numel())
+        # Read uint32 result, convert to int64
+        from .runtime import buffer_contents
+        ptr = buffer_contents(out_buf)
+        idx_val = struct.unpack("I", (ctypes.c_char * 4).from_address(ptr))[0]
+        out = np.array(int(idx_val), dtype=np.int64)
+        return _from_numpy(out, int64_dtype, a.device)
     arr = _to_numpy(a)
     if dim is None:
         out = np.array(np.argmax(arr), dtype=np.int64)
@@ -174,6 +353,17 @@ def argmax(a, dim=None, keepdim=False):
 
 
 def argmin(a, dim=None, keepdim=False):
+    # GPU path: full-tensor argmin (dim=None)
+    if dim is None and _can_use_gpu(a) and a.dtype == float32_dtype:
+        d = _get_dispatcher()
+        out_buf = _alloc_output_buf(1, int64_dtype)
+        d.dispatch_arg_reduction("argmin_partial_f32", "argmin_final_f32",
+                                 _metal_buf(a), out_buf, a.numel())
+        from .runtime import buffer_contents
+        ptr = buffer_contents(out_buf)
+        idx_val = struct.unpack("I", (ctypes.c_char * 4).from_address(ptr))[0]
+        out = np.array(int(idx_val), dtype=np.int64)
+        return _from_numpy(out, int64_dtype, a.device)
     arr = _to_numpy(a)
     if dim is None:
         out = np.array(np.argmin(arr), dtype=np.int64)
@@ -717,24 +907,61 @@ def ge(a, b):
 
 
 def add_(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_inplace_binary(f"add_inplace_{sfx}", _metal_buf(a),
+                                      _metal_buf(b), numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_inplace_binary_scalar(f"add_inplace_scalar_{sfx}",
+                                              _metal_buf(a), scalar, numel,
+                                              scalar_fmt=_scalar_fmt(a.dtype))
+        return a
     arr = _to_numpy(a)
     arr += _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
 def mul_(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_inplace_binary(f"mul_inplace_{sfx}", _metal_buf(a),
+                                      _metal_buf(b), numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_inplace_binary_scalar(f"mul_inplace_scalar_{sfx}",
+                                              _metal_buf(a), scalar, numel,
+                                              scalar_fmt=_scalar_fmt(a.dtype))
+        return a
     arr = _to_numpy(a)
     arr *= _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
 def relu_(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        d.dispatch_inplace_unary(f"relu_inplace_{sfx}", _metal_buf(a), a.numel())
+        return a
     arr = _to_numpy(a)
     np.maximum(arr, 0, out=arr)
     return a
 
 
 def zero_(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        d.dispatch_fill(f"fill_{sfx}", _metal_buf(a), 0.0, a.numel(),
+                        scalar_fmt=_scalar_fmt(a.dtype))
+        return a
     arr = _to_numpy(a)
     arr.fill(0)
     return a
@@ -803,6 +1030,12 @@ def geometric_(a, p, generator=None):
 
 
 def fill_(a, value):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        d.dispatch_fill(f"fill_{sfx}", _metal_buf(a), float(value), a.numel(),
+                        scalar_fmt=_scalar_fmt(a.dtype))
+        return a
     arr = _to_numpy(a)
     arr.fill(value)
     return a
@@ -815,6 +1048,12 @@ def clamp_(a, min_val=None, max_val=None):
 
 
 def copy_(a, src):
+    if _can_use_gpu(a) and _can_use_gpu(src):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = min(a.numel(), src.numel())
+        d.dispatch_copy(f"copy_{sfx}", _metal_buf(src), _metal_buf(a), numel)
+        return a
     arr = _to_numpy(a)
     src_arr = _to_numpy(src)
     np.copyto(arr, src_arr)
@@ -874,12 +1113,38 @@ def _ndtr_inv(p):
 
 
 def sub_(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_inplace_binary(f"sub_inplace_{sfx}", _metal_buf(a),
+                                      _metal_buf(b), numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_inplace_binary_scalar(f"sub_inplace_scalar_{sfx}",
+                                              _metal_buf(a), scalar, numel,
+                                              scalar_fmt=_scalar_fmt(a.dtype))
+        return a
     arr = _to_numpy(a)
     arr -= _to_numpy(b) if isinstance(b, Tensor) else b
     return a
 
 
 def div_(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_inplace_binary(f"div_inplace_{sfx}", _metal_buf(a),
+                                      _metal_buf(b), numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_inplace_binary_scalar(f"div_inplace_scalar_{sfx}",
+                                              _metal_buf(a), scalar, numel,
+                                              scalar_fmt=_scalar_fmt(a.dtype))
+        return a
     arr = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     arr /= b_np
@@ -894,30 +1159,79 @@ def contiguous(a):
 
 
 def abs(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"abs_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.abs(_to_numpy(a)), a.dtype, a.device)
 
 
 def neg(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"neg_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.negative(_to_numpy(a)), a.dtype, a.device)
 
 
 def exp(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"exp_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.exp(_to_numpy(a)), a.dtype, a.device)
 
 
 def log(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"log_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.log(_to_numpy(a)), a.dtype, a.device)
 
 
 def sqrt(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"sqrt_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.sqrt(_to_numpy(a)), a.dtype, a.device)
 
 
 def sin(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"sin_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.sin(_to_numpy(a)), a.dtype, a.device)
 
 
 def cos(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"cos_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.cos(_to_numpy(a)), a.dtype, a.device)
 
 
@@ -926,24 +1240,59 @@ def tan(a):
 
 
 def tanh(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"tanh_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.tanh(_to_numpy(a)), a.dtype, a.device)
 
 
 def sigmoid(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"sigmoid_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     arr = _to_numpy(a)
     out = 1.0 / (1.0 + np.exp(-arr))
     return _from_numpy(out, a.dtype, a.device)
 
 
 def floor(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"floor_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.floor(_to_numpy(a)), a.dtype, a.device)
 
 
 def ceil(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"ceil_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.ceil(_to_numpy(a)), a.dtype, a.device)
 
 
 def round(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"round_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.round(_to_numpy(a)), a.dtype, a.device)
 
 
@@ -958,6 +1307,20 @@ def frac(a):
 
 
 def pow(a, b):
+    if isinstance(a, Tensor) and _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"pow_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"pow_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     if isinstance(a, Tensor):
         arr_a = _to_numpy(a)
         ref = a
@@ -972,6 +1335,13 @@ def pow(a, b):
 
 
 def log2(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"log2_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.log2(_to_numpy(a)), a.dtype, a.device)
 
 
@@ -984,12 +1354,26 @@ def exp2(a):
 
 
 def rsqrt(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"rsqrt_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     arr = _to_numpy(a)
     out = 1.0 / np.sqrt(arr)
     return _from_numpy(out, a.dtype, a.device)
 
 
 def sign(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"sign_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.sign(_to_numpy(a)), a.dtype, a.device)
 
 
@@ -1058,6 +1442,13 @@ def softplus(a):
 
 
 def silu(a):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_unary(f"silu_{sfx}", _metal_buf(a), out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     arr = _to_numpy(a)
     out = arr / (1.0 + np.exp(-arr))
     return _from_numpy(out, a.dtype, a.device)
@@ -1283,6 +1674,20 @@ def hypot(a, b):
 
 
 def remainder(a, b):
+    if isinstance(a, Tensor) and _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"remainder_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"remainder_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a) if isinstance(a, Tensor) else a
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     ref = a if isinstance(a, Tensor) else b
@@ -1290,6 +1695,14 @@ def remainder(a, b):
 
 
 def fmod(a, b):
+    if _can_use_gpu(a) and isinstance(b, Tensor) and _can_use_gpu(b):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_binary(f"fmod_{sfx}", _metal_buf(a), _metal_buf(b),
+                          out_buf, numel)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     return _from_numpy(np.fmod(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
 
@@ -1535,6 +1948,19 @@ def pad(a, pad_widths, mode='constant', value=0):
 
 
 def softmax(a, dim):
+    # GPU path: softmax over last dim for 2D contiguous float32
+    ndim = len(a.shape)
+    actual_dim = dim if dim >= 0 else dim + ndim
+    if (_can_use_gpu(a) and a.dtype == float32_dtype
+            and actual_dim == ndim - 1 and ndim >= 1):
+        d = _get_dispatcher()
+        numel = a.numel()
+        cols = a.shape[-1]
+        rows = numel // cols
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        d.dispatch_softmax_2d("softmax_f32", _metal_buf(a), out_buf,
+                              rows, cols)
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     arr = _to_numpy(a)
     exp_arr = np.exp(arr - np.max(arr, axis=dim, keepdims=True))
     result = exp_arr / np.sum(exp_arr, axis=dim, keepdims=True)
@@ -2095,6 +2521,20 @@ def adaptive_avg_pool2d(input, output_size):
 # ---------------------------------------------------------------------------
 
 def sub(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"sub_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"sub_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     return _from_numpy(a_np - b_np, a.dtype, a.device)
@@ -2113,12 +2553,40 @@ def reciprocal(a):
 
 
 def maximum(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"maximum_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"maximum_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     return _from_numpy(np.maximum(a_np, b_np), a.dtype, a.device)
 
 
 def minimum(a, b):
+    if _can_use_gpu(a):
+        d = _get_dispatcher()
+        sfx = _kernel_suffix(a.dtype)
+        numel = a.numel()
+        out_buf = _alloc_output_buf(numel, a.dtype)
+        if isinstance(b, Tensor) and _can_use_gpu(b):
+            d.dispatch_binary(f"minimum_{sfx}", _metal_buf(a), _metal_buf(b),
+                              out_buf, numel)
+        else:
+            scalar = float(b) if not isinstance(b, Tensor) else float(_to_numpy(b).ravel()[0])
+            d.dispatch_binary_scalar(f"minimum_scalar_{sfx}", _metal_buf(a),
+                                     scalar, out_buf, numel,
+                                     scalar_fmt=_scalar_fmt(a.dtype))
+        return _from_metal_buffer(out_buf, a.shape, a.stride, a.dtype, a.device)
     a_np = _to_numpy(a)
     b_np = _to_numpy(b) if isinstance(b, Tensor) else b
     return _from_numpy(np.minimum(a_np, b_np), a.dtype, a.device)
