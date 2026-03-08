@@ -350,6 +350,20 @@ class OpSchema:
                 return
             _raise_invalid_combo()
 
+        def _validate_std_var_dim(value):
+            if value is None:
+                return
+            if isinstance(value, bool):
+                _raise_invalid_combo_with_got("(Tensor, dim=bool)")
+                return
+            if isinstance(value, str):
+                if value.isidentifier():
+                    raise _dimname_not_found(value, bound.get("input"))
+                raise RuntimeError(
+                    "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                    f"and/or underscore and starts with a non-digit. got: '{value}'."
+                )
+
         def _type_label(value):
             if isinstance(value, bool):
                 return "bool"
@@ -622,6 +636,9 @@ class OpSchema:
                 continue
             if op_short_name == "count_nonzero" and param.name == "dim":
                 _validate_count_nonzero_dim(value)
+                continue
+            if op_short_name in {"std", "var"} and param.name == "dim":
+                _validate_std_var_dim(value)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
