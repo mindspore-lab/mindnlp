@@ -17,15 +17,19 @@ _PROFILE_TO_POLICY = {
 _PROFILE_CAPABILITIES = {
     "910a": {
         "use_smallop_arange_1d": False,
+        "use_smallop_linspace": False,
     },
     "910b": {
         "use_smallop_arange_1d": False,
+        "use_smallop_linspace": False,
     },
     "310b": {
         "use_smallop_arange_1d": True,
+        "use_smallop_linspace": True,
     },
     "310p": {
         "use_smallop_arange_1d": False,
+        "use_smallop_linspace": False,
     },
 }
 
@@ -57,3 +61,7 @@ def capability(name, profile=None, default=False):
 
 def use_smallop_arange_1d(profile=None):
     return capability("use_smallop_arange_1d", profile=profile, default=False)
+
+
+def use_smallop_linspace(profile=None):
+    return capability("use_smallop_linspace", profile=profile, default=False)

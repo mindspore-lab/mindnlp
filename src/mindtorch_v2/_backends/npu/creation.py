@@ -175,7 +175,7 @@ def linspace_create(start, end, steps, dtype=None, device=None):
         raise ValueError("number of steps must be non-negative")
     dtype = _resolve_dtype(dtype)
 
-    if ops_soc.use_fallback("linspace"):
+    if ops_soc.use_smallop_linspace():
         return _linspace_fallback_npu(start, end, steps, dtype=dtype, device=device)
 
     if not aclnn.linspace_symbols_ok():
