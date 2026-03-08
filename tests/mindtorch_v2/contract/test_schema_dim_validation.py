@@ -519,3 +519,75 @@ def test_dispatch_argmin_rejects_str_dim_matches_torch():
         pt.argmin(pt.tensor([1.0, 2.0]), dim="0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_all_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+
+    def mt_call():
+        dispatch("all", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.all(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_all_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+
+    def mt_call():
+        dispatch("all", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.all(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_any_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+
+    def mt_call():
+        dispatch("any", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.any(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_any_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+
+    def mt_call():
+        dispatch("any", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.any(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_count_nonzero_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+
+    def mt_call():
+        dispatch("count_nonzero", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.count_nonzero(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_count_nonzero_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+
+    def mt_call():
+        dispatch("count_nonzero", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.count_nonzero(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
