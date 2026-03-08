@@ -872,6 +872,12 @@ def new_subgroups(group_size=None, group=None, timeout=None, backend=None,
     world_size = pg.size()
     if group_size is None:
         raise ValueError("group_size must be specified")
+    if group_size <= 0:
+        raise ValueError(f"group_size {group_size} must be a positive integer")
+    if group_size > world_size:
+        raise ValueError(
+            f"group_size {group_size} must not exceed world_size {world_size}"
+        )
     if world_size % group_size != 0:
         raise ValueError(
             f"world_size {world_size} not divisible by group_size {group_size}"
