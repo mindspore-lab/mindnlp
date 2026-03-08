@@ -380,20 +380,6 @@ class OpSchema:
                 f"{op_short_name}(): argument 'dim' must be tuple of ints, not {type(value).__name__}"
             )
 
-        def _validate_logsumexp_dim(value, input_tensor):
-            if isinstance(value, bool):
-                _raise_invalid_combo_with_got("(Tensor, dim=bool)")
-                return
-            if isinstance(value, int) and not isinstance(value, bool):
-                return
-            if isinstance(value, str):
-                if value.isidentifier():
-                    raise _dimname_not_found(value, input_tensor)
-                raise RuntimeError(
-                    "Invalid name: a valid identifier contains only digits, alphabetical characters, "
-                    f"and/or underscore and starts with a non-digit. got: '{value}'."
-                )
-
         def _type_label(value):
             if isinstance(value, bool):
                 return "bool"
@@ -672,9 +658,6 @@ class OpSchema:
                 continue
             if op_short_name in {"nansum", "nanmean"} and param.name == "dim":
                 _validate_nan_reduction_dim(value)
-                continue
-            if op_short_name == "logsumexp" and param.name == "dim":
-                _validate_logsumexp_dim(value, bound.get("input"))
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
