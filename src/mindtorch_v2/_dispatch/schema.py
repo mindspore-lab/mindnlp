@@ -168,8 +168,8 @@ class OpSchema:
             name_sig = f"!int!, !{t1}!" if isinstance(dim0, int) and not isinstance(dim0, bool) else f"!{t0}!, !int!"
             return int_sig, name_sig
 
-        def _validate_sum_dim(value, input_tensor):
-            # Match torch call-site validation for sum(dim=...).
+        def _validate_sum_mean_dim(value, input_tensor):
+            # Match torch call-site validation for sum/mean(dim=...).
             if value is None:
                 return
             if isinstance(value, bool):
@@ -177,12 +177,23 @@ class OpSchema:
             if isinstance(value, int):
                 return
             if isinstance(value, str):
-                raise _dimname_not_found(value, input_tensor)
+                if value.isidentifier():
+                    raise _dimname_not_found(value, input_tensor)
+                raise RuntimeError(
+                    "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                    f"and/or underscore and starts with a non-digit. got: '{value}'."
+                )
             if isinstance(value, (list, tuple)):
                 if not value:
                     return
                 if len(value) == 1 and isinstance(value[0], str):
-                    raise _dimname_not_found(value[0], input_tensor)
+                    name_value = value[0]
+                    if name_value.isidentifier():
+                        raise _dimname_not_found(name_value, input_tensor)
+                    raise RuntimeError(
+                        "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                        f"and/or underscore and starts with a non-digit. got: '{name_value}'."
+                    )
                 if isinstance(value[0], str):
                     for item in value[1:]:
                         if not (item is None or isinstance(item, str)):
@@ -222,6 +233,23 @@ class OpSchema:
                     kwargs["dim"] = tuple(normalized)
                     bound["dim"] = kwargs["dim"]
                 return
+            _raise_invalid_combo()
+
+        def _validate_prod_dim(value, input_tensor):
+            # Match torch call-site validation for prod(dim=...).
+            if value is None:
+                return
+            if isinstance(value, bool):
+                _raise_invalid_combo()
+            if isinstance(value, int):
+                return
+            if isinstance(value, str):
+                if value.isidentifier():
+                    raise _dimname_not_found(value, input_tensor)
+                raise RuntimeError(
+                    "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                    f"and/or underscore and starts with a non-digit. got: '{value}'."
+                )
             _raise_invalid_combo()
 
         def _type_label(value):
@@ -475,7 +503,15 @@ class OpSchema:
             ptype = getattr(param, "type_name", None)
             if op_short_name == "sum" and param.name == "dim":
                 input_tensor = bound.get("input")
-                _validate_sum_dim(value, input_tensor)
+                _validate_sum_mean_dim(value, input_tensor)
+                continue
+            if op_short_name == "mean" and param.name == "dim":
+                input_tensor = bound.get("input")
+                _validate_sum_mean_dim(value, input_tensor)
+                continue
+            if op_short_name == "prod" and param.name == "dim":
+                input_tensor = bound.get("input")
+                _validate_prod_dim(value, input_tensor)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)

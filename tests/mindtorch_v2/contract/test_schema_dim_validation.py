@@ -399,3 +399,51 @@ def test_dispatch_sort_rejects_str_dim_matches_torch():
         pt.sort(pt.tensor([1.0, 2.0]), "0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_mean_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("mean", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.mean(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_mean_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("mean", mt_x.device.type, mt_x, "0")
+
+    def th_call():
+        pt.mean(pt.tensor([1.0, 2.0]), "0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_prod_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("prod", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.prod(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_prod_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("prod", mt_x.device.type, mt_x, "0")
+
+    def th_call():
+        pt.prod(pt.tensor([1.0, 2.0]), "0")
+
+    assert_torch_error(mt_call, th_call)
