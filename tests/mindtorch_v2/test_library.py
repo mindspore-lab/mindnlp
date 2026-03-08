@@ -24,8 +24,8 @@ class TestDispatchKeyFromString:
     def test_npu(self):
         assert dispatch_key_from_string("NPU") is DispatchKey.NPU
 
-    def test_cuda_maps_to_privateuse1(self):
-        assert dispatch_key_from_string("CUDA") is DispatchKey.PrivateUse1
+    def test_cuda_maps_to_cuda(self):
+        assert dispatch_key_from_string("CUDA") is DispatchKey.CUDA
 
     def test_privateuse1_maps_to_privateuse1(self):
         assert dispatch_key_from_string("PrivateUse1") is DispatchKey.PrivateUse1
@@ -42,8 +42,8 @@ class TestDispatchKeyFromString:
     def test_autograd_npu(self):
         assert dispatch_key_from_string("AutogradNPU") is DispatchKey.AutogradNPU
 
-    def test_autograd_cuda_maps_to_autogradxpu(self):
-        assert dispatch_key_from_string("AutogradCUDA") is DispatchKey.AutogradXPU
+    def test_autograd_cuda_maps_to_autogradcuda(self):
+        assert dispatch_key_from_string("AutogradCUDA") is DispatchKey.AutogradCUDA
 
     def test_autograd_privateuse1_maps_to_autogradxpu(self):
         assert dispatch_key_from_string("AutogradPrivateUse1") is DispatchKey.AutogradXPU

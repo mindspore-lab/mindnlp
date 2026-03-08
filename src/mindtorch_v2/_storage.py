@@ -501,6 +501,9 @@ class TypedStorage:
             )
         if self.device.type == "meta":
             return meta_typed_storage_from_size(self._size, self.dtype, device=self.device)
+        if self.device.type == "cuda":
+            arr = cuda_typed_storage_to_numpy(self, (self._size,), self.dtype)
+            return cuda_typed_storage_from_numpy(arr, self.dtype, device=self.device)
         raise NotImplementedError(f"Unsupported device: {self.device}")
 
     def copy_(self, other):
@@ -530,6 +533,11 @@ class TypedStorage:
             )
             if ret != 0:
                 raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
+            return self
+        if self.device.type == "cuda":
+            from ._backends.cuda import storage as cuda_storage
+
+            cuda_storage.copy_untyped(self.untyped_storage(), other.untyped_storage())
             return self
         raise NotImplementedError(f"Unsupported device: {self.device}")
 
@@ -610,6 +618,31 @@ def mps_typed_storage_from_ptr(metal_buffer, size, dtype, device=None):
     )
     typed_data = np.frombuffer(data_buf, dtype=to_numpy_dtype(dtype), count=int(size))
     return TypedStorage(untyped, dtype, int(size), data=typed_data)
+
+
+def cuda_typed_storage_from_numpy(arr, dtype, device=None):
+    arr = np.ascontiguousarray(arr, dtype=to_numpy_dtype(dtype))
+    from ._backends.cuda import storage as cuda_storage
+
+    untyped = cuda_storage.untyped_from_numpy(arr, device=device)
+    return TypedStorage(untyped, dtype, arr.size)
+
+
+def empty_cuda_typed_storage(shape, dtype, device=None):
+    if isinstance(shape, int):
+        shape = (shape,)
+    shape = tuple(shape)
+    size = int(np.prod(shape))
+    from ._backends.cuda import storage as cuda_storage
+
+    untyped = cuda_storage.empty_untyped(shape, dtype, device=device)
+    return TypedStorage(untyped, dtype, size)
+
+
+def cuda_typed_storage_to_numpy(storage, shape, dtype):
+    from ._backends.cuda import storage as cuda_storage
+
+    return cuda_storage.to_numpy(storage.untyped_storage(), dtype, shape=shape)
 
 
 class PendingStorage:

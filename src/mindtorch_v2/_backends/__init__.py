@@ -1,5 +1,6 @@
 from . import cpu
 from . import meta
+from . import cuda
 from . import npu
 from . import autograd
 
@@ -10,4 +11,4 @@ if sys.platform == "darwin":
     except ImportError:
         pass
 
-__all__ = ["cpu", "meta", "npu", "autograd"]
+__all__ = ["cpu", "meta", "cuda", "npu", "autograd"]

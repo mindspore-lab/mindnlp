@@ -114,6 +114,7 @@ def _register_global_fallthroughs():
         DispatchKey.AutogradOther,
         DispatchKey.AutogradCPU,
         DispatchKey.AutogradNPU,
+        DispatchKey.AutogradCUDA,
         DispatchKey.AutogradXPU,
         DispatchKey.AutogradMeta,
         DispatchKey.Python,
@@ -146,7 +147,7 @@ def resolve_dispatch_key(device):
     if label == "meta":
         return DispatchKey.Meta
     if label == "cuda":
-        return DispatchKey.PrivateUse1
+        return DispatchKey.CUDA
     if label == "mps":
         return DispatchKey.PrivateUse2
 
@@ -156,7 +157,7 @@ def resolve_dispatch_key(device):
 _DISPATCH_KEY_STRING_MAP = {
     "CPU": DispatchKey.CPU,
     "NPU": DispatchKey.NPU,
-    "CUDA": DispatchKey.PrivateUse1,
+    "CUDA": DispatchKey.CUDA,
     "PrivateUse1": DispatchKey.PrivateUse1,
     "MPS": DispatchKey.PrivateUse2,
     "PrivateUse2": DispatchKey.PrivateUse2,
@@ -164,7 +165,7 @@ _DISPATCH_KEY_STRING_MAP = {
     "Autograd": DispatchKey.Autograd,
     "AutogradCPU": DispatchKey.AutogradCPU,
     "AutogradNPU": DispatchKey.AutogradNPU,
-    "AutogradCUDA": DispatchKey.AutogradXPU,
+    "AutogradCUDA": DispatchKey.AutogradCUDA,
     "AutogradPrivateUse1": DispatchKey.AutogradXPU,
     "AutogradMPS": DispatchKey.PrivateUse3,
     "AutogradPrivateUse2": DispatchKey.PrivateUse3,
