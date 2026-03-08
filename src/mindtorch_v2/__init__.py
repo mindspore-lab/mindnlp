@@ -94,6 +94,7 @@ from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, ena
 from . import _autograd as autograd
 from ._backends import autograd as _autograd_kernels
 from . import npu
+from . import mps
 from . import _C
 from . import distributed
 from . import onnx

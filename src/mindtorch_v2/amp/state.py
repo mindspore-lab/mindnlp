@@ -8,7 +8,7 @@ _TLS = threading.local()
 _AMP_CACHE = {}
 _AUTOCACHE_ENABLED = True
 _DEFAULT_DEVICE = "cpu"
-_VALID_DEVICE_TYPES = {"cpu", "npu", "cuda", "meta"}
+_VALID_DEVICE_TYPES = {"cpu", "npu", "cuda", "meta", "mps"}
 
 
 def _require_valid_device_type(device_type):
@@ -39,6 +39,12 @@ def _state_map():
                 "nesting": 0,
             },
             "meta": {
+                "enabled": False,
+                "dtype": float16,
+                "cache_enabled": True,
+                "nesting": 0,
+            },
+            "mps": {
                 "enabled": False,
                 "dtype": float16,
                 "cache_enabled": True,
