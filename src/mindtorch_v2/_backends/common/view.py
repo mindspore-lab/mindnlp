@@ -93,10 +93,25 @@ def squeeze(a, dim=None):
     shape = list(a.shape)
     stride = list(a.stride)
     if dim is not None:
-        d = dim if dim >= 0 else dim + len(shape)
-        if 0 <= d < len(shape) and shape[d] == 1:
-            del shape[d]
-            del stride[d]
+        if isinstance(dim, (list, tuple)):
+            if dim:
+                ndim = len(shape)
+                targets = set()
+                for item in dim:
+                    d = item if item >= 0 else item + ndim
+                    targets.add(d)
+                pairs = [
+                    (s, st)
+                    for idx, (s, st) in enumerate(zip(shape, stride))
+                    if idx not in targets or s != 1
+                ]
+                shape = [p[0] for p in pairs]
+                stride = [p[1] for p in pairs]
+        else:
+            d = dim if dim >= 0 else dim + len(shape)
+            if 0 <= d < len(shape) and shape[d] == 1:
+                del shape[d]
+                del stride[d]
     else:
         pairs = [(s, st) for s, st in zip(shape, stride) if s != 1]
         shape = [p[0] for p in pairs]
