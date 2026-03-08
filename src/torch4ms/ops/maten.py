@@ -294,7 +294,29 @@ def _aten_log_softmax(x, dim=-1, dtype=None):
 
 @op(torch.ops.aten.layer_norm)
 def _aten_layer_norm(x, normalized_shape, weight=None, bias=None, eps=1e-5):
-    return ops.layer_norm(x, normalized_shape, weight, bias, eps)
+    # 手工实现 layer_norm，避免部分 MindSpore 版本 layer_norm 内核不可用
+    if isinstance(normalized_shape, int):
+        normalized_shape = (normalized_shape,)
+    else:
+        normalized_shape = tuple(normalized_shape)
+
+    ndim = int(x.ndim)
+    k = len(normalized_shape)
+    axes = tuple(range(ndim - k, ndim))
+
+    mean = ops.mean(x, axis=axes, keep_dims=True)
+    centered = x - mean
+    var = ops.mean(centered * centered, axis=axes, keep_dims=True)
+    y = centered / ops.sqrt(var + eps)
+
+    if weight is not None:
+        w_shape = (1,) * (ndim - k) + normalized_shape
+        y = y * ops.reshape(weight, w_shape)
+    if bias is not None:
+        b_shape = (1,) * (ndim - k) + normalized_shape
+        y = y + ops.reshape(bias, b_shape)
+
+    return y
 
 
 @op(torch.ops.aten.batch_norm)
@@ -303,11 +325,11 @@ def _aten_batch_norm(x, running_mean, running_var, weight=None, bias=None,
     # MindSpore的BatchNorm接口略有不同，这里使用MindSpore的reduce操作实现
     if training:
         # 训练模式下的BatchNorm - 计算当前batch的均值和方差
-        # 使用MindSpore的reduce_mean计算均值
-        mean = ops.reduce_mean(x, axis=(0, 2, 3), keep_dims=True)
+        # 使用 MindSpore 的 mean 计算均值（该版本参数名为 keep_dims）
+        mean = ops.mean(x, axis=(0, 2, 3), keep_dims=True)
         # 计算方差：E[(x - E[x])^2]
         centered = x - mean
-        var = ops.reduce_mean(centered * centered, axis=(0, 2, 3), keep_dims=True)
+        var = ops.mean(centered * centered, axis=(0, 2, 3), keep_dims=True)
         # 更新running_mean和running_var（简化实现）
         if running_mean is not None:
             running_mean = running_mean * (1 - momentum) + mean.squeeze() * momentum
@@ -345,7 +367,11 @@ def _aten_silu(x):
 @op(torch.ops.aten.dropout)
 def _aten_dropout(x, p=0.5, training=True):
     if training:
-        return ops.dropout(x, p)
+        out = ops.dropout(x, p)
+        # 部分 MindSpore 版本返回 (output, mask)
+        if isinstance(out, tuple):
+            return out[0]
+        return out
     return x
 
 
@@ -684,49 +710,20 @@ def _aten_convolution(input, weight, bias, stride, padding, dilation, transposed
         output_padding = (0,) * num_shape_dim
     
     # 根据空间维度数量选择对应的卷积操作
-    # 使用MindSpore的nn层API（参考 torchax 的实现方式，统一使用nn层以确保兼容性）
-    import mindspore.nn as nn
+    # 直接使用 ops.convXd，让 weight/bias 作为显式输入参与图计算，避免 set_data 造成梯度链断裂。
     
     if num_shape_dim == 1:
-        # 1D卷积 - 通过转换为2D卷积实现（参考 MindSpore 内部实现）
-        # 输入: [N, C_in, L] -> [N, C_in, 1, L]
-        # 权重: [C_out, C_in, K] -> [C_out, C_in, 1, K]
-        # 使用 Conv2D 进行卷积
-        # 输出: [N, C_out, 1, L_out] -> [N, C_out, L_out]
-        
-        # 扩展输入维度：在位置2插入维度1
-        input_2d = ops.expand_dims(input, 2)  # [N, C_in, L] -> [N, C_in, 1, L]
-        
-        # 扩展权重维度：在位置2插入维度1
-        weight_2d = ops.expand_dims(weight, 2)  # [C_out, C_in, K] -> [C_out, C_in, 1, K]
-        
-        # 准备padding：对于2D，padding格式为(上,下,左,右)，1D只需要左右padding
-        pad_val = int(padding[0])
-        pad_2d = (0, 0, pad_val, pad_val)  # (上=0, 下=0, 左=pad, 右=pad)
-        
-        # 使用Conv2D进行卷积
-        conv2d_op = nn.Conv2d(
-            in_channels=int(weight.shape[1] * groups),
-            out_channels=int(weight.shape[0]),
-            kernel_size=(1, int(weight.shape[2])),  # (height=1, width=kernel_size)
-            stride=(1, int(stride[0])),  # (height_stride=1, width_stride=stride)
+        pad_val = int(padding[0]) if len(padding) > 0 else 0
+        res = ops.conv1d(
+            input,
+            weight,
+            bias=bias,
+            stride=int(stride[0]),
             pad_mode='pad',
-            padding=pad_2d,
-            dilation=(1, int(dilation[0])),  # (height_dilation=1, width_dilation=dilation)
-            group=groups,
-            has_bias=(bias is not None)
+            padding=pad_val,
+            dilation=int(dilation[0]),
+            groups=groups,
         )
-        
-        # 设置权重和偏置
-        conv2d_op.weight.set_data(weight_2d)
-        if bias is not None:
-            conv2d_op.bias.set_data(bias)
-        
-        # 执行2D卷积
-        res_2d = conv2d_op(input_2d)  # [N, C_out, 1, L_out]
-        
-        # 压缩输出维度：移除位置2的维度
-        res = ops.squeeze(res_2d, 2)  # [N, C_out, 1, L_out] -> [N, C_out, L_out]
     
     elif num_shape_dim == 2:
         # 2D卷积 - 使用 nn.Conv2d
@@ -741,25 +738,16 @@ def _aten_convolution(input, weight, bias, stride, padding, dilation, transposed
         else:
             pad_val = tuple(padding[:2])
         
-        # 创建临时Conv2d层
-        conv2d_layer = nn.Conv2d(
-            in_channels=int(weight.shape[1] * groups),
-            out_channels=int(weight.shape[0]),
-            kernel_size=tuple(weight.shape[2:]),
+        res = ops.conv2d(
+            input,
+            weight,
+            bias=bias,
             stride=tuple(stride),
             pad_mode='pad',
             padding=pad_val,
             dilation=tuple(dilation),
-            group=groups,
-            has_bias=(bias is not None)
+            groups=groups,
         )
-        
-        # 设置权重和偏置
-        conv2d_layer.weight.set_data(weight)
-        if bias is not None:
-            conv2d_layer.bias.set_data(bias)
-        
-        res = conv2d_layer(input)
     
     elif num_shape_dim == 3:
         # 3D卷积 - 使用 nn.Conv3d
@@ -777,25 +765,16 @@ def _aten_convolution(input, weight, bias, stride, padding, dilation, transposed
         else:
             pad_val = tuple(padding[:3])
         
-        # 创建临时Conv3d层
-        conv3d_layer = nn.Conv3d(
-            in_channels=int(weight.shape[1] * groups),
-            out_channels=int(weight.shape[0]),
-            kernel_size=tuple(weight.shape[2:]),
+        res = ops.conv3d(
+            input,
+            weight,
+            bias=bias,
             stride=tuple(stride),
             pad_mode='pad',
             padding=pad_val,
             dilation=tuple(dilation),
-            group=groups,
-            has_bias=(bias is not None)
+            groups=groups,
         )
-        
-        # 设置权重和偏置
-        conv3d_layer.weight.set_data(weight)
-        if bias is not None:
-            conv3d_layer.bias.set_data(bias)
-        
-        res = conv3d_layer(input)
     
     else:
         raise NotImplementedError(f"Convolution not supported for {num_shape_dim}D spatial dimensions (weight.ndim={weight.ndim})")

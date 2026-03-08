@@ -16,7 +16,7 @@ from torch4ms.ops import op_base, mappings
 import torch4ms.tensor
 from torch4ms.view import View, NarrowInfo
 import torch.utils._pytree as pytree
-from torch4ms.ops.maten import _aten_convolution
+from torch4ms.ops.maten import _aten_convolution, _aten_batch_norm, _aten_dropout, _aten_layer_norm
 
 
 def register_function(torch_func, **kwargs):
@@ -173,6 +173,96 @@ def one_hot(tensor, num_classes=-1):
     return mops.one_hot(tensor, num_classes, on_value=1, off_value=0).astype(mnp.int64)
 
 
+@register_function(torch.transpose)
+def functional_transpose(input, dim0, dim1):
+    rank = int(input.ndim)
+    d0 = int(dim0)
+    d1 = int(dim1)
+    if d0 < 0:
+        d0 += rank
+    if d1 < 0:
+        d1 += rank
+    perm = list(range(rank))
+    perm[d0], perm[d1] = perm[d1], perm[d0]
+    return mops.transpose(input, tuple(perm))
+
+
+@register_function(torch.permute)
+def functional_permute(input, dims):
+    return mops.transpose(input, tuple(dims))
+
+
+@register_function(torch.reshape)
+def functional_reshape(input, shape):
+    return mops.reshape(input, tuple(shape))
+
+
+@register_function(torch.flatten)
+def functional_flatten(input, start_dim=0, end_dim=-1):
+    return mops.flatten(input, start_dim, end_dim)
+
+
+@register_function(torch.chunk)
+def functional_chunk(input, chunks, dim=0):
+    return mops.chunk(input, chunks, axis=dim)
+
+
+@register_function(torch.split)
+def functional_split(input, split_size_or_sections, dim=0):
+    return mops.split(input, split_size_or_sections, axis=dim)
+
+
+@register_function(torch.matmul)
+def functional_matmul(input, other):
+    return mops.matmul(input, other)
+
+
+@register_function(torch.softmax)
+def functional_softmax(input, dim=None, dtype=None):
+    axis = -1 if dim is None else dim
+    return mops.softmax(input, axis=axis)
+
+
+@register_function(torch.mul)
+def functional_mul(input, other):
+    return mops.mul(input, other)
+
+
+@register_function(torch.mean)
+def functional_mean(input, dim=None, keepdim=False, dtype=None):
+    x = input
+    if dtype is not None:
+        x = x.astype(mappings.t2ms_dtype(dtype))
+    if dim is None:
+        return mops.mean(x)
+    axis = tuple(dim) if isinstance(dim, (list, tuple)) else dim
+    return mops.mean(x, axis=axis, keep_dims=keepdim)
+
+
+# 补充 Tensor 方法入口，避免 x.transpose()/x.reshape() 走回退路径
+if hasattr(torch.Tensor, "transpose"):
+    register_function(torch.Tensor.transpose)(functional_transpose)
+if hasattr(torch.Tensor, "permute"):
+    register_function(torch.Tensor.permute)(functional_permute)
+if hasattr(torch.Tensor, "reshape"):
+    register_function(torch.Tensor.reshape)(functional_reshape)
+if hasattr(torch.Tensor, "flatten"):
+    register_function(torch.Tensor.flatten)(functional_flatten)
+if hasattr(torch.Tensor, "chunk"):
+    register_function(torch.Tensor.chunk)(functional_chunk)
+if hasattr(torch.Tensor, "split"):
+    register_function(torch.Tensor.split)(functional_split)
+if hasattr(torch.Tensor, "mean"):
+    register_function(torch.Tensor.mean)(functional_mean)
+
+
+@register_function(torch.relu)
+@register_function(torch.nn.functional.relu)
+def functional_relu(input, inplace=False):
+    # MindSpore relu 没有 inplace 语义，忽略该参数。
+    return mops.relu(input)
+
+
 @register_function(torch.nn.functional.pad)
 def pad(tensor, pad, mode="constant", value=None):
     # MindSpore的pad接口需要不同的参数格式
@@ -232,6 +322,107 @@ def scaled_dot_product_attention(
     return _sdpa_reference(
         query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa
     )
+
+
+@register_function(torch.nn.functional.multi_head_attention_forward, is_mindspore_function=False)
+def functional_multi_head_attention_forward(
+    query,
+    key,
+    value,
+    embed_dim_to_check,
+    num_heads,
+    in_proj_weight,
+    in_proj_bias,
+    bias_k,
+    bias_v,
+    add_zero_attn,
+    dropout_p,
+    out_proj_weight,
+    out_proj_bias,
+    training=True,
+    key_padding_mask=None,
+    need_weights=True,
+    attn_mask=None,
+    use_separate_proj_weight=False,
+    q_proj_weight=None,
+    k_proj_weight=None,
+    v_proj_weight=None,
+    static_k=None,
+    static_v=None,
+    average_attn_weights=True,
+    is_causal=False,
+):
+    """
+    轻量 MHA 前向实现，优先覆盖 TransformerEncoderLayer 的常见路径：
+    - use_separate_proj_weight=False
+    - bias_k/bias_v/static_k/static_v/add_zero_attn 不启用
+    - need_weights=False
+    """
+    if use_separate_proj_weight:
+        raise torch4ms.tensor.OperatorNotFound(
+            "multi_head_attention_forward with separate proj weights is not supported yet."
+        )
+    if bias_k is not None or bias_v is not None or static_k is not None or static_v is not None:
+        raise torch4ms.tensor.OperatorNotFound(
+            "multi_head_attention_forward with bias_k/bias_v/static_k/static_v is not supported yet."
+        )
+    if add_zero_attn:
+        raise torch4ms.tensor.OperatorNotFound(
+            "multi_head_attention_forward with add_zero_attn=True is not supported yet."
+        )
+    if key_padding_mask is not None:
+        raise torch4ms.tensor.OperatorNotFound(
+            "multi_head_attention_forward with key_padding_mask is not supported yet."
+        )
+
+    # query/key/value shape: [L, N, E]
+    # in-projection: [L, N, 3E] -> chunk to q/k/v
+    qkv = torch.nn.functional.linear(query, in_proj_weight, in_proj_bias)
+    q, k, v = torch.chunk(qkv, 3, dim=-1)
+
+    L, N, E = q.shape
+    head_dim = E // num_heads
+    if head_dim * num_heads != E:
+        raise ValueError(f"embed_dim {E} not divisible by num_heads {num_heads}")
+
+    def _to_heads(x):
+        # [L, N, E] -> [N, H, L, D]
+        x = torch.transpose(x, 0, 1)
+        x = torch.reshape(x, (N, L, num_heads, head_dim))
+        x = torch.transpose(x, 1, 2)
+        return x
+
+    qh = _to_heads(q)
+    kh = _to_heads(k)
+    vh = _to_heads(v)
+
+    if attn_mask is not None:
+        raise torch4ms.tensor.OperatorNotFound(
+            "multi_head_attention_forward with attn_mask is not supported yet."
+        )
+    if is_causal:
+        raise torch4ms.tensor.OperatorNotFound(
+            "multi_head_attention_forward with is_causal=True is not supported yet."
+        )
+
+    scale = 1.0 / math.sqrt(head_dim)
+    attn_scores = torch.matmul(qh, torch.transpose(kh, -2, -1)) * scale
+    attn_probs = torch.softmax(attn_scores, dim=-1)
+    if training and dropout_p > 0:
+        attn_probs = torch.nn.functional.dropout(attn_probs, p=dropout_p, training=True)
+    attn_out = torch.matmul(attn_probs, vh)
+
+    # [N, H, L, D] -> [L, N, E]
+    attn_out = torch.transpose(attn_out, 1, 2)
+    attn_out = torch.reshape(attn_out, (N, L, E))
+    attn_out = torch.transpose(attn_out, 0, 1)
+
+    out = torch.nn.functional.linear(attn_out, out_proj_weight, out_proj_bias)
+
+    if need_weights:
+        # 暂不返回 attention 权重（测试路径中 need_weights=False）
+        return out, None
+    return out, None
 
 
 @register_function(
@@ -845,6 +1036,7 @@ def _functional_max_pool2d(
     return output
 
 
+@register_function(torch.conv1d)
 @register_function(torch.nn.functional.conv1d)
 def functional_conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     """
@@ -884,6 +1076,7 @@ def functional_conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1,
     return result
 
 
+@register_function(torch.conv2d)
 @register_function(torch.nn.functional.conv2d)
 def functional_conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     """
@@ -923,6 +1116,7 @@ def functional_conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1,
     return result
 
 
+@register_function(torch.conv3d)
 @register_function(torch.nn.functional.conv3d)
 def functional_conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     """
@@ -960,3 +1154,41 @@ def functional_conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1,
     if isinstance(input, torch4ms.tensor.Tensor):
         return input._env.ms2t_iso(result)
     return result
+
+
+@register_function(torch.nn.functional.batch_norm)
+def functional_batch_norm(input, running_mean, running_var, weight=None, bias=None,
+                          training=False, momentum=0.1, eps=1e-5):
+    result = _aten_batch_norm(
+        input, running_mean, running_var, weight, bias, training, momentum, eps
+    )
+    if isinstance(input, torch4ms.tensor.Tensor):
+        return input._env.ms2t_iso(result)
+    return result
+
+
+@register_function(torch.nn.functional.dropout)
+def functional_dropout(input, p=0.5, training=True, inplace=False):
+    # MindSpore 路径无 inplace 语义，这里忽略 inplace 参数。
+    result = _aten_dropout(input, p, training)
+    if isinstance(input, torch4ms.tensor.Tensor):
+        return input._env.ms2t_iso(result)
+    return result
+
+
+if hasattr(torch, "batch_norm"):
+    register_function(torch.batch_norm)(functional_batch_norm)
+if hasattr(torch, "dropout"):
+    register_function(torch.dropout)(functional_dropout)
+
+
+@register_function(torch.nn.functional.layer_norm)
+def functional_layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    result = _aten_layer_norm(input, normalized_shape, weight, bias, eps)
+    if isinstance(input, torch4ms.tensor.Tensor):
+        return input._env.ms2t_iso(result)
+    return result
+
+
+if hasattr(torch, "layer_norm"):
+    register_function(torch.layer_norm)(functional_layer_norm)

@@ -6,7 +6,6 @@
 """
 from typing import Callable, Dict, List, Tuple
 import torch
-from torch.nn.utils import stateless as torch_stateless
 from torch4ms.tensor import Tensor as Torch4msTensor
 from mindspore import Tensor as ms_Tensor
 
@@ -129,58 +128,22 @@ class AutogradForwardExtractor:
         """
         获取用于 MindSpore GradOperation 的 forward 函数。
 
-        输入为 MindSpore Tensor，内部会转换为 torch.Tensor 执行前向（因为 functional_call 需要），
-        并将结果转换回 MindSpore Tensor。
+        输入为 MindSpore Tensor，内部先转为 torch4ms.Tensor 视图，再在 env 下执行
+        functional forward。这样模块内部算子仍通过 torch4ms dispatch 路由到 MindSpore，
+        避免退化为纯 PyTorch 计算图。
         """
         base_forward = self.get_forward_fn(include_buffers=include_buffers)
 
         def forward_fn(*ms_args):
-            # 将 MindSpore Tensor 转为 torch.Tensor（functional_call 需要）
-            # 先转为 torch4ms.Tensor，再转为 torch.Tensor
+            # 仅做同构包装：MindSpore Tensor -> torch4ms.Tensor（不复制，不降级为纯 torch.Tensor）
             t4_args = env.ms2t_iso(ms_args)
-            torch_args = []
-            for arg in t4_args:
-                if isinstance(arg, Torch4msTensor):
-                    # 转换为 torch.Tensor（用于 functional_call）
-                    from torch4ms.ops import mappings
-                    torch_args.append(mappings.ms2t(arg._elem))
-                else:
-                    torch_args.append(arg)
-            
-            # 调用 base_forward（它期望 torch.Tensor）
+
+            # 在 env 下调用 base_forward，让模块内部 op 继续走 torch4ms dispatch
             with env:
-                res = base_forward(*torch_args)
-            
-            # 将结果转换回 MindSpore Tensor
-            if isinstance(res, Torch4msTensor):
-                # 如果已经是 torch4ms.Tensor，直接返回其 _elem
-                return res._elem
-            elif isinstance(res, torch.Tensor):
-                # 检查是否是 meta 设备上的 tensor
-                # 注意：torch4ms.Tensor 的 device 属性返回字符串，不是 torch.device
-                # 所以我们需要检查 res 是否是普通的 torch.Tensor 且在 meta 设备上
-                try:
-                    device_type = res.device.type if hasattr(res.device, 'type') else str(res.device)
-                    if device_type == 'meta':
-                        # meta tensor 无法直接转换
-                        # 这种情况可能发生在某些操作没有被正确拦截的情况下
-                        # 尝试检查是否有 _elem 属性（可能是 torch4ms.Tensor 但没有被正确识别）
-                        if hasattr(res, '_elem') and isinstance(res._elem, ms_Tensor):
-                            return res._elem
-                        raise RuntimeError(
-                            "Cannot convert meta tensor to MindSpore tensor. "
-                            "This may indicate that the forward function returned a meta tensor. "
-                            "Please ensure all operations are performed on real tensors. "
-                            "If you're using torch4ms, make sure the environment is enabled."
-                        )
-                except (AttributeError, TypeError):
-                    # 如果 device 属性不是标准的 torch.device，尝试直接转换
-                    pass
-                
-                from torch4ms.ops import mappings
-                return mappings.t2ms(res)
-            else:
-                return res
+                res = base_forward(*t4_args)
+
+            # 同构回收：torch4ms / torch 结果统一映射回 MindSpore
+            return env.t2ms_iso(res)
 
         return forward_fn
     
@@ -232,9 +195,11 @@ class AutogradForwardExtractor:
             # 合并参数和 buffers
             params_and_buffers = {**param_dict, **buffer_dict}
             
-            # 使用 functional_call 调用模块
-            with torch_stateless._reparametrize_module(module, params_and_buffers):
-                return module.forward(*input_args)
+            # 使用 torch.func.functional_call（与 torchax 路径一致）
+            # tie_weights=False 避免共享参数在 functional_call 中被强制绑定。
+            return torch.func.functional_call(
+                module, params_and_buffers, input_args, {}, tie_weights=False
+            )
         
         return forward_fn
     

@@ -295,7 +295,28 @@ def _aten_log_softmax(x, dim=-1, dtype=None):
 
 @op(torch.ops.aten.layer_norm)
 def _aten_layer_norm(x, normalized_shape, weight=None, bias=None, eps=1e-5):
-    return ops.layer_norm(x, normalized_shape, weight, bias, eps)
+    if isinstance(normalized_shape, int):
+        normalized_shape = (normalized_shape,)
+    else:
+        normalized_shape = tuple(normalized_shape)
+
+    ndim = int(x.ndim)
+    k = len(normalized_shape)
+    axes = tuple(range(ndim - k, ndim))
+
+    mean = ops.mean(x, axis=axes, keep_dims=True)
+    centered = x - mean
+    var = ops.mean(centered * centered, axis=axes, keep_dims=True)
+    y = centered / ops.sqrt(var + eps)
+
+    if weight is not None:
+        w_shape = (1,) * (ndim - k) + normalized_shape
+        y = y * ops.reshape(weight, w_shape)
+    if bias is not None:
+        b_shape = (1,) * (ndim - k) + normalized_shape
+        y = y + ops.reshape(bias, b_shape)
+
+    return y
 
 
 @op(torch.ops.aten.batch_norm)
@@ -305,7 +326,7 @@ def _aten_batch_norm(x, running_mean, running_var, weight=None, bias=None,
     if training:
         # 训练模式下的BatchNorm
         mean = ops.mean(x, (0, 2, 3), keep_dims=True)
-        var = ops.var(x, (0, 2, 3), keep_dims=True)
+        var = ops.var(x, (0, 2, 3), keepdims=True)
         # 更新running_mean和running_var（简化实现）
         if running_mean is not None:
             running_mean = running_mean * (1 - momentum) + mean.squeeze() * momentum
@@ -343,7 +364,10 @@ def _aten_silu(x):
 @op(torch.ops.aten.dropout)
 def _aten_dropout(x, p=0.5, training=True):
     if training:
-        return ops.dropout(x, p)
+        out = ops.dropout(x, p)
+        if isinstance(out, tuple):
+            return out[0]
+        return out
     return x
 
 

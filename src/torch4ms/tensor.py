@@ -160,8 +160,42 @@ class Tensor(torch.Tensor):
         return self._elem.shape[dim]
 
     def flatten(self, start_dim=0, end_dim=-1):
-        # 使用MindSpore的reshape操作
-        return self._env.ms2t_iso(mnp.reshape(self._elem, (-1,)))
+        # 对齐 PyTorch 语义：仅展平 [start_dim, end_dim] 区间
+        shape = tuple(int(s) for s in self._elem.shape)
+        ndim = len(shape)
+        if ndim == 0:
+            # 标量 flatten 后为一维长度 1
+            res = mnp.reshape(self._elem, (1,))
+            out = self._env.ms2t_iso(res)
+            if self._requires_grad:
+                out._requires_grad = True
+            return out
+
+        start = int(start_dim)
+        end = int(end_dim)
+        if start < 0:
+            start += ndim
+        if end < 0:
+            end += ndim
+
+        start = max(0, min(start, ndim - 1))
+        end = max(0, min(end, ndim - 1))
+        if end < start:
+            # 与 PyTorch 行为一致：空区间不改变形状
+            out = self._env.ms2t_iso(self._elem)
+            if self._requires_grad:
+                out._requires_grad = True
+            return out
+
+        flat_dim = 1
+        for s in shape[start : end + 1]:
+            flat_dim *= s
+        new_shape = shape[:start] + (flat_dim,) + shape[end + 1 :]
+        res = mnp.reshape(self._elem, new_shape)
+        out = self._env.ms2t_iso(res)
+        if self._requires_grad:
+            out._requires_grad = True
+        return out
 
     # ========= 基本算术运算支持 =========
     def _binary_op(self, other, ms_op, op_name=None):
