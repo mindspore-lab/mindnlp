@@ -808,6 +808,9 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     if ranks is None:
         ranks = list(range(world_size))
 
+    if len(ranks) != len(set(ranks)):
+        raise ValueError("ranks cannot contain duplicate entries")
+
     # Reserve a deterministic group sequence ID on every rank even when
     # this rank is not a member, so subsequent implicit group names stay aligned.
     prefix = group_desc or f"pg{_group_count}"
