@@ -193,8 +193,32 @@ def functional_permute(input, dims):
 
 
 @register_function(torch.reshape)
-def functional_reshape(input, shape):
-    return mops.reshape(input, tuple(shape))
+def functional_reshape(input, *shape):
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        target_shape = tuple(shape[0])
+    else:
+        target_shape = tuple(shape)
+    return mops.reshape(input, target_shape)
+
+
+@register_function(torch.Tensor.view)
+def tensor_view(input, *shape):
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        target_shape = tuple(shape[0])
+    else:
+        target_shape = tuple(shape)
+    return mops.reshape(input, target_shape)
+
+
+@register_function(torch.Tensor.contiguous)
+def tensor_contiguous(input, memory_format=None):
+    # MindSpore tensors are contiguous in this path; keep semantic no-op.
+    return input
+
+
+@register_function(torch.Tensor.float)
+def tensor_float(input):
+    return mops.cast(input, ms.float32)
 
 
 @register_function(torch.flatten)
@@ -212,6 +236,16 @@ def functional_split(input, split_size_or_sections, dim=0):
     return mops.split(input, split_size_or_sections, axis=dim)
 
 
+@register_function(torch.stack)
+def functional_stack(tensors, dim=0):
+    return mops.stack(tuple(tensors), axis=dim)
+
+
+@register_function(torch.cat)
+def functional_cat(tensors, dim=0):
+    return mops.concat(tuple(tensors), axis=dim)
+
+
 @register_function(torch.matmul)
 def functional_matmul(input, other):
     return mops.matmul(input, other)
@@ -220,12 +254,61 @@ def functional_matmul(input, other):
 @register_function(torch.softmax)
 def functional_softmax(input, dim=None, dtype=None):
     axis = -1 if dim is None else dim
-    return mops.softmax(input, axis=axis)
+    x = input
+    if dtype is not None:
+        x = x.astype(mappings.t2ms_dtype(dtype))
+    return mops.softmax(x, axis=axis)
+
+
+@register_function(torch.nn.functional.softmax)
+def functional_softmax_f(input, dim=None, _stacklevel=3, dtype=None):
+    axis = -1 if dim is None else dim
+    x = input
+    if dtype is not None:
+        x = x.astype(mappings.t2ms_dtype(dtype))
+    return mops.softmax(x, axis=axis)
 
 
 @register_function(torch.mul)
 def functional_mul(input, other):
     return mops.mul(input, other)
+
+
+@register_function(torch.pow)
+def functional_pow(input, exponent):
+    exp = exponent
+    if not isinstance(exp, ms.Tensor):
+        exp = ms.Tensor(float(exp), dtype=input.dtype)
+    else:
+        exp_dtype = getattr(exp, "dtype", None)
+        if exp_dtype is not None and "Int" in str(exp_dtype):
+            exp = mops.cast(exp, input.dtype)
+    return mops.pow(input, exp)
+
+
+@register_function(torch.rsqrt)
+def functional_rsqrt(input):
+    return mops.rsqrt(input)
+
+
+@register_function(torch.sqrt)
+def functional_sqrt(input):
+    return mops.sqrt(input)
+
+
+@register_function(torch.nn.functional.gelu)
+def functional_gelu(input, approximate="none"):
+    approx = "tanh" if approximate == "tanh" else "none"
+    return mops.gelu(input, approximate=approx)
+
+
+@register_function(torch.nn.functional.embedding)
+def functional_embedding(input, weight, padding_idx=-1, max_norm=None, norm_type=2.0, scale_grad_by_freq=False, sparse=False):
+    vocab_size = weight.shape[0]
+    on_value = ms.Tensor(1.0, dtype=weight.dtype)
+    off_value = ms.Tensor(0.0, dtype=weight.dtype)
+    one_hot = mops.one_hot(input, vocab_size, on_value, off_value)
+    return mops.matmul(one_hot, weight)
 
 
 @register_function(torch.mean)
@@ -252,8 +335,12 @@ if hasattr(torch.Tensor, "chunk"):
     register_function(torch.Tensor.chunk)(functional_chunk)
 if hasattr(torch.Tensor, "split"):
     register_function(torch.Tensor.split)(functional_split)
+if hasattr(torch.Tensor, "pow"):
+    register_function(torch.Tensor.pow)(functional_pow)
 if hasattr(torch.Tensor, "mean"):
     register_function(torch.Tensor.mean)(functional_mean)
+if hasattr(torch.Tensor, "sqrt"):
+    register_function(torch.Tensor.sqrt)(functional_sqrt)
 
 
 @register_function(torch.relu)

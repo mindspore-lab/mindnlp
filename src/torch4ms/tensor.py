@@ -308,12 +308,22 @@ class Tensor(torch.Tensor):
 
     def __pow__(self, other):
         """支持 x ** y。"""
+        if not isinstance(other, (Tensor, ms_Tensor, torch.Tensor, np.ndarray)):
+            try:
+                other = ms_Tensor(float(other), dtype=self._elem.dtype)
+            except Exception:
+                pass
         return self._binary_op(other, ops.pow)
 
     def __rpow__(self, other):
         """支持 y ** x。"""
         if isinstance(other, Tensor):
             return other._binary_op(self, ops.pow)
+        if not isinstance(other, (ms_Tensor, torch.Tensor, np.ndarray)):
+            try:
+                other = ms_Tensor(float(other), dtype=self._elem.dtype)
+            except Exception:
+                pass
         return self._binary_op(other, lambda a, b: ops.pow(b, a))
 
     # 比较运算，返回布尔 Tensor
@@ -345,9 +355,9 @@ class Tensor(torch.Tensor):
         # 确保other是Tensor类型
         if not isinstance(other, Tensor):
             raise TypeError(f"Expected Tensor, got {type(other).__name__}")
-        # 获取目标数据类型（MindSpore dtype，供 mnp.astype 使用）
+        # 获取目标数据类型并使用 MindSpore cast
         target_ms_dtype = other._elem.dtype
-        return self._env.ms2t_iso(mnp.astype(self._elem, target_ms_dtype))
+        return self._env.ms2t_iso(ops.cast(self._elem, target_ms_dtype))
 
     __torch_function__ = torch._C._disabled_torch_function_impl
 

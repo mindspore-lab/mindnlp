@@ -86,6 +86,12 @@ def _aten_div(x, y, rounding_mode=None):
 @op(torch.ops.aten.pow)
 @op(torch.ops.aten.pow.Scalar)
 def _aten_pow(x, y):
+    if not isinstance(y, ms.Tensor):
+        y = ms.Tensor(float(y), dtype=x.dtype)
+    else:
+        y_dtype = getattr(y, "dtype", None)
+        if y_dtype is not None and "Int" in str(y_dtype):
+            y = ops.cast(y, x.dtype)
     return ops.pow(x, y)
 
 
@@ -1093,9 +1099,11 @@ def _aten_gather(x, dim, index):
 @op(torch.ops.aten.embedding)
 def _aten_embedding(weight, indices, padding_idx=-1, scale_grad_by_freq=False, sparse=False):
     """嵌入层"""
-    # 使用 MindSpore 的 embedding lookup
-    # 注意：MindSpore 的 embedding 可能需要不同的实现方式
-    return ops.gather(weight, indices, axis=0)
+    vocab_size = weight.shape[0]
+    on_value = ms.Tensor(1.0, dtype=weight.dtype)
+    off_value = ms.Tensor(0.0, dtype=weight.dtype)
+    one_hot = ops.one_hot(indices, vocab_size, on_value, off_value)
+    return ops.matmul(one_hot, weight)
 
 
 @op(torch.ops.aten.embedding_renorm_)

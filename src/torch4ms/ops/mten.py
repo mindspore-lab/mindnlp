@@ -87,6 +87,12 @@ def _aten_div(x, y, rounding_mode=None):
 @op(torch.ops.aten.pow)
 @op(torch.ops.aten.pow.Scalar)
 def _aten_pow(x, y):
+    if not isinstance(y, ms.Tensor):
+        y = ms.Tensor(float(y), dtype=x.dtype)
+    else:
+        y_dtype = getattr(y, "dtype", None)
+        if y_dtype is not None and "Int" in str(y_dtype):
+            y = ops.cast(y, x.dtype)
     return ops.pow(x, y)
 
 
