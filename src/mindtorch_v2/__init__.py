@@ -93,6 +93,7 @@ from ._backends import cpu
 from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad, inference_mode
 from . import _autograd as autograd
 from ._backends import autograd as _autograd_kernels
+from . import cuda
 from . import npu
 from . import mps
 from . import _C
@@ -152,6 +153,7 @@ def compile(model=None, *args, **kwargs):
 __all__ = [
     "Device",
     "device",
+    "cuda",
     "Tensor",
     "Size",
     "FloatTensor", "DoubleTensor", "HalfTensor", "BFloat16Tensor",

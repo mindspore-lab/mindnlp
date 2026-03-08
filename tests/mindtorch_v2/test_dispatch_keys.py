@@ -48,3 +48,26 @@ def test_dispatch_keyset_without_removes_keys():
     trimmed = keyset.without(DispatchKey.Autograd)
     assert DispatchKey.CPU in trimmed
     assert DispatchKey.Autograd not in trimmed
+
+
+def test_dispatch_keyset_cuda_uses_explicit_cuda_key(monkeypatch):
+    import mindtorch_v2._backends.cuda.runtime as cuda_runtime
+
+    monkeypatch.setattr(cuda_runtime, "is_available", lambda: True)
+    monkeypatch.setattr(cuda_runtime, "device_count", lambda: 1)
+
+    t = torch.ones((2,), device="cuda")
+    keyset = DispatchKeySet.from_tensors((t,))
+    assert DispatchKey.CUDA in keyset
+
+
+def test_dispatch_keyset_cuda_autograd_uses_explicit_cuda_key(monkeypatch):
+    import mindtorch_v2._backends.cuda.runtime as cuda_runtime
+
+    monkeypatch.setattr(cuda_runtime, "is_available", lambda: True)
+    monkeypatch.setattr(cuda_runtime, "device_count", lambda: 1)
+
+    t = torch.ones((2,), device="cuda")
+    t.requires_grad = True
+    keyset = DispatchKeySet.from_tensors((t,), grad_enabled=True, pipeline_enabled=False)
+    assert DispatchKey.AutogradCUDA in keyset

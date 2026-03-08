@@ -266,6 +266,7 @@ _AUTOGRAD_KEYS = (
     DispatchKey.Autograd,
     DispatchKey.AutogradCPU,
     DispatchKey.AutogradNPU,
+    DispatchKey.AutogradCUDA,
     DispatchKey.AutogradMeta,
     DispatchKey.AutogradOther,
     DispatchKey.AutogradXPU,

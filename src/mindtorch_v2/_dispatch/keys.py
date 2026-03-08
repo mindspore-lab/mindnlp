@@ -9,19 +9,21 @@ class DispatchKey(IntEnum):
     AutogradOther = 1 << 5
     AutogradCPU = 1 << 6
     AutogradNPU = 1 << 7
-    AutogradXPU = 1 << 8
-    AutogradMeta = 1 << 9
-    Autograd = 1 << 10
-    Meta = 1 << 11
-    NPU = 1 << 12
-    CPU = 1 << 13
-    PythonDispatcher = 1 << 14
-    CompositeImplicitAutograd = 1 << 15
-    CompositeExplicitAutograd = 1 << 16
-    Autocast = 1 << 17
-    PrivateUse1 = 1 << 18
-    PrivateUse2 = 1 << 19
-    PrivateUse3 = 1 << 20
+    AutogradCUDA = 1 << 8
+    AutogradXPU = 1 << 9
+    AutogradMeta = 1 << 10
+    Autograd = 1 << 11
+    Meta = 1 << 12
+    NPU = 1 << 13
+    CUDA = 1 << 14
+    CPU = 1 << 15
+    PythonDispatcher = 1 << 16
+    CompositeImplicitAutograd = 1 << 17
+    CompositeExplicitAutograd = 1 << 18
+    Autocast = 1 << 19
+    PrivateUse1 = 1 << 20
+    PrivateUse2 = 1 << 21
+    PrivateUse3 = 1 << 22
 
 
 DISPATCH_KEY_PRIORITY = [
@@ -33,11 +35,13 @@ DISPATCH_KEY_PRIORITY = [
     DispatchKey.AutogradOther,
     DispatchKey.AutogradCPU,
     DispatchKey.AutogradNPU,
+    DispatchKey.AutogradCUDA,
     DispatchKey.AutogradXPU,
     DispatchKey.AutogradMeta,
     DispatchKey.Autograd,
     DispatchKey.Meta,
     DispatchKey.NPU,
+    DispatchKey.CUDA,
     DispatchKey.CPU,
     DispatchKey.PythonDispatcher,
     DispatchKey.CompositeImplicitAutograd,
@@ -216,7 +220,7 @@ class DispatchKeySet:
         elif has_npu:
             mask |= int(DispatchKey.NPU)
         elif has_cuda:
-            mask |= int(DispatchKey.PrivateUse1)
+            mask |= int(DispatchKey.CUDA)
         elif has_mps:
             mask |= int(DispatchKey.PrivateUse2)
         else:
@@ -229,7 +233,7 @@ class DispatchKeySet:
             elif has_npu:
                 mask |= int(DispatchKey.AutogradNPU)
             elif has_cuda:
-                mask |= int(DispatchKey.AutogradXPU)
+                mask |= int(DispatchKey.AutogradCUDA)
             elif has_mps:
                 mask |= int(DispatchKey.PrivateUse3)
             else:

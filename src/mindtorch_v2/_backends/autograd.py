@@ -18,6 +18,7 @@ def _strip_autograd_keys(keyset):
             DispatchKey.AutogradOther,
             DispatchKey.AutogradCPU,
             DispatchKey.AutogradNPU,
+            DispatchKey.AutogradCUDA,
             DispatchKey.AutogradXPU,
             DispatchKey.AutogradMeta,
             DispatchKey.PrivateUse3,
@@ -6084,6 +6085,7 @@ def _register_autograd_op(name, factory, *, npu_factory=None, include_meta=True)
         "default": factory(),
         "cpu": factory(),
         "npu": (npu_factory or factory)(),
+        "cuda": factory(),
     }
     if include_meta:
         kwargs["meta"] = factory()
