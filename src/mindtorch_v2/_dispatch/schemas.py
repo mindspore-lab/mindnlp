@@ -511,6 +511,12 @@ def register_schemas():
 
     # New GROUP C ops for Tensor API alignment
     registry.register_schema("logsumexp", "logsumexp(Tensor input, int dim, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "logsumexp",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, tuple of ints dim, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of names dim, bool keepdim = False, *, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("trace", "trace(Tensor input) -> Tensor")
     registry.register_schema("det", "det(Tensor input) -> Tensor")
     registry.register_schema("matrix_power", "matrix_power(Tensor input, int n) -> Tensor")
