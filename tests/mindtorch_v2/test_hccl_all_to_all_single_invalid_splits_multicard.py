@@ -1,4 +1,4 @@
-"""HCCL all_to_all_single async unequal-split semantics on 2/4/8 NPUs."""
+"""HCCL all_to_all_single invalid split-size validation on 2/4/8 NPUs."""
 
 import os
 import subprocess
@@ -25,10 +25,14 @@ device = torch.Device(f"npu:{rank}")
 time.sleep(0.05 * rank)
 dist.init_process_group("hccl", device_id=device)
 
-# Pairwise-consistent unequal split profile for all ranks:
-# send 1 item to self, 2 items to every other peer.
+# Baseline profile: send 1 item to self, 2 items to other peers.
 input_split = [1 if i == rank else 2 for i in range(world_size)]
 output_split = [1 if j == rank else 2 for j in range(world_size)]
+
+# Break pairwise compatibility only on rank 0:
+# rank0 -> rank1 send count becomes 3, but rank1's output from rank0 remains 2.
+if rank == 0:
+    input_split[1] = 3
 
 vals = []
 for dst in range(world_size):
@@ -38,39 +42,21 @@ for dst in range(world_size):
 inp = torch.tensor(vals, device=device)
 out = torch.zeros(sum(output_split), device=device)
 
-w = dist.all_to_all_single(
-    out,
-    inp,
-    output_split_sizes=output_split,
-    input_split_sizes=input_split,
-    async_op=True,
-)
-assert w is not None
-w.wait()
-
-actual = list(out.to("cpu")._numpy_view())
-expected = []
-for src in range(world_size):
-    cnt = 1 if src == rank else 2
-    for k in range(cnt):
-        expected.append(float(src * 1000 + rank * 10 + k))
-assert actual == expected, f"rank={rank} actual={actual}, expected={expected}"
-
-# Repeat once for stability.
-out2 = torch.zeros(sum(output_split), device=device)
-w2 = dist.all_to_all_single(
-    out2,
-    inp,
-    output_split_sizes=output_split,
-    input_split_sizes=input_split,
-    async_op=True,
-)
-w2.wait()
-actual2 = list(out2.to("cpu")._numpy_view())
-assert actual2 == expected, f"rank={rank} repeat actual={actual2}, expected={expected}"
+try:
+    dist.all_to_all_single(
+        out,
+        inp,
+        output_split_sizes=output_split,
+        input_split_sizes=input_split,
+        async_op=True,
+    )
+except ValueError as exc:
+    assert "split mismatch" in str(exc)
+else:
+    raise AssertionError("expected ValueError for invalid all_to_all_single split pairing")
 
 dist.destroy_process_group()
-print(f"[rank {rank}] HCCL all_to_all_single async unequal {world_size}card PASS")
+print(f"[rank {rank}] HCCL invalid split validation {world_size}card PASS")
 '''
 
 
@@ -84,7 +70,7 @@ def _run_once(world_size, master_port):
     env["PYTHONPATH"] = src_dir + \
         (":" + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
 
-    worker_file = f"/tmp/_hccl_all_to_all_single_async_unequal_{world_size}card.py"
+    worker_file = f"/tmp/_hccl_all_to_all_single_invalid_split_{world_size}card.py"
     with open(worker_file, "w") as f:
         f.write(SCRIPT)
 
@@ -138,17 +124,17 @@ def _run_case(world_size, master_port):
             print(f"=== RANK {r} ===")
             print(txt)
         raise AssertionError(
-            f"HCCL all_to_all_single async unequal {world_size}card failed on ranks: {failed}"
+            f"HCCL invalid split validation {world_size}card failed on ranks: {failed}"
         )
 
 
 @pytest.mark.parametrize(
     "world_size,master_port",
     [
-        (2, 29714),
-        (4, 29724),
-        (8, 29734),
+        (2, 29715),
+        (4, 29725),
+        (8, 29735),
     ],
 )
-def test_hccl_all_to_all_single_async_unequal_multicard(world_size, master_port):
+def test_hccl_all_to_all_single_invalid_split_pairing_multicard(world_size, master_port):
     _run_case(world_size, master_port)

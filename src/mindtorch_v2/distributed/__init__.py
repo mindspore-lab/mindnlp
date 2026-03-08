@@ -30,6 +30,7 @@ _pg_names = {}        # ProcessGroup -> str
 _pg_group_ranks = {}  # ProcessGroup -> {global_rank: group_rank}
 _group_count = 0
 _split_group_seq = {}
+_all_to_all_single_seq = {}
 
 default_pg_timeout = timedelta(minutes=30)
 
@@ -130,7 +131,7 @@ def _raise_with_context(exc, *, stage, backend, rank, world_size, device_id=None
 def init_process_group(backend=None, init_method=None, timeout=None,
                        world_size=-1, rank=-1, store=None,
                        group_name="", pg_options=None, device_id=None):
-    global _default_pg, _group_count, _split_group_seq
+    global _default_pg, _group_count, _split_group_seq, _all_to_all_single_seq
 
     if _default_pg is not None:
         raise RuntimeError(
@@ -226,10 +227,11 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     _pg_group_ranks[pg] = {i: i for i in range(world_size)}
     _group_count += 1
     _split_group_seq = {}
+    _all_to_all_single_seq = {}
 
 
 def destroy_process_group(group=None):
-    global _default_pg, _group_count, _split_group_seq
+    global _default_pg, _group_count, _split_group_seq, _all_to_all_single_seq
 
     if group is None or group is _default_pg:
         # Destroy all groups
@@ -242,11 +244,13 @@ def destroy_process_group(group=None):
         GroupMember.WORLD = None
         _group_count = 0
         _split_group_seq = {}
+        _all_to_all_single_seq = {}
     else:
         group.destroy()
         _pg_map.pop(group, None)
         _pg_names.pop(group, None)
         _pg_group_ranks.pop(group, None)
+        _all_to_all_single_seq.pop(group, None)
 
 
 # ---------------------------------------------------------------------------
@@ -624,6 +628,62 @@ def all_to_all(output_tensor_list, input_tensor_list, group=None,
     return work
 
 
+def _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes):
+    if len(input_split_sizes) != pg.size():
+        raise ValueError(
+            f"input_split_sizes length {len(input_split_sizes)} must equal world_size {pg.size()}"
+        )
+    if len(output_split_sizes) != pg.size():
+        raise ValueError(
+            f"output_split_sizes length {len(output_split_sizes)} must equal world_size {pg.size()}"
+        )
+    if any(int(s) < 0 for s in input_split_sizes + output_split_sizes):
+        raise ValueError("all_to_all_single split sizes must be non-negative")
+
+
+def _validate_hccl_all_to_all_single_pairwise(pg, input_split_sizes, output_split_sizes):
+    if pg not in _pg_map:
+        raise ValueError("The given group is not registered")
+
+    _, store = _pg_map[pg]
+    rank = pg.rank()
+    world_size = pg.size()
+
+    # Use a per-process-group call sequence so every rank writes/reads
+    # the same store keys for the same collective invocation.
+    call_id = _all_to_all_single_seq.get(pg, 0)
+    _all_to_all_single_seq[pg] = call_id + 1
+    key_prefix = f"all_to_all_single_splits/{call_id}"
+
+    local_in = ",".join(str(int(x)) for x in input_split_sizes)
+    local_out = ",".join(str(int(x)) for x in output_split_sizes)
+    store.set(f"{key_prefix}/in/{rank}", local_in.encode("utf-8"))
+    store.set(f"{key_prefix}/out/{rank}", local_out.encode("utf-8"))
+    store.wait([f"{key_prefix}/in/{r}" for r in range(world_size)])
+    store.wait([f"{key_prefix}/out/{r}" for r in range(world_size)])
+
+    all_in = []
+    all_out = []
+    for peer in range(world_size):
+        raw_in = store.get(f"{key_prefix}/in/{peer}")
+        raw_out = store.get(f"{key_prefix}/out/{peer}")
+        peer_in = [int(x) for x in (raw_in.decode("utf-8") if isinstance(raw_in, bytes) else str(raw_in)).split(",") if x != ""]
+        peer_out = [int(x) for x in (raw_out.decode("utf-8") if isinstance(raw_out, bytes) else str(raw_out)).split(",") if x != ""]
+        if len(peer_in) != world_size or len(peer_out) != world_size:
+            raise ValueError("all_to_all_single split sizes have inconsistent world_size")
+        all_in.append(peer_in)
+        all_out.append(peer_out)
+
+    # Matrix consistency: for every (src, dst) pair,
+    # src.input_split[dst] must equal dst.output_split[src].
+    for src in range(world_size):
+        for dst in range(world_size):
+            if int(all_in[src][dst]) != int(all_out[dst][src]):
+                raise ValueError(
+                    "all_to_all_single split mismatch: input_split_sizes[dst] must match peer output_split_sizes[src]"
+                )
+
+
 def all_to_all_single(output, input, output_split_sizes=None,
                       input_split_sizes=None, group=None, async_op=False):
     import mindtorch_v2 as torch
@@ -638,6 +698,11 @@ def all_to_all_single(output, input, output_split_sizes=None,
         assert output.numel() % world_size == 0
         chunk_size = output.numel() // world_size
         output_split_sizes = [chunk_size] * world_size
+
+    _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes)
+
+    if isinstance(pg, ProcessGroupHCCL):
+        _validate_hccl_all_to_all_single_pairwise(pg, input_split_sizes, output_split_sizes)
 
     equal_split = (len(set(input_split_sizes)) == 1 and
                    len(set(output_split_sizes)) == 1)
