@@ -39,6 +39,37 @@ assert dist.get_process_group_ranks(sg2) == [0, 1]
 assert dist.get_group_rank(sg2, rank) == rank
 assert dist.get_global_rank(sg2, rank) == rank
 
+# Parent PG rank order should be used as key tie-breaker when keys are equal.
+parent = dist.new_group(ranks=[1, 0], backend="gloo", group_desc="split_parent_1_0")
+assert parent is not dist.GroupMember.NON_GROUP_MEMBER
+assert dist.get_group_rank(parent, 1) == 0
+assert dist.get_group_rank(parent, 0) == 1
+
+sg3 = dist.split_group(parent, color=3, key=0)
+assert sg3 is not dist.GroupMember.NON_GROUP_MEMBER
+assert dist.get_world_size(sg3) == 2
+assert dist.get_group_rank(sg3, 1) == 0
+assert dist.get_group_rank(sg3, 0) == 1
+assert dist.get_global_rank(sg3, 0) == 1
+assert dist.get_global_rank(sg3, 1) == 0
+
+# split_group sequence should be per-parent-group.
+# Calling split_group only on rank0's parent subgroup must not desync a later
+# WORLD split_group call.
+parent_single = dist.new_group(ranks=[0], backend="gloo", group_desc="split_parent_single_0")
+if rank == 0:
+    sg4 = dist.split_group(parent_single, color=11, key=0)
+    assert sg4 is not dist.GroupMember.NON_GROUP_MEMBER
+    assert dist.get_world_size(sg4) == 1
+    assert dist.get_process_group_ranks(sg4) == [0]
+else:
+    assert parent_single is dist.GroupMember.NON_GROUP_MEMBER
+
+sg5 = dist.split_group(dist.group.WORLD, color=9, key=0)
+assert sg5 is not dist.GroupMember.NON_GROUP_MEMBER
+assert dist.get_world_size(sg5) == 2
+assert dist.get_process_group_ranks(sg5) == [0, 1]
+
 dist.destroy_process_group()
 print(f"[rank {rank}] split_group checks passed")
 '''
@@ -71,8 +102,8 @@ def test_split_group_gloo_world2():
         stderr=subprocess.STDOUT,
     )
 
-    out0, _ = p0.communicate(timeout=120)
-    out1, _ = p1.communicate(timeout=120)
+    out0, _ = p0.communicate(timeout=20)
+    out1, _ = p1.communicate(timeout=20)
 
     if p0.returncode != 0 or p1.returncode != 0:
         print("=== RANK 0 ===")
