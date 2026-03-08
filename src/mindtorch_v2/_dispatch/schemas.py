@@ -255,7 +255,19 @@ def register_schemas():
     )
     registry.register_schema("cummax", "cummax(Tensor input, int dim=0) -> (Tensor, Tensor)")
     registry.register_schema("argsort", "argsort(Tensor input, int dim=-1, bool descending=False, bool stable=False) -> Tensor")
+    registry.register_error_overrides(
+        "argsort",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, bool stable, int dim = -1, bool descending = False, Tensor out = None)\n * (Tensor input, int dim = -1, bool descending = False)\n * (Tensor input, name dim, bool descending = False)\n",
+        },
+    )
     registry.register_schema("sort", "sort(Tensor input, int dim=-1, bool descending=False, bool stable=False) -> (Tensor, Tensor)")
+    registry.register_error_overrides(
+        "sort",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, bool stable, int dim = -1, bool descending = False, tuple of Tensors out = None)\n * (Tensor input, int dim = -1, bool descending = False, *, tuple of Tensors out = None)\n * (Tensor input, *, bool stable, name dim, bool descending = False, tuple of Tensors out = None)\n * (Tensor input, name dim, bool descending = False, *, tuple of Tensors out = None)\n",
+        },
+    )
     registry.register_schema("topk", "topk(Tensor input, int k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor, Tensor)")
 
     registry.register_schema("stack", "stack(Tensor[] tensors, int dim=0) -> Tensor")
