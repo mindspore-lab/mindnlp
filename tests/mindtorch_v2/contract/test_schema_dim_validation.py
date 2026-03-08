@@ -639,3 +639,51 @@ def test_dispatch_var_rejects_str_dim_matches_torch():
         pt.var(pt.tensor([1.0, 0.0]), dim="0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_nansum_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("nansum", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.nansum(pt.tensor([1.0, 0.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_nansum_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("nansum", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.nansum(pt.tensor([1.0, 0.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_nanmean_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("nanmean", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.nanmean(pt.tensor([1.0, 0.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_nanmean_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("nanmean", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.nanmean(pt.tensor([1.0, 0.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
