@@ -236,6 +236,24 @@ def register_schemas():
     registry.register_schema("setitem", "setitem(Tensor(a!) self, Any key, Any value) -> Tensor")
 
     _register_reduction_ops(("all", "any", "argmax", "argmin", "count_nonzero"))
+    registry.register_error_overrides(
+        "all",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, int dim, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, name dim, bool keepdim = False, *, Tensor out = None)\n",
+        },
+    )
+    registry.register_error_overrides(
+        "any",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, int dim, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, name dim, bool keepdim = False, *, Tensor out = None)\n",
+        },
+    )
+    registry.register_error_overrides(
+        "count_nonzero",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim = None)\n      didn't match because some of the keywords were incorrect: dim\n * (Tensor input, tuple of ints dim)\n      didn't match because some of the arguments have invalid types: (Tensor, !dim={dim_detail}!)\n",
+        },
+    )
     registry.register_schema("amin", "amin(Tensor input, int[]? dim=None, bool keepdim=False) -> Tensor")
     registry.register_schema("amax", "amax(Tensor input, int[]? dim=None, bool keepdim=False) -> Tensor")
 

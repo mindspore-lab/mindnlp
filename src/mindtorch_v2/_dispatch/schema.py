@@ -292,6 +292,64 @@ class OpSchema:
                     f"{op_short_name}(): argument 'dim' must be int, not {type(value).__name__}"
                 )
 
+        def _invalid_dimname(value):
+            raise RuntimeError(
+                "Invalid name: a valid identifier contains only digits, alphabetical characters, "
+                f"and/or underscore and starts with a non-digit. got: '{value}'."
+            )
+
+        def _validate_all_any_dim(value):
+            if value is None:
+                return
+            if isinstance(value, bool):
+                _raise_invalid_combo_with_got("(Tensor, dim=bool)", {"dim_detail": "bool"})
+                return
+            if isinstance(value, int):
+                return
+            if isinstance(value, str):
+                if value.isidentifier():
+                    raise RuntimeError(
+                        f"{op_short_name}: You passed a dimname (string) to this op in place of a dimension "
+                        "index but it does not yet support this behavior. Please pass a dimension index to "
+                        "work around this."
+                    )
+                _invalid_dimname(value)
+                return
+            if isinstance(value, (list, tuple)):
+                if not value:
+                    return
+                first = value[0]
+                if isinstance(first, bool) or isinstance(first, str):
+                    _raise_invalid_combo_with_got("(Tensor, dim=list)", {"dim_detail": "list"})
+                    return
+                for item in value:
+                    if not isinstance(item, int):
+                        _raise_invalid_combo_with_got("(Tensor, dim=list)", {"dim_detail": "list"})
+                        return
+                return
+            _raise_invalid_combo()
+
+        def _validate_count_nonzero_dim(value):
+            if value is None:
+                return
+            if isinstance(value, bool):
+                _raise_invalid_combo_with_got("(Tensor, dim=bool)", {"dim_detail": "bool"})
+                return
+            if isinstance(value, str):
+                _raise_invalid_combo_with_got("(Tensor, dim=str)", {"dim_detail": "str"})
+                return
+            if isinstance(value, int):
+                return
+            if isinstance(value, (list, tuple)):
+                if not value:
+                    return
+                for item in value:
+                    if not isinstance(item, int) or isinstance(item, bool):
+                        _raise_invalid_combo_with_got("(Tensor, dim=list)", {"dim_detail": "list"})
+                        return
+                return
+            _raise_invalid_combo()
+
         def _type_label(value):
             if isinstance(value, bool):
                 return "bool"
@@ -558,6 +616,12 @@ class OpSchema:
                 continue
             if op_short_name in {"argmax", "argmin"} and param.name == "dim":
                 _validate_arg_reduce_dim(value)
+                continue
+            if op_short_name in {"all", "any"} and param.name == "dim":
+                _validate_all_any_dim(value)
+                continue
+            if op_short_name == "count_nonzero" and param.name == "dim":
+                _validate_count_nonzero_dim(value)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
