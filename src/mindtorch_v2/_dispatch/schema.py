@@ -284,6 +284,14 @@ class OpSchema:
                 f"not {type(value).__name__}"
             )
 
+        def _validate_arg_reduce_dim(value):
+            if value is None:
+                return
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError(
+                    f"{op_short_name}(): argument 'dim' must be int, not {type(value).__name__}"
+                )
+
         def _type_label(value):
             if isinstance(value, bool):
                 return "bool"
@@ -547,6 +555,9 @@ class OpSchema:
                 continue
             if op_short_name == "norm" and param.name == "dim":
                 _validate_norm_dim(value)
+                continue
+            if op_short_name in {"argmax", "argmin"} and param.name == "dim":
+                _validate_arg_reduce_dim(value)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
