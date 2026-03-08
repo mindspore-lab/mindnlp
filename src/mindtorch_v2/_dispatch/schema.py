@@ -360,6 +360,12 @@ class OpSchema:
             if value < -rank - 1 or value > rank:
                 raise _unsqueeze_dim_out_of_range(value, rank)
 
+        def _validate_topk_k(value):
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError(
+                    f"{name}(): argument 'k' (position 2) must be int, not {type(value).__name__}"
+                )
+
         def _normalize_permute_dims(value):
             if isinstance(value, tuple):
                 return list(value)
@@ -451,6 +457,9 @@ class OpSchema:
             if op_short_name == "permute" and param.name == "dims":
                 input_tensor = bound.get("input")
                 _validate_permute_dims(value, input_tensor)
+                continue
+            if op_short_name == "topk" and param.name == "k":
+                _validate_topk_k(value)
                 continue
             if ptype == "bool" and not isinstance(value, bool):
                 _raise_invalid_combo()
