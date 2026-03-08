@@ -1449,3 +1449,125 @@ def npu_adaptive_max_pool2d_backward(grad, saved_input, backward_data):
     )
 
     return _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Hardshrink backward
+# ---------------------------------------------------------------
+
+def npu_hardshrink_backward(grad, saved_input, lambd=0.5):
+    """NPU hardshrink backward via aclnnHardshrinkBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.hardshrink_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        float(lambd),
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Softshrink backward
+# ---------------------------------------------------------------
+
+def npu_softshrink_backward(grad, saved_input, lambd=0.5):
+    """NPU softshrink backward via aclnnSoftshrinkBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.softshrink_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        float(lambd),
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Repeat-interleave backward
+# ---------------------------------------------------------------
+
+def npu_repeat_interleave_backward(grad, saved_a, repeats, dim):
+    """NPU repeat_interleave backward via aclnnRepeatInterleaveGrad."""
+    import numpy as np
+
+    runtime, stream = _get_runtime_stream(grad)
+
+    # Determine the actual axis
+    if dim is None:
+        # Original input was flattened; backward axis is 0, output is 1-D
+        d = 0
+        out_shape = (saved_a.numel(),)
+    else:
+        d = dim if dim >= 0 else dim + len(saved_a.shape)
+        out_shape = saved_a.shape
+
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+
+    # Prepare repeats as a 1-D int64 tensor on NPU
+    if isinstance(repeats, int):
+        n = saved_a.numel() if dim is None else saved_a.shape[d]
+        reps_np = np.full((n,), repeats, dtype=np.int64)
+        # Copy numpy array to NPU
+        reps_ptr, _ = npu_runtime._copy_cpu_to_npu(reps_np, runtime=runtime)
+        reps_shape = (n,)
+        reps_stride = (1,)
+    else:
+        # repeats is already a Tensor on the device
+        reps_ptr = _unwrap_storage(repeats).data_ptr()
+        reps_shape = repeats.shape
+        reps_stride = repeats.stride
+
+    # Allocate output
+    byte_size = max(out_numel, 1) * _dtype_itemsize(grad.dtype)
+    out_ptr = npu_runtime._alloc_device(byte_size, runtime=runtime)
+
+    aclnn.repeat_interleave_grad(
+        _unwrap_storage(grad).data_ptr(),
+        reps_ptr,
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        grad.dtype,
+        reps_shape,
+        reps_stride,
+        out_shape,
+        out_stride,
+        grad.dtype,
+        d,
+        runtime,
+        stream=stream.stream,
+    )
+
+    result = _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+    # If dim was None, the original input was flattened; reshape back
+    if dim is None:
+        result = _wrap_tensor(
+            _unwrap_storage(result),
+            saved_a.shape,
+            npu_runtime._contiguous_stride(saved_a.shape),
+        )
+
+    return result

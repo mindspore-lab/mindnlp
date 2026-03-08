@@ -2615,6 +2615,9 @@ def _threshold_backward(grad, _a, saved_a, keyset, args, kwargs):
 def _hardshrink_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for hardshrink: grad * (|x| > lambd)."""
     lambd = args[0] if args else kwargs.get("lambd", 0.5)
+    if grad.device.type == "npu":
+        from .npu.backward import npu_hardshrink_backward
+        return (npu_hardshrink_backward(grad, saved_a, lambd),)
     with _grad_context(keyset):
         lambd_t = _scalar_tensor_like(saved_a, float(lambd))
         abs_x = redispatch("abs", keyset, saved_a)
@@ -2629,6 +2632,9 @@ def _hardshrink_backward(grad, _a, saved_a, keyset, args, kwargs):
 def _softshrink_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for softshrink: grad * (|x| > lambd)."""
     lambd = args[0] if args else kwargs.get("lambd", 0.5)
+    if grad.device.type == "npu":
+        from .npu.backward import npu_softshrink_backward
+        return (npu_softshrink_backward(grad, saved_a, lambd),)
     with _grad_context(keyset):
         lambd_t = _scalar_tensor_like(saved_a, float(lambd))
         abs_x = redispatch("abs", keyset, saved_a)
@@ -2806,6 +2812,21 @@ def _max_backward(grad, a, b, saved_a, saved_b, keyset):
 def _cumprod_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for cumprod: uses reverse cumsum of grad * cumprod / x."""
     dim = args[0] if args else kwargs.get("dim", 0)
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            y = redispatch("cumprod", keyset, saved_a, dim)
+            gy = redispatch("mul", keyset, grad, y)
+            flip_dims = [dim]
+            gy_flip = redispatch("flip", keyset, gy, flip_dims)
+            rev_cumsum = redispatch("flip", keyset,
+                redispatch("cumsum", keyset, gy_flip, dim), flip_dims)
+            zero = _scalar_tensor_like(saved_a, 0.0)
+            one = _scalar_tensor_like(saved_a, 1.0)
+            nonzero_mask = redispatch("ne", keyset, saved_a, zero)
+            safe_x = redispatch("where", keyset, nonzero_mask, saved_a, one)
+            raw = redispatch("div", keyset, rev_cumsum, safe_x)
+            result = redispatch("where", keyset, nonzero_mask, raw, zero)
+            return (result,)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -2824,6 +2845,9 @@ def _repeat_interleave_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for repeat_interleave: sum over interleaved groups."""
     repeats = args[0] if args else kwargs.get("repeats")
     dim = args[1] if len(args) > 1 else kwargs.get("dim", None)
+    if grad.device.type == "npu":
+        from .npu.backward import npu_repeat_interleave_backward
+        return (npu_repeat_interleave_backward(grad, saved_a, repeats, dim),)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -2900,19 +2924,28 @@ def _scatter_backward(grad, a, src, dim, index, keyset):
         grad_a = None
         grad_src = None
         if getattr(a, "requires_grad", False):
-            # Zero out the scattered positions
-            import numpy as np
-            from .cpu.ops import _to_numpy, _from_numpy
-            grad_np = _to_numpy(grad).copy()
-            idx_np = _to_numpy(index).astype(np.int64)
-            d = dim if dim >= 0 else dim + grad_np.ndim
-            it = np.nditer(idx_np, flags=['multi_index'])
-            while not it.finished:
-                mi = list(it.multi_index)
-                mi[d] = int(it[0])
-                grad_np[tuple(mi)] = 0.0
-                it.iternext()
-            grad_a = _from_numpy(grad_np, a.dtype, a.device)
+            if grad.device.type == "npu":
+                # Create mask: scatter ones at index positions, then invert
+                ones_src = redispatch("ones", keyset, src.shape, dtype=grad.dtype, device=grad.device)
+                zeros_base = redispatch("zeros", keyset, a.shape, dtype=grad.dtype, device=grad.device)
+                mask = redispatch("scatter", keyset, zeros_base, dim, index, ones_src)
+                one = redispatch("ones", keyset, a.shape, dtype=grad.dtype, device=grad.device)
+                inv_mask = redispatch("sub", keyset, one, mask)
+                grad_a = redispatch("mul", keyset, grad, inv_mask)
+            else:
+                # CPU fallback: zero out the scattered positions via numpy
+                import numpy as np
+                from .cpu.ops import _to_numpy, _from_numpy
+                grad_np = _to_numpy(grad).copy()
+                idx_np = _to_numpy(index).astype(np.int64)
+                d = dim if dim >= 0 else dim + grad_np.ndim
+                it = np.nditer(idx_np, flags=['multi_index'])
+                while not it.finished:
+                    mi = list(it.multi_index)
+                    mi[d] = int(it[0])
+                    grad_np[tuple(mi)] = 0.0
+                    it.iternext()
+                grad_a = _from_numpy(grad_np, a.dtype, a.device)
         if getattr(src, "requires_grad", False):
             grad_src = redispatch("gather", keyset, grad, dim, index)
     return grad_a, grad_src
@@ -3249,7 +3282,17 @@ def _rot90_backward(grad, _a, _saved_a, keyset, args, kwargs):
 def _take_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for take: scatter gradient back to original positions."""
     index = args[0] if args else kwargs.get("index")
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            flat_size = saved_a.numel()
+            grad_flat = redispatch("reshape", keyset, grad, (-1,))
+            idx_flat = redispatch("reshape", keyset, index, (-1,))
+            idx_flat = redispatch("to", keyset, idx_flat, dtype='int64')
+            result_flat = redispatch("zeros", keyset, (flat_size,), dtype=grad.dtype, device=grad.device)
+            redispatch("scatter_add_", keyset, result_flat, 0, idx_flat, grad_flat)
+            return (redispatch("reshape", keyset, result_flat, saved_a.shape),)
     with _grad_context(keyset):
+        # CPU fallback via numpy
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
 
@@ -3264,7 +3307,15 @@ def _take_along_dim_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for take_along_dim: scatter-add gradient back along dim."""
     indices = args[0] if args else kwargs.get("indices")
     dim = args[1] if len(args) > 1 else kwargs.get("dim")
+    if grad.device.type == "npu" and dim is not None:
+        with _grad_context(keyset):
+            d = dim if dim >= 0 else dim + len(saved_a.shape)
+            result = redispatch("zeros", keyset, saved_a.shape, dtype=grad.dtype, device=grad.device)
+            idx_long = redispatch("to", keyset, indices, dtype='int64')
+            redispatch("scatter_add_", keyset, result, d, idx_long, grad)
+            return (result,)
     with _grad_context(keyset):
+        # CPU fallback via numpy
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
 
@@ -3315,7 +3366,15 @@ def _autograd_cummax(name):
 def _cummax_backward(grad, a, indices, keyset, args, kwargs):
     """Backward for cummax: scatter-add grad to positions indicated by cummax indices."""
     dim = args[0] if args else kwargs.get("dim", 0)
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            d = dim if dim >= 0 else dim + len(a.shape)
+            result = redispatch("zeros", keyset, a.shape, dtype=grad.dtype, device=grad.device)
+            idx_long = redispatch("to", keyset, indices, dtype='int64')
+            redispatch("scatter_add_", keyset, result, d, idx_long, grad)
+            return (result,)
     with _grad_context(keyset):
+        # CPU fallback via numpy
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
 
@@ -4350,7 +4409,15 @@ def _autograd_cummin(name):
 def _cummin_backward(grad, a, indices, keyset, args, kwargs):
     """Backward for cummin: same pattern as cummax — scatter-add to index positions."""
     dim = args[0] if args else kwargs.get("dim", 0)
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            d = dim if dim >= 0 else dim + len(a.shape)
+            result = redispatch("zeros", keyset, a.shape, dtype=grad.dtype, device=grad.device)
+            idx_long = redispatch("to", keyset, indices, dtype='int64')
+            redispatch("scatter_add_", keyset, result, d, idx_long, grad)
+            return (result,)
     with _grad_context(keyset):
+        # CPU fallback via numpy
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
 
@@ -4530,6 +4597,69 @@ def _autograd_affine_grid(name="affine_grid"):
 
 def _affine_grid_backward(grad, theta, size, align_corners, keyset):
     """Backward for affine_grid: grad_theta = grad^T @ base_grid."""
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            N = size[0]
+            if len(size) == 4:
+                _, _, H, W = size
+                # Build grid points
+                if align_corners:
+                    h_pts = redispatch("linspace", keyset, -1.0, 1.0, H)
+                    w_pts = redispatch("linspace", keyset, -1.0, 1.0, W)
+                else:
+                    h_pts = redispatch("linspace", keyset, -1.0 + 1.0 / H, 1.0 - 1.0 / H, H)
+                    w_pts = redispatch("linspace", keyset, -1.0 + 1.0 / W, 1.0 - 1.0 / W, W)
+                # Build base grid: (H*W, 3) with columns [w, h, 1]
+                w_grid = redispatch("reshape", keyset, w_pts, (1, W))
+                w_grid = redispatch("expand", keyset, w_grid, (H, W))
+                h_grid = redispatch("reshape", keyset, h_pts, (H, 1))
+                h_grid = redispatch("expand", keyset, h_grid, (H, W))
+                ones_grid = redispatch("ones", keyset, (H, W), dtype=grad.dtype, device=grad.device)
+                w_flat = redispatch("reshape", keyset, redispatch("contiguous", keyset, w_grid), (H * W,))
+                h_flat = redispatch("reshape", keyset, redispatch("contiguous", keyset, h_grid), (H * W,))
+                ones_flat = redispatch("reshape", keyset, ones_grid, (H * W,))
+                base = redispatch("stack", keyset, [w_flat, h_flat, ones_flat], dim=1)  # (H*W, 3)
+                # grad: (N, H, W, 2) -> (N, H*W, 2)
+                grad_flat = redispatch("reshape", keyset, grad, (N, H * W, 2))
+                grad_t = redispatch("transpose", keyset, grad_flat, -1, -2)  # (N, 2, H*W)
+                base_expanded = redispatch("reshape", keyset, base, (1, H * W, 3))
+                base_expanded = redispatch("expand", keyset, base_expanded, (N, H * W, 3))
+                base_expanded = redispatch("contiguous", keyset, base_expanded)
+                grad_theta = redispatch("matmul", keyset, grad_t, base_expanded)  # (N, 2, 3)
+            else:
+                # 3D case
+                _, _, D, H, W = size
+                if align_corners:
+                    d_pts = redispatch("linspace", keyset, -1.0, 1.0, D)
+                    h_pts = redispatch("linspace", keyset, -1.0, 1.0, H)
+                    w_pts = redispatch("linspace", keyset, -1.0, 1.0, W)
+                else:
+                    d_pts = redispatch("linspace", keyset, -1.0 + 1.0 / D, 1.0 - 1.0 / D, D)
+                    h_pts = redispatch("linspace", keyset, -1.0 + 1.0 / H, 1.0 - 1.0 / H, H)
+                    w_pts = redispatch("linspace", keyset, -1.0 + 1.0 / W, 1.0 - 1.0 / W, W)
+                M = D * H * W
+                # Build 3D meshgrid via reshape+expand
+                d_3d = redispatch("reshape", keyset, d_pts, (D, 1, 1))
+                d_3d = redispatch("expand", keyset, d_3d, (D, H, W))
+                h_3d = redispatch("reshape", keyset, h_pts, (1, H, 1))
+                h_3d = redispatch("expand", keyset, h_3d, (D, H, W))
+                w_3d = redispatch("reshape", keyset, w_pts, (1, 1, W))
+                w_3d = redispatch("expand", keyset, w_3d, (D, H, W))
+                ones_3d = redispatch("ones", keyset, (D, H, W), dtype=grad.dtype, device=grad.device)
+                w_f = redispatch("reshape", keyset, redispatch("contiguous", keyset, w_3d), (M,))
+                h_f = redispatch("reshape", keyset, redispatch("contiguous", keyset, h_3d), (M,))
+                d_f = redispatch("reshape", keyset, redispatch("contiguous", keyset, d_3d), (M,))
+                ones_f = redispatch("reshape", keyset, ones_3d, (M,))
+                base = redispatch("stack", keyset, [w_f, h_f, d_f, ones_f], dim=1)  # (M, 4)
+                grad_flat = redispatch("reshape", keyset, grad, (N, M, 3))
+                grad_t = redispatch("transpose", keyset, grad_flat, -1, -2)  # (N, 3, M)
+                base_exp = redispatch("reshape", keyset, base, (1, M, 4))
+                base_exp = redispatch("expand", keyset, base_exp, (N, M, 4))
+                base_exp = redispatch("contiguous", keyset, base_exp)
+                grad_theta = redispatch("matmul", keyset, grad_t, base_exp)  # (N, 3, 4)
+            # Cast to match theta dtype
+            grad_theta = redispatch("to", keyset, grad_theta, dtype=theta.dtype)
+            return (grad_theta,)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -5055,6 +5185,38 @@ def _autograd_dist(name):
 
 
 def _dist_backward(grad, a, b, p, keyset):
+    if a.device.type == "npu":
+        with _grad_context(keyset):
+            diff = redispatch("sub", keyset, a, b)
+            if p == 2:
+                sq = redispatch("mul", keyset, diff, diff)
+                d = redispatch("sqrt", keyset, redispatch("sum", keyset, sq))
+                eps = _scalar_tensor_like(a, 1e-30)
+                safe_d = redispatch("add", keyset, d, eps)
+                grad_dir = redispatch("div", keyset, diff, safe_d)
+            elif p == 1:
+                grad_dir = redispatch("sign", keyset, diff)
+            elif p == float('inf'):
+                abs_diff = redispatch("abs", keyset, diff)
+                max_val = redispatch("amax", keyset, abs_diff)
+                grad_dir = redispatch("where", keyset,
+                    redispatch("eq", keyset, abs_diff, max_val),
+                    redispatch("sign", keyset, diff),
+                    _scalar_tensor_like(diff, 0.0))
+            else:
+                abs_diff = redispatch("abs", keyset, diff)
+                sum_p = redispatch("sum", keyset, redispatch("pow", keyset, abs_diff, float(p)))
+                d = redispatch("pow", keyset, sum_p, 1.0 / p)
+                eps = _scalar_tensor_like(a, 1e-30)
+                safe_d = redispatch("add", keyset, d, eps)
+                numer = redispatch("mul", keyset, redispatch("sign", keyset, diff),
+                                   redispatch("pow", keyset, abs_diff, float(p - 1)))
+                denom = redispatch("pow", keyset, safe_d, float(p - 1))
+                grad_dir = redispatch("div", keyset, numer, denom)
+            result = redispatch("mul", keyset, grad, grad_dir)
+            grad_a = result if getattr(a, "requires_grad", False) else None
+            grad_b = redispatch("neg", keyset, result) if getattr(b, "requires_grad", False) else None
+            return grad_a, grad_b
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     a_np = _to_numpy(a).astype(np.float64)
@@ -5091,6 +5253,51 @@ def _renorm_backward(grad, a, saved_a, keyset, args, kwargs):
     p_val = args[0] if len(args) > 0 else kwargs.get("p", 2)
     dim = args[1] if len(args) > 1 else kwargs.get("dim", 0)
     maxnorm = args[2] if len(args) > 2 else kwargs.get("maxnorm", 1.0)
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            d = dim if dim >= 0 else dim + len(saved_a.shape)
+            reduce_axes = tuple(i for i in range(len(saved_a.shape)) if i != d)
+            eps = _scalar_tensor_like(saved_a, 1e-30)
+            maxnorm_t = _scalar_tensor_like(saved_a, float(maxnorm))
+
+            abs_a = redispatch("abs", keyset, saved_a)
+            if p_val == 2:
+                norm_sq = redispatch("sum", keyset,
+                    redispatch("mul", keyset, saved_a, saved_a),
+                    dim=reduce_axes, keepdim=True)
+                norm_val = redispatch("sqrt", keyset,
+                    redispatch("add", keyset, norm_sq, eps))
+            else:
+                norm_val = redispatch("pow", keyset,
+                    redispatch("sum", keyset,
+                        redispatch("pow", keyset, abs_a, float(p_val)),
+                        dim=reduce_axes, keepdim=True),
+                    1.0 / p_val)
+                norm_val = redispatch("add", keyset, norm_val, eps)
+
+            needs_renorm = redispatch("gt", keyset, norm_val, maxnorm_t)
+
+            if p_val == 2:
+                # Chain rule: d/dx_i [maxnorm * x_i / norm]
+                #   = maxnorm/norm * (grad_i - x_i * dot(grad, x) / norm^2)
+                inv_norm = redispatch("div", keyset, maxnorm_t, norm_val)
+                term1 = redispatch("mul", keyset, grad, inv_norm)
+                dot_ga = redispatch("sum", keyset,
+                    redispatch("mul", keyset, grad, saved_a),
+                    dim=reduce_axes, keepdim=True)
+                term2 = redispatch("mul", keyset, saved_a,
+                    redispatch("div", keyset,
+                        redispatch("mul", keyset, maxnorm_t, dot_ga),
+                        redispatch("mul", keyset, norm_val, norm_sq)))
+                renorm_grad = redispatch("sub", keyset, term1, term2)
+            else:
+                # General p: scale gradient by maxnorm / norm
+                scale = redispatch("div", keyset, maxnorm_t, norm_val)
+                renorm_grad = redispatch("mul", keyset, grad, scale)
+
+            # Where norm > maxnorm, use renorm_grad; otherwise pass through
+            result = redispatch("where", keyset, needs_renorm, renorm_grad, grad)
+            return (result,)
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     a_np = _to_numpy(saved_a).astype(np.float64)
@@ -5353,6 +5560,34 @@ def _dsplit_backward(grad, idx, a, _saved_a, keyset, args, _kwargs):
 
 def _inner_backward(grad, a, b, saved_a, saved_b, keyset):
     """Backward for inner: contracts last dim of both inputs."""
+    import math
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            if saved_a.ndim == 1 and saved_b.ndim == 1:
+                grad_a = redispatch("mul", keyset, grad, saved_b) if getattr(a, "requires_grad", False) else None
+                grad_b = redispatch("mul", keyset, grad, saved_a) if getattr(b, "requires_grad", False) else None
+            else:
+                # ND case: inner(a, b) contracts last dim of both
+                # output shape = a.shape[:-1] + b.shape[:-1]
+                if getattr(a, "requires_grad", False):
+                    b_free_shape = saved_b.shape[:-1]
+                    K = saved_a.shape[-1]
+                    grad_2d = redispatch("reshape", keyset, grad, (-1, math.prod(b_free_shape)))
+                    b_2d = redispatch("reshape", keyset, saved_b, (math.prod(b_free_shape), K))
+                    ga_2d = redispatch("matmul", keyset, grad_2d, b_2d)
+                    grad_a = redispatch("reshape", keyset, ga_2d, saved_a.shape)
+                else:
+                    grad_a = None
+                if getattr(b, "requires_grad", False):
+                    a_free_shape = saved_a.shape[:-1]
+                    grad_2d = redispatch("reshape", keyset, grad, (math.prod(a_free_shape), -1))
+                    a_2d = redispatch("reshape", keyset, saved_a, (math.prod(a_free_shape), saved_a.shape[-1]))
+                    grad_t = redispatch("transpose", keyset, grad_2d, 0, 1)
+                    gb_2d = redispatch("matmul", keyset, grad_t, a_2d)
+                    grad_b = redispatch("reshape", keyset, gb_2d, saved_b.shape)
+                else:
+                    grad_b = None
+            return grad_a, grad_b
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     grad_np = _to_numpy(grad)

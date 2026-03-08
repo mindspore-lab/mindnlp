@@ -2945,6 +2945,28 @@ class AclnnBindings:
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
+        # aclnnHardshrinkBackward(gradOutput, self, lambd, gradInput)
+        self.aclnn_hardshrink_backward_get_workspace = _optional_symbol(
+            libs, "aclnnHardshrinkBackwardGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_hardshrink_backward = _optional_symbol(
+            libs, "aclnnHardshrinkBackward", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnSoftshrinkBackward(gradOutput, self, lambd, gradInput)
+        self.aclnn_softshrink_backward_get_workspace = _optional_symbol(
+            libs, "aclnnSoftshrinkBackwardGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_softshrink_backward = _optional_symbol(
+            libs, "aclnnSoftshrinkBackward", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
         # aclnnSiluBackward(gradOutput, self, gradInput)
         self.aclnn_silu_backward_get_workspace = _optional_symbol(
             libs, "aclnnSiluBackwardGetWorkspaceSize", ctypes.c_int32,
@@ -3870,6 +3892,17 @@ class AclnnBindings:
         )
         self.aclnn_apply_adam_w_v2 = _optional_symbol(
             libs, "aclnnApplyAdamWV2", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnRepeatInterleaveGrad(yGrad, repeats, axis, out)
+        self.aclnn_repeat_interleave_grad_get_workspace = _optional_symbol(
+            libs, "aclnnRepeatInterleaveGradGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_repeat_interleave_grad = _optional_symbol(
+            libs, "aclnnRepeatInterleaveGrad", ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
 
@@ -13942,6 +13975,112 @@ def threshold_backward(grad_ptr, self_ptr, out_ptr, shape, grad_stride, self_str
         _ = (grad_keep, self_keep, out_keep, threshold_keep)
 
 
+def hardshrink_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_hardshrink_backward_get_workspace, b.aclnn_hardshrink_backward])
+    except Exception:
+        return False
+
+
+def hardshrink_backward(grad_ptr, self_ptr, out_ptr, shape, grad_stride, self_stride, out_stride,
+                        dtype, lambd, runtime, stream=None):
+    """aclnnHardshrinkBackward(gradOutput, self, lambd, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    lambd_scalar, lambd_keep = _create_scalar(bindings, lambd, dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_hardshrink_backward_get_workspace(
+            grad_tensor, self_tensor, lambd_scalar, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnHardshrinkBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_hardshrink_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnHardshrinkBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_scalar(lambd_scalar)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, self_keep, out_keep, lambd_keep)
+
+
+def softshrink_backward_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_softshrink_backward_get_workspace, b.aclnn_softshrink_backward])
+    except Exception:
+        return False
+
+
+def softshrink_backward(grad_ptr, self_ptr, out_ptr, shape, grad_stride, self_stride, out_stride,
+                        dtype, lambd, runtime, stream=None):
+    """aclnnSoftshrinkBackward(gradOutput, self, lambd, gradInput)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    grad_tensor, grad_keep = _create_tensor(bindings, shape, grad_stride, dtype, grad_ptr)
+    self_tensor, self_keep = _create_tensor(bindings, shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, shape, out_stride, dtype, out_ptr)
+    lambd_scalar, lambd_keep = _create_scalar(bindings, lambd, dtype)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_softshrink_backward_get_workspace(
+            grad_tensor, self_tensor, lambd_scalar, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSoftshrinkBackwardGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_softshrink_backward(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnSoftshrinkBackward failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_scalar(lambd_scalar)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, self_keep, out_keep, lambd_keep)
+
+
 def sigmoid_backward_symbols_ok():
     try:
         b = get_bindings()
@@ -16080,3 +16219,61 @@ def adaptive_max_pool2d_backward(grad_ptr, self_ptr, indices_ptr, grad_input_ptr
         if workspace is not None:
             runtime.defer_raw_free(workspace)
         _ = (grad_keep, self_keep, idx_keep, gi_keep)
+
+
+def repeat_interleave_grad_symbols_ok():
+    try:
+        b = get_bindings()
+        return all([b.aclnn_repeat_interleave_grad_get_workspace,
+                    b.aclnn_repeat_interleave_grad])
+    except Exception:
+        return False
+
+
+def repeat_interleave_grad(grad_ptr, repeats_ptr, out_ptr,
+                           grad_shape, grad_stride, grad_dtype,
+                           repeats_shape, repeats_stride,
+                           out_shape, out_stride, out_dtype,
+                           axis, runtime, stream=None):
+    """aclnnRepeatInterleaveGrad(yGrad, repeats, axis, out)"""
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+
+    grad_tensor, grad_keep = _create_tensor(bindings, grad_shape, grad_stride, grad_dtype, grad_ptr)
+    repeats_tensor, repeats_keep = _create_tensor(bindings, repeats_shape, repeats_stride, "int64", repeats_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_repeat_interleave_grad_get_workspace(
+            grad_tensor, repeats_tensor, ctypes.c_int64(axis),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnRepeatInterleaveGradGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_repeat_interleave_grad(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnRepeatInterleaveGrad failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(grad_tensor)
+        bindings.acl_destroy_tensor(repeats_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (grad_keep, repeats_keep, out_keep)
