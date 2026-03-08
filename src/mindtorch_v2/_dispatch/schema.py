@@ -319,7 +319,7 @@ class OpSchema:
                 if not value:
                     return
                 first = value[0]
-                if isinstance(first, bool) or isinstance(first, str):
+                if isinstance(first, (bool, str)):
                     _raise_invalid_combo_with_got("(Tensor, dim=list)", {"dim_detail": "list"})
                     return
                 for item in value:
