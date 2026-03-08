@@ -303,3 +303,51 @@ def test_dispatch_topk_rejects_str_dim_matches_torch():
         pt.topk(pt.tensor([1.0, 2.0]), 1, "0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_cumsum_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("cumsum", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.cumsum(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_cumsum_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("cumsum", mt_x.device.type, mt_x, "0")
+
+    def th_call():
+        pt.cumsum(pt.tensor([1.0, 2.0]), "0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_cumprod_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("cumprod", mt_x.device.type, mt_x, True)
+
+    def th_call():
+        pt.cumprod(pt.tensor([1.0, 2.0]), True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_cumprod_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("cumprod", mt_x.device.type, mt_x, "0")
+
+    def th_call():
+        pt.cumprod(pt.tensor([1.0, 2.0]), "0")
+
+    assert_torch_error(mt_call, th_call)
