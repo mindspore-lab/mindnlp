@@ -1232,6 +1232,46 @@ def npu_avg_pool3d_backward(grad, saved_input, kernel_size, stride, padding,
     return _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
 
 
+def npu_max_pool3d_backward(grad, saved_input, backward_data):
+    """MaxPool3d backward via aclnnMaxPool3dWithArgmaxBackward.
+
+    *backward_data* is the ``_backward_data`` dict from the forward output.
+    It must contain ``indices_ptr``, ``indices_shape``, ``indices_stride``,
+    ``kernel_size``, ``strides``, ``padding``, ``dilation``, ``ceil_mode``.
+    """
+    runtime, stream = _get_runtime_stream(grad)
+
+    indices_ptr = backward_data["indices_ptr"]
+    indices_shape = backward_data["indices_shape"]
+    indices_stride = backward_data["indices_stride"]
+    kernel_size = backward_data["kernel_size"]
+    strides = backward_data["strides"]
+    padding = backward_data["padding"]
+    dilation = backward_data["dilation"]
+    ceil_mode = backward_data["ceil_mode"]
+
+    # grad_input (same shape as saved_input)
+    gi_ptr, gi_shape, gi_stride, gi_numel = _alloc_like(saved_input, runtime)
+
+    aclnn.max_pool3d_with_argmax_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        indices_ptr,
+        gi_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        indices_shape, indices_stride,
+        gi_shape, gi_stride,
+        grad.dtype,
+        list(kernel_size), list(strides), list(padding), list(dilation),
+        ceil_mode,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
+
+
 # ---------------------------------------------------------------
 # Grid sample backward
 # ---------------------------------------------------------------
@@ -1267,3 +1307,145 @@ def npu_grid_sample_backward(grad, saved_input, saved_grid,
     grad_input = _wrap_output(ig_ptr, ig_numel, ig_shape, ig_stride, grad.dtype, grad.device)
     grad_grid = _wrap_output(gg_ptr, gg_numel, gg_shape, gg_stride, grad.dtype, grad.device)
     return grad_input, grad_grid
+
+
+# ---------------------------------------------------------------
+# Unfold backward
+# ---------------------------------------------------------------
+
+def npu_unfold_backward(grad, input_sizes, dim, size, step):
+    """NPU backward for unfold using aclnnUnfoldGrad."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_shape = tuple(input_sizes)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_numel = _numel(out_shape)
+    itemsize = _dtype_itemsize(grad.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_numel, 1) * itemsize, runtime=runtime)
+
+    aclnn.unfold_grad(
+        _unwrap_storage(grad).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        out_shape,
+        out_stride,
+        list(input_sizes),
+        dim,
+        size,
+        step,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Threshold backward
+# ---------------------------------------------------------------
+
+def npu_threshold_backward(grad, saved_input, threshold):
+    """NPU backward for threshold using aclnnThresholdBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+
+    aclnn.threshold_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        saved_input.stride,
+        out_stride,
+        grad.dtype,
+        float(threshold),
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# SELU backward
+# ---------------------------------------------------------------
+
+def npu_selu_backward(grad, saved_input):
+    """NPU backward for selu using aclnnSeluBackward.
+
+    aclnnSeluBackward expects the forward output (result), not the input.
+    We compute selu(saved_input) = SCALE * elu(input, alpha=ALPHA) via
+    aclnn.elu with scale=SELU_SCALE, then feed it to selu_backward.
+    """
+    SELU_SCALE = 1.0507009873554804934193349852946
+    SELU_ALPHA = 1.6732631921893986195596513061800
+
+    runtime, stream = _get_runtime_stream(grad)
+
+    # Compute selu(saved_input) using aclnn.elu with scale=SELU_SCALE
+    fwd_ptr, fwd_shape, fwd_stride, fwd_numel = _alloc_like(saved_input, runtime)
+    aclnn.elu(
+        _unwrap_storage(saved_input).data_ptr(),
+        fwd_ptr,
+        saved_input.shape,
+        saved_input.stride,
+        saved_input.dtype,
+        SELU_ALPHA,
+        runtime,
+        stream=stream.stream,
+        scale=SELU_SCALE,
+    )
+
+    # Backward: grad_input = aclnnSeluBackward(grad, selu_output)
+    out_ptr, out_shape, out_stride, out_numel = _alloc_like(grad, runtime)
+    aclnn.selu_backward(
+        _unwrap_storage(grad).data_ptr(),
+        fwd_ptr,
+        out_ptr,
+        grad.shape,
+        grad.stride,
+        fwd_stride,
+        out_stride,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    # Keep fwd_ptr alive via storage until backward completes
+    _fwd_storage = npu_typed_storage_from_ptr(
+        fwd_ptr, max(fwd_numel, 1), saved_input.dtype, device=saved_input.device)
+
+    return _wrap_output(out_ptr, out_numel, out_shape, out_stride, grad.dtype, grad.device)
+
+
+# ---------------------------------------------------------------
+# Adaptive max pool 2d backward
+# ---------------------------------------------------------------
+
+def npu_adaptive_max_pool2d_backward(grad, saved_input, backward_data):
+    """NPU backward for adaptive_max_pool2d using aclnnAdaptiveMaxPool2dBackward."""
+    runtime, stream = _get_runtime_stream(grad)
+
+    indices_ptr = backward_data["indices_ptr"]
+    indices_shape = backward_data["indices_shape"]
+    indices_stride = backward_data["indices_stride"]
+
+    # grad_input (same shape as saved_input)
+    gi_ptr, gi_shape, gi_stride, gi_numel = _alloc_like(saved_input, runtime)
+
+    aclnn.adaptive_max_pool2d_backward(
+        _unwrap_storage(grad).data_ptr(),
+        _unwrap_storage(saved_input).data_ptr(),
+        indices_ptr,
+        gi_ptr,
+        grad.shape, grad.stride,
+        saved_input.shape, saved_input.stride,
+        indices_shape, indices_stride,
+        gi_shape, gi_stride,
+        grad.dtype,
+        runtime,
+        stream=stream.stream,
+    )
+
+    return _wrap_output(gi_ptr, gi_numel, gi_shape, gi_stride, grad.dtype, grad.device)
