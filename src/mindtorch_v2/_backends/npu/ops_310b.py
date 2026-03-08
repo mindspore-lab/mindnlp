@@ -21,7 +21,6 @@ _310B_FALLBACK_OPS = frozenset(
         "dropout",
         "take_along_dim",
         "gather",
-        "linspace",
     }
 )
 
