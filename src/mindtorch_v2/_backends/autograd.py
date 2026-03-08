@@ -2436,10 +2436,34 @@ def _movedim_backward(grad, _a, _saved_a, keyset, args, kwargs):
 
 
 def _diagonal_backward(grad, _a, saved_a, keyset, args, kwargs):
-    """Backward for diagonal: scatter grad back along the diagonal using numpy."""
+    """Backward for diagonal: scatter grad back along the diagonal."""
     offset = args[0] if args else kwargs.get("offset", 0)
     dim1 = args[1] if len(args) > 1 else kwargs.get("dim1", 0)
     dim2 = args[2] if len(args) > 2 else kwargs.get("dim2", 1)
+    if grad.device.type == "npu":
+        with _grad_context(keyset):
+            result = redispatch("zeros", keyset, saved_a.shape, dtype=grad.dtype, device=grad.device)
+            ndim = len(saved_a.shape)
+            d1 = dim1 if dim1 >= 0 else dim1 + ndim
+            d2 = dim2 if dim2 >= 0 else dim2 + ndim
+            n_d1, n_d2 = saved_a.shape[d1], saved_a.shape[d2]
+            if offset >= 0:
+                diag_len = min(n_d1, n_d2 - offset)
+            else:
+                diag_len = min(n_d1 + offset, n_d2)
+            diag_len = max(diag_len, 0)
+            for k in range(diag_len):
+                i1 = k if offset >= 0 else k - offset
+                i2 = k + offset if offset >= 0 else k
+                # Build index tuple: slice(None) for all dims, then set d1 and d2
+                idx = [slice(None)] * ndim
+                idx[d1] = i1
+                idx[d2] = i2
+                # grad[..., k] — index the last dim of grad
+                grad_idx = [slice(None)] * (len(grad.shape) - 1) + [k]
+                g_slice = redispatch("getitem", keyset, grad, tuple(grad_idx))
+                redispatch("setitem", keyset, result, tuple(idx), g_slice)
+            return (result,)
     with _grad_context(keyset):
         import numpy as np
         from .cpu.ops import _to_numpy, _from_numpy
@@ -5354,6 +5378,59 @@ def _autograd_cdist(name):
 
 
 def _cdist_backward(grad, x1, x2, p, keyset):
+    # --- NPU: vectorized broadcasting (avoids O(B*P*R*M) Python loop) ---
+    if x1.device.type == "npu":
+        was_2d = (x1.ndim == 2)
+        if was_2d:
+            _x1 = redispatch("unsqueeze", keyset, x1, 0)    # (1, P, M)
+            _x2 = redispatch("unsqueeze", keyset, x2, 0)    # (1, R, M)
+            _grad = redispatch("unsqueeze", keyset, grad, 0) # (1, P, R)
+        else:
+            _x1, _x2, _grad = x1, x2, grad
+
+        with _grad_context(keyset):
+            # (B, P, 1, M) - (B, 1, R, M) = (B, P, R, M)
+            x1_exp = redispatch("unsqueeze", keyset, _x1, 2)
+            x2_exp = redispatch("unsqueeze", keyset, _x2, 1)
+            diff = redispatch("sub", keyset, x1_exp, x2_exp)
+
+            if p == 2.0:
+                # L2 norm direction: diff / ||diff||_2
+                dist = redispatch("sqrt", keyset, redispatch("sum", keyset,
+                    redispatch("mul", keyset, diff, diff), dim=-1, keepdim=True))
+                eps = _scalar_tensor_like(_x1, 1e-30)
+                safe_dist = redispatch("add", keyset, dist, eps)
+                direction = redispatch("div", keyset, diff, safe_dist)  # (B,P,R,M)
+            elif p == 1.0:
+                # L1 norm direction: sign(diff)
+                direction = redispatch("sign", keyset, diff)
+            else:
+                # General Lp norm direction
+                abs_diff = redispatch("abs", keyset, diff)
+                dist = redispatch("pow", keyset,
+                    redispatch("sum", keyset, redispatch("pow", keyset, abs_diff, float(p)), dim=-1, keepdim=True),
+                    1.0 / p)
+                eps = _scalar_tensor_like(_x1, 1e-30)
+                safe_dist = redispatch("add", keyset, dist, eps)
+                numer = redispatch("mul", keyset, redispatch("sign", keyset, diff),
+                                   redispatch("pow", keyset, abs_diff, float(p - 1)))
+                denom = redispatch("pow", keyset, safe_dist, float(p - 1))
+                direction = redispatch("div", keyset, numer, denom)
+
+            grad_exp = redispatch("unsqueeze", keyset, _grad, -1)  # (B,P,R,1)
+            gd = redispatch("mul", keyset, grad_exp, direction)    # (B,P,R,M)
+
+            grad_x1 = redispatch("sum", keyset, gd, dim=2) if getattr(x1, "requires_grad", False) else None   # (B,P,M)
+            grad_x2 = redispatch("neg", keyset, redispatch("sum", keyset, gd, dim=1)) if getattr(x2, "requires_grad", False) else None  # (B,R,M)
+
+            if was_2d:
+                if grad_x1 is not None:
+                    grad_x1 = redispatch("reshape", keyset, grad_x1, x1.shape)
+                if grad_x2 is not None:
+                    grad_x2 = redispatch("reshape", keyset, grad_x2, x2.shape)
+            return grad_x1, grad_x2
+
+    # --- CPU fallback: numpy triple-loop ---
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     x1_np = _to_numpy(x1).astype(np.float64)
@@ -5648,6 +5725,73 @@ def _autograd_tensordot(name):
 
 def _tensordot_backward(grad, a, b, dims, keyset):
     """Backward for tensordot."""
+    # NPU path: use redispatch composites (matmul + reshape/permute)
+    if grad.device.type == "npu":
+        import math
+        # Normalize dims to ([dims_a], [dims_b])
+        if isinstance(dims, int):
+            dims_a = list(range(a.ndim - dims, a.ndim))
+            dims_b = list(range(dims))
+        else:
+            dims_a, dims_b = [list(d) for d in dims]
+        free_a = [i for i in range(a.ndim) if i not in dims_a]
+        free_b = [i for i in range(b.ndim) if i not in dims_b]
+
+        grad_a = None
+        grad_b = None
+        if getattr(a, "requires_grad", False):
+            with _grad_context(keyset):
+                free_a_sizes = [a.shape[i] for i in free_a]
+                free_b_sizes = [b.shape[i] for i in free_b]
+                contracted_sizes = [b.shape[i] for i in dims_b]
+
+                grad_2d = redispatch("reshape", keyset, grad, (math.prod(free_a_sizes) or 1, math.prod(free_b_sizes) or 1))
+                # b reordered: free_b axes first, then contracted axes
+                b_perm = free_b + dims_b
+                b_t = redispatch("permute", keyset, b, b_perm)
+                b_2d = redispatch("reshape", keyset, redispatch("contiguous", keyset, b_t),
+                                  (math.prod(free_b_sizes) or 1, math.prod(contracted_sizes) or 1))
+                ga_2d = redispatch("matmul", keyset, grad_2d, b_2d)
+                # Reshape to free_a_sizes + contracted_sizes
+                ga_shape = free_a_sizes + contracted_sizes
+                ga = redispatch("reshape", keyset, ga_2d, tuple(ga_shape) if ga_shape else (1,))
+                # Transpose back to a's original order
+                current_order = free_a + dims_a
+                inv_perm = [0] * a.ndim
+                for new_i, orig_i in enumerate(current_order):
+                    inv_perm[orig_i] = new_i
+                grad_a = redispatch("permute", keyset, ga, inv_perm)
+                if ga_shape == []:
+                    grad_a = redispatch("reshape", keyset, grad_a, a.shape)
+
+        if getattr(b, "requires_grad", False):
+            with _grad_context(keyset):
+                free_a_sizes = [a.shape[i] for i in free_a]
+                free_b_sizes = [b.shape[i] for i in free_b]
+                contracted_sizes = [a.shape[i] for i in dims_a]
+
+                grad_2d = redispatch("reshape", keyset, grad, (math.prod(free_a_sizes) or 1, math.prod(free_b_sizes) or 1))
+                # a reordered: free_a axes first, then contracted axes
+                a_perm = free_a + dims_a
+                a_t = redispatch("permute", keyset, a, a_perm)
+                a_2d = redispatch("reshape", keyset, redispatch("contiguous", keyset, a_t),
+                                  (math.prod(free_a_sizes) or 1, math.prod(contracted_sizes) or 1))
+                # grad^T @ a_2d = (free_b x free_a) @ (free_a x contracted) = (free_b x contracted)
+                grad_2d_t = redispatch("transpose", keyset, grad_2d, 0, 1)
+                gb_2d = redispatch("matmul", keyset, grad_2d_t, a_2d)
+                gb_shape = free_b_sizes + contracted_sizes
+                gb = redispatch("reshape", keyset, gb_2d, tuple(gb_shape) if gb_shape else (1,))
+                current_order = free_b + dims_b
+                inv_perm = [0] * b.ndim
+                for new_i, orig_i in enumerate(current_order):
+                    inv_perm[orig_i] = new_i
+                grad_b = redispatch("permute", keyset, gb, inv_perm)
+                if gb_shape == []:
+                    grad_b = redispatch("reshape", keyset, grad_b, b.shape)
+
+        return grad_a, grad_b
+
+    # CPU path: numpy fallback
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     grad_np = _to_numpy(grad)
@@ -5704,6 +5848,30 @@ def _matrix_power_backward(grad, _a, saved_a, keyset, args, kwargs):
     """Backward for matrix_power: A^n.
     d(A^n)/dA = sum_{k=0}^{n-1} (A^T)^{n-1-k} @ grad @ (A^T)^k
     """
+    n = args[0]
+    if grad.device.type == "npu":
+        if n == 0:
+            return (redispatch("zeros", keyset, saved_a.shape, dtype=saved_a.dtype, device=saved_a.device),)
+        if n > 0:  # Only handle positive powers on NPU (negative needs linalg.inv)
+            with _grad_context(keyset):
+                at = redispatch("transpose", keyset, saved_a, -2, -1)  # A^T
+                # Precompute identity
+                I = redispatch("eye", keyset, saved_a.shape[-1], dtype=saved_a.dtype, device=saved_a.device)
+                if saved_a.ndim > 2:
+                    I = redispatch("expand", keyset, I, saved_a.shape)
+                # Precompute powers of A^T
+                at_powers = [I]
+                for k in range(1, n):
+                    at_powers.append(redispatch("matmul", keyset, at_powers[-1], at))
+                # Accumulate: result = sum_{k=0}^{n-1} (A^T)^{n-1-k} @ grad @ (A^T)^k
+                result = redispatch("zeros", keyset, saved_a.shape, dtype=saved_a.dtype, device=saved_a.device)
+                for k in range(n):
+                    left = at_powers[n - 1 - k]
+                    right = at_powers[k]
+                    term = redispatch("matmul", keyset, redispatch("matmul", keyset, left, grad), right)
+                    result = redispatch("add", keyset, result, term)
+                return (result,)
+        # n < 0 falls through to numpy below
     import numpy as np
     from .cpu.ops import _to_numpy, _from_numpy
     n = args[0]
