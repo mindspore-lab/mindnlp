@@ -104,7 +104,7 @@ def _npu_arange_1d(size, device):
     size = int(size)
     shape = (size,)
 
-    if npu_runtime.soc_profile() == "310b":
+    if ops_soc.use_smallop_arange_1d():
         from .creation import empty_create, ones_create
 
         if size == 0:
