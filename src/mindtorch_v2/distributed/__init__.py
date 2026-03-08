@@ -876,10 +876,22 @@ def new_subgroups(group_size=None, group=None, timeout=None, backend=None,
         raise ValueError(
             f"world_size {world_size} not divisible by group_size {group_size}"
         )
+
+    parent_rank_map = _pg_group_ranks.get(pg)
+    if parent_rank_map is None:
+        raise ValueError("The given group is not registered")
+
+    group_to_global = {
+        group_rank: global_rank
+        for global_rank, group_rank in parent_rank_map.items()
+    }
+
     num_groups = world_size // group_size
     subgroups = []
     for i in range(num_groups):
-        ranks = list(range(i * group_size, (i + 1) * group_size))
+        start = i * group_size
+        stop = (i + 1) * group_size
+        ranks = [group_to_global[g_rank] for g_rank in range(start, stop)]
         subgroups.append(new_group(ranks, timeout=timeout, backend=backend,
                                    pg_options=pg_options))
     rank = pg.rank()
