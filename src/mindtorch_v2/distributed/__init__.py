@@ -909,6 +909,23 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
                                  backend=None, pg_options=None):
     if _default_pg is None:
         raise RuntimeError("Default process group not initialized")
+
+    world_size = _default_pg.size()
+    seen = set()
+    for ranks in ranks_per_subgroup_list:
+        if len(ranks) == 0:
+            raise ValueError("the split group cannot be empty")
+        if len(ranks) != len(set(ranks)):
+            raise ValueError("the split group cannot have duplicate ranks")
+        for r in ranks:
+            if r < 0 or r >= world_size:
+                raise ValueError(
+                    f"the split group rank {r} must be in range [0, {world_size})"
+                )
+            if r in seen:
+                raise ValueError("split groups cannot overlap")
+            seen.add(r)
+
     subgroups = []
     for ranks in ranks_per_subgroup_list:
         subgroups.append(new_group(ranks, timeout=timeout, backend=backend,
