@@ -172,6 +172,12 @@ def register_schemas():
         },
     )
     registry.register_schema("mean", "mean(Tensor input, int[]? dim=None, bool keepdim=False, Dtype? dtype=None) -> Tensor")
+    registry.register_error_overrides(
+        "mean",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, tuple of ints dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, tuple of names dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("std", "std(Tensor input, int[]? dim=None, bool keepdim=False, bool unbiased=True) -> Tensor")
 
     registry.register_schema("reshape", "reshape(Tensor(a) input, int[] shape) -> Tensor(a)")
@@ -370,6 +376,12 @@ def register_schemas():
     registry.register_schema("var", "var(Tensor input, int[]? dim=None, bool unbiased=True, bool keepdim=False) -> Tensor")
     registry.register_schema("norm", "norm(Tensor input, Any p=2, int[]? dim=None, bool keepdim=False) -> Tensor")
     registry.register_schema("prod", "prod(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "prod",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, torch.dtype dtype = None)\n * (Tensor input, int dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, name dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("floor_divide", "floor_divide(Tensor input, Any other) -> Tensor")
     registry.register_schema("rms_norm", "rms_norm(Tensor input, int[] normalized_shape, Any weight=None, float eps=1e-6) -> Tensor")
 
