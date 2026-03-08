@@ -286,6 +286,22 @@ from .ops import (
     nanmedian_op,
     matrix_power_op,
     col2im_op,
+    # Phase 1: ACLNN large kernel ops (910B confirmed)
+    special_digamma,
+    special_erfinv,
+    special_gammaln,
+    special_sinc,
+    linalg_inv,
+    mm_op,
+    bmm_op,
+    linalg_vector_norm_op,
+    aminmax_aclnn,
+    bincount_aclnn,
+    adaptive_avg_pool3d_op,
+    upsample_bicubic2d_op,
+    upsample_linear1d_op,
+    _adam_step_op,
+    _adamw_step_op,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -610,6 +626,25 @@ registry.register("nanquantile", "npu", nanquantile_op)
 registry.register("nanmedian", "npu", nanmedian_op)
 registry.register("matrix_power", "npu", matrix_power_op, meta=meta_infer.infer_unary)
 registry.register("col2im", "npu", col2im_op)
+
+# Phase 1: ACLNN large kernel ops (910B confirmed working)
+registry.register("mm", "npu", mm_op, meta=meta_infer.infer_matmul)
+registry.register("bmm", "npu", bmm_op, meta=meta_infer.infer_matmul)
+registry.register("special_digamma", "npu", special_digamma, meta=meta_infer.infer_unary)
+registry.register("special_erfinv", "npu", special_erfinv, meta=meta_infer.infer_unary)
+registry.register("special_gammaln", "npu", special_gammaln, meta=meta_infer.infer_unary)
+registry.register("special_sinc", "npu", special_sinc, meta=meta_infer.infer_unary)
+registry.register("linalg_inv", "npu", linalg_inv, meta=meta_infer.infer_unary)
+registry.register("linalg_vector_norm", "npu", linalg_vector_norm_op)
+registry.register("adaptive_avg_pool3d", "npu", adaptive_avg_pool3d_op)
+registry.register("upsample_bicubic2d", "npu", upsample_bicubic2d_op)
+registry.register("upsample_linear1d", "npu", upsample_linear1d_op)
+registry.register("_adam_step", "npu", _adam_step_op)
+registry.register("_adamw_step", "npu", _adamw_step_op)
+
+# Upgrade composites to ACLNN large kernels
+registry.register("aminmax", "npu", aminmax_aclnn)
+registry.register("bincount", "npu", bincount_aclnn)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 

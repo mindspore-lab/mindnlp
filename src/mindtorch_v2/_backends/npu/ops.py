@@ -8673,3 +8673,317 @@ def col2im_op(a, output_size, kernel_size, dilation, padding, stride):
         out = dispatch("narrow", "npu", out, 3, pW, W_out)
         out = contiguous(out)
     return out
+
+
+# ---- ACLNN large-kernel ops (Phase 1, confirmed working on 910B) ----
+
+def special_digamma(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+    out_ptr = npu_runtime._alloc_device(s.nbytes, runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    aclnn.digamma(s.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def special_erfinv(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+    out_ptr = npu_runtime._alloc_device(s.nbytes, runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    aclnn.erfinv(s.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def special_gammaln(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+    out_ptr = npu_runtime._alloc_device(s.nbytes, runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    aclnn.lgamma(s.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def special_sinc(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+    out_ptr = npu_runtime._alloc_device(s.nbytes, runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    aclnn.sinc(s.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def linalg_inv(a):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+    out_ptr = npu_runtime._alloc_device(s.nbytes, runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(a.shape), a.dtype, device=a.device)
+    aclnn.inverse(s.data_ptr(), out_ptr, a.shape, a.stride, a.dtype, runtime, stream=stream.stream)
+    return _wrap_tensor(out_storage, a.shape, a.stride)
+
+
+def mm_op(a, b):
+    return matmul(a, b)
+
+
+def bmm_op(a, b):
+    return matmul(a, b)
+
+
+def linalg_vector_norm_op(a, ord=2, dim=None, keepdim=False):
+    from ..._dispatch.dispatcher import dispatch
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if dim is None:
+        dim = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        dim = [dim]
+
+    # Normalize negative dims
+    dim = [d % len(a.shape) for d in dim]
+
+    # Compute output shape
+    out_shape = []
+    for i, s in enumerate(a.shape):
+        if i in dim:
+            if keepdim:
+                out_shape.append(1)
+        else:
+            out_shape.append(s)
+    if not out_shape:
+        out_shape = (1,)
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+
+    out_nbytes = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+
+    s = _unwrap_storage(a)
+    aclnn.linalg_vector_norm(
+        s.data_ptr(), out_ptr,
+        a.shape, a.stride, out_shape, out_stride,
+        a.dtype, float(ord), dim, keepdim,
+        runtime, stream=stream.stream,
+    )
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def aminmax_aclnn(a, dim=None, keepdim=False):
+    from collections import namedtuple
+    from ..._dispatch.dispatcher import dispatch
+    AminmaxResult = namedtuple("aminmax", ["min", "max"])
+
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    if dim is None:
+        dim = list(range(len(a.shape)))
+    elif isinstance(dim, int):
+        dim = [dim]
+
+    dim = [d % len(a.shape) for d in dim]
+
+    out_shape = []
+    for i, s in enumerate(a.shape):
+        if i in dim:
+            if keepdim:
+                out_shape.append(1)
+        else:
+            out_shape.append(s)
+    if not out_shape:
+        out_shape = (1,)
+    out_shape = tuple(out_shape)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+
+    out_nbytes = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    min_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    max_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    min_storage = npu_typed_storage_from_ptr(min_ptr, _numel(out_shape), a.dtype, device=a.device)
+    max_storage = npu_typed_storage_from_ptr(max_ptr, _numel(out_shape), a.dtype, device=a.device)
+
+    s = _unwrap_storage(a)
+    aclnn.aminmax(
+        s.data_ptr(), min_ptr, max_ptr,
+        a.shape, a.stride, out_shape, out_stride,
+        a.dtype, dim, keepdim,
+        runtime, stream=stream.stream,
+    )
+    return AminmaxResult(
+        _wrap_tensor(min_storage, out_shape, out_stride),
+        _wrap_tensor(max_storage, out_shape, out_stride),
+    )
+
+
+def bincount_aclnn(a, weights=None, minlength=0):
+    import numpy as _np
+    from ..._dispatch.dispatcher import dispatch
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+
+    # Get max value to determine output size (need sync)
+    flat = dispatch("flatten", "npu", a)
+    n = flat.shape[0]
+    if n == 0:
+        length = max(0, minlength)
+        out_dt = weights.dtype if weights is not None else int64_dtype
+        return dispatch("zeros", "npu", (length,), dtype=out_dt, device=a.device)
+
+    max_val = dispatch("amax", "npu", flat)
+    max_val_c = contiguous(max_val)
+    max_np = _np.zeros(1, dtype=_np.int64)
+    npu_runtime._memcpy_d2h(max_np.ctypes.data, max_np.nbytes, _unwrap_storage(max_val_c).data_ptr(), runtime=runtime)
+    length = max(int(max_np[0]) + 1, minlength)
+
+    out_dt = weights.dtype if weights is not None else int64_dtype
+    out_shape = (length,)
+    out_stride = (1,)
+    out_nbytes = length * _dtype_itemsize(out_dt)
+    out_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, length, out_dt, device=a.device)
+
+    s = _unwrap_storage(flat)
+    w_ptr = None
+    w_shape = None
+    w_stride = None
+    w_dtype = None
+    if weights is not None:
+        w_flat = dispatch("flatten", "npu", weights)
+        w_s = _unwrap_storage(w_flat)
+        w_ptr = w_s.data_ptr()
+        w_shape = w_flat.shape
+        w_stride = w_flat.stride
+        w_dtype = w_flat.dtype
+
+    aclnn.bincount(
+        s.data_ptr(), w_ptr, out_ptr,
+        flat.shape, flat.stride, out_shape, out_stride,
+        flat.dtype, out_dt, minlength,
+        weights_shape=w_shape, weights_stride=w_stride, weights_dtype=w_dtype,
+        runtime=runtime, stream=stream.stream,
+    )
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def adaptive_avg_pool3d_op(input, output_size):
+    runtime = npu_runtime.get_runtime((input.device.index or 0))
+    stream = npu_state.current_stream((input.device.index or 0))
+    s = _unwrap_storage(input)
+
+    if len(input.shape) == 4:
+        N, C, D, H, W = 1, *input.shape
+        in_5d = True
+    else:
+        N, C, D, H, W = input.shape
+        in_5d = False
+
+    oD, oH, oW = output_size
+    out_shape_5d = (N, C, oD, oH, oW)
+    out_stride_5d = npu_runtime._contiguous_stride(out_shape_5d)
+    out_nbytes = _numel(out_shape_5d) * _dtype_itemsize(input.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape_5d), input.dtype, device=input.device)
+
+    in_shape = input.shape if not in_5d else (N, C, D, H, W)
+    in_stride = input.stride if not in_5d else npu_runtime._contiguous_stride(in_shape)
+
+    aclnn.adaptive_avg_pool3d(
+        s.data_ptr(), out_ptr,
+        in_shape, in_stride, out_shape_5d, out_stride_5d,
+        input.dtype, output_size,
+        runtime=runtime, stream=stream.stream,
+    )
+    result = _wrap_tensor(out_storage, out_shape_5d, out_stride_5d)
+    if in_5d:
+        from ..common import view as view_backend
+        result = view_backend.reshape(result, (C, oD, oH, oW))
+    return result
+
+
+def upsample_bicubic2d_op(a, output_size, align_corners=False, scales_h=None, scales_w=None):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+
+    N, C, H_in, W_in = a.shape
+    H_out, W_out = output_size
+    out_shape = (N, C, H_out, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_nbytes = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+
+    aclnn.upsample_bicubic2d(
+        s.data_ptr(), out_ptr,
+        a.shape, a.stride, out_shape, out_stride,
+        a.dtype, output_size, align_corners, scales_h, scales_w,
+        runtime=runtime, stream=stream.stream,
+    )
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def upsample_linear1d_op(a, output_size, align_corners=False, scales=None):
+    runtime = npu_runtime.get_runtime((a.device.index or 0))
+    stream = npu_state.current_stream((a.device.index or 0))
+    s = _unwrap_storage(a)
+
+    N, C, W_in = a.shape
+    W_out = output_size[0]
+    out_shape = (N, C, W_out)
+    out_stride = npu_runtime._contiguous_stride(out_shape)
+    out_nbytes = _numel(out_shape) * _dtype_itemsize(a.dtype)
+    out_ptr = npu_runtime._alloc_device(max(out_nbytes, 4), runtime=runtime)
+    out_storage = npu_typed_storage_from_ptr(out_ptr, _numel(out_shape), a.dtype, device=a.device)
+
+    aclnn.upsample_linear1d(
+        s.data_ptr(), out_ptr,
+        a.shape, a.stride, out_shape, out_stride,
+        a.dtype, output_size, align_corners, scales,
+        runtime=runtime, stream=stream.stream,
+    )
+    return _wrap_tensor(out_storage, out_shape, out_stride)
+
+
+def _adam_step_op(param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
+                  step, lr, beta1, beta2, eps, weight_decay, amsgrad, maximize):
+    runtime = npu_runtime.get_runtime((param.device.index or 0))
+    stream = npu_state.current_stream((param.device.index or 0))
+
+    p_s = _unwrap_storage(param)
+    g_s = _unwrap_storage(grad)
+    ea_s = _unwrap_storage(exp_avg)
+    eas_s = _unwrap_storage(exp_avg_sq)
+    # Create step tensor on device
+    import numpy as _np
+    step_np = _np.array([float(step)], dtype=_np.float32)
+    step_ptr, _ = npu_runtime._copy_cpu_to_npu(step_np, runtime=runtime)
+    step_shape = (1,)
+    step_stride = (1,)
+
+    max_v_ptr = None
+    if amsgrad and max_exp_avg_sq is not None:
+        max_v_ptr = _unwrap_storage(max_exp_avg_sq).data_ptr()
+
+    aclnn.apply_adam_w_v2(
+        p_s.data_ptr(), ea_s.data_ptr(), eas_s.data_ptr(),
+        max_v_ptr, g_s.data_ptr(), step_ptr,
+        param.shape, param.stride, step_shape, step_stride,
+        param.dtype,
+        float(lr), float(beta1), float(beta2),
+        float(weight_decay), float(eps),
+        bool(amsgrad), bool(maximize),
+        runtime=runtime, stream=stream.stream,
+    )
+    return param
+
+
+def _adamw_step_op(param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
+                   step, lr, beta1, beta2, eps, weight_decay, amsgrad, maximize):
+    return _adam_step_op(param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
+                         step, lr, beta1, beta2, eps, weight_decay, amsgrad, maximize)
