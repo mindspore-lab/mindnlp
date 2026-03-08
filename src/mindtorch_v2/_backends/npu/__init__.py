@@ -304,6 +304,103 @@ from .ops import (
     upsample_linear1d_op,
     _adam_step_op,
     _adamw_step_op,
+    # Phase 2: activation composites
+    selu_op,
+    celu_op,
+    threshold_op,
+    hardshrink_op,
+    softshrink_op,
+    hardswish_op,
+    hardsigmoid_op,
+    softsign_op,
+    rrelu_op,
+    normalize_op,
+    moveaxis_op,
+    # Phase 3: 1D pooling composites
+    adaptive_avg_pool1d_op,
+    avg_pool1d_op,
+    max_pool1d_op,
+    adaptive_max_pool1d_op,
+    # Phase 4: optimizer composites
+    _sgd_step_op,
+    _adagrad_step_op,
+    _rmsprop_step_op,
+    _adadelta_step_op,
+    _adamax_step_op,
+    _asgd_step_op,
+    _nadam_step_op,
+    _radam_step_op,
+    _rprop_step_op,
+    _sparse_adam_step_op,
+    # Phase 5: special function composites + CPU fallbacks
+    special_entr_op,
+    special_erfcx_op,
+    special_logit_op,
+    special_ndtr_op,
+    special_log_ndtr_op,
+    special_xlogy_op,
+    special_xlog1py_op,
+    special_multigammaln_op,
+    special_gammainc_op,
+    special_gammaincc_op,
+    special_i0_op,
+    special_i0e_op,
+    special_i1_op,
+    special_i1e_op,
+    special_ndtri_op,
+    special_polygamma_op,
+    special_zeta_op,
+    # Phase 6: linalg composites + CPU fallbacks
+    linalg_norm_op,
+    linalg_matrix_norm_op,
+    linalg_multi_dot_op,
+    linalg_matrix_power_op,
+    linalg_vander_op,
+    linalg_cholesky_op,
+    linalg_cond_op,
+    linalg_det_op,
+    linalg_eig_op,
+    linalg_eigh_op,
+    linalg_eigvals_op,
+    linalg_eigvalsh_op,
+    linalg_householder_product_op,
+    linalg_lstsq_op,
+    linalg_lu_op,
+    linalg_lu_factor_op,
+    linalg_lu_solve_op,
+    linalg_matrix_exp_op,
+    linalg_matrix_rank_op,
+    linalg_pinv_op,
+    linalg_slogdet_op,
+    linalg_solve_op,
+    linalg_solve_triangular_op,
+    linalg_svd_op,
+    linalg_svdvals_op,
+    linalg_tensorinv_op,
+    linalg_tensorsolve_op,
+    # Phase 7: FFT CPU fallbacks
+    fft_fft_op,
+    fft_ifft_op,
+    fft_rfft_op,
+    fft_irfft_op,
+    fft_fft2_op,
+    fft_ifft2_op,
+    fft_rfft2_op,
+    fft_irfft2_op,
+    fft_fftn_op,
+    fft_ifftn_op,
+    fft_rfftn_op,
+    fft_irfftn_op,
+    fft_hfft_op,
+    fft_ihfft_op,
+    fft_fftshift_op,
+    fft_ifftshift_op,
+    # Other missing ops
+    conv3d_op,
+    conv_transpose3d_op,
+    avg_pool3d_op,
+    upsample_nearest1d_op,
+    ctc_loss_op,
 )
 from .runtime import is_available, _model_dir, _probe_model_dirs
 from . import allocator
@@ -649,6 +746,110 @@ registry.register("_adamw_step", "npu", _adamw_step_op)
 # Upgrade composites to ACLNN large kernels
 registry.register("aminmax", "npu", aminmax_aclnn)
 registry.register("bincount", "npu", bincount_aclnn)
+
+# Phase 2: Activation composites
+registry.register("selu", "npu", selu_op, meta=meta_infer.infer_unary)
+registry.register("celu", "npu", celu_op, meta=meta_infer.infer_unary)
+registry.register("threshold", "npu", threshold_op, meta=meta_infer.infer_unary)
+registry.register("hardshrink", "npu", hardshrink_op, meta=meta_infer.infer_unary)
+registry.register("softshrink", "npu", softshrink_op, meta=meta_infer.infer_unary)
+registry.register("hardswish", "npu", hardswish_op, meta=meta_infer.infer_unary)
+registry.register("hardsigmoid", "npu", hardsigmoid_op, meta=meta_infer.infer_unary)
+registry.register("softsign", "npu", softsign_op, meta=meta_infer.infer_unary)
+registry.register("rrelu", "npu", rrelu_op, meta=meta_infer.infer_unary)
+registry.register("normalize", "npu", normalize_op, meta=meta_infer.infer_unary)
+registry.register("moveaxis", "npu", moveaxis_op, meta=meta_infer.infer_movedim)
+
+# Phase 3: 1D pooling composites
+registry.register("adaptive_avg_pool1d", "npu", adaptive_avg_pool1d_op)
+registry.register("avg_pool1d", "npu", avg_pool1d_op)
+registry.register("max_pool1d", "npu", max_pool1d_op)
+registry.register("adaptive_max_pool1d", "npu", adaptive_max_pool1d_op)
+
+# Phase 4: Optimizer composites
+registry.register("_sgd_step", "npu", _sgd_step_op)
+registry.register("_adagrad_step", "npu", _adagrad_step_op)
+registry.register("_rmsprop_step", "npu", _rmsprop_step_op)
+registry.register("_adadelta_step", "npu", _adadelta_step_op)
+registry.register("_adamax_step", "npu", _adamax_step_op)
+registry.register("_asgd_step", "npu", _asgd_step_op)
+registry.register("_nadam_step", "npu", _nadam_step_op)
+registry.register("_radam_step", "npu", _radam_step_op)
+registry.register("_rprop_step", "npu", _rprop_step_op)
+registry.register("_sparse_adam_step", "npu", _sparse_adam_step_op)
+
+# Phase 5: Special function composites + CPU fallbacks
+registry.register("special_entr", "npu", special_entr_op, meta=meta_infer.infer_unary)
+registry.register("special_erfcx", "npu", special_erfcx_op, meta=meta_infer.infer_unary)
+registry.register("special_logit", "npu", special_logit_op, meta=meta_infer.infer_unary)
+registry.register("special_ndtr", "npu", special_ndtr_op, meta=meta_infer.infer_unary)
+registry.register("special_log_ndtr", "npu", special_log_ndtr_op, meta=meta_infer.infer_unary)
+registry.register("special_xlogy", "npu", special_xlogy_op, meta=meta_infer.infer_binary)
+registry.register("special_xlog1py", "npu", special_xlog1py_op, meta=meta_infer.infer_binary)
+registry.register("special_multigammaln", "npu", special_multigammaln_op)
+registry.register("special_gammainc", "npu", special_gammainc_op)
+registry.register("special_gammaincc", "npu", special_gammaincc_op)
+registry.register("special_i0", "npu", special_i0_op, meta=meta_infer.infer_unary)
+registry.register("special_i0e", "npu", special_i0e_op, meta=meta_infer.infer_unary)
+registry.register("special_i1", "npu", special_i1_op, meta=meta_infer.infer_unary)
+registry.register("special_i1e", "npu", special_i1e_op, meta=meta_infer.infer_unary)
+registry.register("special_ndtri", "npu", special_ndtri_op, meta=meta_infer.infer_unary)
+registry.register("special_polygamma", "npu", special_polygamma_op)
+registry.register("special_zeta", "npu", special_zeta_op)
+
+# Phase 6: Linalg composites + CPU fallbacks
+registry.register("linalg_norm", "npu", linalg_norm_op)
+registry.register("linalg_matrix_norm", "npu", linalg_matrix_norm_op)
+registry.register("linalg_multi_dot", "npu", linalg_multi_dot_op)
+registry.register("linalg_matrix_power", "npu", linalg_matrix_power_op)
+registry.register("linalg_vander", "npu", linalg_vander_op)
+registry.register("linalg_cholesky", "npu", linalg_cholesky_op)
+registry.register("linalg_cond", "npu", linalg_cond_op)
+registry.register("linalg_det", "npu", linalg_det_op)
+registry.register("linalg_eig", "npu", linalg_eig_op)
+registry.register("linalg_eigh", "npu", linalg_eigh_op)
+registry.register("linalg_eigvals", "npu", linalg_eigvals_op)
+registry.register("linalg_eigvalsh", "npu", linalg_eigvalsh_op)
+registry.register("linalg_householder_product", "npu", linalg_householder_product_op)
+registry.register("linalg_lstsq", "npu", linalg_lstsq_op)
+registry.register("linalg_lu", "npu", linalg_lu_op)
+registry.register("linalg_lu_factor", "npu", linalg_lu_factor_op)
+registry.register("linalg_lu_solve", "npu", linalg_lu_solve_op)
+registry.register("linalg_matrix_exp", "npu", linalg_matrix_exp_op)
+registry.register("linalg_matrix_rank", "npu", linalg_matrix_rank_op)
+registry.register("linalg_pinv", "npu", linalg_pinv_op)
+registry.register("linalg_slogdet", "npu", linalg_slogdet_op)
+registry.register("linalg_solve", "npu", linalg_solve_op)
+registry.register("linalg_solve_triangular", "npu", linalg_solve_triangular_op)
+registry.register("linalg_svd", "npu", linalg_svd_op)
+registry.register("linalg_svdvals", "npu", linalg_svdvals_op)
+registry.register("linalg_tensorinv", "npu", linalg_tensorinv_op)
+registry.register("linalg_tensorsolve", "npu", linalg_tensorsolve_op)
+
+# Phase 7: FFT CPU fallbacks
+registry.register("fft_fft", "npu", fft_fft_op)
+registry.register("fft_ifft", "npu", fft_ifft_op)
+registry.register("fft_rfft", "npu", fft_rfft_op)
+registry.register("fft_irfft", "npu", fft_irfft_op)
+registry.register("fft_fft2", "npu", fft_fft2_op)
+registry.register("fft_ifft2", "npu", fft_ifft2_op)
+registry.register("fft_rfft2", "npu", fft_rfft2_op)
+registry.register("fft_irfft2", "npu", fft_irfft2_op)
+registry.register("fft_fftn", "npu", fft_fftn_op)
+registry.register("fft_ifftn", "npu", fft_ifftn_op)
+registry.register("fft_rfftn", "npu", fft_rfftn_op)
+registry.register("fft_irfftn", "npu", fft_irfftn_op)
+registry.register("fft_hfft", "npu", fft_hfft_op)
+registry.register("fft_ihfft", "npu", fft_ihfft_op)
+registry.register("fft_fftshift", "npu", fft_fftshift_op)
+registry.register("fft_ifftshift", "npu", fft_ifftshift_op)
+
+# Other missing ops: 3D conv, upsample, ctc_loss
+registry.register("conv3d", "npu", conv3d_op)
+registry.register("conv_transpose3d", "npu", conv_transpose3d_op)
+registry.register("avg_pool3d", "npu", avg_pool3d_op)
+registry.register("upsample_nearest1d", "npu", upsample_nearest1d_op)
+registry.register("ctc_loss", "npu", ctc_loss_op)
 
 __all__ = ["is_available", "_probe_model_dirs", "_model_dir", "allocator"]
 
