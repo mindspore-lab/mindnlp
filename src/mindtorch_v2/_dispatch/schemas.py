@@ -375,6 +375,12 @@ def register_schemas():
 
     registry.register_schema("var", "var(Tensor input, int[]? dim=None, bool unbiased=True, bool keepdim=False) -> Tensor")
     registry.register_schema("norm", "norm(Tensor input, Any p=2, int[]? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "norm",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, Number p = 2, tuple of ints dim = None, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, str p = 'fro', tuple of ints dim = None, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("prod", "prod(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
     registry.register_error_overrides(
         "prod",

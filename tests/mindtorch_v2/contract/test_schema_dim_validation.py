@@ -447,3 +447,27 @@ def test_dispatch_prod_rejects_str_dim_matches_torch():
         pt.prod(pt.tensor([1.0, 2.0]), "0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_norm_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("norm", mt_x.device.type, mt_x, 2, dim=True)
+
+    def th_call():
+        pt.norm(pt.tensor([1.0, 2.0]), 2, dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_norm_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("norm", mt_x.device.type, mt_x, 2, dim="0")
+
+    def th_call():
+        pt.norm(pt.tensor([1.0, 2.0]), 2, dim="0")
+
+    assert_torch_error(mt_call, th_call)

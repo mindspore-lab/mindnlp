@@ -252,6 +252,38 @@ class OpSchema:
                 )
             _raise_invalid_combo()
 
+        def _validate_norm_dim(value):
+            # Match torch call-site type validation for linalg_vector_norm dim.
+            if value is None:
+                return
+            if isinstance(value, int) and not isinstance(value, bool):
+                return
+            if isinstance(value, bool):
+                raise TypeError(
+                    "linalg_vector_norm(): argument 'dim' (position 3) must be tuple of ints, "
+                    "but found element of type bool at pos 0"
+                )
+            if isinstance(value, (list, tuple)):
+                if not value:
+                    return
+                for idx, item in enumerate(value):
+                    if not isinstance(item, int) or isinstance(item, bool):
+                        item_type = type(item).__name__
+                        if idx == 0:
+                            raise TypeError(
+                                "linalg_vector_norm(): argument 'dim' (position 3) must be tuple of ints, "
+                                f"but found element of type {item_type} at pos 0"
+                            )
+                        raise TypeError(
+                            "linalg_vector_norm(): argument 'dim' failed to unpack the object at pos 2 "
+                            f"with error \"type must be tuple of ints,but got {item_type}\""
+                        )
+                return
+            raise TypeError(
+                "linalg_vector_norm(): argument 'dim' (position 3) must be tuple of ints, "
+                f"not {type(value).__name__}"
+            )
+
         def _type_label(value):
             if isinstance(value, bool):
                 return "bool"
@@ -512,6 +544,9 @@ class OpSchema:
             if op_short_name == "prod" and param.name == "dim":
                 input_tensor = bound.get("input")
                 _validate_prod_dim(value, input_tensor)
+                continue
+            if op_short_name == "norm" and param.name == "dim":
+                _validate_norm_dim(value)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
