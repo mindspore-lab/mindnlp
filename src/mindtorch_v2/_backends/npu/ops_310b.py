@@ -1,28 +1,8 @@
-"""310B-specific NPU fallback policy table."""
+"""310B-specific NPU fallback policy table (compat shim)."""
 
-_310B_FALLBACK_OPS = frozenset(
-    {
-        "atan2",
-        "where",
-        "flip",
-        "argsort",
-        "sort",
-        "topk",
-        "diag",
-        "lerp",
-        "remainder",
-        "isclose",
-        "softplus",
-        "uniform_",
-        "normal_",
-        "layer_norm",
-        "mish",
-        "batch_norm",
-        "dropout",
-        "take_along_dim",
-        "gather",
-    }
-)
+# Source of truth moved to ops_soc capability table. Keep this module for
+# compatibility with any out-of-tree imports.
+_310B_FALLBACK_OPS = frozenset()
 
 
 def use_fallback(op_name):
