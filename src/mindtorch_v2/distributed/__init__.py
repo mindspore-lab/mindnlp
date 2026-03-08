@@ -29,7 +29,7 @@ _pg_map = {}          # ProcessGroup -> (Backend, Store)
 _pg_names = {}        # ProcessGroup -> str
 _pg_group_ranks = {}  # ProcessGroup -> {global_rank: group_rank}
 _group_count = 0
-_split_group_seq = 0
+_split_group_seq = {}
 
 default_pg_timeout = timedelta(minutes=30)
 
@@ -130,7 +130,7 @@ def _raise_with_context(exc, *, stage, backend, rank, world_size, device_id=None
 def init_process_group(backend=None, init_method=None, timeout=None,
                        world_size=-1, rank=-1, store=None,
                        group_name="", pg_options=None, device_id=None):
-    global _default_pg, _group_count
+    global _default_pg, _group_count, _split_group_seq
 
     if _default_pg is not None:
         raise RuntimeError(
@@ -225,10 +225,11 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     _pg_names[pg] = group_name or "default_pg"
     _pg_group_ranks[pg] = {i: i for i in range(world_size)}
     _group_count += 1
+    _split_group_seq = {}
 
 
 def destroy_process_group(group=None):
-    global _default_pg, _group_count
+    global _default_pg, _group_count, _split_group_seq
 
     if group is None or group is _default_pg:
         # Destroy all groups
@@ -240,6 +241,7 @@ def destroy_process_group(group=None):
         _default_pg = None
         GroupMember.WORLD = None
         _group_count = 0
+        _split_group_seq = {}
     else:
         group.destroy()
         _pg_map.pop(group, None)
@@ -806,6 +808,14 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     if ranks is None:
         ranks = list(range(world_size))
 
+    if len(ranks) != len(set(ranks)):
+        raise ValueError("ranks cannot contain duplicate entries")
+
+    # Reserve a deterministic group sequence ID on every rank even when
+    # this rank is not a member, so subsequent implicit group names stay aligned.
+    prefix = group_desc or f"pg{_group_count}"
+    _group_count += 1
+
     if world_rank not in ranks:
         return GroupMember.NON_GROUP_MEMBER
 
@@ -814,7 +824,6 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
 
     # Reuse the default store with a prefix to avoid key collisions
     _, default_store = _pg_map[_default_pg]
-    prefix = group_desc or f"pg{_group_count}"
     prefixed_store = PrefixStore(prefix, default_store)
 
     # Inherit backend from parent PG if not specified
@@ -849,7 +858,6 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     _pg_map[pg] = (Backend(backend), prefixed_store)
     _pg_names[pg] = group_desc or prefix
     _pg_group_ranks[pg] = {ranks[i]: i for i in range(group_size)}
-    _group_count += 1
     return pg
 
 
@@ -894,10 +902,13 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
 
 
 def split_group(parent_pg, color, key=None):
-    global _split_group_seq
+
 
     if _default_pg is None:
         raise RuntimeError("Default process group not initialized")
+
+    if parent_pg is GroupMember.NON_GROUP_MEMBER:
+        return GroupMember.NON_GROUP_MEMBER
 
     pg = parent_pg or _default_pg
     if pg not in _pg_map:
@@ -907,34 +918,49 @@ def split_group(parent_pg, color, key=None):
         key = 0
 
     world_rank = _default_pg.rank()
-    world_size = _default_pg.size()
-    _, default_store = _pg_map[_default_pg]
-    split_call_id = _split_group_seq
-    _split_group_seq += 1
+    parent_rank_map = _pg_group_ranks.get(pg)
+    if parent_rank_map is None:
+        raise ValueError("The given group is not registered")
+    if world_rank not in parent_rank_map:
+        raise ValueError(
+            f"Global rank {world_rank} is not part of the parent group"
+        )
 
+    group_rank = parent_rank_map[world_rank]
+    group_size = pg.size()
+    group_to_global = {
+        group_r: global_r for global_r, group_r in parent_rank_map.items()
+    }
+
+    split_call_id = _split_group_seq.get(pg, 0)
+    _split_group_seq[pg] = split_call_id + 1
+
+    _, parent_store = _pg_map[pg]
     prefix = f"split_group_{split_call_id}"
-    # Publish local request to world store.
-    default_store.set(
-        f"{prefix}/rank_{world_rank}",
+    parent_store.set(
+        f"{prefix}/rank_{group_rank}",
         f"{int(color)}:{int(key)}".encode("utf-8"),
     )
 
-    keys = [f"{prefix}/rank_{r}" for r in range(world_size)]
-    default_store.wait(keys)
+    keys = [f"{prefix}/rank_{r}" for r in range(group_size)]
+    parent_store.wait(keys)
 
     members = []
-    for global_rank in range(world_size):
-        raw = default_store.get(f"{prefix}/rank_{global_rank}")
+    for parent_group_rank in range(group_size):
+        raw = parent_store.get(f"{prefix}/rank_{parent_group_rank}")
         text = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
         rank_color, rank_key = text.split(":", 1)
         if int(rank_color) == int(color) and int(rank_color) >= 0:
-            members.append((int(rank_key), global_rank))
+            members.append((int(rank_key), parent_group_rank))
 
     if int(color) < 0:
         return GroupMember.NON_GROUP_MEMBER
 
     members.sort(key=lambda item: (item[0], item[1]))
-    ranks = [global_rank for _, global_rank in members]
+    ranks = [
+        group_to_global[parent_group_rank]
+        for _, parent_group_rank in members
+    ]
     if world_rank not in ranks:
         return GroupMember.NON_GROUP_MEMBER
 
