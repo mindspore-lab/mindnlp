@@ -471,3 +471,51 @@ def test_dispatch_norm_rejects_str_dim_matches_torch():
         pt.norm(pt.tensor([1.0, 2.0]), 2, dim="0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_argmax_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("argmax", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.argmax(pt.tensor([1.0, 2.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_argmax_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("argmax", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.argmax(pt.tensor([1.0, 2.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_argmin_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("argmin", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.argmin(pt.tensor([1.0, 2.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_argmin_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+
+    def mt_call():
+        dispatch("argmin", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.argmin(pt.tensor([1.0, 2.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
