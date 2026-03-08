@@ -3663,6 +3663,136 @@ class AclnnBindings:
             libs, "aclnnSquare", ctypes.c_int32,
             [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
         )
+        # aclnnDigamma (unary: out = digamma(x))
+        self.aclnn_digamma_get_workspace = _optional_symbol(
+            libs, "aclnnDigammaGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_digamma = _optional_symbol(
+            libs, "aclnnDigamma", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnLgamma (unary: out = lgamma(x))
+        self.aclnn_lgamma_get_workspace = _optional_symbol(
+            libs, "aclnnLgammaGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_lgamma = _optional_symbol(
+            libs, "aclnnLgamma", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnSinc (unary: out = sinc(x))
+        self.aclnn_sinc_get_workspace = _optional_symbol(
+            libs, "aclnnSincGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_sinc = _optional_symbol(
+            libs, "aclnnSinc", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnInverse (out = inv(x))
+        self.aclnn_inverse_get_workspace = _optional_symbol(
+            libs, "aclnnInverseGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_inverse = _optional_symbol(
+            libs, "aclnnInverse", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnLinalgVectorNorm (self, ord_scalar, dim[], keepdim, dtype, out)
+        self.aclnn_linalg_vector_norm_get_workspace = _optional_symbol(
+            libs, "aclnnLinalgVectorNormGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_bool, ctypes.c_int32, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_linalg_vector_norm = _optional_symbol(
+            libs, "aclnnLinalgVectorNorm", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnAminmax (self, dim[], keepDim, minOut, maxOut)
+        self.aclnn_aminmax_get_workspace = _optional_symbol(
+            libs, "aclnnAminmaxGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool,
+             ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_aminmax = _optional_symbol(
+            libs, "aclnnAminmax", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnBincount (self, weights_or_null, minlength, out)
+        self.aclnn_bincount_get_workspace = _optional_symbol(
+            libs, "aclnnBincountGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64,
+             ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_bincount = _optional_symbol(
+            libs, "aclnnBincount", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnAdaptiveAvgPool3d (self, outputSize[], out)
+        self.aclnn_adaptive_avg_pool3d_get_workspace = _optional_symbol(
+            libs, "aclnnAdaptiveAvgPool3dGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_adaptive_avg_pool3d = _optional_symbol(
+            libs, "aclnnAdaptiveAvgPool3d", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnUpsampleBicubic2d (self, outSize[], alignCorners, scalesH, scalesW, out)
+        self.aclnn_upsample_bicubic2d_get_workspace = _optional_symbol(
+            libs, "aclnnUpsampleBicubic2dGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool,
+             ctypes.c_double, ctypes.c_double, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_upsample_bicubic2d = _optional_symbol(
+            libs, "aclnnUpsampleBicubic2d", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnUpsampleLinear1d (self, outSize[], alignCorners, scales, out)
+        self.aclnn_upsample_linear1d_get_workspace = _optional_symbol(
+            libs, "aclnnUpsampleLinear1dGetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool,
+             ctypes.c_double, ctypes.c_void_p,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_upsample_linear1d = _optional_symbol(
+            libs, "aclnnUpsampleLinear1d", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
+        # aclnnApplyAdamWV2 (var, m, v, maxGradNormOpt, grad, step, lr, beta1, beta2, wd, eps, amsgrad, maximize)
+        self.aclnn_apply_adam_w_v2_get_workspace = _optional_symbol(
+            libs, "aclnnApplyAdamWV2GetWorkspaceSize", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+             ctypes.c_float, ctypes.c_float, ctypes.c_float,
+             ctypes.c_float, ctypes.c_float,
+             ctypes.c_bool, ctypes.c_bool,
+             ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_void_p)],
+        )
+        self.aclnn_apply_adam_w_v2 = _optional_symbol(
+            libs, "aclnnApplyAdamWV2", ctypes.c_int32,
+            [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_void_p],
+        )
+
 
 
 _ACL_DTYPE = {
@@ -15080,3 +15210,377 @@ def group_norm_backward(grad_ptr, input_ptr, mean_ptr, rstd_ptr, gamma_ptr,
         if workspace is not None:
             runtime.defer_raw_free(workspace)
         _ = (grad_keep, input_keep, mean_keep, rstd_keep, gi_keep)
+
+
+def digamma(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnDigamma", bindings.aclnn_digamma_get_workspace, bindings.aclnn_digamma,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def lgamma(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnLgamma", bindings.aclnn_lgamma_get_workspace, bindings.aclnn_lgamma,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def sinc(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnSinc", bindings.aclnn_sinc_get_workspace, bindings.aclnn_sinc,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def inverse(self_ptr, out_ptr, shape, stride, dtype, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    return _unary_call(bindings, "aclnnInverse", bindings.aclnn_inverse_get_workspace, bindings.aclnn_inverse,
+                       self_ptr, out_ptr, shape, stride, dtype, runtime, stream)
+
+
+def linalg_vector_norm(self_ptr, out_ptr, self_shape, self_stride,
+                       out_shape, out_stride, dtype, ord_val, dim, keepdim,
+                       runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    ord_scalar, ord_keep = _create_scalar(bindings, ord_val, dtype)
+    dim_arr = _make_int64_array(dim)
+    dim_handle = bindings.acl_create_int_array(dim_arr, ctypes.c_uint64(len(dim)))
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_linalg_vector_norm_get_workspace(
+            self_tensor, ord_scalar, dim_handle,
+            ctypes.c_bool(keepdim), ctypes.c_int32(_dtype_to_acl(dtype)),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLinalgVectorNormGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_linalg_vector_norm(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnLinalgVectorNorm failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, out_keep, ord_keep, dim_arr)
+
+
+def aminmax(self_ptr, min_out_ptr, max_out_ptr, self_shape, self_stride,
+            out_shape, out_stride, dtype, dim, keepdim, runtime, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    min_tensor, min_keep = _create_tensor(bindings, out_shape, out_stride, dtype, min_out_ptr)
+    max_tensor, max_keep = _create_tensor(bindings, out_shape, out_stride, dtype, max_out_ptr)
+    dim_arr = _make_int64_array(dim)
+    dim_handle = bindings.acl_create_int_array(dim_arr, ctypes.c_uint64(len(dim)))
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_aminmax_get_workspace(
+            self_tensor, dim_handle, ctypes.c_bool(keepdim),
+            min_tensor, max_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAminmaxGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_aminmax(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAminmax failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(min_tensor)
+        bindings.acl_destroy_tensor(max_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, min_keep, max_keep, dim_arr)
+
+
+def bincount(self_ptr, weights_ptr, out_ptr, self_shape, self_stride,
+             out_shape, out_stride, self_dtype, out_dtype, minlength,
+             weights_shape=None, weights_stride=None, weights_dtype=None,
+             runtime=None, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, self_dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, out_dtype, out_ptr)
+    weights_tensor = None
+    weights_keep = None
+    if weights_ptr is not None and weights_shape is not None:
+        weights_tensor, weights_keep = _create_tensor(bindings, weights_shape, weights_stride, weights_dtype, weights_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_bincount_get_workspace(
+            self_tensor,
+            ctypes.c_void_p(0) if weights_tensor is None else weights_tensor,
+            ctypes.c_int64(minlength),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnBincountGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_bincount(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnBincount failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if weights_tensor is not None:
+            bindings.acl_destroy_tensor(weights_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, out_keep, weights_keep)
+
+
+def adaptive_avg_pool3d(self_ptr, out_ptr, self_shape, self_stride,
+                        out_shape, out_stride, dtype, output_size,
+                        runtime=None, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    osz_arr = _make_int64_array(output_size)
+    osz_handle = bindings.acl_create_int_array(osz_arr, ctypes.c_uint64(len(output_size)))
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_adaptive_avg_pool3d_get_workspace(
+            self_tensor, osz_handle, out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAdaptiveAvgPool3dGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_adaptive_avg_pool3d(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnAdaptiveAvgPool3d failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, out_keep, osz_arr)
+
+
+def upsample_bicubic2d(self_ptr, out_ptr, self_shape, self_stride,
+                       out_shape, out_stride, dtype, output_size,
+                       align_corners, scales_h, scales_w,
+                       runtime=None, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    osz_arr = _make_int64_array(output_size)
+    osz_handle = bindings.acl_create_int_array(osz_arr, ctypes.c_uint64(len(output_size)))
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_upsample_bicubic2d_get_workspace(
+            self_tensor, osz_handle, ctypes.c_bool(align_corners),
+            ctypes.c_double(scales_h if scales_h is not None else 0.0),
+            ctypes.c_double(scales_w if scales_w is not None else 0.0),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnUpsampleBicubic2dGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_upsample_bicubic2d(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnUpsampleBicubic2d failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, out_keep, osz_arr)
+
+
+def upsample_linear1d(self_ptr, out_ptr, self_shape, self_stride,
+                      out_shape, out_stride, dtype, output_size,
+                      align_corners, scales,
+                      runtime=None, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    self_tensor, self_keep = _create_tensor(bindings, self_shape, self_stride, dtype, self_ptr)
+    out_tensor, out_keep = _create_tensor(bindings, out_shape, out_stride, dtype, out_ptr)
+    osz_arr = _make_int64_array(output_size)
+    osz_handle = bindings.acl_create_int_array(osz_arr, ctypes.c_uint64(len(output_size)))
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_upsample_linear1d_get_workspace(
+            self_tensor, osz_handle, ctypes.c_bool(align_corners),
+            ctypes.c_double(scales if scales is not None else -1.0),
+            out_tensor,
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnUpsampleLinear1dGetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_upsample_linear1d(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnUpsampleLinear1d failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(self_tensor)
+        bindings.acl_destroy_tensor(out_tensor)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (self_keep, out_keep, osz_arr)
+
+
+def apply_adam_w_v2(var_ptr, m_ptr, v_ptr, max_v_ptr, grad_ptr, step_ptr,
+                    var_shape, var_stride, step_shape, step_stride,
+                    dtype, lr, beta1, beta2, weight_decay, eps,
+                    amsgrad, maximize,
+                    runtime=None, stream=None):
+    global acl
+    if acl is None:
+        acl = ensure_acl()
+    bindings = get_bindings()
+    var_t, var_k = _create_tensor(bindings, var_shape, var_stride, dtype, var_ptr)
+    m_t, m_k = _create_tensor(bindings, var_shape, var_stride, dtype, m_ptr)
+    v_t, v_k = _create_tensor(bindings, var_shape, var_stride, dtype, v_ptr)
+    grad_t, grad_k = _create_tensor(bindings, var_shape, var_stride, dtype, grad_ptr)
+    step_t, step_k = _create_tensor(bindings, step_shape, step_stride, dtype, step_ptr)
+    max_v_t = None
+    max_v_k = None
+    if max_v_ptr is not None:
+        max_v_t, max_v_k = _create_tensor(bindings, var_shape, var_stride, dtype, max_v_ptr)
+    executor = ctypes.c_void_p()
+    workspace_size = ctypes.c_uint64(0)
+    workspace = None
+    try:
+        ret = bindings.aclnn_apply_adam_w_v2_get_workspace(
+            var_t, m_t, v_t,
+            ctypes.c_void_p(0) if max_v_t is None else max_v_t,
+            grad_t, step_t,
+            ctypes.c_float(lr), ctypes.c_float(beta1), ctypes.c_float(beta2),
+            ctypes.c_float(weight_decay), ctypes.c_float(eps),
+            ctypes.c_bool(amsgrad), ctypes.c_bool(maximize),
+            ctypes.byref(workspace_size), ctypes.byref(executor),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnApplyAdamWV2GetWorkspaceSize failed: {ret}")
+        if workspace_size.value:
+            workspace_ptr, ret = acl.rt.malloc(int(workspace_size.value), 0)
+            if ret != 0:
+                raise RuntimeError(f"acl.rt.malloc failed: {ret}")
+            workspace = workspace_ptr
+        ret = bindings.aclnn_apply_adam_w_v2(
+            ctypes.c_void_p(0 if workspace is None else int(workspace)),
+            ctypes.c_uint64(workspace_size.value), executor,
+            ctypes.c_void_p(int(runtime.stream if stream is None else stream)),
+        )
+        if ret != 0:
+            raise RuntimeError(f"aclnnApplyAdamWV2 failed: {ret}")
+        _maybe_sync(runtime)
+    finally:
+        _defer_executor(executor)
+        bindings.acl_destroy_tensor(var_t)
+        bindings.acl_destroy_tensor(m_t)
+        bindings.acl_destroy_tensor(v_t)
+        bindings.acl_destroy_tensor(grad_t)
+        bindings.acl_destroy_tensor(step_t)
+        if max_v_t is not None:
+            bindings.acl_destroy_tensor(max_v_t)
+        if workspace is not None:
+            runtime.defer_raw_free(workspace)
+        _ = (var_k, m_k, v_k, grad_k, step_k, max_v_k)
