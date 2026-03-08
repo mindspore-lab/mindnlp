@@ -910,6 +910,9 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
     if _default_pg is None:
         raise RuntimeError("Default process group not initialized")
 
+    if ranks_per_subgroup_list is None or len(ranks_per_subgroup_list) == 0:
+        raise ValueError("The arg 'ranks_per_subgroup_list' cannot be empty")
+
     world_size = _default_pg.size()
     seen = set()
     for ranks in ranks_per_subgroup_list:
