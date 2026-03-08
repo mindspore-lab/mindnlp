@@ -7,9 +7,13 @@ import builtins as _builtins
 
 
 def add(*args, **kwargs):
-    alpha = kwargs.get("alpha", 1)
+    alpha = kwargs.pop("alpha", 1)
+    kwargs.pop("out", None)
     if alpha != 1:
-        raise NotImplementedError("alpha != 1 not supported yet")
+        # Pre-multiply: add(a, b, alpha=k) => a + k*b
+        a, b = args[0], args[1]
+        b = mul(b, alpha)
+        return dispatch("add", None, a, b)
     return dispatch("add", None, *args, **kwargs)
 
 
@@ -273,7 +277,10 @@ def true_divide(a, b):
 def mean(a, dim=None, keepdim=False, *, dtype=None, axis=None):
     if axis is not None:
         dim = axis
-    return dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+    result = dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+    if dtype is not None:
+        result = result.to(dtype=dtype)
+    return result
 
 
 def std(a, dim=None, keepdim=False, unbiased=True, *, axis=None):
@@ -303,11 +310,12 @@ def softplus(a):
 
 
 def sum(*args, **kwargs):
-    dtype = kwargs.get("dtype")
-    if dtype is not None:
-        raise NotImplementedError("sum dtype not supported yet")
+    dtype = kwargs.pop("dtype", None)
     kwargs.pop("device", None)
-    return dispatch("sum", None, *args, **kwargs)
+    result = dispatch("sum", None, *args, **kwargs)
+    if dtype is not None:
+        result = result.to(dtype=dtype)
+    return result
 
 
 def all(a, dim=None, keepdim=False):
@@ -948,15 +956,44 @@ def normal(mean, std, size=None, *, generator=None, out=None):
             out.copy_(result)
             return out
         return result
-    raise NotImplementedError("tensor mean/std form not yet supported")
+    # Tensor mean/std forms
+    from ._tensor import Tensor
+    mean_is_tensor = isinstance(mean, Tensor)
+    std_is_tensor = isinstance(std, Tensor)
+    if mean_is_tensor or std_is_tensor:
+        if mean_is_tensor and std_is_tensor:
+            shape = mean.shape
+            device = str(mean.device)
+            dt = mean.dtype
+        elif mean_is_tensor:
+            shape = mean.shape
+            device = str(mean.device)
+            dt = mean.dtype
+        else:
+            shape = std.shape
+            device = str(std.device)
+            dt = std.dtype
+        result = randn(shape, dtype=dt, device=device)
+        result = add(mul(result, std), mean)
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    raise TypeError("normal expects at least one of mean/std to be a Tensor, or size to be specified")
 
 
 # ---------------------------------------------------------------------------
 # New ops: math, logical, bitwise, shape, search
 # ---------------------------------------------------------------------------
 
-def sub(a, b):
-    return dispatch("sub", None, a, b)
+def sub(*args, **kwargs):
+    alpha = kwargs.pop("alpha", 1)
+    kwargs.pop("out", None)
+    if alpha != 1:
+        a, b = args[0], args[1]
+        b = mul(b, alpha)
+        return dispatch("sub", None, a, b)
+    return dispatch("sub", None, *args, **kwargs)
 
 
 def log1p(a):

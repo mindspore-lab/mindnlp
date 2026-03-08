@@ -13,6 +13,7 @@ from ._dtype import float32, float16, float64, bfloat16, int8, int16, int32, int
 from ._dtype import bool as dtype_bool
 from ._dtype import to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum, mean as mean_dispatch, std as std_dispatch, true_divide as true_divide_dispatch, repeat as repeat_dispatch, chunk as chunk_dispatch, split as split_dispatch, abs as abs_dispatch, neg as neg_dispatch
+from ._functional import sub as sub_dispatch, div as div_dispatch
 from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
 from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_dispatch
 from ._functional import tanh as tanh_dispatch, sigmoid as sigmoid_dispatch
@@ -532,12 +533,26 @@ class Tensor:
         if self._is_view() and self._base is not None and self._base.grad_fn is None and self._base.requires_grad:
             raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation.")
 
-    def add_(self, other):
+    def add_(self, other, *, alpha=1):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
+        if alpha != 1:
+            other = mul(other, alpha)
         out = dispatch("add_", self.device.type, self, other)
         return out
+
+    def add(self, other, *, alpha=1):
+        return add(self, other, alpha=alpha)
+
+    def sub(self, other, *, alpha=1):
+        return sub_dispatch(self, other, alpha=alpha)
+
+    def mul(self, other):
+        return mul(self, other)
+
+    def div(self, other, *, rounding_mode=None):
+        return div_dispatch(self, other)
 
     def mul_(self, other):
         from ._dispatch.dispatcher import dispatch
@@ -651,10 +666,12 @@ class Tensor:
         out = dispatch("erfinv_", self.device.type, self)
         return out
 
-    def sub_(self, other):
+    def sub_(self, other, *, alpha=1):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
+        if alpha != 1:
+            other = mul(other, alpha)
         out = dispatch("sub_", self.device.type, self, other)
         return out
 
@@ -1310,13 +1327,13 @@ class Tensor:
 
     def bmm(self, batch2):
         return bmm_dispatch(self, batch2)
-    def sum(self, dim=None, keepdim=False):
-        return sum(self, dim=dim, keepdim=keepdim)
+    def sum(self, dim=None, keepdim=False, *, dtype=None):
+        return sum(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
-    def mean(self, dim=None, keepdim=False, axis=None):
+    def mean(self, dim=None, keepdim=False, *, dtype=None, axis=None):
         if axis is not None:
             dim = axis
-        return mean_dispatch(self, dim=dim, keepdim=keepdim)
+        return mean_dispatch(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
     def std(self, dim=None, keepdim=False, unbiased=True, axis=None):
         if axis is not None:
