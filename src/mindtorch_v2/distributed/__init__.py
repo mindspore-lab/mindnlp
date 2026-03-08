@@ -808,6 +808,11 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     if ranks is None:
         ranks = list(range(world_size))
 
+    # Reserve a deterministic group sequence ID on every rank even when
+    # this rank is not a member, so subsequent implicit group names stay aligned.
+    prefix = group_desc or f"pg{_group_count}"
+    _group_count += 1
+
     if world_rank not in ranks:
         return GroupMember.NON_GROUP_MEMBER
 
@@ -816,7 +821,6 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
 
     # Reuse the default store with a prefix to avoid key collisions
     _, default_store = _pg_map[_default_pg]
-    prefix = group_desc or f"pg{_group_count}"
     prefixed_store = PrefixStore(prefix, default_store)
 
     # Inherit backend from parent PG if not specified
@@ -851,7 +855,6 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     _pg_map[pg] = (Backend(backend), prefixed_store)
     _pg_names[pg] = group_desc or prefix
     _pg_group_ranks[pg] = {ranks[i]: i for i in range(group_size)}
-    _group_count += 1
     return pg
 
 
@@ -896,7 +899,7 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
 
 
 def split_group(parent_pg, color, key=None):
-    global _split_group_seq
+
 
     if _default_pg is None:
         raise RuntimeError("Default process group not initialized")
