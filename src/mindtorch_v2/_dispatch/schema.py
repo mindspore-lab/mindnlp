@@ -364,6 +364,22 @@ class OpSchema:
                     f"and/or underscore and starts with a non-digit. got: '{value}'."
                 )
 
+        def _validate_nan_reduction_dim(value):
+            if value is None:
+                return
+            if isinstance(value, int) and not isinstance(value, bool):
+                return
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    if not isinstance(item, int) or isinstance(item, bool):
+                        raise TypeError(
+                            f"{op_short_name}(): argument 'dim' must be tuple of ints, not {type(item).__name__}"
+                        )
+                return
+            raise TypeError(
+                f"{op_short_name}(): argument 'dim' must be tuple of ints, not {type(value).__name__}"
+            )
+
         def _type_label(value):
             if isinstance(value, bool):
                 return "bool"
@@ -639,6 +655,9 @@ class OpSchema:
                 continue
             if op_short_name in {"std", "var"} and param.name == "dim":
                 _validate_std_var_dim(value)
+                continue
+            if op_short_name in {"nansum", "nanmean"} and param.name == "dim":
+                _validate_nan_reduction_dim(value)
                 continue
             if op_short_name == "view" and param.name == "shape":
                 _validate_view_shape(value)
