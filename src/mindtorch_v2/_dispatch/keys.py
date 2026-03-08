@@ -176,6 +176,7 @@ class DispatchKeySet:
         has_meta = False
         has_npu = False
         has_cuda = False
+        has_mps = False
         has_cpu = False
         requires_grad = False
         saw_device = False
@@ -191,6 +192,8 @@ class DispatchKeySet:
                 has_npu = True
             elif dev_type == "cuda":
                 has_cuda = True
+            elif dev_type == "mps":
+                has_mps = True
             else:
                 has_cpu = True
             if getattr(tensor, "requires_grad", False):
@@ -203,6 +206,8 @@ class DispatchKeySet:
                 has_npu = True
             elif dev_type == "cuda":
                 has_cuda = True
+            elif dev_type == "mps":
+                has_mps = True
             else:
                 has_cpu = True
         mask = 0
@@ -212,6 +217,8 @@ class DispatchKeySet:
             mask |= int(DispatchKey.NPU)
         elif has_cuda:
             mask |= int(DispatchKey.PrivateUse1)
+        elif has_mps:
+            mask |= int(DispatchKey.PrivateUse2)
         else:
             mask |= int(DispatchKey.CPU)
         if grad_enabled and requires_grad:
@@ -223,6 +230,8 @@ class DispatchKeySet:
                 mask |= int(DispatchKey.AutogradNPU)
             elif has_cuda:
                 mask |= int(DispatchKey.AutogradXPU)
+            elif has_mps:
+                mask |= int(DispatchKey.PrivateUse3)
             else:
                 mask |= int(DispatchKey.AutogradCPU)
         if functionalize_enabled:

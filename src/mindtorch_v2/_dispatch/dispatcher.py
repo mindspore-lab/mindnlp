@@ -332,6 +332,8 @@ def _infer_dispatch_device(dispatch_device, tensors, keyset):
         return "meta"
     if keyset.has(DispatchKey.NPU):
         return "npu"
+    if keyset.has(DispatchKey.PrivateUse2):
+        return "mps"
     return "cpu"
 
 

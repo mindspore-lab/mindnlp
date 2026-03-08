@@ -917,6 +917,23 @@ class Tensor:
             # Wrap result
             storage = npu_typed_storage_from_ptr(out_ptr, _numel(self.shape), dtype, device=self.device)
             return _wrap_tensor(storage, self.shape, self.stride)
+        elif self.device.type == "mps":
+            from ._storage import mps_typed_storage_from_numpy
+            arr = self._numpy_view()
+            src_dtype = self.dtype
+            target_np = to_numpy_dtype(dtype)
+            if src_dtype == bfloat16:
+                arr = _bf16_to_f32(arr)
+            if dtype == bfloat16:
+                arr = arr.astype(np.float32)
+                arr = _f32_to_bf16(arr)
+            else:
+                arr = arr.astype(target_np)
+            storage = mps_typed_storage_from_numpy(
+                np.ascontiguousarray(arr), dtype, device=self.device
+            )
+            stride = tuple(np.array(arr.strides) // arr.itemsize) if arr.ndim > 0 else ()
+            return Tensor(storage, arr.shape, stride)
         elif self.device.type == "meta":
             storage = meta_typed_storage_from_shape(self.shape, dtype, device=self.device)
             return Tensor(storage, self.shape, _compute_strides(self.shape))

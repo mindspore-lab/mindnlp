@@ -147,6 +147,8 @@ def resolve_dispatch_key(device):
         return DispatchKey.Meta
     if label == "cuda":
         return DispatchKey.PrivateUse1
+    if label == "mps":
+        return DispatchKey.PrivateUse2
 
     raise ValueError(f"unsupported registration device: {device}")
 
@@ -156,12 +158,16 @@ _DISPATCH_KEY_STRING_MAP = {
     "NPU": DispatchKey.NPU,
     "CUDA": DispatchKey.PrivateUse1,
     "PrivateUse1": DispatchKey.PrivateUse1,
+    "MPS": DispatchKey.PrivateUse2,
+    "PrivateUse2": DispatchKey.PrivateUse2,
     "Meta": DispatchKey.Meta,
     "Autograd": DispatchKey.Autograd,
     "AutogradCPU": DispatchKey.AutogradCPU,
     "AutogradNPU": DispatchKey.AutogradNPU,
     "AutogradCUDA": DispatchKey.AutogradXPU,
     "AutogradPrivateUse1": DispatchKey.AutogradXPU,
+    "AutogradMPS": DispatchKey.PrivateUse3,
+    "AutogradPrivateUse2": DispatchKey.PrivateUse3,
     "AutogradMeta": DispatchKey.AutogradMeta,
     "AutogradOther": DispatchKey.AutogradOther,
     "AutogradXPU": DispatchKey.AutogradXPU,

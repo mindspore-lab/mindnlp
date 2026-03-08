@@ -20,6 +20,7 @@ def _strip_autograd_keys(keyset):
             DispatchKey.AutogradNPU,
             DispatchKey.AutogradXPU,
             DispatchKey.AutogradMeta,
+            DispatchKey.PrivateUse3,
         }
     )
 

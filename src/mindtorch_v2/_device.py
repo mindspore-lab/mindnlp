@@ -10,6 +10,8 @@ class device:
         self.type = str(dev)
         if self.type == "npu" and index is None:
             index = 0
+        if self.type == "mps" and index is None:
+            index = 0
         self.index = None if index is None else int(index)
 
     def __repr__(self):
