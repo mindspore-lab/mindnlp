@@ -179,6 +179,12 @@ def register_schemas():
         },
     )
     registry.register_schema("std", "std(Tensor input, int[]? dim=None, bool keepdim=False, bool unbiased=True) -> Tensor")
+    registry.register_error_overrides(
+        "std",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, tuple of ints dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, *, Number correction = None, bool keepdim = False, Tensor out = None)\n * (Tensor input, bool unbiased = True)\n      didn't match because some of the keywords were incorrect: dim\n * (Tensor input, tuple of names dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of names dim, *, Number correction = None, bool keepdim = False, Tensor out = None)\n",
+        },
+    )
 
     registry.register_schema("reshape", "reshape(Tensor(a) input, int[] shape) -> Tensor(a)")
     registry.register_error_overrides(
@@ -392,6 +398,12 @@ def register_schemas():
     registry.register_schema("scatter_add_", "scatter_add_(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor")
 
     registry.register_schema("var", "var(Tensor input, int[]? dim=None, bool unbiased=True, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "var",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, tuple of ints dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, *, Number correction = None, bool keepdim = False, Tensor out = None)\n * (Tensor input, bool unbiased = True)\n      didn't match because some of the keywords were incorrect: dim\n * (Tensor input, tuple of names dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of names dim, *, Number correction = None, bool keepdim = False, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("norm", "norm(Tensor input, Any p=2, int[]? dim=None, bool keepdim=False) -> Tensor")
     registry.register_error_overrides(
         "norm",

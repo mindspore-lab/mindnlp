@@ -591,3 +591,51 @@ def test_dispatch_count_nonzero_rejects_str_dim_matches_torch():
         pt.count_nonzero(pt.tensor([[1.0, 0.0], [0.0, 1.0]]), dim="0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_std_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("std", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.std(pt.tensor([1.0, 0.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_std_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("std", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.std(pt.tensor([1.0, 0.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_var_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("var", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.var(pt.tensor([1.0, 0.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_var_rejects_str_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("var", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.var(pt.tensor([1.0, 0.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
