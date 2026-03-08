@@ -245,3 +245,25 @@ def test_dispatch_permute_rejects_duplicate_dims_matches_torch():
         pt.permute(pt.tensor([[1.0, 2.0], [3.0, 4.0]]), [0, 0])
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_squeeze_accepts_list_dim_like_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+    pt_x = pt.tensor([1.0, 2.0])
+
+    mt_out = dispatch("squeeze", mt_x.device.type, mt_x, [0])
+    pt_out = pt.squeeze(pt_x, [0])
+
+    assert mt_out.shape == pt_out.shape
+    assert mt_out.tolist() == pt_out.tolist()
+
+
+def test_dispatch_squeeze_accepts_tuple_dim_like_torch():
+    mt_x = torch.tensor([1.0, 2.0])
+    pt_x = pt.tensor([1.0, 2.0])
+
+    mt_out = dispatch("squeeze", mt_x.device.type, mt_x, (0,))
+    pt_out = pt.squeeze(pt_x, (0,))
+
+    assert mt_out.shape == pt_out.shape
+    assert mt_out.tolist() == pt_out.tolist()
