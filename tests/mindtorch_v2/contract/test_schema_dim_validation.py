@@ -687,3 +687,39 @@ def test_dispatch_nanmean_rejects_str_dim_matches_torch():
         pt.nanmean(pt.tensor([1.0, 0.0]), dim="0")
 
     assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_logsumexp_rejects_bool_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("logsumexp", mt_x.device.type, mt_x, dim=True)
+
+    def th_call():
+        pt.logsumexp(pt.tensor([1.0, 0.0]), dim=True)
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_logsumexp_rejects_invalid_name_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("logsumexp", mt_x.device.type, mt_x, dim="0")
+
+    def th_call():
+        pt.logsumexp(pt.tensor([1.0, 0.0]), dim="0")
+
+    assert_torch_error(mt_call, th_call)
+
+
+def test_dispatch_logsumexp_rejects_missing_name_dim_matches_torch():
+    mt_x = torch.tensor([1.0, 0.0])
+
+    def mt_call():
+        dispatch("logsumexp", mt_x.device.type, mt_x, dim="x")
+
+    def th_call():
+        pt.logsumexp(pt.tensor([1.0, 0.0]), dim="x")
+
+    assert_torch_error(mt_call, th_call)
