@@ -160,8 +160,42 @@ class Tensor(torch.Tensor):
         return self._elem.shape[dim]
 
     def flatten(self, start_dim=0, end_dim=-1):
-        # 使用MindSpore的reshape操作
-        return self._env.ms2t_iso(mnp.reshape(self._elem, (-1,)))
+        # 对齐 PyTorch 语义：仅展平 [start_dim, end_dim] 区间
+        shape = tuple(int(s) for s in self._elem.shape)
+        ndim = len(shape)
+        if ndim == 0:
+            # 标量 flatten 后为一维长度 1
+            res = mnp.reshape(self._elem, (1,))
+            out = self._env.ms2t_iso(res)
+            if self._requires_grad:
+                out._requires_grad = True
+            return out
+
+        start = int(start_dim)
+        end = int(end_dim)
+        if start < 0:
+            start += ndim
+        if end < 0:
+            end += ndim
+
+        start = max(0, min(start, ndim - 1))
+        end = max(0, min(end, ndim - 1))
+        if end < start:
+            # 与 PyTorch 行为一致：空区间不改变形状
+            out = self._env.ms2t_iso(self._elem)
+            if self._requires_grad:
+                out._requires_grad = True
+            return out
+
+        flat_dim = 1
+        for s in shape[start : end + 1]:
+            flat_dim *= s
+        new_shape = shape[:start] + (flat_dim,) + shape[end + 1 :]
+        res = mnp.reshape(self._elem, new_shape)
+        out = self._env.ms2t_iso(res)
+        if self._requires_grad:
+            out._requires_grad = True
+        return out
 
     # ========= 基本算术运算支持 =========
     def _binary_op(self, other, ms_op, op_name=None):
@@ -274,12 +308,22 @@ class Tensor(torch.Tensor):
 
     def __pow__(self, other):
         """支持 x ** y。"""
+        if not isinstance(other, (Tensor, ms_Tensor, torch.Tensor, np.ndarray)):
+            try:
+                other = ms_Tensor(float(other), dtype=self._elem.dtype)
+            except Exception:
+                pass
         return self._binary_op(other, ops.pow)
 
     def __rpow__(self, other):
         """支持 y ** x。"""
         if isinstance(other, Tensor):
             return other._binary_op(self, ops.pow)
+        if not isinstance(other, (ms_Tensor, torch.Tensor, np.ndarray)):
+            try:
+                other = ms_Tensor(float(other), dtype=self._elem.dtype)
+            except Exception:
+                pass
         return self._binary_op(other, lambda a, b: ops.pow(b, a))
 
     # 比较运算，返回布尔 Tensor
@@ -311,9 +355,9 @@ class Tensor(torch.Tensor):
         # 确保other是Tensor类型
         if not isinstance(other, Tensor):
             raise TypeError(f"Expected Tensor, got {type(other).__name__}")
-        # 获取目标数据类型（MindSpore dtype，供 mnp.astype 使用）
+        # 获取目标数据类型并使用 MindSpore cast
         target_ms_dtype = other._elem.dtype
-        return self._env.ms2t_iso(mnp.astype(self._elem, target_ms_dtype))
+        return self._env.ms2t_iso(ops.cast(self._elem, target_ms_dtype))
 
     __torch_function__ = torch._C._disabled_torch_function_impl
 

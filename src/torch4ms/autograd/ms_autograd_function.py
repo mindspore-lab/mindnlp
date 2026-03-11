@@ -363,11 +363,9 @@ def extract_and_wrap_loss_fn(module: torch.nn.Module, loss_fn: Callable, *module
     # 获取 MindSpore 版本的输入和标签
     input_tensors_ms = tuple(inp._elem if isinstance(inp, Tensor) else inp for inp in input_tensors)
     label_tensors_ms = tuple(label._elem if isinstance(label, Tensor) else label for label in label_tensors) if label_tensors else None
-    
+
     # 对于 Linear 模块，直接使用 MindSpore 算子实现（避免转换问题）
     if isinstance(module, torch.nn.Linear):
-        from mindspore import ops
-        
         # 获取参数
         params = extractor.get_trainable_params()
         param_tensors = []
@@ -394,7 +392,7 @@ def extract_and_wrap_loss_fn(module: torch.nn.Module, loss_fn: Callable, *module
             return output_ms
     else:
         # 其他模块使用 extractor 的方法
-        model_forward_fn = extractor.get_ms_forward_fn(env, include_buffers=False)
+        model_forward_base_fn = extractor.get_ms_forward_fn(env, include_buffers=False)
         # 获取参数
         params = extractor.get_trainable_params()
         
@@ -409,48 +407,131 @@ def extract_and_wrap_loss_fn(module: torch.nn.Module, loss_fn: Callable, *module
                 param_tensors.append(Tensor(ms_param, env, requires_grad=True))
             else:
                 raise TypeError(f"Unsupported parameter type: {type(param)}")
+
+        def model_forward_fn(*ms_params):
+            return model_forward_base_fn(*ms_params, *input_tensors_ms)
     
-    # 创建完整的 loss 函数（MindSpore 语义）
-    # 这个函数包含：模型前向 + loss 计算
-    # 注意：我们需要将 loss_fn 的操作也转换为 MindSpore 语义
-    def full_loss_fn(*ms_params):
-        """完整的 loss 函数：模型前向 + loss 计算"""
-        # 模型前向
-        output_ms = model_forward_fn(*ms_params, *input_tensors_ms)
-        
-        # 调用 loss 函数（直接使用 MindSpore Tensor）
-        # 假设 loss_fn 是 MindSpore 语义的函数
-        if label_tensors_ms:
-            loss_ms = loss_fn(output_ms, label_tensors_ms[0])
-        else:
-            loss_ms = loss_fn(output_ms)
-        
-        
-        # 确保返回 MindSpore Tensor
-        if isinstance(loss_ms, ms_Tensor):
-            return loss_ms
-        else:
-            # 如果不是 MindSpore Tensor，尝试转换
-            try:
-                return ms_Tensor(loss_ms)
-            except:
-                return loss_ms
-        
-        # 转换回 MindSpore Tensor
-        # 注意：loss_t4 可能已经是 MindSpore Tensor（如果 loss_fn 被正确拦截）
-        if isinstance(loss_t4, Tensor):
-            return loss_t4._elem
-        elif isinstance(loss_t4, torch.Tensor):
+    def _to_ms_scalar_or_tensor(value):
+        if isinstance(value, ms_Tensor):
+            return value
+        if isinstance(value, Tensor):
+            return value._elem
+        if isinstance(value, torch.Tensor):
             from torch4ms.ops import mappings
-            return mappings.t2ms(loss_t4)
-        elif isinstance(loss_t4, ms_Tensor):
-            return loss_t4
-        else:
-            # 尝试转换为 MindSpore Tensor
-            try:
-                return ms_Tensor(loss_t4)
-            except:
-                return loss_t4
+            return mappings.t2ms(value)
+        try:
+            return ms_Tensor(value)
+        except Exception:
+            return value
+
+    def _apply_reduction(ms_loss, reduction):
+        if reduction == "mean":
+            return ops.reduce_mean(ms_loss)
+        if reduction == "sum":
+            return ops.reduce_sum(ms_loss)
+        return ms_loss
+
+    def _convert_known_torch_loss_to_ms(ms_output, ms_target):
+        """
+        针对常用回归 / 二分类 / 多分类损失做显式转换：
+        - nn.MSELoss
+        - nn.L1Loss
+        - nn.SmoothL1Loss
+        - nn.HuberLoss
+        - nn.BCEWithLogitsLoss（基础无权重场景）
+        """
+        if ms_target is None:
+            return None
+
+        # 仅针对 torch.nn.Module 形式的 loss 做稳定转换
+        if not isinstance(loss_fn, torch.nn.Module):
+            return None
+
+        reduction = getattr(loss_fn, "reduction", "mean")
+        diff = ms_output - ms_target
+
+        # -------- 回归类 --------
+        if isinstance(loss_fn, torch.nn.MSELoss):
+            per_elem = ops.square(diff)
+            return _apply_reduction(per_elem, reduction)
+
+        if isinstance(loss_fn, torch.nn.L1Loss):
+            per_elem = ops.abs(diff)
+            return _apply_reduction(per_elem, reduction)
+
+        if isinstance(loss_fn, torch.nn.SmoothL1Loss):
+            beta = float(getattr(loss_fn, "beta", 1.0))
+            abs_diff = ops.abs(diff)
+            if beta == 0.0:
+                per_elem = abs_diff
+            else:
+                per_elem = ops.where(
+                    abs_diff < beta,
+                    0.5 * ops.square(diff) / beta,
+                    abs_diff - 0.5 * beta,
+                )
+            return _apply_reduction(per_elem, reduction)
+
+        if isinstance(loss_fn, torch.nn.HuberLoss):
+            delta = float(getattr(loss_fn, "delta", 1.0))
+            abs_diff = ops.abs(diff)
+            per_elem = ops.where(
+                abs_diff <= delta,
+                0.5 * ops.square(diff),
+                delta * (abs_diff - 0.5 * delta),
+            )
+            return _apply_reduction(per_elem, reduction)
+
+        # -------- 二分类：BCEWithLogitsLoss（基础配置） --------
+        if isinstance(loss_fn, torch.nn.BCEWithLogitsLoss):
+            weight = getattr(loss_fn, "weight", None)
+            pos_weight = getattr(loss_fn, "pos_weight", None)
+            # 复杂配置暂时交给 fallback
+            if weight is not None or pos_weight is not None:
+                return None
+            x = ms_output
+            y = ms_target
+            zero = ops.zeros_like(x)
+            max_x0 = ops.maximum(x, zero)
+            neg_abs_x = -ops.abs(x)
+            # log(1 + exp(-|x|)) 数值安全版本
+            log_term = ops.log(ops.exp(neg_abs_x) + 1.0)
+            per_elem = max_x0 - x * y + log_term
+            return _apply_reduction(per_elem, reduction)
+
+        return None
+
+    # 创建完整的 loss 函数（模型前向 + loss）
+    # 优先按 PyTorch 风格调用 loss_fn，让 loss 内部算子走 torch4ms 拦截转换。
+    # 如果用户传入的是 MindSpore 风格 loss_fn（期望 ms.Tensor），则回退到 ms 调用。
+    def full_loss_fn(*ms_params):
+        """完整的 loss 函数：模型前向 + loss 计算。"""
+        # 模型前向
+        output_ms = model_forward_fn(*ms_params)
+        target_ms = label_tensors_ms[0] if label_tensors_ms else None
+
+        # 0) 常用损失显式转换（先满足 MSE 等核心需求）
+        known_loss_ms = _convert_known_torch_loss_to_ms(output_ms, target_ms)
+        if known_loss_ms is not None:
+            return known_loss_ms
+
+        # 1) 优先 PyTorch 风格 loss（通过 env.dispatch 拦截转换）
+        try:
+            output_t4 = Tensor(output_ms, env, requires_grad=False)
+            label_t4 = label_tensors[0] if label_tensors else None
+            with env:
+                if label_t4 is not None:
+                    loss_val = loss_fn(output_t4, label_t4)
+                else:
+                    loss_val = loss_fn(output_t4)
+            return _to_ms_scalar_or_tensor(loss_val)
+        except Exception:
+            # 2) 回退 MindSpore 风格 loss（兼容现有调用）
+            if label_tensors_ms:
+                loss_val = loss_fn(output_ms, label_tensors_ms[0])
+            else:
+                loss_val = loss_fn(output_ms)
+            return _to_ms_scalar_or_tensor(loss_val)
     
     # 包装为 autograd 函数（只传入 params）
     loss_output = ms2t_autograd(full_loss_fn, *param_tensors)
