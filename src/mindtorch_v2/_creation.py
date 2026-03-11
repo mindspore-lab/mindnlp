@@ -13,6 +13,7 @@ from ._functional import randn as randn_dispatch
 from ._functional import rand as rand_dispatch
 from ._functional import randint as randint_dispatch
 from ._functional import randperm as randperm_dispatch
+from ._functional import normal as normal_dispatch
 
 
 def tensor(data, *, dtype=float32, device=None, requires_grad=False):
@@ -55,37 +56,20 @@ def range(start, end, step=1, dtype=float32, device=None):
     return range_dispatch(start, end, step=step, dtype=dtype, device=device)
 
 
-def randn(*shape, dtype=float32, device=None, memory_format=None):
-    return randn_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
+def randn(*shape, dtype=float32, device=None, memory_format=None, generator=None):
+    return randn_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
-def rand(*shape, dtype=float32, device=None, memory_format=None):
-    return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format)
+def rand(*shape, dtype=float32, device=None, memory_format=None, generator=None):
+    return rand_dispatch(*shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
-def randint(low, high=None, size=None, *, dtype=None, device=None):
-    import numpy as np
-    from ._dtype import int64 as default_int
-    if dtype is None:
-        dtype = default_int
-    if high is None:
-        high = low
-        low = 0
-    if size is None:
-        raise TypeError("randint requires size argument")
-    if isinstance(size, int):
-        size = (size,)
-    arr = np.random.randint(low, high, size=size)
-    return tensor_dispatch(arr, dtype=dtype, device=device)
+def randint(low, high=None, size=None, *, dtype=None, device=None, generator=None):
+    return randint_dispatch(low, high=high, size=size, dtype=dtype, device=device, generator=generator)
 
 
-def randperm(n, *, dtype=None, device=None):
-    import numpy as np
-    from ._dtype import int64 as default_int
-    if dtype is None:
-        dtype = default_int
-    arr = np.random.permutation(n)
-    return tensor_dispatch(arr, dtype=dtype, device=device)
+def randperm(n, *, dtype=None, device=None, generator=None):
+    return randperm_dispatch(n, dtype=dtype, device=device, generator=generator)
 
 
 def from_numpy(ndarray):
@@ -107,3 +91,7 @@ def as_tensor(data, dtype=None, device=None):
     if dtype is None:
         dtype = float32
     return tensor_dispatch(data, dtype=dtype, device=device)
+
+
+def normal(mean, std, size=None, *, generator=None, out=None):
+    return normal_dispatch(mean, std, size=size, generator=generator, out=out)

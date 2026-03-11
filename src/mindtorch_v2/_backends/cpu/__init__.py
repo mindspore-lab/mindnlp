@@ -21,6 +21,8 @@ from .creation import (
 from .ops import (
     add,
     matmul,
+    mm,
+    bmm,
     mul,
     div,
     true_divide,
@@ -74,6 +76,11 @@ from .ops import (
     zero_,
     uniform_,
     normal_,
+    bernoulli_,
+    exponential_,
+    log_normal_,
+    cauchy_,
+    geometric_,
     fill_,
     clamp_,
     copy_,
@@ -103,6 +110,7 @@ from .ops import (
     rsqrt,
     sign,
     signbit,
+    square,
     isnan,
     isinf,
     isfinite,
@@ -162,6 +170,7 @@ from .ops import (
     getitem,
     setitem,
     batch_norm,
+    instance_norm,
     group_norm,
     layer_norm,
     dropout,
@@ -222,6 +231,7 @@ from .ops import (
     bitwise_not,
     # New random in-place op
     randint_,
+    random_,
     # New shape ops
     flatten,
     unflatten,
@@ -233,6 +243,18 @@ from .ops import (
     searchsorted,
     kthvalue,
     median,
+    # New GROUP C ops
+    logsumexp,
+    trace,
+    det,
+    matrix_power,
+    dist,
+    renorm,
+    nansum,
+    nanmean,
+    argwhere,
+    baddbmm,
+    cummin,
 )
 
 registry.register("add", "cpu", add, meta=meta_infer.infer_binary)
@@ -240,6 +262,8 @@ registry.register("mul", "cpu", mul, meta=meta_infer.infer_binary)
 registry.register("div", "cpu", div, meta=meta_infer.infer_binary)
 registry.register("true_divide", "cpu", true_divide, meta=meta_infer.infer_binary)
 registry.register("matmul", "cpu", matmul, meta=meta_infer.infer_matmul)
+registry.register("mm", "cpu", mm, meta=meta_infer.infer_matmul)
+registry.register("bmm", "cpu", bmm, meta=meta_infer.infer_matmul)
 registry.register("relu", "cpu", relu, meta=meta_infer.infer_unary)
 registry.register("abs", "cpu", abs, meta=meta_infer.infer_unary)
 registry.register("neg", "cpu", neg, meta=meta_infer.infer_unary)
@@ -262,6 +286,7 @@ registry.register("log10", "cpu", log10, meta=meta_infer.infer_unary)
 registry.register("exp2", "cpu", exp2, meta=meta_infer.infer_unary)
 registry.register("rsqrt", "cpu", rsqrt, meta=meta_infer.infer_unary)
 registry.register("sign", "cpu", sign, meta=meta_infer.infer_unary)
+registry.register("square", "cpu", square, meta=meta_infer.infer_unary)
 registry.register("signbit", "cpu", signbit, meta=meta_infer.infer_unary_bool)
 registry.register("isnan", "cpu", isnan, meta=meta_infer.infer_unary_bool)
 registry.register("isinf", "cpu", isinf, meta=meta_infer.infer_unary_bool)
@@ -326,6 +351,7 @@ registry.register("mean", "cpu", mean_, meta=meta_infer.infer_sum)
 registry.register("std", "cpu", std_, meta=meta_infer.infer_sum)
 registry.register("all", "cpu", all_, meta=meta_infer.infer_reduce_bool)
 registry.register("batch_norm", "cpu", batch_norm, meta=meta_infer.infer_unary)
+registry.register("instance_norm", "cpu", instance_norm, meta=meta_infer.infer_unary)
 registry.register("group_norm", "cpu", group_norm, meta=meta_infer.infer_unary)
 registry.register("layer_norm", "cpu", layer_norm, meta=meta_infer.infer_unary)
 registry.register("dropout", "cpu", dropout, meta=meta_infer.infer_unary)
@@ -379,6 +405,11 @@ registry.register("relu_", "cpu", relu_, meta=meta_infer.infer_unary)
 registry.register("zero_", "cpu", zero_, meta=meta_infer.infer_unary)
 registry.register("uniform_", "cpu", uniform_, meta=meta_infer.infer_unary)
 registry.register("normal_", "cpu", normal_, meta=meta_infer.infer_unary)
+registry.register("bernoulli_", "cpu", bernoulli_, meta=meta_infer.infer_unary)
+registry.register("exponential_", "cpu", exponential_, meta=meta_infer.infer_unary)
+registry.register("log_normal_", "cpu", log_normal_, meta=meta_infer.infer_unary)
+registry.register("cauchy_", "cpu", cauchy_, meta=meta_infer.infer_unary)
+registry.register("geometric_", "cpu", geometric_, meta=meta_infer.infer_unary)
 registry.register("fill_", "cpu", fill_, meta=meta_infer.infer_unary)
 registry.register("clamp_", "cpu", clamp_, meta=meta_infer.infer_unary)
 registry.register("copy_", "cpu", copy_, meta=meta_infer.infer_unary)
@@ -480,6 +511,7 @@ registry.register("bitwise_not", "cpu", bitwise_not, meta=meta_infer.infer_unary
 
 # Random in-place op
 registry.register("randint_", "cpu", randint_, meta=meta_infer.infer_unary)
+registry.register("random_", "cpu", random_, meta=meta_infer.infer_unary)
 
 # Shape ops
 registry.register("flatten", "cpu", flatten, meta=meta_infer.infer_flatten)
@@ -493,3 +525,320 @@ registry.register("unique", "cpu", unique)
 registry.register("searchsorted", "cpu", searchsorted)
 registry.register("kthvalue", "cpu", kthvalue)
 registry.register("median", "cpu", median)
+
+# New GROUP C ops
+registry.register("logsumexp", "cpu", logsumexp, meta=meta_infer.infer_sum)
+registry.register("trace", "cpu", trace)  # Returns scalar
+registry.register("det", "cpu", det)  # Returns scalar or batch of scalars
+registry.register("matrix_power", "cpu", matrix_power, meta=meta_infer.infer_unary)
+registry.register("dist", "cpu", dist)  # Returns scalar
+registry.register("renorm", "cpu", renorm, meta=meta_infer.infer_unary)
+registry.register("nansum", "cpu", nansum, meta=meta_infer.infer_sum)
+registry.register("nanmean", "cpu", nanmean, meta=meta_infer.infer_sum)
+registry.register("argwhere", "cpu", argwhere)  # Returns 2D tensor
+registry.register("baddbmm", "cpu", baddbmm, meta=meta_infer.infer_binary)
+registry.register("cummin", "cpu", cummin)  # Returns namedtuple
+
+# Top-level gap-fill ops (Category C2)
+from .ops import (
+    diff,
+    bincount,
+    cdist,
+    aminmax,
+    quantile,
+    nanquantile,
+    nanmedian,
+    histc,
+    histogram,
+    bucketize,
+    isneginf,
+    isposinf,
+    isreal,
+    isin,
+    heaviside,
+)
+
+registry.register("diff", "cpu", diff, meta=meta_infer.infer_unary)
+registry.register("bincount", "cpu", bincount)
+registry.register("cdist", "cpu", cdist)
+registry.register("aminmax", "cpu", aminmax)
+registry.register("quantile", "cpu", quantile)
+registry.register("nanquantile", "cpu", nanquantile)
+registry.register("nanmedian", "cpu", nanmedian)
+registry.register("histc", "cpu", histc)
+registry.register("histogram", "cpu", histogram)
+registry.register("bucketize", "cpu", bucketize)
+registry.register("isneginf", "cpu", isneginf, meta=meta_infer.infer_unary)
+registry.register("isposinf", "cpu", isposinf, meta=meta_infer.infer_unary)
+registry.register("isreal", "cpu", isreal, meta=meta_infer.infer_unary)
+registry.register("isin", "cpu", isin, meta=meta_infer.infer_binary)
+registry.register("heaviside", "cpu", heaviside, meta=meta_infer.infer_binary)
+
+# Optimizer step ops
+from .optim_ops import (
+    _sgd_step,
+    _adam_step,
+    _adamw_step,
+    _adagrad_step,
+    _rmsprop_step,
+    _adadelta_step,
+    _adamax_step,
+    _nadam_step,
+    _radam_step,
+    _asgd_step,
+    _rprop_step,
+    _sparse_adam_step,
+)
+registry.register("_sgd_step", "cpu", _sgd_step)
+registry.register("_adam_step", "cpu", _adam_step)
+registry.register("_adamw_step", "cpu", _adamw_step)
+registry.register("_adagrad_step", "cpu", _adagrad_step)
+registry.register("_rmsprop_step", "cpu", _rmsprop_step)
+registry.register("_adadelta_step", "cpu", _adadelta_step)
+registry.register("_adamax_step", "cpu", _adamax_step)
+registry.register("_nadam_step", "cpu", _nadam_step)
+registry.register("_radam_step", "cpu", _radam_step)
+registry.register("_asgd_step", "cpu", _asgd_step)
+registry.register("_rprop_step", "cpu", _rprop_step)
+registry.register("_sparse_adam_step", "cpu", _sparse_adam_step)
+
+# ---------------------------------------------------------------------------
+# torch.linalg ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    linalg_cholesky,
+    linalg_cond,
+    linalg_det,
+    linalg_eig,
+    linalg_eigh,
+    linalg_eigvals,
+    linalg_eigvalsh,
+    linalg_householder_product,
+    linalg_inv,
+    linalg_lstsq,
+    linalg_lu,
+    linalg_lu_factor,
+    linalg_lu_solve,
+    linalg_matrix_exp,
+    linalg_matrix_norm,
+    linalg_matrix_power,
+    linalg_matrix_rank,
+    linalg_multi_dot,
+    linalg_norm,
+    linalg_pinv,
+    linalg_slogdet,
+    linalg_solve,
+    linalg_solve_triangular,
+    linalg_svd,
+    linalg_svdvals,
+    linalg_tensorinv,
+    linalg_tensorsolve,
+    linalg_vander,
+    linalg_vector_norm,
+)
+
+registry.register("linalg_cholesky", "cpu", linalg_cholesky)
+registry.register("linalg_cond", "cpu", linalg_cond)
+registry.register("linalg_det", "cpu", linalg_det)
+registry.register("linalg_eig", "cpu", linalg_eig)
+registry.register("linalg_eigh", "cpu", linalg_eigh)
+registry.register("linalg_eigvals", "cpu", linalg_eigvals)
+registry.register("linalg_eigvalsh", "cpu", linalg_eigvalsh)
+registry.register("linalg_householder_product", "cpu", linalg_householder_product)
+registry.register("linalg_inv", "cpu", linalg_inv)
+registry.register("linalg_lstsq", "cpu", linalg_lstsq)
+registry.register("linalg_lu", "cpu", linalg_lu)
+registry.register("linalg_lu_factor", "cpu", linalg_lu_factor)
+registry.register("linalg_lu_solve", "cpu", linalg_lu_solve)
+registry.register("linalg_matrix_exp", "cpu", linalg_matrix_exp)
+registry.register("linalg_matrix_norm", "cpu", linalg_matrix_norm)
+registry.register("linalg_matrix_power", "cpu", linalg_matrix_power)
+registry.register("linalg_matrix_rank", "cpu", linalg_matrix_rank)
+registry.register("linalg_multi_dot", "cpu", linalg_multi_dot)
+registry.register("linalg_norm", "cpu", linalg_norm)
+registry.register("linalg_pinv", "cpu", linalg_pinv)
+registry.register("linalg_slogdet", "cpu", linalg_slogdet)
+registry.register("linalg_solve", "cpu", linalg_solve)
+registry.register("linalg_solve_triangular", "cpu", linalg_solve_triangular)
+registry.register("linalg_svd", "cpu", linalg_svd)
+registry.register("linalg_svdvals", "cpu", linalg_svdvals)
+registry.register("linalg_tensorinv", "cpu", linalg_tensorinv)
+registry.register("linalg_tensorsolve", "cpu", linalg_tensorsolve)
+registry.register("linalg_vander", "cpu", linalg_vander)
+registry.register("linalg_vector_norm", "cpu", linalg_vector_norm)
+
+# ---------------------------------------------------------------------------
+# torch.fft ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    fft_fft,
+    fft_ifft,
+    fft_fft2,
+    fft_ifft2,
+    fft_fftn,
+    fft_ifftn,
+    fft_rfft,
+    fft_irfft,
+    fft_rfft2,
+    fft_irfft2,
+    fft_rfftn,
+    fft_irfftn,
+    fft_hfft,
+    fft_ihfft,
+    fft_fftshift,
+    fft_ifftshift,
+)
+
+registry.register("fft_fft", "cpu", fft_fft)
+registry.register("fft_ifft", "cpu", fft_ifft)
+registry.register("fft_fft2", "cpu", fft_fft2)
+registry.register("fft_ifft2", "cpu", fft_ifft2)
+registry.register("fft_fftn", "cpu", fft_fftn)
+registry.register("fft_ifftn", "cpu", fft_ifftn)
+registry.register("fft_rfft", "cpu", fft_rfft)
+registry.register("fft_irfft", "cpu", fft_irfft)
+registry.register("fft_rfft2", "cpu", fft_rfft2)
+registry.register("fft_irfft2", "cpu", fft_irfft2)
+registry.register("fft_rfftn", "cpu", fft_rfftn)
+registry.register("fft_irfftn", "cpu", fft_irfftn)
+registry.register("fft_hfft", "cpu", fft_hfft)
+registry.register("fft_ihfft", "cpu", fft_ihfft)
+registry.register("fft_fftshift", "cpu", fft_fftshift)
+registry.register("fft_ifftshift", "cpu", fft_ifftshift)
+
+# ---------------------------------------------------------------------------
+# torch.special ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    special_digamma,
+    special_entr,
+    special_erfcx,
+    special_erfinv,
+    special_gammainc,
+    special_gammaincc,
+    special_gammaln,
+    special_i0,
+    special_i0e,
+    special_i1,
+    special_i1e,
+    special_log_ndtr,
+    special_logit,
+    special_multigammaln,
+    special_ndtr,
+    special_ndtri,
+    special_polygamma,
+    special_sinc,
+    special_xlog1py,
+    special_xlogy,
+    special_zeta,
+)
+
+registry.register("special_digamma", "cpu", special_digamma)
+registry.register("special_entr", "cpu", special_entr)
+registry.register("special_erfcx", "cpu", special_erfcx)
+registry.register("special_erfinv", "cpu", special_erfinv)
+registry.register("special_gammainc", "cpu", special_gammainc)
+registry.register("special_gammaincc", "cpu", special_gammaincc)
+registry.register("special_gammaln", "cpu", special_gammaln)
+registry.register("special_i0", "cpu", special_i0)
+registry.register("special_i0e", "cpu", special_i0e)
+registry.register("special_i1", "cpu", special_i1)
+registry.register("special_i1e", "cpu", special_i1e)
+registry.register("special_log_ndtr", "cpu", special_log_ndtr)
+registry.register("special_logit", "cpu", special_logit)
+registry.register("special_multigammaln", "cpu", special_multigammaln)
+registry.register("special_ndtr", "cpu", special_ndtr)
+registry.register("special_ndtri", "cpu", special_ndtri)
+registry.register("special_polygamma", "cpu", special_polygamma)
+registry.register("special_sinc", "cpu", special_sinc)
+registry.register("special_xlog1py", "cpu", special_xlog1py)
+registry.register("special_xlogy", "cpu", special_xlogy)
+registry.register("special_zeta", "cpu", special_zeta)
+
+# ---------------------------------------------------------------------------
+# F.affine_grid / F.grid_sample
+# ---------------------------------------------------------------------------
+from .ops import grid_sample, affine_grid
+registry.register("grid_sample", "cpu", grid_sample)
+registry.register("affine_grid", "cpu", affine_grid)
+
+# ---------------------------------------------------------------------------
+# F.unfold (im2col) / F.fold (col2im)
+# ---------------------------------------------------------------------------
+from .ops import im2col, col2im
+registry.register("im2col", "cpu", im2col)
+registry.register("col2im", "cpu", col2im)
+
+# ---------------------------------------------------------------------------
+# one_hot (was missing registration)
+# ---------------------------------------------------------------------------
+from .ops import one_hot
+registry.register("one_hot", "cpu", one_hot)
+
+# ---------------------------------------------------------------------------
+# uniform (out-of-place)
+# ---------------------------------------------------------------------------
+from .ops import uniform
+registry.register("uniform", "cpu", uniform)
+
+# ---------------------------------------------------------------------------
+# Upsample ops
+# ---------------------------------------------------------------------------
+from .ops import (
+    upsample_nearest1d,
+    upsample_linear1d,
+    upsample_nearest2d,
+    upsample_bilinear2d,
+    upsample_bicubic2d,
+)
+registry.register("upsample_nearest1d", "cpu", upsample_nearest1d)
+registry.register("upsample_linear1d", "cpu", upsample_linear1d)
+registry.register("upsample_nearest2d", "cpu", upsample_nearest2d)
+registry.register("upsample_bilinear2d", "cpu", upsample_bilinear2d)
+registry.register("upsample_bicubic2d", "cpu", upsample_bicubic2d)
+
+# 1D pooling ops
+from .ops import max_pool1d, avg_pool1d, adaptive_avg_pool1d
+registry.register("max_pool1d", "cpu", max_pool1d)
+registry.register("avg_pool1d", "cpu", avg_pool1d)
+registry.register("adaptive_avg_pool1d", "cpu", adaptive_avg_pool1d)
+
+# 3D conv/pool ops
+from .ops import conv_transpose3d, max_pool3d, avg_pool3d, adaptive_avg_pool3d, conv3d
+registry.register("conv3d", "cpu", conv3d)
+registry.register("conv_transpose3d", "cpu", conv_transpose3d)
+registry.register("max_pool3d", "cpu", max_pool3d)
+registry.register("avg_pool3d", "cpu", avg_pool3d)
+registry.register("adaptive_avg_pool3d", "cpu", adaptive_avg_pool3d)
+
+# addmm
+from .ops import addmm
+registry.register("addmm", "cpu", addmm)
+
+# adaptive_max_pool ops
+from .ops import adaptive_max_pool2d, adaptive_max_pool1d
+registry.register("adaptive_max_pool2d", "cpu", adaptive_max_pool2d)
+registry.register("adaptive_max_pool1d", "cpu", adaptive_max_pool1d)
+
+# Round 6: missing activation CPU forwards
+from .ops import selu, celu, threshold, hardshrink, softshrink, rrelu
+registry.register("selu", "cpu", selu, meta=meta_infer.infer_unary)
+registry.register("celu", "cpu", celu, meta=meta_infer.infer_unary)
+registry.register("threshold", "cpu", threshold, meta=meta_infer.infer_unary)
+registry.register("hardshrink", "cpu", hardshrink, meta=meta_infer.infer_unary)
+registry.register("softshrink", "cpu", softshrink, meta=meta_infer.infer_unary)
+registry.register("rrelu", "cpu", rrelu, meta=meta_infer.infer_unary)
+
+# CTC loss
+from .ops import ctc_loss
+registry.register("ctc_loss", "cpu", ctc_loss)
+
+# Round 12: remaining CPU forward gaps
+from .ops import hardswish, hardsigmoid, softsign, normalize, movedim, min_, max_
+registry.register("hardswish", "cpu", hardswish, meta=meta_infer.infer_unary)
+registry.register("hardsigmoid", "cpu", hardsigmoid, meta=meta_infer.infer_unary)
+registry.register("softsign", "cpu", softsign, meta=meta_infer.infer_unary)
+registry.register("normalize", "cpu", normalize, meta=meta_infer.infer_unary)
+registry.register("moveaxis", "cpu", movedim, meta=meta_infer.infer_movedim)
+registry.register("min_", "cpu", min_, meta=meta_infer.infer_binary)
+registry.register("max_", "cpu", max_, meta=meta_infer.infer_binary)

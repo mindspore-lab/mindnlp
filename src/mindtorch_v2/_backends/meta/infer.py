@@ -49,6 +49,23 @@ def infer_unary_bool(a, *args, **kwargs):
 
 def infer_sum(a, dim=None, keepdim=False):
     shape = list(a.shape)
+    if isinstance(dim, (list, tuple)) and len(dim) == 0:
+        dim = None
+
+    ndim = len(shape)
+
+    def _check_dim_range(d):
+        if d < -ndim or d >= ndim:
+            raise IndexError(
+                f"Dimension out of range (expected to be in range of [{-ndim}, {ndim - 1}], but got {d})"
+            )
+
+    if isinstance(dim, int):
+        _check_dim_range(dim)
+    elif isinstance(dim, (list, tuple)):
+        for d in dim:
+            _check_dim_range(d)
+
     if dim is None:
         dims = list(range(len(shape)))
     elif isinstance(dim, int):

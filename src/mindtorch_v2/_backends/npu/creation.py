@@ -7,6 +7,7 @@ from ..._storage import npu_typed_storage_from_ptr
 from . import runtime as npu_runtime
 from . import aclnn
 from . import state as npu_state
+from . import ops_soc
 
 
 def _wrap_tensor(storage, shape, stride, requires_grad):
@@ -76,46 +77,29 @@ def empty_create(shape, dtype=None, device=None, requires_grad=False, memory_for
     return _wrap_tensor(storage, shape, stride, requires_grad)
 
 
-def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create a tensor filled with random numbers from a normal distribution.
-
-    Generates on CPU using the shared RNG state and copies to NPU.
-    """
-    runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
+def randn_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None, generator=None):
+    """Create a tensor filled with random numbers from N(0,1) on NPU."""
     if isinstance(shape, int):
         shape = (shape,)
     shape = tuple(shape)
-
-    from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
-    arr = rng.randn(*shape).astype(npu_runtime._dtype_to_numpy(dtype))
-    size = int(np.prod(shape))
-    ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
-    stride = npu_runtime._contiguous_stride(shape)
-
-    storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
-    return _wrap_tensor(storage, shape, stride, requires_grad)
+    # Create empty NPU tensor, then fill with normal_ (uses ACLNN kernel)
+    t = empty_create(shape, dtype=dtype, device=device, requires_grad=requires_grad,
+                     memory_format=memory_format)
+    from .ops import normal_
+    normal_(t, mean=0.0, std=1.0, generator=generator)
+    return t
 
 
-def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None):
-    """Create a tensor filled with random numbers from a uniform distribution [0, 1).
-
-    Generates on CPU using the shared RNG state and copies to NPU.
-    """
-    runtime = npu_runtime.get_runtime((device.index if hasattr(device, "index") else None) or 0)
+def rand_create(shape, dtype=None, device=None, requires_grad=False, memory_format=None, generator=None):
+    """Create a tensor filled with random numbers from U(0,1) on NPU."""
     if isinstance(shape, int):
         shape = (shape,)
     shape = tuple(shape)
-
-    from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
-    arr = rng.random_sample(shape).astype(npu_runtime._dtype_to_numpy(dtype))
-    size = int(np.prod(shape))
-    ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
-    stride = npu_runtime._contiguous_stride(shape)
-
-    storage = npu_typed_storage_from_ptr(ptr, size, dtype, device=device)
-    return _wrap_tensor(storage, shape, stride, requires_grad)
+    t = empty_create(shape, dtype=dtype, device=device, requires_grad=requires_grad,
+                     memory_format=memory_format)
+    from .ops import uniform_
+    uniform_(t, low=0.0, high=1.0, generator=generator)
+    return t
 
 
 def _resolve_dtype(dtype):
@@ -134,9 +118,6 @@ def _contiguous_stride(shape):
 def _device_index(device):
     return (device.index if hasattr(device, "index") else None) or 0
 
-
-def _is_310b_profile():
-    return npu_runtime.soc_profile() == "310b"
 
 
 def _linspace_fallback_npu(start, end, steps, dtype, device):
@@ -194,7 +175,7 @@ def linspace_create(start, end, steps, dtype=None, device=None):
         raise ValueError("number of steps must be non-negative")
     dtype = _resolve_dtype(dtype)
 
-    if _is_310b_profile():
+    if ops_soc.use_smallop_linspace():
         return _linspace_fallback_npu(start, end, steps, dtype=dtype, device=device)
 
     if not aclnn.linspace_symbols_ok():
@@ -281,3 +262,41 @@ def range_create(start, end, step=1, dtype=None, device=None):
 
     storage = npu_typed_storage_from_ptr(ptr, max(size, 1), dtype, device=device)
     return _wrap_tensor(storage, shape, stride, requires_grad=False)
+
+
+def randint_create(low, high=None, size=None, dtype=None, device=None, requires_grad=False, generator=None, **kwargs):
+    """Create a tensor filled with random integers from [low, high) on NPU."""
+    from ..._dtype import int64 as int64_dtype, float32 as f32
+    if high is None:
+        low, high = 0, low
+    if size is None:
+        raise ValueError("size is required for randint")
+    size = tuple(size)
+    out_dtype = dtype if dtype is not None else int64_dtype
+    # Create float tensor, fill uniform [low, high), floor, then cast to int dtype
+    t = empty_create(size, dtype=f32, device=device)
+    from .ops import uniform_
+    uniform_(t, float(low), float(high), generator=generator)
+    # floor
+    runtime = npu_runtime.get_runtime(_device_index(device))
+    stream = npu_state.current_stream(_device_index(device))
+    t_storage = t.storage()
+    aclnn.floor(t_storage.data_ptr(), t_storage.data_ptr(), t.shape, t.stride, t.dtype, runtime, stream=stream.stream)
+    # cast to target int dtype if needed
+    if out_dtype != f32:
+        if not aclnn.cast_symbols_ok():
+            raise RuntimeError("aclnnCast not available")
+        numel = int(np.prod(size))
+        out_itemsize = np.dtype(npu_runtime._dtype_to_numpy(out_dtype)).itemsize
+        out_ptr = npu_runtime._alloc_device(max(numel, 1) * out_itemsize, runtime=runtime)
+        out_stride = _contiguous_stride(size)
+        aclnn.cast(t_storage.data_ptr(), out_ptr, size, out_stride, f32, out_dtype, runtime, stream=stream.stream)
+        out_storage = npu_typed_storage_from_ptr(out_ptr, max(numel, 1), out_dtype, device=device)
+        return _wrap_tensor(out_storage, size, out_stride, requires_grad)
+    return t
+
+
+def randperm_create(n, dtype=None, device=None, requires_grad=False, generator=None, **kwargs):
+    """Create a random permutation of integers from 0 to n-1 on NPU."""
+    from .ops import randperm as randperm_op
+    return randperm_op(n, dtype=dtype, device=device, generator=generator)

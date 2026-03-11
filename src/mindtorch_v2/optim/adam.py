@@ -1,111 +1,225 @@
-import math
+"""
+Adam and AdamW optimizers for mindtorch_v2.
+
+Aligned with PyTorch's torch.optim.Adam and torch.optim.AdamW.
+"""
+
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 from .optimizer import Optimizer
-from .._autograd.grad_mode import no_grad
+from .._tensor import Tensor
+from .._dispatch import dispatch
+from .._functional import zeros_like
 
 
 class Adam(Optimizer):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=0, amsgrad=False):
-        super().__init__(params)
-        self.lr = lr
-        self.betas = betas
-        self.eps = eps
-        self.weight_decay = weight_decay
-        self.amsgrad = amsgrad
-        self.state = {}
-        self._step_count = 0
+    """Implements Adam algorithm.
 
-    def step(self):
-        self._step_count += 1
-        beta1, beta2 = self.betas
+    Args:
+        params: Iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr: Learning rate (default: 1e-3)
+        betas: Coefficients used for computing running averages of gradient
+            and its square (default: (0.9, 0.999))
+        eps: Term added to the denominator to improve numerical stability
+            (default: 1e-8)
+        weight_decay: Weight decay (L2 penalty) (default: 0)
+        amsgrad: Whether to use the AMSGrad variant (default: False)
+        maximize: Maximize the params based on the objective, instead of
+            minimizing (default: False)
 
-        with no_grad():
-            for p in self.params:
+    Example:
+        >>> optimizer = Adam(model.parameters(), lr=0.001)
+        >>> optimizer.zero_grad()
+        >>> loss_fn(model(input), target).backward()
+        >>> optimizer.step()
+    """
+
+    def __init__(
+        self,
+        params: Iterable[Union[Tensor, Dict]],
+        lr: float = 1e-3,
+        betas: tuple = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0,
+        amsgrad: bool = False,
+        *,
+        maximize: bool = False,
+    ):
+        if lr < 0.0:
+            raise ValueError(f"Invalid learning rate: {lr}")
+        if eps < 0.0:
+            raise ValueError(f"Invalid epsilon value: {eps}")
+        if not 0.0 <= betas[0] < 1.0:
+            raise ValueError(f"Invalid beta parameter at index 0: {betas[0]}")
+        if not 0.0 <= betas[1] < 1.0:
+            raise ValueError(f"Invalid beta parameter at index 1: {betas[1]}")
+        if weight_decay < 0.0:
+            raise ValueError(f"Invalid weight_decay value: {weight_decay}")
+
+        defaults = dict(
+            lr=lr,
+            betas=betas,
+            eps=eps,
+            weight_decay=weight_decay,
+            amsgrad=amsgrad,
+            maximize=maximize,
+        )
+        super().__init__(params, defaults)
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        super().__setstate__(state)
+        for group in self.param_groups:
+            group.setdefault("amsgrad", False)
+            group.setdefault("maximize", False)
+
+    def step(self, closure: Optional[Callable[[], float]] = None) -> Optional[float]:
+        """Performs a single optimization step."""
+        loss = None
+        if closure is not None:
+            loss = closure()
+        self._call_step_pre_hooks()
+
+        for group in self.param_groups:
+            beta1, beta2 = group["betas"]
+            lr = group["lr"]
+            weight_decay = group["weight_decay"]
+            eps = group["eps"]
+            amsgrad = group["amsgrad"]
+            maximize = group["maximize"]
+
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
-                grad_data = p.grad.storage().data
+                param_id = id(p)
 
-                if self.weight_decay != 0:
-                    grad_data = grad_data + self.weight_decay * p.storage().data
-
-                pid = id(p)
-                if pid not in self.state:
-                    import numpy as np
-                    self.state[pid] = {
-                        "m": np.zeros_like(p.storage().data),
-                        "v": np.zeros_like(p.storage().data),
+                if param_id not in self.state:
+                    self.state[param_id] = {
+                        "step": 0,
+                        "exp_avg": zeros_like(p),
+                        "exp_avg_sq": zeros_like(p),
                     }
-                    if self.amsgrad:
-                        self.state[pid]["v_max"] = np.zeros_like(p.storage().data)
+                    if amsgrad:
+                        self.state[param_id]["max_exp_avg_sq"] = zeros_like(p)
 
-                s = self.state[pid]
-                s["m"] = beta1 * s["m"] + (1 - beta1) * grad_data
-                s["v"] = beta2 * s["v"] + (1 - beta2) * grad_data * grad_data
+                state = self.state[param_id]
+                state["step"] += 1
 
-                m_hat = s["m"] / (1 - beta1 ** self._step_count)
-                v_hat = s["v"] / (1 - beta2 ** self._step_count)
+                dispatch(
+                    "_adam_step", None,
+                    p, p.grad,
+                    state["exp_avg"], state["exp_avg_sq"],
+                    state.get("max_exp_avg_sq"),
+                    state["step"], lr, beta1, beta2, eps,
+                    weight_decay, amsgrad, maximize,
+                )
 
-                if self.amsgrad:
-                    import numpy as np
-                    s["v_max"] = np.maximum(s["v_max"], v_hat)
-                    denom = s["v_max"] ** 0.5 + self.eps
-                else:
-                    denom = v_hat ** 0.5 + self.eps
-
-                p.storage()._data = p.storage().data - self.lr * m_hat / denom
+        self._call_step_post_hooks()
+        return loss
 
 
 class AdamW(Optimizer):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=1e-2, amsgrad=False):
-        super().__init__(params)
-        self.lr = lr
-        self.betas = betas
-        self.eps = eps
-        self.weight_decay = weight_decay
-        self.amsgrad = amsgrad
-        self.state = {}
-        self._step_count = 0
+    """Implements AdamW algorithm.
 
-    def step(self):
-        self._step_count += 1
-        beta1, beta2 = self.betas
+    The AdamW variant was proposed in "Decoupled Weight Decay Regularization".
 
-        with no_grad():
-            for p in self.params:
+    Args:
+        params: Iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr: Learning rate (default: 1e-3)
+        betas: Coefficients used for computing running averages of gradient
+            and its square (default: (0.9, 0.999))
+        eps: Term added to the denominator to improve numerical stability
+            (default: 1e-8)
+        weight_decay: Weight decay coefficient (default: 1e-2)
+        amsgrad: Whether to use the AMSGrad variant (default: False)
+        maximize: Maximize the params based on the objective, instead of
+            minimizing (default: False)
+
+    Example:
+        >>> optimizer = AdamW(model.parameters(), lr=0.001, weight_decay=0.01)
+    """
+
+    def __init__(
+        self,
+        params: Iterable[Union[Tensor, Dict]],
+        lr: float = 1e-3,
+        betas: tuple = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 1e-2,
+        amsgrad: bool = False,
+        *,
+        maximize: bool = False,
+    ):
+        if lr < 0.0:
+            raise ValueError(f"Invalid learning rate: {lr}")
+        if eps < 0.0:
+            raise ValueError(f"Invalid epsilon value: {eps}")
+        if not 0.0 <= betas[0] < 1.0:
+            raise ValueError(f"Invalid beta parameter at index 0: {betas[0]}")
+        if not 0.0 <= betas[1] < 1.0:
+            raise ValueError(f"Invalid beta parameter at index 1: {betas[1]}")
+        if weight_decay < 0.0:
+            raise ValueError(f"Invalid weight_decay value: {weight_decay}")
+
+        defaults = dict(
+            lr=lr,
+            betas=betas,
+            eps=eps,
+            weight_decay=weight_decay,
+            amsgrad=amsgrad,
+            maximize=maximize,
+        )
+        super().__init__(params, defaults)
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        super().__setstate__(state)
+        for group in self.param_groups:
+            group.setdefault("amsgrad", False)
+            group.setdefault("maximize", False)
+
+    def step(self, closure: Optional[Callable[[], float]] = None) -> Optional[float]:
+        """Performs a single optimization step."""
+        loss = None
+        if closure is not None:
+            loss = closure()
+        self._call_step_pre_hooks()
+
+        for group in self.param_groups:
+            beta1, beta2 = group["betas"]
+            lr = group["lr"]
+            weight_decay = group["weight_decay"]
+            eps = group["eps"]
+            amsgrad = group["amsgrad"]
+            maximize = group["maximize"]
+
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
-                # Decoupled weight decay: applied to params directly, not to grad
-                if self.weight_decay != 0:
-                    p.storage()._data = p.storage().data * (1 - self.lr * self.weight_decay)
+                param_id = id(p)
 
-                grad_data = p.grad.storage().data
-
-                pid = id(p)
-                if pid not in self.state:
-                    import numpy as np
-                    self.state[pid] = {
-                        "m": np.zeros_like(p.storage().data),
-                        "v": np.zeros_like(p.storage().data),
+                if param_id not in self.state:
+                    self.state[param_id] = {
+                        "step": 0,
+                        "exp_avg": zeros_like(p),
+                        "exp_avg_sq": zeros_like(p),
                     }
-                    if self.amsgrad:
-                        self.state[pid]["v_max"] = np.zeros_like(p.storage().data)
+                    if amsgrad:
+                        self.state[param_id]["max_exp_avg_sq"] = zeros_like(p)
 
-                s = self.state[pid]
-                s["m"] = beta1 * s["m"] + (1 - beta1) * grad_data
-                s["v"] = beta2 * s["v"] + (1 - beta2) * grad_data * grad_data
+                state = self.state[param_id]
+                state["step"] += 1
 
-                m_hat = s["m"] / (1 - beta1 ** self._step_count)
-                v_hat = s["v"] / (1 - beta2 ** self._step_count)
+                dispatch(
+                    "_adamw_step", None,
+                    p, p.grad,
+                    state["exp_avg"], state["exp_avg_sq"],
+                    state.get("max_exp_avg_sq"),
+                    state["step"], lr, beta1, beta2, eps,
+                    weight_decay, amsgrad, maximize,
+                )
 
-                if self.amsgrad:
-                    import numpy as np
-                    s["v_max"] = np.maximum(s["v_max"], v_hat)
-                    denom = s["v_max"] ** 0.5 + self.eps
-                else:
-                    denom = v_hat ** 0.5 + self.eps
-
-                p.storage()._data = p.storage().data - self.lr * m_hat / denom
+        self._call_step_post_hooks()
+        return loss

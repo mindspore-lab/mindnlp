@@ -9,6 +9,8 @@ from ._dtype import (
     complex64, complex128,
     # aliases
     half, double, short, long, byte, cfloat, cdouble,
+    # info classes
+    finfo, iinfo,
 )
 from ._dtype import float as float  # noqa: F811
 from ._dtype import int as int  # noqa: F811
@@ -32,9 +34,9 @@ BoolTensor = Tensor
 ComplexFloatTensor = Tensor
 ComplexDoubleTensor = Tensor
 Size = tuple
-from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand, randint, randperm, from_numpy, as_tensor
+from ._creation import tensor, zeros, ones, empty, arange, linspace, full, logspace, eye, range, randn, rand, randint, randperm, from_numpy, as_tensor, normal
 from ._functional import zeros_like
-from ._functional import ones_like, empty_like, full_like, randn_like, rand_like
+from ._functional import ones_like, empty_like, full_like, randn_like, rand_like, randint_like
 from ._storage import UntypedStorage, TypedStorage
 from ._functional import add, mul, matmul, relu, sum, all, any, argmax, argmin, count_nonzero, masked_select, flip, roll, rot90, repeat, repeat_interleave, tile, nonzero, allclose, isclose, equal, cumsum, cumprod, cummax, argsort, sort, topk, stack, cat, concat, concatenate, hstack, vstack, row_stack, dstack, column_stack, pad_sequence, block_diag, tril, triu, diag, cartesian_prod, chunk, split, vsplit, hsplit, dsplit, unbind, tril_indices, triu_indices, take, take_along_dim, index_select, gather, scatter, abs, neg, exp, log, sqrt, div, true_divide, mean, std
 from ._functional import sin, cos, tan, tanh, sigmoid, floor, ceil, round, trunc, frac
@@ -56,9 +58,30 @@ from ._functional import logical_and, logical_or, logical_not
 from ._functional import sub, log1p, expm1, maximum, minimum
 from ._functional import dot, outer, inner, mv, cross, tensordot
 from ._functional import logical_xor
+from ._functional import baddbmm, trace, cummin, logsumexp, renorm
 from ._functional import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
-from ._functional import unflatten, broadcast_to, movedim, diagonal
+from ._functional import unflatten, broadcast_to, movedim, moveaxis, diagonal
 from ._functional import unique, searchsorted, kthvalue, median
+# Category A: Export existing functions
+from ._functional import eq, ne, lt, le, gt, ge
+from ._functional import select, expand, masked_fill, unfold
+from ._functional import scatter_, scatter_add_
+from ._functional import index_add_, index_copy_, index_fill_
+from ._functional import index_put, index_put_
+from ._functional import masked_fill_, masked_scatter_
+# Category B: Wrapper + export
+from ._functional import nansum, nanmean, det, dist, matrix_power, argwhere
+# Category C1: Pure-Python functions
+from ._functional import meshgrid, atleast_1d, atleast_2d, atleast_3d
+from ._functional import broadcast_tensors, broadcast_shapes
+from ._functional import complex, polar
+# Category C2: Dispatch-based functions
+from ._functional import diff, bincount, cdist, aminmax
+from ._functional import quantile, nanquantile, nanmedian
+from ._functional import histc, histogram, bucketize
+from ._functional import isneginf, isposinf, isreal, isin, heaviside
+# P0 dtype utilities & query functions
+from ._functional import is_tensor, is_floating_point, is_complex, numel, square
 from ._printing import set_printoptions, get_printoptions
 from ._dispatch import (
     pipeline_context,
@@ -70,7 +93,9 @@ from ._backends import cpu
 from ._autograd.grad_mode import is_grad_enabled, set_grad_enabled, no_grad, enable_grad, inference_mode
 from . import _autograd as autograd
 from ._backends import autograd as _autograd_kernels
+from . import cuda
 from . import npu
+from . import mps
 from . import _C
 from . import distributed
 from . import onnx
@@ -83,10 +108,15 @@ from . import optim
 from . import jit
 from . import profiler
 from . import multiprocessing
+from . import linalg
+from . import fft
+from . import special
+from . import testing
 from ._random import (
     manual_seed, seed, initial_seed, get_rng_state, set_rng_state,
     Generator, default_generator,
-    bernoulli, multinomial,
+    bernoulli, multinomial, poisson,
+    fork_rng,
 )
 from . import _random as random
 from .serialization import save, load
@@ -95,6 +125,8 @@ from .amp.state import (
     set_autocast_enabled,
     get_autocast_dtype,
     set_autocast_dtype,
+    is_autocast_cache_enabled,
+    set_autocast_cache_enabled,
 )
 
 
@@ -121,6 +153,7 @@ def compile(model=None, *args, **kwargs):
 __all__ = [
     "Device",
     "device",
+    "cuda",
     "Tensor",
     "Size",
     "FloatTensor", "DoubleTensor", "HalfTensor", "BFloat16Tensor",
@@ -158,6 +191,7 @@ __all__ = [
     "full_like",
     "randn_like",
     "rand_like",
+    "randint_like",
     # ops
     "add",
     "mul",
@@ -328,6 +362,8 @@ __all__ = [
     "set_autocast_enabled",
     "get_autocast_dtype",
     "set_autocast_dtype",
+    "is_autocast_cache_enabled",
+    "set_autocast_cache_enabled",
     "ops",
     "library",
     "compiler",
@@ -369,13 +405,86 @@ __all__ = [
     "unflatten",
     "broadcast_to",
     "movedim",
+    "moveaxis",
     "diagonal",
     # new search ops
     "unique",
     "searchsorted",
     "kthvalue",
     "median",
+    # P1 new ops
+    "baddbmm",
+    "trace",
+    "cummin",
+    "logsumexp",
+    "renorm",
     # new random ops
     "bernoulli",
     "multinomial",
+    # Category A: Comparison ops
+    "eq",
+    "ne",
+    "lt",
+    "le",
+    "gt",
+    "ge",
+    # Category A: Indexing/mutation ops
+    "select",
+    "expand",
+    "masked_fill",
+    "masked_fill_",
+    "unfold",
+    "scatter_",
+    "scatter_add_",
+    "index_add_",
+    "index_copy_",
+    "index_fill_",
+    "index_put",
+    "index_put_",
+    "masked_scatter_",
+    # Category B: Wrapper ops
+    "nansum",
+    "nanmean",
+    "det",
+    "dist",
+    "matrix_power",
+    "argwhere",
+    # Category C1: Pure-Python ops
+    "meshgrid",
+    "atleast_1d",
+    "atleast_2d",
+    "atleast_3d",
+    "broadcast_tensors",
+    "broadcast_shapes",
+    "complex",
+    "polar",
+    # Category C2: Dispatch-based ops
+    "diff",
+    "bincount",
+    "cdist",
+    "aminmax",
+    "quantile",
+    "nanquantile",
+    "nanmedian",
+    "histc",
+    "histogram",
+    "bucketize",
+    "isneginf",
+    "isposinf",
+    "isreal",
+    "isin",
+    "heaviside",
+    # P0 dtype utilities & query functions
+    "finfo",
+    "iinfo",
+    "is_tensor",
+    "is_floating_point",
+    "is_complex",
+    "numel",
+    "square",
+    # submodules
+    "linalg",
+    "fft",
+    "special",
+    "testing",
 ]

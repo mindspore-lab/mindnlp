@@ -13,6 +13,7 @@ from ._dtype import float32, float16, float64, bfloat16, int8, int16, int32, int
 from ._dtype import bool as dtype_bool
 from ._dtype import to_numpy_dtype
 from ._functional import add, mul, matmul, relu, sum, mean as mean_dispatch, std as std_dispatch, true_divide as true_divide_dispatch, repeat as repeat_dispatch, chunk as chunk_dispatch, split as split_dispatch, abs as abs_dispatch, neg as neg_dispatch
+from ._functional import sub as sub_dispatch, div as div_dispatch
 from ._functional import exp as exp_dispatch, log as log_dispatch, sqrt as sqrt_dispatch
 from ._functional import sin as sin_dispatch, cos as cos_dispatch, tan as tan_dispatch
 from ._functional import tanh as tanh_dispatch, sigmoid as sigmoid_dispatch
@@ -20,7 +21,7 @@ from ._functional import floor as floor_dispatch, ceil as ceil_dispatch, round a
 from ._functional import trunc as trunc_dispatch, frac as frac_dispatch
 from ._functional import pow as pow_dispatch, log2 as log2_dispatch, log10 as log10_dispatch
 from ._functional import exp2 as exp2_dispatch, rsqrt as rsqrt_dispatch
-from ._functional import sign as sign_dispatch, signbit as signbit_dispatch
+from ._functional import sign as sign_dispatch, signbit as signbit_dispatch, square as square_dispatch
 from ._functional import isnan as isnan_dispatch, isinf as isinf_dispatch, isfinite as isfinite_dispatch
 from ._functional import sinh as sinh_dispatch, cosh as cosh_dispatch
 from ._functional import asinh as asinh_dispatch, acosh as acosh_dispatch, atanh as atanh_dispatch
@@ -65,9 +66,24 @@ from ._functional import mm as mm_dispatch, bmm as bmm_dispatch
 from ._functional import floor_divide as floor_divide_dispatch
 from ._functional import tile as tile_dispatch, flip as flip_dispatch, roll as roll_dispatch, rot90 as rot90_dispatch
 from ._functional import reciprocal as reciprocal_dispatch, addmm as addmm_dispatch
+from ._functional import log1p as log1p_dispatch, expm1 as expm1_dispatch
 from ._autograd.engine import backward as _backward
 from ._autograd.version_counter import VersionCounter
 from ._printing import format_tensor
+
+
+class _StrideTuple(tuple):
+    """A tuple subclass that is also callable, matching PyTorch's stride() API.
+
+    Supports both attribute access (t.stride) and method call (t.stride()),
+    as well as per-dimension access (t.stride(dim)).
+    """
+    def __call__(self, dim=None):
+        if dim is None:
+            return tuple(self)
+        if dim < 0:
+            dim += len(self)
+        return self[dim]
 
 
 def _compute_strides(shape):
@@ -76,7 +92,7 @@ def _compute_strides(shape):
     for d in reversed(shape):
         stride.append(acc)
         acc *= d
-    return tuple(reversed(stride))
+    return _StrideTuple(reversed(stride))
 
 
 def _bf16_to_f32(arr):
@@ -119,7 +135,7 @@ class Tensor:
     def __init__(self, storage, shape, stride, offset=0, requires_grad=False):
         self._storage = storage
         self.shape = tuple(shape)
-        self.stride = tuple(stride)
+        self.stride = _StrideTuple(stride)
         self.offset = int(offset)
         self.requires_grad = requires_grad
         self.grad = None
@@ -139,8 +155,73 @@ class Tensor:
     def device(self):
         return self._storage.device
 
+    @property
+    def data(self):
+        """Returns the underlying data tensor (detached from autograd graph)."""
+        return self.detach()
+
+    @data.setter
+    def data(self, new_data):
+        """Replace the tensor's data with new_data (in-place)."""
+        if not isinstance(new_data, Tensor):
+            raise TypeError(f"data must be a Tensor, got {type(new_data).__name__}")
+        if new_data.shape != self.shape:
+            raise RuntimeError(f"shape mismatch: expected {self.shape}, got {new_data.shape}")
+        if new_data.dtype != self.dtype:
+            raise RuntimeError(f"dtype mismatch: expected {self.dtype}, got {new_data.dtype}")
+        # Replace storage
+        self._storage = new_data._storage
+        self.stride = new_data.stride
+        self.offset = new_data.offset
+        self._bump_version()
+
+    @property
+    def is_cuda(self):
+        """Returns True if the tensor is stored on a CUDA GPU."""
+        return self.device.type == "cuda"
+
+    @property
+    def is_cpu(self):
+        """Returns True if the tensor is stored on CPU."""
+        return self.device.type == "cpu"
+
+    @property
+    def is_npu(self):
+        """Returns True if the tensor is stored on NPU."""
+        return self.device.type == "npu"
+
+    @property
+    def is_meta(self):
+        """Returns True if the tensor is a meta tensor."""
+        return self.device.type == "meta"
+
+    @property
+    def is_leaf(self):
+        """Returns True if this tensor is a leaf in the autograd graph."""
+        return self.grad_fn is None
+
+    @property
+    def is_sparse(self):
+        """Returns True if the tensor is sparse."""
+        return False
+
+    @property
+    def is_quantized(self):
+        """Returns True if the tensor is quantized."""
+        return False
+
     def storage(self):
         return self._storage
+
+    def storage_offset(self):
+        """Returns the offset into the storage."""
+        return self.offset
+
+    def get_device(self):
+        """Returns device index for GPU/NPU tensors, or -1 for CPU."""
+        if self.device.type == "cpu":
+            return -1
+        return self.device.index if self.device.index is not None else 0
 
     def untyped_storage(self):
         """Return the underlying untyped storage.
@@ -151,6 +232,10 @@ class Tensor:
         return self._storage.untyped_storage()
 
     def dim(self):
+        return len(self.shape)
+
+    def ndimension(self):
+        """Return the number of dimensions of the tensor (alias for dim())."""
         return len(self.shape)
 
     @property
@@ -269,7 +354,7 @@ class Tensor:
             return self
         # Swap shape and stride dimensions in-place
         self.shape = (self.shape[1], self.shape[0])
-        self.stride = (self.stride[1], self.stride[0])
+        self.stride = _StrideTuple((self.stride[1], self.stride[0]))
         return self
 
     @property
@@ -286,6 +371,35 @@ class Tensor:
         dt = dtype if dtype is not None else self.dtype
         dev = device if device is not None else self.device
         return empty(size, dtype=dt, device=dev)
+
+    def new_tensor(self, data, *, dtype=None, device=None, requires_grad=False):
+        """Create a new tensor with the given data using this tensor's dtype and device by default."""
+        from ._creation import tensor
+        dt = dtype if dtype is not None else self.dtype
+        dev = device if device is not None else self.device
+        return tensor(data, dtype=dt, device=dev)
+
+    def new_empty_strided(self, size, stride, *, dtype=None, device=None, requires_grad=False):
+        """Create a new empty tensor with the given size and stride."""
+        dt = dtype if dtype is not None else self.dtype
+        dev = device if device is not None else self.device
+        if dev.type == "cpu":
+            numel = 1
+            for s in size:
+                numel *= s
+            arr = np.empty(numel, dtype=to_numpy_dtype(dt))
+            storage = typed_storage_from_numpy(arr, dt, device=dev)
+            return Tensor(storage, tuple(size), tuple(stride))
+        else:
+            from ._creation import empty
+            t = empty(size, dtype=dt, device=dev)
+            return t
+
+    def as_strided(self, size, stride, storage_offset=None):
+        """Create a view of the tensor with given size, stride, and storage_offset."""
+        offset = storage_offset if storage_offset is not None else self.offset
+        return Tensor(self._storage, tuple(size), tuple(stride), offset=offset,
+                      requires_grad=self.requires_grad)
 
     def _ones_like(self):
         if self.device.type == "meta":
@@ -419,12 +533,26 @@ class Tensor:
         if self._is_view() and self._base is not None and self._base.grad_fn is None and self._base.requires_grad:
             raise RuntimeError("a view of a leaf Variable that requires grad is being used in an in-place operation.")
 
-    def add_(self, other):
+    def add_(self, other, *, alpha=1):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
+        if alpha != 1:
+            other = mul(other, alpha)
         out = dispatch("add_", self.device.type, self, other)
         return out
+
+    def add(self, other, *, alpha=1):
+        return add(self, other, alpha=alpha)
+
+    def sub(self, other, *, alpha=1):
+        return sub_dispatch(self, other, alpha=alpha)
+
+    def mul(self, other):
+        return mul(self, other)
+
+    def div(self, other, *, rounding_mode=None):
+        return div_dispatch(self, other)
 
     def mul_(self, other):
         from ._dispatch.dispatcher import dispatch
@@ -447,18 +575,67 @@ class Tensor:
         out = dispatch("zero_", self.device.type, self)
         return out
 
-    def uniform_(self, low=0.0, high=1.0):
+    def uniform_(self, low=0.0, high=1.0, *, generator=None):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
-        out = dispatch("uniform_", self.device.type, self, low, high)
+        out = dispatch("uniform_", self.device.type, self, low, high, generator=generator)
         return out
 
-    def normal_(self, mean=0.0, std=1.0):
+    def normal_(self, mean=0.0, std=1.0, *, generator=None):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
-        out = dispatch("normal_", self.device.type, self, mean, std)
+        out = dispatch("normal_", self.device.type, self, mean, std, generator=generator)
+        return out
+
+    def random_(self, from_=0, to=None, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("random_", self.device.type, self, from_, to, generator=generator)
+        return out
+
+    def randint_(self, low, high=None, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("randint_", self.device.type, self, low, high, generator=generator)
+        return out
+
+    def bernoulli_(self, p=0.5, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("bernoulli_", self.device.type, self, p, generator=generator)
+        return out
+
+    def exponential_(self, lambd=1.0, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("exponential_", self.device.type, self, lambd, generator=generator)
+        return out
+
+    def log_normal_(self, mean=1.0, std=2.0, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("log_normal_", self.device.type, self, mean, std, generator=generator)
+        return out
+
+    def cauchy_(self, median=0.0, sigma=1.0, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("cauchy_", self.device.type, self, median, sigma, generator=generator)
+        return out
+
+    def geometric_(self, p, *, generator=None):
+        from ._dispatch.dispatcher import dispatch
+
+        self._check_inplace()
+        out = dispatch("geometric_", self.device.type, self, p, generator=generator)
         return out
 
     def fill_(self, value):
@@ -489,12 +666,158 @@ class Tensor:
         out = dispatch("erfinv_", self.device.type, self)
         return out
 
-    def sub_(self, other):
+    def sub_(self, other, *, alpha=1):
         from ._dispatch.dispatcher import dispatch
 
         self._check_inplace()
+        if alpha != 1:
+            other = mul(other, alpha)
         out = dispatch("sub_", self.device.type, self, other)
         return out
+
+    def abs_(self):
+        """In-place absolute value."""
+        self._check_inplace()
+        out = abs_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def neg_(self):
+        """In-place negation."""
+        self._check_inplace()
+        out = neg_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def exp_(self):
+        """In-place exponential."""
+        self._check_inplace()
+        out = exp_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def log_(self):
+        """In-place natural logarithm."""
+        self._check_inplace()
+        out = log_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def log2_(self):
+        """In-place base-2 logarithm."""
+        self._check_inplace()
+        out = log2_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def log10_(self):
+        """In-place base-10 logarithm."""
+        self._check_inplace()
+        out = log10_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def sqrt_(self):
+        """In-place square root."""
+        self._check_inplace()
+        out = sqrt_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def sin_(self):
+        """In-place sine."""
+        self._check_inplace()
+        out = sin_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def cos_(self):
+        """In-place cosine."""
+        self._check_inplace()
+        out = cos_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def tan_(self):
+        """In-place tangent."""
+        self._check_inplace()
+        out = tan_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def tanh_(self):
+        """In-place hyperbolic tangent."""
+        self._check_inplace()
+        out = tanh_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def sigmoid_(self):
+        """In-place sigmoid."""
+        self._check_inplace()
+        out = sigmoid_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def floor_(self):
+        """In-place floor."""
+        self._check_inplace()
+        out = floor_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def ceil_(self):
+        """In-place ceiling."""
+        self._check_inplace()
+        out = ceil_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def round_(self):
+        """In-place rounding."""
+        self._check_inplace()
+        out = round_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def trunc_(self):
+        """In-place truncation."""
+        self._check_inplace()
+        out = trunc_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def pow_(self, exponent):
+        """In-place power."""
+        self._check_inplace()
+        out = pow_dispatch(self, exponent)
+        self._storage = out._storage
+        self._bump_version()
+        return self
+
+    def reciprocal_(self):
+        """In-place reciprocal."""
+        self._check_inplace()
+        out = reciprocal_dispatch(self)
+        self._storage = out._storage
+        self._bump_version()
+        return self
 
     def to(self, *args, **kwargs):
         if self._pending:
@@ -611,6 +934,23 @@ class Tensor:
             # Wrap result
             storage = npu_typed_storage_from_ptr(out_ptr, _numel(self.shape), dtype, device=self.device)
             return _wrap_tensor(storage, self.shape, self.stride)
+        elif self.device.type == "mps":
+            from ._storage import mps_typed_storage_from_numpy
+            arr = self._numpy_view()
+            src_dtype = self.dtype
+            target_np = to_numpy_dtype(dtype)
+            if src_dtype == bfloat16:
+                arr = _bf16_to_f32(arr)
+            if dtype == bfloat16:
+                arr = arr.astype(np.float32)
+                arr = _f32_to_bf16(arr)
+            else:
+                arr = arr.astype(target_np)
+            storage = mps_typed_storage_from_numpy(
+                np.ascontiguousarray(arr), dtype, device=self.device
+            )
+            stride = tuple(np.array(arr.strides) // arr.itemsize) if arr.ndim > 0 else ()
+            return Tensor(storage, arr.shape, stride)
         elif self.device.type == "meta":
             storage = meta_typed_storage_from_shape(self.shape, dtype, device=self.device)
             return Tensor(storage, self.shape, _compute_strides(self.shape))
@@ -849,6 +1189,9 @@ class Tensor:
     def signbit(self):
         return signbit_dispatch(self)
 
+    def square(self):
+        return square_dispatch(self)
+
     def isnan(self):
         return isnan_dispatch(self)
 
@@ -984,13 +1327,13 @@ class Tensor:
 
     def bmm(self, batch2):
         return bmm_dispatch(self, batch2)
-    def sum(self, dim=None, keepdim=False):
-        return sum(self, dim=dim, keepdim=keepdim)
+    def sum(self, dim=None, keepdim=False, *, dtype=None):
+        return sum(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
-    def mean(self, dim=None, keepdim=False, axis=None):
+    def mean(self, dim=None, keepdim=False, *, dtype=None, axis=None):
         if axis is not None:
             dim = axis
-        return mean_dispatch(self, dim=dim, keepdim=keepdim)
+        return mean_dispatch(self, dim=dim, keepdim=keepdim, dtype=dtype)
 
     def std(self, dim=None, keepdim=False, unbiased=True, axis=None):
         if axis is not None:
@@ -1060,8 +1403,78 @@ class Tensor:
     def reciprocal(self):
         return reciprocal_dispatch(self)
 
+    def log1p(self):
+        """Returns a new tensor with the natural logarithm of (1 + input)."""
+        return log1p_dispatch(self)
+
+    def expm1(self):
+        """Returns a new tensor with the exponential of the elements minus 1."""
+        return expm1_dispatch(self)
+
+    def logsumexp(self, dim, keepdim=False):
+        """Returns the log of summed exponentials of each row of the input tensor in the given dimension dim."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("logsumexp", self.device.type, self, dim, keepdim)
+
+    def trace(self):
+        """Returns the sum of the elements of the diagonal of the input 2-D matrix."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("trace", self.device.type, self)
+
+    def det(self):
+        """Returns the determinant of a square matrix."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("det", self.device.type, self)
+
+    def matrix_power(self, n):
+        """Returns the matrix raised to the power n for square matrices."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("matrix_power", self.device.type, self, n)
+
+    def dist(self, other, p=2):
+        """Returns the p-norm of (self - other)."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("dist", self.device.type, self, other, p)
+
+    def renorm(self, p, dim, maxnorm):
+        """Returns a tensor where each sub-tensor along dimension dim is normalized."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("renorm", self.device.type, self, p, dim, maxnorm)
+
+    def nansum(self, dim=None, keepdim=False):
+        """Returns the sum of all elements, treating NaNs as zero."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("nansum", self.device.type, self, dim, keepdim)
+
+    def nanmean(self, dim=None, keepdim=False):
+        """Returns the mean of all elements, treating NaNs as zero."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("nanmean", self.device.type, self, dim, keepdim)
+
+    def argwhere(self):
+        """Returns a tensor containing the indices of all non-zero elements."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("argwhere", self.device.type, self)
+
     def addmm(self, mat1, mat2, *, beta=1, alpha=1):
         return addmm_dispatch(self, mat1, mat2, beta=beta, alpha=alpha)
+
+    def baddbmm(self, batch1, batch2, *, beta=1, alpha=1):
+        """Performs a batch matrix-matrix product with added input.
+
+        out = beta * self + alpha * (batch1 @ batch2)
+
+        Args:
+            batch1: First batch of matrices (B x N x M)
+            batch2: Second batch of matrices (B x M x P)
+            beta: Multiplier for self (default: 1)
+            alpha: Multiplier for batch1 @ batch2 (default: 1)
+
+        Returns:
+            Tensor of shape (B x N x P)
+        """
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("baddbmm", self.device.type, self, batch1, batch2, beta=beta, alpha=alpha)
 
     def type_as(self, other):
         return self.to(other.dtype)
@@ -1177,6 +1590,201 @@ class Tensor:
 
     def ne(self, other):
         return self.__ne__(other)
+
+    def lt(self, other):
+        """Element-wise less-than comparison."""
+        return lt_dispatch(self, other)
+
+    def le(self, other):
+        """Element-wise less-than-or-equal comparison."""
+        return le_dispatch(self, other)
+
+    def gt(self, other):
+        """Element-wise greater-than comparison."""
+        return gt_dispatch(self, other)
+
+    def ge(self, other):
+        """Element-wise greater-than-or-equal comparison."""
+        return ge_dispatch(self, other)
+
+    def logical_and(self, other):
+        """Element-wise logical AND."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("logical_and", self.device.type, self, other)
+
+    def logical_or(self, other):
+        """Element-wise logical OR."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("logical_or", self.device.type, self, other)
+
+    def logical_xor(self, other):
+        """Element-wise logical XOR."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("logical_xor", self.device.type, self, other)
+
+    def logical_not(self):
+        """Element-wise logical NOT."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("logical_not", self.device.type, self)
+
+    def bitwise_and(self, other):
+        """Element-wise bitwise AND."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("bitwise_and", self.device.type, self, other)
+
+    def bitwise_or(self, other):
+        """Element-wise bitwise OR."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("bitwise_or", self.device.type, self, other)
+
+    def bitwise_xor(self, other):
+        """Element-wise bitwise XOR."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("bitwise_xor", self.device.type, self, other)
+
+    def bitwise_not(self):
+        """Element-wise bitwise NOT."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("bitwise_not", self.device.type, self)
+
+    def bitwise_and_(self, other):
+        """In-place element-wise bitwise AND."""
+        self._check_inplace()
+        from ._dispatch.dispatcher import dispatch
+        out = dispatch("bitwise_and", self.device.type, self, other)
+        self._storage = out._storage
+        self.shape = out.shape
+        self.stride = out.stride
+        self._bump_version()
+        return self
+
+    def bitwise_or_(self, other):
+        """In-place element-wise bitwise OR."""
+        self._check_inplace()
+        from ._dispatch.dispatcher import dispatch
+        out = dispatch("bitwise_or", self.device.type, self, other)
+        self._storage = out._storage
+        self.shape = out.shape
+        self.stride = out.stride
+        self._bump_version()
+        return self
+
+    def bitwise_xor_(self, other):
+        """In-place element-wise bitwise XOR."""
+        self._check_inplace()
+        from ._dispatch.dispatcher import dispatch
+        out = dispatch("bitwise_xor", self.device.type, self, other)
+        self._storage = out._storage
+        self.shape = out.shape
+        self.stride = out.stride
+        self._bump_version()
+        return self
+
+    def movedim(self, source, destination):
+        """Move dimensions to new positions."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("movedim", self.device.type, self, source, destination)
+
+    def moveaxis(self, source, destination):
+        """Alias for movedim."""
+        return self.movedim(source, destination)
+
+    def swapdims(self, dim0, dim1):
+        """Swap two dimensions (alias for transpose with positional args)."""
+        return self.transpose(dim0, dim1)
+
+    def swapaxes(self, axis0, axis1):
+        """Alias for swapdims."""
+        return self.swapdims(axis0, axis1)
+
+    def diagonal(self, offset=0, dim1=0, dim2=1):
+        """Returns partial view of input with the diagonal elements of input."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("diagonal", self.device.type, self, offset, dim1, dim2)
+
+    def unbind(self, dim=0):
+        """Remove a tensor dimension, returning a tuple of all slices along dim."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("unbind", self.device.type, self, dim)
+
+    def vsplit(self, split_size_or_sections):
+        """Split a tensor into multiple sub-tensors vertically (row-wise)."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("vsplit", self.device.type, self, split_size_or_sections)
+
+    def hsplit(self, split_size_or_sections):
+        """Split a tensor into multiple sub-tensors horizontally (column-wise)."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("hsplit", self.device.type, self, split_size_or_sections)
+
+    def dsplit(self, split_size_or_sections):
+        """Split a tensor into multiple sub-tensors along the third axis."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("dsplit", self.device.type, self, split_size_or_sections)
+
+    def take_along_dim(self, indices, dim):
+        """Take values along an axis at the given indices."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("take_along_dim", self.device.type, self, indices, dim)
+
+    def scatter_add(self, dim, index, src):
+        """Non-inplace scatter_add: adds all values from src into self at index positions."""
+        out = self.clone()
+        out.scatter_add_(dim, index, src)
+        return out
+
+    def index_fill(self, dim, index, value):
+        """Non-inplace version of index_fill_: fills self tensor with value along dim at index."""
+        out = self.clone()
+        out.index_fill_(dim, index, value)
+        return out
+
+    def index_copy(self, dim, index, source):
+        """Non-inplace version of index_copy_: copies values from source into self along dim."""
+        out = self.clone()
+        out.index_copy_(dim, index, source)
+        return out
+
+    def index_add(self, dim, index, source, alpha=1):
+        """Non-inplace version of index_add_: adds values from source (scaled by alpha) into self along dim."""
+        out = self.clone()
+        out.index_add_(dim, index, source, alpha)
+        return out
+
+    def put_(self, indices, values, accumulate=False):
+        """Copies elements from values into self tensor at positions specified by indices.
+
+        Treats self as a flat (1-D) tensor and uses flat indices.
+        """
+        self._check_inplace()
+        # Work on a contiguous version for flat indexing
+        if not self.is_contiguous():
+            cont = self.contiguous()
+            self._storage = cont._storage
+            self.stride = cont.stride
+        numel_idx = indices.numel()
+        shape = self.shape
+        for i in range(numel_idx):
+            idx = int(indices.reshape((numel_idx,))[i].item())
+            val = values.reshape((numel_idx,))[i]
+            # Calculate multi-dim index from flat index
+            multi_idx = []
+            tmp = idx
+            for d in reversed(shape):
+                multi_idx.append(tmp % d)
+                tmp //= d
+            multi_idx = tuple(reversed(multi_idx))
+            if accumulate:
+                self[multi_idx] = self[multi_idx] + val
+            else:
+                self[multi_idx] = val
+        self._bump_version()
+        return self
+
+    def cummin(self, dim):
+        """Returns a namedtuple (values, indices) of cumulative minimum of elements along dim."""
+        from ._dispatch.dispatcher import dispatch
+        return dispatch("cummin", self.device.type, self, dim)
 
     def __getitem__(self, key):
         from ._dispatch.dispatcher import dispatch

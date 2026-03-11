@@ -1,21 +1,14 @@
 """Random number generation and seed management."""
 
+import contextlib
 import numpy as np
 from ._device import device as Device
 from ._dtype import uint8
 
-# Global RNG state
-_cpu_rng_state = None
-_initial_seed = None
-_npu_seed = None
-
 
 def _get_cpu_rng():
-    """Get or create the global CPU RNG state."""
-    global _cpu_rng_state
-    if _cpu_rng_state is None:
-        _cpu_rng_state = np.random.RandomState()
-    return _cpu_rng_state
+    """Get the CPU RNG state from the default generator."""
+    return default_generator._rng
 
 
 def manual_seed(seed: int):
@@ -28,25 +21,14 @@ def manual_seed(seed: int):
     Returns:
         Generator: The default CPU generator.
     """
-    global _initial_seed, _cpu_rng_state, _npu_seed
+    # Seed the CPU default generator
+    default_generator.manual_seed(seed)
 
-    # Validate seed range
-    if seed < -0x8000_0000_0000_0000 or seed > 0xffff_ffff_ffff_ffff:
-        raise RuntimeError(f"Seed must be within range [-2^63, 2^64-1], got {seed}")
-
-    # Remap negative seeds to positive
-    if seed < 0:
-        seed = 0xffff_ffff_ffff_ffff + seed
-
-    _initial_seed = seed
-    _cpu_rng_state = np.random.RandomState(seed & 0xffffffff)  # NumPy uses 32-bit seed
-    _npu_seed = seed
-
-    # Set NPU seed (stored in npu module, used by ACLNN kernels)
+    # Propagate to all NPU devices
     try:
         from . import npu
         if npu.is_available():
-            npu.manual_seed(seed)
+            npu.manual_seed_all(seed)
     except Exception:
         pass
 
@@ -59,19 +41,24 @@ def seed():
     Returns:
         int: The random seed used.
     """
-    import time
-    random_seed = int(time.time() * 1000000) & 0xffffffff
-    manual_seed(random_seed)
-    return random_seed
+    s = default_generator.seed()
+    # Propagate to NPU
+    try:
+        from . import npu
+        if npu.is_available():
+            npu.manual_seed_all(s)
+    except Exception:
+        pass
+    return s
 
 
 def initial_seed() -> int:
-    """Get the initial seed for generating random numbers.
+    """Get the initial seed for the default CPU generator.
 
     Returns:
-        int: The initial seed, or 0 if not set.
+        int: The initial seed.
     """
-    return _initial_seed if _initial_seed is not None else 0
+    return default_generator.initial_seed()
 
 
 def get_rng_state():
@@ -80,15 +67,7 @@ def get_rng_state():
     Returns:
         Tensor: A ByteTensor containing the RNG state (CPU only).
     """
-    from ._creation import tensor
-
-    rng = _get_cpu_rng()
-    state = rng.get_state()
-    # state is tuple: ('MT19937', ndarray(uint32, 624), int, int, float)
-    # Save the uint32 array as raw bytes (uint8 view) for compatibility with PyTorch
-    state_bytes = state[1].view(np.uint8)
-    pos = np.array([state[2]], dtype=np.int32).view(np.uint8)
-    return tensor(np.concatenate([state_bytes, pos]), dtype=uint8)
+    return default_generator.get_state()
 
 
 def set_rng_state(new_state):
@@ -97,17 +76,7 @@ def set_rng_state(new_state):
     Args:
         new_state (Tensor): The desired state (CPU only).
     """
-    global _cpu_rng_state
-
-    # Convert to numpy - handle both CPU and NPU tensors
-    if hasattr(new_state, 'device') and new_state.device.type != 'cpu':
-        new_state = new_state.to('cpu')
-    raw = new_state.numpy()
-    # Extract uint32 state array and position
-    state_array = raw[:624*4].view(np.uint32)
-    pos = raw[624*4:624*4+4].view(np.int32)[0]
-    _cpu_rng_state = np.random.RandomState()
-    _cpu_rng_state.set_state(('MT19937', state_array, int(pos), 0, 0.0))
+    default_generator.set_state(new_state)
 
 
 class Generator:
@@ -117,90 +86,98 @@ class Generator:
         device (str or Device): The device for this generator. Default: 'cpu'
     """
 
+    # PyTorch's default seed constant
+    _DEFAULT_SEED = 67280421310721
+
     def __init__(self, device='cpu'):
         self.device = Device(device) if not isinstance(device, Device) else device
-        self._seed = None
+        self._seed = self._DEFAULT_SEED
 
         if self.device.type == 'cpu':
-            self._rng = np.random.RandomState()
+            self._rng = np.random.RandomState(self._seed & 0xffffffff)
         elif self.device.type == 'npu':
-            # NPU uses global MindSpore seed
             self._rng = None
+            self._offset = 0
         else:
             raise ValueError(f"Unsupported device type: {self.device.type}")
 
     def manual_seed(self, seed: int):
-        """Set the seed for this generator.
-
-        Args:
-            seed (int): The desired seed.
-
-        Returns:
-            Generator: self
-        """
-        # Validate seed range
+        """Set the seed for this generator."""
         if seed < -0x8000_0000_0000_0000 or seed > 0xffff_ffff_ffff_ffff:
-            raise RuntimeError(f"Seed must be within range [-2^63, 2^64-1], got {seed}")
-
-        # Remap negative seeds to positive
+            raise RuntimeError(
+                f"Seed must be within range [-2^63, 2^64-1], got {seed}"
+            )
         if seed < 0:
             seed = 0xffff_ffff_ffff_ffff + seed
 
         self._seed = seed
 
         if self.device.type == 'cpu':
-            self._rng.seed(seed & 0xffffffff)
+            self._rng = np.random.RandomState(seed & 0xffffffff)
         elif self.device.type == 'npu':
-            # NPU seed is managed by npu module, used by ACLNN kernels
-            try:
-                from . import npu
-                npu.manual_seed(seed)
-            except Exception:
-                pass
-
+            self._offset = 0
         return self
 
-    def initial_seed(self) -> int:
-        """Get the initial seed for this generator.
+    def seed(self):
+        """Set the seed to a random value and return it."""
+        import time
+        s = int(time.time() * 1000000) & 0xffff_ffff_ffff_ffff
+        self.manual_seed(s)
+        return s
 
-        Returns:
-            int: The initial seed, or 0 if not set.
-        """
-        return self._seed if self._seed is not None else 0
+    def initial_seed(self) -> int:
+        """Get the current seed for this generator."""
+        return self._seed
 
     def get_state(self):
-        """Get the RNG state for this generator.
-
-        Returns:
-            Tensor: The RNG state (CPU only).
-        """
+        """Get the RNG state as a ByteTensor."""
         from ._creation import tensor
 
         if self.device.type == 'cpu':
             state = self._rng.get_state()
-            # Save as bytes (uint8 view of uint32 array + position)
             state_bytes = state[1].view(np.uint8)
             pos = np.array([state[2]], dtype=np.int32).view(np.uint8)
             return tensor(np.concatenate([state_bytes, pos]), dtype=uint8)
-        else:
-            raise NotImplementedError(f"get_state not supported for {self.device.type}")
+        elif self.device.type == 'npu':
+            # NPU state: seed (uint64) + offset (int64) = 16 bytes
+            buf = np.zeros(16, dtype=np.uint8)
+            buf[:8] = np.array([self._seed], dtype=np.uint64).view(np.uint8)
+            buf[8:] = np.array([self._offset], dtype=np.int64).view(np.uint8)
+            return tensor(buf, dtype=uint8)
 
     def set_state(self, new_state):
-        """Set the RNG state for this generator.
+        """Set the RNG state from a ByteTensor."""
+        if hasattr(new_state, 'device') and new_state.device.type != 'cpu':
+            new_state = new_state.to('cpu')
+        raw = new_state.numpy()
+
+        if self.device.type == 'cpu':
+            state_array = raw[:624 * 4].view(np.uint32)
+            pos = raw[624 * 4:624 * 4 + 4].view(np.int32)[0]
+            self._rng = np.random.RandomState()
+            self._rng.set_state(('MT19937', state_array, int(pos), 0, 0.0))
+        elif self.device.type == 'npu':
+            self._seed = int(raw[:8].view(np.uint64)[0])
+            self._offset = int(raw[8:16].view(np.int64)[0])
+
+    def philox_engine_inputs(self, increment=10):
+        """Get (seed, offset) for NPU ACLNN kernels and advance offset.
+
+        This matches torch_npu's NPUGeneratorImpl::philox_engine_inputs().
+        The increment represents Philox rounds of separation between ops.
 
         Args:
-            new_state (Tensor): The desired state (CPU only).
+            increment: Number of Philox rounds to advance. Default: 10.
+
+        Returns:
+            tuple: (seed, offset) as integers.
         """
-        if self.device.type == 'cpu':
-            if hasattr(new_state, 'device') and new_state.device.type != 'cpu':
-                new_state = new_state.to('cpu')
-            raw = new_state.numpy()
-            # Extract uint32 state array and position
-            state_array = raw[:624*4].view(np.uint32)
-            pos = raw[624*4:624*4+4].view(np.int32)[0]
-            self._rng.set_state(('MT19937', state_array, int(pos), 0, 0.0))
-        else:
-            raise NotImplementedError(f"set_state not supported for {self.device.type}")
+        if self.device.type != 'npu':
+            raise RuntimeError("philox_engine_inputs only for NPU generators")
+        seed = self._seed
+        offset = self._offset
+        self._offset += increment
+        return seed, offset
 
 
 # Default generator (CPU)
@@ -220,8 +197,7 @@ def bernoulli(input, *, generator=None):
     from ._creation import tensor
     from ._dtype import float32
 
-    rng = _get_cpu_rng()
-    # input is a Tensor of probabilities
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     if hasattr(input, '_numpy_view'):
         probs = input._numpy_view().copy()
     else:
@@ -246,7 +222,7 @@ def multinomial(input, num_samples, replacement=False, *, generator=None):
     from ._creation import tensor
     from ._dtype import int64
 
-    rng = _get_cpu_rng()
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     if hasattr(input, '_numpy_view'):
         weights = input._numpy_view().copy().astype(np.float64)
     else:
@@ -276,6 +252,43 @@ def multinomial(input, num_samples, replacement=False, *, generator=None):
         raise ValueError("multinomial expects 1D or 2D input")
 
 
+def poisson(lam, generator=None):
+    """Sample from a Poisson distribution with rate parameter lam."""
+    from ._creation import tensor
+    from ._dtype import float32
+
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    if hasattr(lam, '_numpy_view'):
+        rates = lam._numpy_view().copy().astype(np.float64)
+    elif hasattr(lam, 'numpy'):
+        rates = lam.numpy().astype(np.float64)
+    else:
+        rates = np.array(lam, dtype=np.float64)
+    out = rng.poisson(rates).astype(np.float32)
+    out_dtype = lam.dtype if hasattr(lam, 'dtype') else float32
+    return tensor(out, dtype=out_dtype)
+
+
+@contextlib.contextmanager
+def fork_rng(devices=None, enabled=True, _caller='fork_rng', _devices_kw='devices'):
+    """Fork the RNG state so it is restored upon exiting the context.
+
+    Args:
+        devices: Ignored (for API compatibility with PyTorch CUDA fork_rng).
+        enabled (bool): If False, the context manager is a no-op. Default: True.
+    """
+    if not enabled:
+        yield
+        return
+    # Save CPU state
+    cpu_state = default_generator.get_state()
+    try:
+        yield
+    finally:
+        # Restore CPU state
+        default_generator.set_state(cpu_state)
+
+
 __all__ = [
     'manual_seed',
     'seed',
@@ -286,4 +299,6 @@ __all__ = [
     'default_generator',
     'bernoulli',
     'multinomial',
+    'poisson',
+    'fork_rng',
 ]

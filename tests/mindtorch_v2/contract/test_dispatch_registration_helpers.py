@@ -16,8 +16,8 @@ def _new_op(prefix="reg_helper"):
     return name
 
 
-def test_resolve_dispatch_key_supports_cuda_reserved_dispatch_key():
-    assert resolve_dispatch_key("cuda") is DispatchKey.PrivateUse1
+def test_resolve_dispatch_key_supports_cuda_dispatch_key():
+    assert resolve_dispatch_key("cuda") is DispatchKey.CUDA
 
 
 def test_resolve_dispatch_key_rejects_unknown_registration_device():
@@ -39,7 +39,7 @@ def test_register_forward_kernels_registers_cpu_npu_meta_from_one_call():
     assert DispatchKey.Meta in entry.kernels
 
 
-def test_register_forward_kernels_accepts_cuda_key_as_reserved_backend():
+def test_register_forward_kernels_accepts_cuda_key_as_backend():
     op = _new_op("forward_cuda")
 
     def fn(x):
@@ -48,7 +48,7 @@ def test_register_forward_kernels_accepts_cuda_key_as_reserved_backend():
     register_forward_kernels(op, cpu=fn, cuda=fn, meta=fn)
 
     entry = registry.get(op)
-    assert DispatchKey.PrivateUse1 in entry.kernels
+    assert DispatchKey.CUDA in entry.kernels
 
 
 def test_register_autograd_kernels_registers_all_autograd_device_keys():
@@ -66,7 +66,7 @@ def test_register_autograd_kernels_registers_all_autograd_device_keys():
     assert DispatchKey.AutogradMeta in entry.kernels
 
 
-def test_register_autograd_kernels_accepts_cuda_key_as_reserved_autograd_backend():
+def test_register_autograd_kernels_accepts_cuda_key_as_autograd_backend():
     op = _new_op("autograd_cuda")
 
     def fn(x):
@@ -75,7 +75,7 @@ def test_register_autograd_kernels_accepts_cuda_key_as_reserved_autograd_backend
     register_autograd_kernels(op, default=fn, cpu=fn, cuda=fn, meta=fn)
 
     entry = registry.get(op)
-    assert DispatchKey.AutogradXPU in entry.kernels
+    assert DispatchKey.AutogradCUDA in entry.kernels
 
 
 def test_register_helpers_still_enforce_schema_first():

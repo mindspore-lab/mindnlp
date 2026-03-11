@@ -179,6 +179,13 @@ class _Reducer:
 
         with no_grad():
             if self._gradient_as_bucket_view:
+                # Ensure unused parameters stay zero in bucket-view mode: their
+                # placeholders are inserted before some used-grad hooks may fire,
+                # and later hook writes can otherwise overwrite those slots.
+                for pi, _ in bucket:
+                    if pi not in grads:
+                        grads[pi] = self._bucket_views[pi]
+
                 # Allreduce the single flat buffer; views update automatically
                 flat_buf = self._bucket_buffers[bucket_idx]
                 if self.comm_hook is not None:
@@ -207,7 +214,9 @@ class _Reducer:
         for pi, _ in bucket:
             g = grads[pi]
             dist.all_reduce(g, op=dist.ReduceOp.SUM, group=self.process_group)
-            grads[pi] = mul(g, 1.0 / self.world_size)
+            # Keep parameter gradients detached from autograd graph across
+            # iterations; DDP gradient reduction should not create a new graph.
+            grads[pi] = mul(g, 1.0 / self.world_size).detach()
 
     def _run_comm_hook(self, bucket_idx, bucket, grads):
         # Call comm hook per-parameter (avoids needing cat on NPU)
@@ -221,7 +230,7 @@ class _Reducer:
                 is_last=(bucket_idx == len(self.buckets) - 1 and i == len(bucket) - 1),
             )
             future = self.comm_hook(self.comm_hook_state, grad_bucket)
-            grads[pi] = future.wait()
+            grads[pi] = future.wait().detach()
 
     def _rebuild_views_from_buffer(self, bucket_idx):
         """Rebuild param views after buffer replacement (e.g. after mul)."""
@@ -244,7 +253,7 @@ class _Reducer:
             is_last=(bucket_idx == len(self.buckets) - 1),
         )
         future = self.comm_hook(self.comm_hook_state, grad_bucket)
-        result = future.wait()
+        result = future.wait().detach()
         self._bucket_buffers[bucket_idx] = result
         self._rebuild_views_from_buffer(bucket_idx)
 
@@ -371,8 +380,9 @@ class DistributedDataParallel(Module):
 
         # Build reducer with bucket-based grad sync
         bucket_cap_bytes = bucket_cap_mb * 1024 * 1024
+        params = list(module.parameters())
         self.reducer = _Reducer(
-            list(module.parameters()),
+            params,
             process_group,
             self.world_size,
             bucket_cap_bytes,
@@ -380,10 +390,18 @@ class DistributedDataParallel(Module):
 
         # Configure reducer flags
         self.reducer._static_graph = static_graph
-        self.reducer._gradient_as_bucket_view = gradient_as_bucket_view
 
-        # Initialize bucket views if gradient_as_bucket_view is enabled
-        if gradient_as_bucket_view:
+        # NPU slice/view semantics currently cannot guarantee isolated
+        # regions in a flat 1-D buffer, so bucket-view mode can corrupt
+        # unused-param gradients. Fall back to safe non-bucket-view path.
+        effective_bucket_view = gradient_as_bucket_view
+        if gradient_as_bucket_view and any(getattr(p.device, 'type', None) == 'npu' for p in params):
+            effective_bucket_view = False
+
+        self.reducer._gradient_as_bucket_view = effective_bucket_view
+
+        # Initialize bucket views only when effectively enabled
+        if effective_bucket_view:
             self.reducer._init_bucket_views()
 
         self.reducer.register_hooks()

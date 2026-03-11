@@ -376,6 +376,45 @@ class _NPUUntypedStorage(UntypedStorage):
         return self
 
 
+class _MPSUntypedStorage(UntypedStorage):
+    def __init__(self, metal_buffer, nbytes, device=None):
+        super().__init__(device or Device("mps"))
+        self._metal_buffer = metal_buffer
+        self._nbytes = int(nbytes)
+        from ._backends.mps.runtime import buffer_contents
+        self._contents_ptr = buffer_contents(metal_buffer)
+
+    def nbytes(self):
+        return self._nbytes
+
+    def data_ptr(self):
+        return self._contents_ptr
+
+    def is_pinned(self):
+        return False
+
+    def buffer(self):
+        return np.ctypeslib.as_array(
+            (ctypes.c_uint8 * self._nbytes).from_address(self._contents_ptr)
+        )
+
+    def resize_(self, new_nbytes):
+        new_nbytes = int(new_nbytes)
+        if new_nbytes == self._nbytes:
+            return self
+        from ._backends.mps.runtime import get_runtime, buffer_contents
+        rt = get_runtime()
+        new_buf = rt.create_buffer(new_nbytes)
+        new_ptr = buffer_contents(new_buf)
+        copy_bytes = min(self._nbytes, new_nbytes)
+        if copy_bytes > 0:
+            ctypes.memmove(new_ptr, self._contents_ptr, copy_bytes)
+        self._metal_buffer = new_buf
+        self._contents_ptr = new_ptr
+        self._nbytes = new_nbytes
+        return self
+
+
 class _MetaUntypedStorage(UntypedStorage):
     def __init__(self, nbytes, device=None):
         super().__init__(device or Device("meta"))
@@ -427,7 +466,7 @@ class TypedStorage:
 
     @property
     def data(self):
-        if self.device.type != "cpu":
+        if self.device.type not in ("cpu", "mps"):
             raise RuntimeError("storage has no CPU data")
         return self._data
 
@@ -452,8 +491,19 @@ class TypedStorage:
                 raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
             untyped = _NPUUntypedStorage(dst_ptr, size, device=self.device)
             return TypedStorage(untyped, self.dtype, self._size)
+        if self.device.type == "mps":
+            src_buf = self._untyped.buffer()
+            arr = np.array(src_buf, copy=True)
+            return mps_typed_storage_from_numpy(
+                np.frombuffer(arr, dtype=to_numpy_dtype(self.dtype), count=self._size),
+                self.dtype,
+                device=self.device,
+            )
         if self.device.type == "meta":
             return meta_typed_storage_from_size(self._size, self.dtype, device=self.device)
+        if self.device.type == "cuda":
+            arr = cuda_typed_storage_to_numpy(self, (self._size,), self.dtype)
+            return cuda_typed_storage_from_numpy(arr, self.dtype, device=self.device)
         raise NotImplementedError(f"Unsupported device: {self.device}")
 
     def copy_(self, other):
@@ -461,6 +511,12 @@ class TypedStorage:
             raise NotImplementedError("cross-device copy_ not supported")
         if self.device.type == "cpu":
             np.copyto(self._data, other._data)
+            return self
+        if self.device.type == "mps":
+            dst_buf = self._untyped.buffer()
+            src_buf = other._untyped.buffer()
+            copy_bytes = min(dst_buf.nbytes, src_buf.nbytes)
+            dst_buf[:copy_bytes] = src_buf[:copy_bytes]
             return self
         if self.device.type == "npu":
             from ._backends.npu import runtime as npu_runtime
@@ -478,6 +534,11 @@ class TypedStorage:
             if ret != 0:
                 raise RuntimeError(f"acl.rt.memcpy D2D failed: {ret}")
             return self
+        if self.device.type == "cuda":
+            from ._backends.cuda import storage as cuda_storage
+
+            cuda_storage.copy_untyped(self.untyped_storage(), other.untyped_storage())
+            return self
         raise NotImplementedError(f"Unsupported device: {self.device}")
 
     def resize_(self, new_size):
@@ -485,6 +546,9 @@ class TypedStorage:
         self._untyped.resize_(int(new_size) * itemsize)
         self._size = int(new_size)
         if self.device.type == "cpu":
+            buf = self._untyped.buffer()
+            self._data = np.frombuffer(buf, dtype=to_numpy_dtype(self.dtype), count=self._size)
+        elif self.device.type == "mps":
             buf = self._untyped.buffer()
             self._data = np.frombuffer(buf, dtype=to_numpy_dtype(self.dtype), count=self._size)
         return self
@@ -520,6 +584,65 @@ def npu_typed_storage_from_ptr(device_ptr, size, dtype, device=None):
     itemsize = np.dtype(to_numpy_dtype(dtype)).itemsize
     untyped = _NPUUntypedStorage(device_ptr, int(size) * itemsize, device=device)
     return TypedStorage(untyped, dtype, int(size))
+
+
+def mps_typed_storage_from_numpy(arr, dtype, device=None):
+    """Create MPS TypedStorage from a numpy array (copies data into a Metal buffer)."""
+    from ._backends.mps.runtime import get_runtime, buffer_contents
+
+    arr = np.ascontiguousarray(arr, dtype=to_numpy_dtype(dtype))
+    rt = get_runtime()
+    nbytes = int(arr.nbytes)
+    metal_buf = rt.create_buffer(max(nbytes, 1))
+    ptr = buffer_contents(metal_buf)
+    if nbytes > 0:
+        ctypes.memmove(ptr, arr.ctypes.data, nbytes)
+    untyped = _MPSUntypedStorage(metal_buf, nbytes, device=device)
+    data = np.ctypeslib.as_array(
+        (ctypes.c_uint8 * nbytes).from_address(ptr)
+    )
+    typed_data = np.frombuffer(data, dtype=to_numpy_dtype(dtype), count=arr.size)
+    return TypedStorage(untyped, dtype, arr.size, data=typed_data)
+
+
+def mps_typed_storage_from_ptr(metal_buffer, size, dtype, device=None):
+    """Create MPS TypedStorage from an existing Metal buffer."""
+    from ._backends.mps.runtime import buffer_contents
+
+    itemsize = np.dtype(to_numpy_dtype(dtype)).itemsize
+    nbytes = int(size) * itemsize
+    untyped = _MPSUntypedStorage(metal_buffer, nbytes, device=device)
+    ptr = buffer_contents(metal_buffer)
+    data_buf = np.ctypeslib.as_array(
+        (ctypes.c_uint8 * nbytes).from_address(ptr)
+    )
+    typed_data = np.frombuffer(data_buf, dtype=to_numpy_dtype(dtype), count=int(size))
+    return TypedStorage(untyped, dtype, int(size), data=typed_data)
+
+
+def cuda_typed_storage_from_numpy(arr, dtype, device=None):
+    arr = np.ascontiguousarray(arr, dtype=to_numpy_dtype(dtype))
+    from ._backends.cuda import storage as cuda_storage
+
+    untyped = cuda_storage.untyped_from_numpy(arr, device=device)
+    return TypedStorage(untyped, dtype, arr.size)
+
+
+def empty_cuda_typed_storage(shape, dtype, device=None):
+    if isinstance(shape, int):
+        shape = (shape,)
+    shape = tuple(shape)
+    size = int(np.prod(shape))
+    from ._backends.cuda import storage as cuda_storage
+
+    untyped = cuda_storage.empty_untyped(shape, dtype, device=device)
+    return TypedStorage(untyped, dtype, size)
+
+
+def cuda_typed_storage_to_numpy(storage, shape, dtype):
+    from ._backends.cuda import storage as cuda_storage
+
+    return cuda_storage.to_numpy(storage.untyped_storage(), dtype, shape=shape)
 
 
 class PendingStorage:

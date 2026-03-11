@@ -31,3 +31,15 @@ def test_dispatch_rejects_cross_npu_device_index():
 
     with pytest.raises(RuntimeError, match=r"npu:1.*npu:0"):
         dispatch_with_keyset("add", keyset, None, a, b)
+
+
+def test_dispatch_prefers_cuda_over_cpu(monkeypatch):
+    import mindtorch_v2._backends.cuda.runtime as cuda_runtime
+
+    monkeypatch.setattr(cuda_runtime, "is_available", lambda: True)
+    monkeypatch.setattr(cuda_runtime, "device_count", lambda: 1)
+
+    a = torch.ones((2,), device="cuda")
+    b = torch.ones((2,), device="cuda")
+    c = torch.add(a, b)
+    assert c.device.type == "cuda"

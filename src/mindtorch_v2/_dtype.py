@@ -1,4 +1,8 @@
+import builtins as _builtins
 import numpy as np
+
+builtins_int = _builtins.int
+builtins_float = _builtins.float
 
 
 class DType:
@@ -148,3 +152,63 @@ def from_numpy_dtype(np_dtype):
 def from_name(name):
     """Convert a dtype name string to a DType."""
     return _NAME_MAP.get(name)
+
+
+class finfo:
+    """Analogous to ``torch.finfo``. Wraps ``numpy.finfo`` for float dtypes."""
+
+    def __init__(self, dtype):
+        from ._tensor import Tensor
+        if isinstance(dtype, Tensor):
+            dtype = dtype.dtype
+        if not isinstance(dtype, DType):
+            raise TypeError(f"finfo() requires a floating point DType, got {type(dtype)}")
+        if not dtype.is_floating_point:
+            raise TypeError(f"finfo() requires a floating point dtype, got {dtype}")
+
+        if dtype is bfloat16:
+            # numpy doesn't natively support bfloat16
+            self.bits = 16
+            self.eps = 0.0078125  # 2^-7
+            self.max = 3.3895313892515355e+38
+            self.min = -3.3895313892515355e+38
+            self.smallest_normal = 1.1754943508222875e-38
+            self.tiny = 1.1754943508222875e-38
+            self.resolution = 0.01
+        else:
+            np_info = np.finfo(to_numpy_dtype(dtype))
+            self.bits = np_info.bits
+            self.eps = builtins_float(np_info.eps)
+            self.max = builtins_float(np_info.max)
+            self.min = builtins_float(np_info.min)
+            self.smallest_normal = builtins_float(np_info.smallest_normal)
+            self.tiny = builtins_float(np_info.tiny)
+            self.resolution = builtins_float(np_info.resolution)
+        self.dtype = dtype
+
+    def __repr__(self):
+        return (
+            f"finfo(resolution={self.resolution}, min={self.min}, max={self.max}, "
+            f"eps={self.eps}, smallest_normal={self.smallest_normal}, "
+            f"tiny={self.tiny}, dtype={self.dtype.name})"
+        )
+
+
+class iinfo:
+    """Analogous to ``torch.iinfo``. Wraps ``numpy.iinfo`` for integer dtypes."""
+
+    def __init__(self, dtype):
+        from ._tensor import Tensor
+        if isinstance(dtype, Tensor):
+            dtype = dtype.dtype
+        if not isinstance(dtype, DType):
+            raise TypeError(f"iinfo() requires an integer DType, got {type(dtype)}")
+
+        np_info = np.iinfo(to_numpy_dtype(dtype))
+        self.bits = np_info.bits
+        self.max = builtins_int(np_info.max)
+        self.min = builtins_int(np_info.min)
+        self.dtype = dtype
+
+    def __repr__(self):
+        return f"iinfo(min={self.min}, max={self.max}, dtype={self.dtype.name})"

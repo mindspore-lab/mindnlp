@@ -172,7 +172,19 @@ def register_schemas():
         },
     )
     registry.register_schema("mean", "mean(Tensor input, int[]? dim=None, bool keepdim=False, Dtype? dtype=None) -> Tensor")
+    registry.register_error_overrides(
+        "mean",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, tuple of ints dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, tuple of names dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("std", "std(Tensor input, int[]? dim=None, bool keepdim=False, bool unbiased=True) -> Tensor")
+    registry.register_error_overrides(
+        "std",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, tuple of ints dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, *, Number correction = None, bool keepdim = False, Tensor out = None)\n * (Tensor input, bool unbiased = True)\n      didn't match because some of the keywords were incorrect: dim\n * (Tensor input, tuple of names dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of names dim, *, Number correction = None, bool keepdim = False, Tensor out = None)\n",
+        },
+    )
 
     registry.register_schema("reshape", "reshape(Tensor(a) input, int[] shape) -> Tensor(a)")
     registry.register_error_overrides(
@@ -186,6 +198,7 @@ def register_schemas():
         "view",
         {
             "missing": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (torch.dtype dtype)\n * (tuple of ints size)\n",
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (torch.dtype dtype)\n      didn't match because some of the arguments have invalid types: (!{detail}!)\n * (tuple of ints size)\n      didn't match because some of the arguments have invalid types: (!{detail}!)\n",
         },
     )
     registry.register_schema("transpose", "transpose(Tensor(a) input, int dim0, int dim1) -> Tensor(a)")
@@ -193,6 +206,7 @@ def register_schemas():
         "transpose",
         {
             "missing": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim0, int dim1)\n * (Tensor input, name dim0, name dim1)\n",
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (int dim0, int dim1)\n      didn't match because some of the arguments have invalid types: ({transpose_int_sig})\n * (name dim0, name dim1)\n      didn't match because some of the arguments have invalid types: ({transpose_name_sig})\n",
         },
     )
     registry.register_schema("squeeze", "squeeze(Tensor(a) input, int? dim=None) -> Tensor(a)")
@@ -210,15 +224,15 @@ def register_schemas():
     registry.register_schema("logspace", "logspace(Scalar start, Scalar end, int steps, Dtype? dtype=None) -> Tensor")
     registry.register_schema("eye", "eye(int n, int? m=None, Dtype? dtype=None, Tensor? out=None) -> Tensor")
     registry.register_schema("range", "range(Scalar start, Scalar end, Scalar step=1, Dtype? dtype=None) -> Tensor")
-    registry.register_schema("randn", "randn(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None) -> Tensor")
-    registry.register_schema("rand", "rand(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None) -> Tensor")
+    registry.register_schema("randn", "randn(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None, Generator? generator=None) -> Tensor")
+    registry.register_schema("rand", "rand(int[] size, *, Dtype? dtype=None, MemoryFormat? memory_format=None, Generator? generator=None) -> Tensor")
 
     registry.register_schema("add_", "add_(Tensor(a!) self, Tensor other) -> Tensor")
     registry.register_schema("mul_", "mul_(Tensor(a!) self, Tensor other) -> Tensor")
     registry.register_schema("relu_", "relu_(Tensor(a!) self) -> Tensor")
     registry.register_schema("zero_", "zero_(Tensor(a!) self) -> Tensor")
-    registry.register_schema("uniform_", "uniform_(Tensor(a!) self, float low=0.0, float high=1.0) -> Tensor")
-    registry.register_schema("normal_", "normal_(Tensor(a!) self, float mean=0.0, float std=1.0) -> Tensor")
+    registry.register_schema("uniform_", "uniform_(Tensor(a!) self, float low=0.0, float high=1.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("normal_", "normal_(Tensor(a!) self, float mean=0.0, float std=1.0, *, Generator? generator=None) -> Tensor")
     registry.register_schema("fill_", "fill_(Tensor(a!) self, Scalar value) -> Tensor")
     registry.register_schema("clamp_", "clamp_(Tensor(a!) self, Scalar? min=None, Scalar? max=None) -> Tensor")
     registry.register_schema("copy_", "copy_(Tensor(a!) self, Tensor src) -> Tensor")
@@ -228,6 +242,24 @@ def register_schemas():
     registry.register_schema("setitem", "setitem(Tensor(a!) self, Any key, Any value) -> Tensor")
 
     _register_reduction_ops(("all", "any", "argmax", "argmin", "count_nonzero"))
+    registry.register_error_overrides(
+        "all",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, int dim, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, name dim, bool keepdim = False, *, Tensor out = None)\n",
+        },
+    )
+    registry.register_error_overrides(
+        "any",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, int dim, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, name dim, bool keepdim = False, *, Tensor out = None)\n",
+        },
+    )
+    registry.register_error_overrides(
+        "count_nonzero",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim = None)\n      didn't match because some of the keywords were incorrect: dim\n * (Tensor input, tuple of ints dim)\n      didn't match because some of the arguments have invalid types: (Tensor, !dim={dim_detail}!)\n",
+        },
+    )
     registry.register_schema("amin", "amin(Tensor input, int[]? dim=None, bool keepdim=False) -> Tensor")
     registry.register_schema("amax", "amax(Tensor input, int[]? dim=None, bool keepdim=False) -> Tensor")
 
@@ -238,10 +270,34 @@ def register_schemas():
     _register_binary_ops(("eq", "ne", "lt", "le", "gt", "ge"), other_type="Any")
 
     registry.register_schema("cumsum", "cumsum(Tensor input, int dim=0) -> Tensor")
+    registry.register_error_overrides(
+        "cumsum",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, name dim, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("cumprod", "cumprod(Tensor input, int dim=0) -> Tensor")
+    registry.register_error_overrides(
+        "cumprod",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, int dim, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, name dim, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("cummax", "cummax(Tensor input, int dim=0) -> (Tensor, Tensor)")
     registry.register_schema("argsort", "argsort(Tensor input, int dim=-1, bool descending=False, bool stable=False) -> Tensor")
+    registry.register_error_overrides(
+        "argsort",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, bool stable, int dim = -1, bool descending = False, Tensor out = None)\n * (Tensor input, int dim = -1, bool descending = False)\n * (Tensor input, name dim, bool descending = False)\n",
+        },
+    )
     registry.register_schema("sort", "sort(Tensor input, int dim=-1, bool descending=False, bool stable=False) -> (Tensor, Tensor)")
+    registry.register_error_overrides(
+        "sort",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, bool stable, int dim = -1, bool descending = False, tuple of Tensors out = None)\n * (Tensor input, int dim = -1, bool descending = False, *, tuple of Tensors out = None)\n * (Tensor input, *, bool stable, name dim, bool descending = False, tuple of Tensors out = None)\n * (Tensor input, name dim, bool descending = False, *, tuple of Tensors out = None)\n",
+        },
+    )
     registry.register_schema("topk", "topk(Tensor input, int k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor, Tensor)")
 
     registry.register_schema("stack", "stack(Tensor[] tensors, int dim=0) -> Tensor")
@@ -291,6 +347,7 @@ def register_schemas():
         "log2", "log10", "exp2", "rsqrt", "reciprocal", "sign", "signbit", "isnan", "isinf", "isfinite",
         "sinh", "cosh", "asinh", "acosh", "atanh", "erf", "erfc", "softplus",
         "relu6", "contiguous", "gelu", "silu", "mish",
+        "square",
     ))
     registry.register_schema("hardtanh", "hardtanh(Tensor input, Scalar min_val=-1.0, Scalar max_val=1.0) -> Tensor")
     registry.register_schema("softmax", "softmax(Tensor input, int dim=-1, Dtype? dtype=None) -> Tensor")
@@ -341,8 +398,26 @@ def register_schemas():
     registry.register_schema("scatter_add_", "scatter_add_(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor")
 
     registry.register_schema("var", "var(Tensor input, int[]? dim=None, bool unbiased=True, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "var",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, tuple of ints dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of ints dim = None, *, Number correction = None, bool keepdim = False, Tensor out = None)\n * (Tensor input, bool unbiased = True)\n      didn't match because some of the keywords were incorrect: dim\n * (Tensor input, tuple of names dim, bool unbiased = True, bool keepdim = False, *, Tensor out = None)\n * (Tensor input, tuple of names dim, *, Number correction = None, bool keepdim = False, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("norm", "norm(Tensor input, Any p=2, int[]? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "norm",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, Number p = 2, tuple of ints dim = None, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, str p = 'fro', tuple of ints dim = None, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("prod", "prod(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_error_overrides(
+        "prod",
+        {
+            "unexpected": "{name}() received an invalid combination of arguments - got {got}, but expected one of:\n * (Tensor input, *, torch.dtype dtype = None)\n * (Tensor input, int dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n * (Tensor input, name dim, bool keepdim = False, *, torch.dtype dtype = None, Tensor out = None)\n",
+        },
+    )
     registry.register_schema("floor_divide", "floor_divide(Tensor input, Any other) -> Tensor")
     registry.register_schema("rms_norm", "rms_norm(Tensor input, int[] normalized_shape, Any weight=None, float eps=1e-6) -> Tensor")
 
@@ -389,6 +464,9 @@ def register_schemas():
     registry.register_schema("selu", "selu(Tensor input) -> Tensor")
     registry.register_schema("celu", "celu(Tensor input, float alpha=1.0) -> Tensor")
     registry.register_schema("threshold", "threshold(Tensor input, Scalar threshold, Scalar value) -> Tensor")
+    registry.register_schema("hardshrink", "hardshrink(Tensor input, float lambd=0.5) -> Tensor")
+    registry.register_schema("softshrink", "softshrink(Tensor input, float lambd=0.5) -> Tensor")
+    registry.register_schema("rrelu", "rrelu(Tensor input, float lower=0.125, float upper=0.3333333333333333, bool training=False) -> Tensor")
     registry.register_schema("instance_norm", "instance_norm(Tensor input, Any weight=None, Any bias=None, Any running_mean=None, Any running_var=None, bool use_input_stats=True, float momentum=0.1, float eps=1e-5, bool cudnn_enabled=False) -> Tensor")
     registry.register_schema("normalize", "normalize(Tensor input, float p=2.0, int dim=1, float eps=1e-12) -> Tensor")
 
@@ -402,11 +480,21 @@ def register_schemas():
     registry.register_schema("bitwise_not", "bitwise_not(Tensor input) -> Tensor")
 
     # New random in-place op
-    registry.register_schema("randint_", "randint_(Tensor(a!) self, int low, int? high=None) -> Tensor")
+    registry.register_schema("randint_", "randint_(Tensor(a!) self, int low, int? high=None, *, Generator? generator=None) -> Tensor")
 
     # New creation ops
-    registry.register_schema("randint", "randint(int low, int? high=None, int[]? size=None, Dtype? dtype=None, bool requires_grad=False) -> Tensor")
-    registry.register_schema("randperm", "randperm(int n, Dtype? dtype=None, bool requires_grad=False) -> Tensor")
+    registry.register_schema("randint", "randint(int low, int? high=None, int[]? size=None, Dtype? dtype=None, bool requires_grad=False, Generator? generator=None) -> Tensor")
+    registry.register_schema("randperm", "randperm(int n, Dtype? dtype=None, bool requires_grad=False, Generator? generator=None) -> Tensor")
+
+    # random_ in-place op
+    registry.register_schema("random_", "random_(Tensor(a!) self, int from_=0, int? to=None, *, Generator? generator=None) -> Tensor")
+
+    # Distribution in-place ops
+    registry.register_schema("bernoulli_", "bernoulli_(Tensor(a!) self, float p=0.5, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("exponential_", "exponential_(Tensor(a!) self, float lambd=1.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("log_normal_", "log_normal_(Tensor(a!) self, float mean=1.0, float std=2.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("cauchy_", "cauchy_(Tensor(a!) self, float median=0.0, float sigma=1.0, *, Generator? generator=None) -> Tensor")
+    registry.register_schema("geometric_", "geometric_(Tensor(a!) self, float p, *, Generator? generator=None) -> Tensor")
 
     # New shape ops
     registry.register_schema("flatten", "flatten(Tensor input, int start_dim=0, int end_dim=-1) -> Tensor")
@@ -420,3 +508,150 @@ def register_schemas():
     registry.register_schema("searchsorted", "searchsorted(Tensor sorted_sequence, Any values, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None) -> Tensor")
     registry.register_schema("kthvalue", "kthvalue(Tensor input, int k, int dim=-1, bool keepdim=False) -> (Tensor, Tensor)")
     registry.register_schema("median", "median(Tensor input, int? dim=None, bool keepdim=False) -> Any")
+
+    # New GROUP C ops for Tensor API alignment
+    registry.register_schema("logsumexp", "logsumexp(Tensor input, int dim, bool keepdim=False) -> Tensor")
+    registry.register_schema("trace", "trace(Tensor input) -> Tensor")
+    registry.register_schema("det", "det(Tensor input) -> Tensor")
+    registry.register_schema("matrix_power", "matrix_power(Tensor input, int n) -> Tensor")
+    registry.register_schema("dist", "dist(Tensor input, Tensor other, Any p=2) -> Tensor")
+    registry.register_schema("renorm", "renorm(Tensor input, Any p, int dim, Scalar maxnorm) -> Tensor")
+    registry.register_schema("nansum", "nansum(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("nanmean", "nanmean(Tensor input, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("argwhere", "argwhere(Tensor input) -> Tensor")
+    registry.register_schema("baddbmm", "baddbmm(Tensor input, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor")
+    registry.register_schema("cummin", "cummin(Tensor input, int dim) -> (Tensor, Tensor)")
+
+    # Optimizer step ops (fused per-parameter kernels)
+    registry.register_schema("_sgd_step", "_sgd_step(Tensor param, Tensor grad, Any buf, float lr, float momentum, float dampening, float weight_decay, bool nesterov, bool maximize) -> Tensor")
+    registry.register_schema("_adam_step", "_adam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, Any max_exp_avg_sq, int step, float lr, float beta1, float beta2, float eps, float weight_decay, bool amsgrad, bool maximize) -> Tensor")
+    registry.register_schema("_adamw_step", "_adamw_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, Any max_exp_avg_sq, int step, float lr, float beta1, float beta2, float eps, float weight_decay, bool amsgrad, bool maximize) -> Tensor")
+    registry.register_schema("_adagrad_step", "_adagrad_step(Tensor param, Tensor grad, Tensor state_sum, int step, float lr, float lr_decay, float weight_decay, float eps, bool maximize) -> Tensor")
+    registry.register_schema("_rmsprop_step", "_rmsprop_step(Tensor param, Tensor grad, Tensor square_avg, Any grad_avg, Any buf, int step, float lr, float alpha, float eps, float weight_decay, float momentum, bool centered, bool maximize) -> Tensor")
+    registry.register_schema("_adadelta_step", "_adadelta_step(Tensor param, Tensor grad, Tensor square_avg, Tensor acc_delta, float lr, float rho, float eps, float weight_decay, bool maximize) -> Tensor")
+    registry.register_schema("_adamax_step", "_adamax_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_inf, int step, float lr, float beta1, float beta2, float eps, float weight_decay, bool maximize) -> Tensor")
+    registry.register_schema("_nadam_step", "_nadam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, int step, float lr, float beta1, float beta2, float eps, float weight_decay, float mu, float mu_next, float mu_product, float mu_product_next, bool maximize) -> Tensor")
+    registry.register_schema("_radam_step", "_radam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, int step, float lr, float beta1, float beta2, float eps, float weight_decay, bool maximize) -> Tensor")
+    registry.register_schema("_asgd_step", "_asgd_step(Tensor param, Tensor grad, Tensor ax, int step, float lr, float lambd, float alpha, float t0, float weight_decay, bool maximize) -> Tensor")
+    registry.register_schema("_rprop_step", "_rprop_step(Tensor param, Tensor grad, Tensor prev, Tensor step_sizes, float lr, float etaminus, float etaplus, float step_size_min, float step_size_max, bool maximize) -> Tensor")
+    registry.register_schema("_sparse_adam_step", "_sparse_adam_step(Tensor param, Tensor grad, Tensor exp_avg, Tensor exp_avg_sq, int step, float lr, float beta1, float beta2, float eps) -> Tensor")
+
+    # -----------------------------------------------------------------------
+    # Top-level gap-fill ops (Category C2)
+    # -----------------------------------------------------------------------
+    registry.register_schema("diff", "diff(Tensor input, int n=1, int dim=-1, Tensor? prepend=None, Tensor? append=None) -> Tensor")
+    registry.register_schema("bincount", "bincount(Tensor input, Tensor? weights=None, int minlength=0) -> Tensor")
+    registry.register_schema("cdist", "cdist(Tensor x1, Tensor x2, float p=2.0) -> Tensor")
+    registry.register_schema("aminmax", "aminmax(Tensor input, int? dim=None, bool keepdim=False) -> (Tensor, Tensor)")
+    registry.register_schema("quantile", "quantile(Tensor input, Any q, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("nanquantile", "nanquantile(Tensor input, Any q, int? dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("nanmedian", "nanmedian(Tensor input, int? dim=None, bool keepdim=False) -> Any")
+    registry.register_schema("histc", "histc(Tensor input, int bins=100, Scalar min=0, Scalar max=0) -> Tensor")
+    registry.register_schema("histogram", "histogram(Tensor input, Any bins, Any? range=None, Tensor? weight=None, bool density=False) -> (Tensor, Tensor)")
+    registry.register_schema("bucketize", "bucketize(Tensor input, Tensor boundaries, bool out_int32=False, bool right=False) -> Tensor")
+    registry.register_schema("isneginf", "isneginf(Tensor input) -> Tensor")
+    registry.register_schema("isposinf", "isposinf(Tensor input) -> Tensor")
+    registry.register_schema("isreal", "isreal(Tensor input) -> Tensor")
+    registry.register_schema("isin", "isin(Tensor elements, Tensor test_elements) -> Tensor")
+    registry.register_schema("heaviside", "heaviside(Tensor input, Tensor values) -> Tensor")
+
+    # -----------------------------------------------------------------------
+    # torch.linalg ops
+    # -----------------------------------------------------------------------
+    registry.register_schema("linalg_cholesky", "linalg_cholesky(Tensor input, bool upper=False) -> Tensor")
+    registry.register_schema("linalg_cond", "linalg_cond(Tensor input, Any p=None) -> Tensor")
+    registry.register_schema("linalg_det", "linalg_det(Tensor input) -> Tensor")
+    registry.register_schema("linalg_eig", "linalg_eig(Tensor input) -> (Tensor, Tensor)")
+    registry.register_schema("linalg_eigh", "linalg_eigh(Tensor input, str UPLO=L) -> (Tensor, Tensor)")
+    registry.register_schema("linalg_eigvals", "linalg_eigvals(Tensor input) -> Tensor")
+    registry.register_schema("linalg_eigvalsh", "linalg_eigvalsh(Tensor input, str UPLO=L) -> Tensor")
+    registry.register_schema("linalg_householder_product", "linalg_householder_product(Tensor input, Tensor tau) -> Tensor")
+    registry.register_schema("linalg_inv", "linalg_inv(Tensor input) -> Tensor")
+    registry.register_schema("linalg_lstsq", "linalg_lstsq(Tensor input, Tensor b, Any rcond=None, Any driver=None) -> Any")
+    registry.register_schema("linalg_lu", "linalg_lu(Tensor input, bool pivot=True) -> (Tensor, Tensor, Tensor)")
+    registry.register_schema("linalg_lu_factor", "linalg_lu_factor(Tensor input, bool pivot=True) -> (Tensor, Tensor)")
+    registry.register_schema("linalg_lu_solve", "linalg_lu_solve(Tensor LU, Tensor pivots, Tensor B, bool left=True, bool adjoint=False) -> Tensor")
+    registry.register_schema("linalg_matrix_exp", "linalg_matrix_exp(Tensor input) -> Tensor")
+    registry.register_schema("linalg_matrix_norm", "linalg_matrix_norm(Tensor input, Any ord=fro, Any dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("linalg_matrix_power", "linalg_matrix_power(Tensor input, int n) -> Tensor")
+    registry.register_schema("linalg_matrix_rank", "linalg_matrix_rank(Tensor input, Any atol=None, Any rtol=None, bool hermitian=False) -> Tensor")
+    registry.register_schema("linalg_multi_dot", "linalg_multi_dot(Tensor[] tensors) -> Tensor")
+    registry.register_schema("linalg_norm", "linalg_norm(Tensor input, Any ord=None, Any dim=None, bool keepdim=False) -> Tensor")
+    registry.register_schema("linalg_pinv", "linalg_pinv(Tensor input, Any atol=None, Any rtol=None, bool hermitian=False) -> Tensor")
+    registry.register_schema("linalg_slogdet", "linalg_slogdet(Tensor input) -> (Tensor, Tensor)")
+    registry.register_schema("linalg_solve", "linalg_solve(Tensor input, Tensor B, bool left=True) -> Tensor")
+    registry.register_schema("linalg_solve_triangular", "linalg_solve_triangular(Tensor input, Tensor B, bool upper, bool left=True, bool unitriangular=False) -> Tensor")
+    registry.register_schema("linalg_svd", "linalg_svd(Tensor input, bool full_matrices=True) -> (Tensor, Tensor, Tensor)")
+    registry.register_schema("linalg_svdvals", "linalg_svdvals(Tensor input) -> Tensor")
+    registry.register_schema("linalg_tensorinv", "linalg_tensorinv(Tensor input, int ind=2) -> Tensor")
+    registry.register_schema("linalg_tensorsolve", "linalg_tensorsolve(Tensor input, Tensor B, Any dims=None) -> Tensor")
+    registry.register_schema("linalg_vander", "linalg_vander(Tensor x, int? N=None) -> Tensor")
+    registry.register_schema("linalg_vector_norm", "linalg_vector_norm(Tensor input, Any ord=2, Any dim=None, bool keepdim=False) -> Tensor")
+
+    # -----------------------------------------------------------------------
+    # torch.fft ops
+    # -----------------------------------------------------------------------
+    registry.register_schema("fft_fft", "fft_fft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
+    registry.register_schema("fft_ifft", "fft_ifft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
+    registry.register_schema("fft_fft2", "fft_fft2(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_ifft2", "fft_ifft2(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_fftn", "fft_fftn(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_ifftn", "fft_ifftn(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_rfft", "fft_rfft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
+    registry.register_schema("fft_irfft", "fft_irfft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
+    registry.register_schema("fft_rfft2", "fft_rfft2(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_irfft2", "fft_irfft2(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_rfftn", "fft_rfftn(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_irfftn", "fft_irfftn(Tensor input, Any s=None, Any dim=None, str? norm=None) -> Tensor")
+    registry.register_schema("fft_hfft", "fft_hfft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
+    registry.register_schema("fft_ihfft", "fft_ihfft(Tensor input, int? n=None, int dim=-1, str? norm=None) -> Tensor")
+    registry.register_schema("fft_fftshift", "fft_fftshift(Tensor input, Any dim=None) -> Tensor")
+    registry.register_schema("fft_ifftshift", "fft_ifftshift(Tensor input, Any dim=None) -> Tensor")
+
+    # -----------------------------------------------------------------------
+    # torch.special ops
+    # -----------------------------------------------------------------------
+    registry.register_schema("special_digamma", "special_digamma(Tensor input) -> Tensor")
+    registry.register_schema("special_entr", "special_entr(Tensor input) -> Tensor")
+    registry.register_schema("special_erfcx", "special_erfcx(Tensor input) -> Tensor")
+    registry.register_schema("special_erfinv", "special_erfinv(Tensor input) -> Tensor")
+    registry.register_schema("special_gammainc", "special_gammainc(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_gammaincc", "special_gammaincc(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_gammaln", "special_gammaln(Tensor input) -> Tensor")
+    registry.register_schema("special_i0", "special_i0(Tensor input) -> Tensor")
+    registry.register_schema("special_i0e", "special_i0e(Tensor input) -> Tensor")
+    registry.register_schema("special_i1", "special_i1(Tensor input) -> Tensor")
+    registry.register_schema("special_i1e", "special_i1e(Tensor input) -> Tensor")
+    registry.register_schema("special_log_ndtr", "special_log_ndtr(Tensor input) -> Tensor")
+    registry.register_schema("special_logit", "special_logit(Tensor input, Any eps=None) -> Tensor")
+    registry.register_schema("special_multigammaln", "special_multigammaln(Tensor input, int p) -> Tensor")
+    registry.register_schema("special_ndtr", "special_ndtr(Tensor input) -> Tensor")
+    registry.register_schema("special_ndtri", "special_ndtri(Tensor input) -> Tensor")
+    registry.register_schema("special_polygamma", "special_polygamma(int n, Tensor input) -> Tensor")
+    registry.register_schema("special_sinc", "special_sinc(Tensor input) -> Tensor")
+    registry.register_schema("special_xlog1py", "special_xlog1py(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_xlogy", "special_xlogy(Tensor input, Tensor other) -> Tensor")
+    registry.register_schema("special_zeta", "special_zeta(Tensor input, Tensor other) -> Tensor")
+
+    # P0 nn.functional ops
+    registry.register_schema("grid_sample", "grid_sample(Tensor input, Tensor grid, str mode='bilinear', str padding_mode='zeros', bool align_corners=False) -> Tensor")
+    registry.register_schema("affine_grid", "affine_grid(Tensor theta, Any size, bool align_corners=False) -> Tensor")
+    registry.register_schema("im2col", "im2col(Tensor input, Any kernel_size, Any dilation, Any padding, Any stride) -> Tensor")
+    registry.register_schema("col2im", "col2im(Tensor input, Any output_size, Any kernel_size, Any dilation, Any padding, Any stride) -> Tensor")
+    registry.register_schema("upsample_nearest1d", "upsample_nearest1d(Tensor input, Any output_size) -> Tensor")
+    registry.register_schema("upsample_linear1d", "upsample_linear1d(Tensor input, Any output_size, bool align_corners=False, Any scales=None) -> Tensor")
+    registry.register_schema("upsample_bicubic2d", "upsample_bicubic2d(Tensor input, Any output_size, bool align_corners=False, Any scales_h=None, Any scales_w=None) -> Tensor")
+    registry.register_schema("uniform", "uniform(Tensor input) -> Tensor")
+    registry.register_schema("ctc_loss", "ctc_loss(Tensor log_probs, Any targets, Any input_lengths, Any target_lengths, int blank=0, str reduction='mean', bool zero_infinity=False) -> Tensor")
+    registry.register_schema("adaptive_max_pool2d", "adaptive_max_pool2d(Tensor input, Any output_size, bool return_indices=False) -> Tensor")
+    registry.register_schema("conv3d", "conv3d(Tensor input, Tensor weight, Tensor? bias, Any stride, Any padding, Any dilation, int groups=1) -> Tensor")
+    registry.register_schema("max_pool1d", "max_pool1d(Tensor input, Any kernel_size, Any stride, Any padding, Any dilation, bool ceil_mode=False, bool return_indices=False) -> Tensor")
+    registry.register_schema("avg_pool1d", "avg_pool1d(Tensor input, Any kernel_size, Any stride, Any padding, bool ceil_mode=False, bool count_include_pad=True) -> Tensor")
+    registry.register_schema("adaptive_avg_pool1d", "adaptive_avg_pool1d(Tensor input, Any output_size) -> Tensor")
+
+    # 3D conv/pool ops
+    registry.register_schema("conv_transpose3d", "conv_transpose3d(Tensor input, Tensor weight, Tensor? bias=None, Any stride=None, Any padding=None, Any output_padding=None, int groups=1, Any dilation=None) -> Tensor")
+    registry.register_schema("max_pool3d", "max_pool3d(Tensor input, Any kernel_size, Any stride, Any padding=None, Any dilation=None, bool ceil_mode=False, bool return_indices=False) -> Tensor")
+    registry.register_schema("avg_pool3d", "avg_pool3d(Tensor input, Any kernel_size, Any stride, Any padding=None, bool ceil_mode=False, bool count_include_pad=True) -> Tensor")
+    registry.register_schema("adaptive_avg_pool3d", "adaptive_avg_pool3d(Tensor input, Any output_size) -> Tensor")
+    registry.register_schema("adaptive_max_pool1d", "adaptive_max_pool1d(Tensor input, Any output_size, bool return_indices=False) -> Tensor")

@@ -2,7 +2,10 @@ import numpy as np
 
 from ..._device import device as Device
 from ..._storage import (
+    cuda_typed_storage_from_numpy,
+    cuda_typed_storage_to_numpy,
     empty_cpu_typed_storage,
+    empty_cuda_typed_storage,
     meta_typed_storage_from_shape,
     npu_typed_storage_from_ptr,
     typed_storage_from_numpy,
@@ -32,6 +35,17 @@ def to_device(a, dev, dtype=None, non_blocking=False, copy=False, memory_format=
                 ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime)
                 storage = npu_typed_storage_from_ptr(ptr, arr.size, a.dtype, device=dev)
                 return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+
+            if dev.type == "mps":
+                from ..._storage import mps_typed_storage_from_numpy
+                arr = a.storage().data.copy()
+                storage = mps_typed_storage_from_numpy(arr, a.dtype, device=dev)
+
+            if dev.type == "cuda":
+                arr = cuda_typed_storage_to_numpy(a.storage(), a.shape, a.dtype)
+                storage = cuda_typed_storage_from_numpy(arr, a.dtype, device=dev)
+
+                return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
         return a
     if a.device.type == "meta":
         if dev.type == "meta":
@@ -47,9 +61,37 @@ def to_device(a, dev, dtype=None, non_blocking=False, copy=False, memory_format=
             ptr = npu_runtime._alloc_device(size, runtime=runtime)
             storage = npu_typed_storage_from_ptr(ptr, int(np.prod(a.shape)), a.dtype, device=dev)
             return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+
+        if dev.type == "mps":
+            from ..._storage import mps_typed_storage_from_numpy
+            from ..._dtype import to_numpy_dtype
+            arr = np.zeros(a.shape, dtype=to_numpy_dtype(a.dtype))
+            storage = mps_typed_storage_from_numpy(arr.ravel(), a.dtype, device=dev)
+
+        if dev.type == "cuda":
+            storage = empty_cuda_typed_storage(a.shape, a.dtype, device=dev)
+
+            return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
         raise NotImplementedError(f"Unsupported device: {dev}")
     if a.device.type == "cpu" and dev.type == "meta":
         storage = meta_typed_storage_from_shape(a.shape, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "cpu" and dev.type == "mps":
+        from ..._storage import mps_typed_storage_from_numpy
+        arr = a._numpy_view()
+        storage = mps_typed_storage_from_numpy(np.ascontiguousarray(arr), a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "mps" and dev.type == "cpu":
+        arr = np.array(a.storage().data, copy=True)
+        storage = typed_storage_from_numpy(arr, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "mps" and dev.type == "meta":
+        storage = meta_typed_storage_from_shape(a.shape, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "mps" and dev.type == "mps":
+        from ..._storage import mps_typed_storage_from_numpy
+        arr = np.array(a.storage().data, copy=True)
+        storage = mps_typed_storage_from_numpy(arr, a.dtype, device=dev)
         return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
     if a.device.type == "cpu" and dev.type == "npu":
         from ..npu import runtime as npu_runtime
@@ -68,6 +110,10 @@ def to_device(a, dev, dtype=None, non_blocking=False, copy=False, memory_format=
             stream = npu_state.current_stream(dev.index or 0).stream
         ptr, _ = npu_runtime._copy_cpu_to_npu(arr, runtime=runtime, non_blocking=do_non_blocking, stream=stream)
         storage = npu_typed_storage_from_ptr(ptr, arr.size, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "cpu" and dev.type == "cuda":
+        arr = a.storage().data
+        storage = cuda_typed_storage_from_numpy(arr, a.dtype, device=dev)
         return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
 
     if a.device.type == "npu" and dev.type == "npu":
@@ -118,4 +164,27 @@ def to_device(a, dev, dtype=None, non_blocking=False, copy=False, memory_format=
     if a.device.type == "npu" and dev.type == "meta":
         storage = meta_typed_storage_from_shape(a.shape, a.dtype, device=dev)
         return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+
+    # MPS <-> NPU: route through CPU
+    if a.device.type == "mps" and dev.type == "npu":
+        cpu_dev = Device("cpu")
+        cpu_tensor = to_device(a, cpu_dev)
+        return to_device(cpu_tensor, dev)
+    if a.device.type == "npu" and dev.type == "mps":
+        cpu_dev = Device("cpu")
+        cpu_tensor = to_device(a, cpu_dev)
+        return to_device(cpu_tensor, dev)
+
+    if a.device.type == "cuda" and dev.type == "cuda":
+        arr = cuda_typed_storage_to_numpy(a.storage(), a.shape, a.dtype)
+        storage = cuda_typed_storage_from_numpy(arr, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "cuda" and dev.type == "cpu":
+        arr = cuda_typed_storage_to_numpy(a.storage(), a.shape, a.dtype)
+        storage = typed_storage_from_numpy(arr, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+    if a.device.type == "cuda" and dev.type == "meta":
+        storage = meta_typed_storage_from_shape(a.shape, a.dtype, device=dev)
+        return Tensor(storage, a.shape, a.stride, a.offset, a.requires_grad)
+
     raise NotImplementedError(f"Unsupported device: {a.device} -> {dev}")

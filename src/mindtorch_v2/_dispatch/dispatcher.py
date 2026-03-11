@@ -150,28 +150,56 @@ class _PendingOp:
         pending.shape = result.shape
         pending.stride = result.stride
         pending.offset = result.offset
-        pending.requires_grad = prev_requires_grad or result.requires_grad
-        if result.grad_fn is not None:
-            pending.grad_fn = result.grad_fn
-        elif not pending.requires_grad:
+        result_requires_grad = result.requires_grad
+        pending_requires_grad = prev_requires_grad or result_requires_grad
+        pending.requires_grad = pending_requires_grad
+
+        result_grad_fn = result.grad_fn
+        if result_grad_fn is not None:
+            pending.grad_fn = result_grad_fn
+        elif not pending_requires_grad:
             pending.grad_fn = None
-        pending._base = result._base
-        pending._view_meta = result._view_meta
-        pending._version_counter = result._version_counter
+
+        # Fast path: most outputs are non-view tensors, so avoid redundant writes.
+        result_base = result._base
+        result_view_meta = result._view_meta
+        if result_base is not None or result_view_meta is not None:
+            pending._base = result_base
+            pending._view_meta = result_view_meta
+        elif pending._base is not None or pending._view_meta is not None:
+            pending._base = None
+            pending._view_meta = None
+
+        result_version = result._version_counter
+        if pending._version_counter is not result_version:
+            pending._version_counter = result_version
         pending._pending = False
 
-    def execute(self):
-        _push_dispatch_context(self.keyset, self.key)
-        try:
-            result = self.impl(*self.args, **self.kwargs)
-        finally:
-            _pop_dispatch_context()
+    def _execute_body(self):
+        result = self.impl(*self.args, **self.kwargs)
         if isinstance(self.out, (tuple, list)):
             for pending, item in zip(self.out, result):
                 self._copy_result(pending, item)
         else:
             self._copy_result(self.out, result)
         _bump_versions(self.schema_obj, self.args, self.kwargs)
+
+    def enter_dispatch_context(self):
+        _push_dispatch_context(self.keyset, self.key)
+
+    @staticmethod
+    def exit_dispatch_context():
+        _pop_dispatch_context()
+
+    def execute_with_active_context(self):
+        self._execute_body()
+
+    def execute(self):
+        _push_dispatch_context(self.keyset, self.key)
+        try:
+            self._execute_body()
+        finally:
+            _pop_dispatch_context()
 
 class _FunctionalizePendingOp:
     def __init__(self, target, thunk, keyset, key, finalize=None, op_name=None, schema_obj=None, args=None, kwargs=None):
@@ -185,12 +213,8 @@ class _FunctionalizePendingOp:
         self.args = args
         self.kwargs = kwargs
 
-    def execute(self):
-        _push_dispatch_context(self.keyset, self.key)
-        try:
-            result = self.thunk()
-        finally:
-            _pop_dispatch_context()
+    def _execute_body(self):
+        result = self.thunk()
 
         if self.finalize is not None:
             self.finalize(result)
@@ -206,6 +230,23 @@ class _FunctionalizePendingOp:
         target = self.target._base if self.target._base is not None else self.target
         if getattr(target, "device", None) is None or target.device.type != "meta":
             target._version_counter.bump()
+
+    def enter_dispatch_context(self):
+        _push_dispatch_context(self.keyset, self.key)
+
+    @staticmethod
+    def exit_dispatch_context():
+        _pop_dispatch_context()
+
+    def execute_with_active_context(self):
+        self._execute_body()
+
+    def execute(self):
+        _push_dispatch_context(self.keyset, self.key)
+        try:
+            self._execute_body()
+        finally:
+            _pop_dispatch_context()
 
 
 
@@ -291,6 +332,8 @@ def _infer_dispatch_device(dispatch_device, tensors, keyset):
         return "meta"
     if keyset.has(DispatchKey.NPU):
         return "npu"
+    if keyset.has(DispatchKey.PrivateUse2):
+        return "mps"
     return "cpu"
 
 
@@ -340,6 +383,8 @@ def dispatch_with_keyset(name, keyset, dispatch_device, *args, **kwargs):
         return redispatch(alias_name, keyset.without(DispatchKey.Autocast), *casted_args, **casted_kwargs)
 
     if pipe is not None and keyset.has(DispatchKey.Pipeline):
+        if not pipe.should_defer_next():
+            return _run_kernel()
         meta = entry.kernels.get(DispatchKey.Meta)
         if meta is None:
             raise RuntimeError(f"pipeline requires meta kernel for op {name}")

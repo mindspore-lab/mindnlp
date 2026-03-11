@@ -6,14 +6,14 @@ _FORWARD_KEY_BY_DEVICE = {
     "cpu": DispatchKey.CPU,
     "npu": DispatchKey.NPU,
     "meta": DispatchKey.Meta,
-    "cuda": DispatchKey.PrivateUse1,
+    "cuda": DispatchKey.CUDA,
 }
 
 _AUTOGRAD_KEY_BY_DEVICE = {
     "cpu": DispatchKey.AutogradCPU,
     "npu": DispatchKey.AutogradNPU,
     "meta": DispatchKey.AutogradMeta,
-    "cuda": DispatchKey.AutogradXPU,
+    "cuda": DispatchKey.AutogradCUDA,
 }
 
 
@@ -27,7 +27,7 @@ def register_forward_kernels(name, **kernels):
     """Register forward kernels by device label in one call.
 
     Supported labels: cpu, npu, meta, cuda.
-    cuda is currently reserved and maps to PrivateUse1.
+    cuda maps to the explicit CUDA dispatch key.
     """
     for device, fn in kernels.items():
         if fn is None:
@@ -43,7 +43,7 @@ def register_autograd_kernels(name, *, default=None, **kernels):
     """Register autograd kernels by device label in one call.
 
     Supported labels: cpu, npu, meta, cuda.
-    cuda is currently reserved and maps to AutogradXPU.
+    cuda maps to the explicit AutogradCUDA dispatch key.
     """
     if default is not None:
         registry.register_kernel(name, DispatchKey.Autograd, default)

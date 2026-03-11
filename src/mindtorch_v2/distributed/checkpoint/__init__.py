@@ -1,8 +1,10 @@
-"""torch.distributed.checkpoint stub - not available in mindtorch_v2."""
+"""Distributed checkpoint APIs available in mindtorch_v2."""
 
+from .state_dict import get_state_dict, load, save, set_state_dict
 
-def __getattr__(name):
-    raise AttributeError(
-        f"module 'torch.distributed.checkpoint' has no attribute '{name}'. "
-        "Distributed checkpoint is not available in mindtorch_v2."
-    )
+__all__ = [
+    "get_state_dict",
+    "save",
+    "load",
+    "set_state_dict",
+]

@@ -29,6 +29,8 @@ _pg_map = {}          # ProcessGroup -> (Backend, Store)
 _pg_names = {}        # ProcessGroup -> str
 _pg_group_ranks = {}  # ProcessGroup -> {global_rank: group_rank}
 _group_count = 0
+_split_group_seq = {}
+_all_to_all_single_seq = {}
 
 default_pg_timeout = timedelta(minutes=30)
 
@@ -95,10 +97,41 @@ def _parse_timeout(timeout):
     return timeout
 
 
+def _format_error_context(*, stage, backend, rank, world_size, device_id=None,
+                          op=None, extra=None):
+    parts = [
+        f"stage={stage}",
+        f"backend={backend}",
+        f"rank={rank}",
+        f"world_size={world_size}",
+    ]
+    if device_id is not None:
+        parts.append(f"device_id={device_id}")
+    if op is not None:
+        parts.append(f"op={op}")
+    if extra is not None:
+        parts.append(str(extra))
+    return ", ".join(parts)
+
+
+def _raise_with_context(exc, *, stage, backend, rank, world_size, device_id=None,
+                        op=None, extra=None):
+    ctx = _format_error_context(
+        stage=stage,
+        backend=backend,
+        rank=rank,
+        world_size=world_size,
+        device_id=device_id,
+        op=op,
+        extra=extra,
+    )
+    raise type(exc)(f"{exc} [{ctx}]") from exc
+
+
 def init_process_group(backend=None, init_method=None, timeout=None,
                        world_size=-1, rank=-1, store=None,
                        group_name="", pg_options=None, device_id=None):
-    global _default_pg, _group_count
+    global _default_pg, _group_count, _split_group_seq, _all_to_all_single_seq
 
     if _default_pg is not None:
         raise RuntimeError(
@@ -112,10 +145,48 @@ def init_process_group(backend=None, init_method=None, timeout=None,
         backend = "hccl" if is_hccl_available() else "gloo"
     backend = str(backend).lower()
 
-    if rank < 0:
+    rank_from_env = rank < 0
+    world_from_env = world_size < 0
+    rank_source = "env" if rank_from_env else "arg"
+    world_size_source = "env" if world_from_env else "arg"
+
+    if rank_from_env:
         rank = _get_env_rank()
-    if world_size < 0:
+    if world_from_env:
         world_size = _get_env_world_size()
+
+    dev_id = None
+    if device_id is not None:
+        dev_id = int(getattr(device_id, "index", device_id))
+
+    master_addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
+    master_port = os.environ.get("MASTER_PORT", "29500")
+
+    try:
+        if backend in ("hccl", "nccl") and rank_from_env and os.environ.get("RANK") is None:
+            raise ValueError("hccl backend requires RANK env when rank is not provided")
+        if backend in ("hccl", "nccl") and world_from_env and os.environ.get("WORLD_SIZE") is None:
+            raise ValueError("hccl backend requires WORLD_SIZE env when world_size is not provided")
+        if world_size <= 0:
+            raise ValueError("world_size must be a positive integer")
+        if rank < 0 or rank >= world_size:
+            raise ValueError("rank must be in range [0, world_size)")
+        if backend in ("hccl", "nccl") and dev_id is not None and dev_id < 0:
+            raise ValueError("device_id must be >= 0 for hccl backend")
+    except Exception as exc:
+        extra = (
+            f"master_addr={master_addr}, master_port={master_port}, "
+            f"rank_source={rank_source}, world_size_source={world_size_source}"
+        )
+        _raise_with_context(
+            exc,
+            stage="init_process_group",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=dev_id,
+            extra=extra,
+        )
 
     if store is None:
         if init_method is not None and init_method.startswith("tcp://"):
@@ -127,21 +198,27 @@ def init_process_group(backend=None, init_method=None, timeout=None,
         else:
             store = _create_store_from_env(timeout_sec)
 
-    dev_id = None
-    if device_id is not None:
-        dev_id = int(getattr(device_id, "index", device_id))
-
-    # Backend dispatch
-    if backend == "gloo":
-        pg = ProcessGroupGloo(store, rank, world_size,
-                              group_name=group_name,
-                              group_ranks=list(range(world_size)))
-    elif backend in ("hccl", "nccl"):
-        pg = ProcessGroupHCCL(store, rank, world_size, device_id=dev_id,
-                              group_name=group_name,
-                              group_ranks=list(range(world_size)))
-    else:
-        raise ValueError(f"Unsupported backend: {backend}")
+    try:
+        # Backend dispatch
+        if backend == "gloo":
+            pg = ProcessGroupGloo(store, rank, world_size,
+                                  group_name=group_name,
+                                  group_ranks=list(range(world_size)))
+        elif backend in ("hccl", "nccl"):
+            pg = ProcessGroupHCCL(store, rank, world_size, device_id=dev_id,
+                                  group_name=group_name,
+                                  group_ranks=list(range(world_size)))
+        else:
+            raise ValueError(f"Unsupported backend: {backend}")
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="init_process_group",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=dev_id,
+        )
 
     _default_pg = pg
     GroupMember.WORLD = pg
@@ -149,10 +226,12 @@ def init_process_group(backend=None, init_method=None, timeout=None,
     _pg_names[pg] = group_name or "default_pg"
     _pg_group_ranks[pg] = {i: i for i in range(world_size)}
     _group_count += 1
+    _split_group_seq = {}
+    _all_to_all_single_seq = {}
 
 
 def destroy_process_group(group=None):
-    global _default_pg, _group_count
+    global _default_pg, _group_count, _split_group_seq, _all_to_all_single_seq
 
     if group is None or group is _default_pg:
         # Destroy all groups
@@ -164,11 +243,14 @@ def destroy_process_group(group=None):
         _default_pg = None
         GroupMember.WORLD = None
         _group_count = 0
+        _split_group_seq = {}
+        _all_to_all_single_seq = {}
     else:
         group.destroy()
         _pg_map.pop(group, None)
         _pg_names.pop(group, None)
         _pg_group_ranks.pop(group, None)
+        _all_to_all_single_seq.pop(group, None)
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +389,27 @@ def barrier(group=None, async_op=False, device_ids=None):
 
 def all_reduce(tensor, op=ReduceOp.SUM, group=None, async_op=False):
     pg = group or _default_pg
-    work = pg.allreduce(tensor, op)
+    backend = "uninitialized"
+    rank = 0
+    world_size = 1
+    device_id = None
+    if pg is not None:
+        backend = str(get_backend(pg))
+        rank = pg.rank()
+        world_size = pg.size()
+        device_id = getattr(pg, "_device_id", None)
+    try:
+        work = pg.allreduce(tensor, op)
+    except Exception as exc:
+        _raise_with_context(
+            exc,
+            stage="all_reduce",
+            backend=backend,
+            rank=rank,
+            world_size=world_size,
+            device_id=device_id,
+            op="all_reduce",
+        )
     if not async_op:
         work.wait()
         return None
@@ -369,6 +471,13 @@ def all_gather(tensor_list, tensor, group=None, async_op=False):
         work.wait()
         _split_flat_to_list(flat_output, tensor_list, numel, tensor.dtype)
         return None
+    # Async path still needs post-processing after transport completion.
+    work._on_wait = lambda: _split_flat_to_list(
+        flat_output,
+        tensor_list,
+        numel,
+        tensor.dtype,
+    )
     return work
 
 
@@ -410,20 +519,37 @@ def gather(tensor, gather_list=None, dst=None, group=None, async_op=False,
     elif dst is None:
         dst = group_dst
 
-    # Implement gather via all_gather + discard
+    # Implement gather via all_gather + discard.
+    # Keep async semantics aligned with torch: materialize gather_list on wait().
     import mindtorch_v2 as torch
     world_size = pg.size()
     rank = pg.rank()
     temp_list = [torch.zeros_like(tensor) for _ in range(world_size)]
-    all_gather(temp_list, tensor, group=pg)
-    if rank == dst and gather_list is not None:
-        for i in range(world_size):
-            gather_list[i].storage().copy_(temp_list[i].storage())
+
+    def _writeback_gather_list():
+        if rank == dst and gather_list is not None:
+            for i in range(world_size):
+                gather_list[i].storage().copy_(temp_list[i].storage())
+
     if not async_op:
+        all_gather(temp_list, tensor, group=pg, async_op=False)
+        _writeback_gather_list()
         return None
-    # For async, return a completed Work since we already waited in all_gather
-    w = Work()
-    w._completed = True
+
+    w = all_gather(temp_list, tensor, group=pg, async_op=True)
+    if w is None:
+        # Defensive fallback: all_gather(async) should return Work.
+        w = Work()
+        w._completed = False
+
+    prev_on_wait = getattr(w, "_on_wait", None)
+
+    def _on_wait_chain():
+        if prev_on_wait is not None:
+            prev_on_wait()
+        _writeback_gather_list()
+
+    w._on_wait = _on_wait_chain
     return w
 
 
@@ -502,6 +628,73 @@ def all_to_all(output_tensor_list, input_tensor_list, group=None,
     return work
 
 
+def _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes, input_numel, output_numel):
+    if len(input_split_sizes) != pg.size():
+        raise ValueError(
+            f"input_split_sizes length {len(input_split_sizes)} must equal world_size {pg.size()}"
+        )
+    if len(output_split_sizes) != pg.size():
+        raise ValueError(
+            f"output_split_sizes length {len(output_split_sizes)} must equal world_size {pg.size()}"
+        )
+    if any(int(s) < 0 for s in input_split_sizes + output_split_sizes):
+        raise ValueError("all_to_all_single split sizes must be non-negative")
+
+    input_split_sum = sum(int(s) for s in input_split_sizes)
+    output_split_sum = sum(int(s) for s in output_split_sizes)
+    if input_split_sum != int(input_numel):
+        raise ValueError(
+            f"all_to_all_single input numel {int(input_numel)} must equal sum(input_split_sizes) {input_split_sum}"
+        )
+    if output_split_sum != int(output_numel):
+        raise ValueError(
+            f"all_to_all_single output numel {int(output_numel)} must equal sum(output_split_sizes) {output_split_sum}"
+        )
+
+
+def _validate_hccl_all_to_all_single_pairwise(pg, input_split_sizes, output_split_sizes):
+    if pg not in _pg_map:
+        raise ValueError("The given group is not registered")
+
+    _, store = _pg_map[pg]
+    rank = pg.rank()
+    world_size = pg.size()
+
+    # Use a per-process-group call sequence so every rank writes/reads
+    # the same store keys for the same collective invocation.
+    call_id = _all_to_all_single_seq.get(pg, 0)
+    _all_to_all_single_seq[pg] = call_id + 1
+    key_prefix = f"all_to_all_single_splits/{call_id}"
+
+    local_in = ",".join(str(int(x)) for x in input_split_sizes)
+    local_out = ",".join(str(int(x)) for x in output_split_sizes)
+    store.set(f"{key_prefix}/in/{rank}", local_in.encode("utf-8"))
+    store.set(f"{key_prefix}/out/{rank}", local_out.encode("utf-8"))
+    store.wait([f"{key_prefix}/in/{r}" for r in range(world_size)])
+    store.wait([f"{key_prefix}/out/{r}" for r in range(world_size)])
+
+    all_in = []
+    all_out = []
+    for peer in range(world_size):
+        raw_in = store.get(f"{key_prefix}/in/{peer}")
+        raw_out = store.get(f"{key_prefix}/out/{peer}")
+        peer_in = [int(x) for x in (raw_in.decode("utf-8") if isinstance(raw_in, bytes) else str(raw_in)).split(",") if x != ""]
+        peer_out = [int(x) for x in (raw_out.decode("utf-8") if isinstance(raw_out, bytes) else str(raw_out)).split(",") if x != ""]
+        if len(peer_in) != world_size or len(peer_out) != world_size:
+            raise ValueError("all_to_all_single split sizes have inconsistent world_size")
+        all_in.append(peer_in)
+        all_out.append(peer_out)
+
+    # Matrix consistency: for every (src, dst) pair,
+    # src.input_split[dst] must equal dst.output_split[src].
+    for src in range(world_size):
+        for dst in range(world_size):
+            if int(all_in[src][dst]) != int(all_out[dst][src]):
+                raise ValueError(
+                    "all_to_all_single split mismatch: input_split_sizes[dst] must match peer output_split_sizes[src]"
+                )
+
+
 def all_to_all_single(output, input, output_split_sizes=None,
                       input_split_sizes=None, group=None, async_op=False):
     import mindtorch_v2 as torch
@@ -516,6 +709,11 @@ def all_to_all_single(output, input, output_split_sizes=None,
         assert output.numel() % world_size == 0
         chunk_size = output.numel() // world_size
         output_split_sizes = [chunk_size] * world_size
+
+    _validate_all_to_all_single_splits(pg, input_split_sizes, output_split_sizes, input.numel(), output.numel())
+
+    if isinstance(pg, ProcessGroupHCCL):
+        _validate_hccl_all_to_all_single_pairwise(pg, input_split_sizes, output_split_sizes)
 
     equal_split = (len(set(input_split_sizes)) == 1 and
                    len(set(output_split_sizes)) == 1)
@@ -560,17 +758,30 @@ def all_to_all_single(output, input, output_split_sizes=None,
             if not async_op:
                 work.wait()
                 dst_base = output.storage().data_ptr()
-                offset = 0
-                for t in output_list:
-                    nbytes = t.numel() * itemsize
+                dst_offset = 0
+                for t, out_size in zip(output_list, output_split_sizes):
+                    nbytes = out_size * output.dtype.itemsize
                     ret = npu_runtime.acl.rt.memcpy(
-                        dst_base + offset, nbytes,
+                        dst_base + dst_offset, nbytes,
                         t.storage().data_ptr(), nbytes, ACL_MEMCPY_D2D,
                     )
                     if ret != 0:
                         raise RuntimeError(f"D2D memcpy failed: {ret}")
-                    offset += nbytes
+                    dst_offset += nbytes
                 return None
+            def _writeback_npu_output():
+                dst_base = output.storage().data_ptr()
+                dst_offset = 0
+                for t, out_size in zip(output_list, output_split_sizes):
+                    nbytes = out_size * output.dtype.itemsize
+                    ret = npu_runtime.acl.rt.memcpy(
+                        dst_base + dst_offset, nbytes,
+                        t.storage().data_ptr(), nbytes, ACL_MEMCPY_D2D,
+                    )
+                    if ret != 0:
+                        raise RuntimeError(f"D2D memcpy failed: {ret}")
+                    dst_offset += nbytes
+            work._on_wait = _writeback_npu_output
             return work
     else:
         # Gloo / CPU path: use numpy views
@@ -597,6 +808,15 @@ def all_to_all_single(output, input, output_split_sizes=None,
                 output_np[offset:offset + n] = t_np
                 offset += n
             return None
+        def _writeback_cpu_output():
+            output_np = output._numpy_view().ravel()
+            offset = 0
+            for t in output_list:
+                t_np = t._numpy_view().ravel()
+                n = t_np.size
+                output_np[offset:offset + n] = t_np
+                offset += n
+        work._on_wait = _writeback_cpu_output
         return work
 
 
@@ -664,6 +884,17 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     if ranks is None:
         ranks = list(range(world_size))
 
+    if len(ranks) != len(set(ranks)):
+        raise ValueError("ranks cannot contain duplicate entries")
+
+    if any(r < 0 or r >= world_size for r in ranks):
+        raise ValueError("ranks must be in range [0, world_size)")
+
+    # Reserve a deterministic group sequence ID on every rank even when
+    # this rank is not a member, so subsequent implicit group names stay aligned.
+    prefix = group_desc or f"pg{_group_count}"
+    _group_count += 1
+
     if world_rank not in ranks:
         return GroupMember.NON_GROUP_MEMBER
 
@@ -672,7 +903,6 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
 
     # Reuse the default store with a prefix to avoid key collisions
     _, default_store = _pg_map[_default_pg]
-    prefix = f"pg{_group_count}"
     prefixed_store = PrefixStore(prefix, default_store)
 
     # Inherit backend from parent PG if not specified
@@ -693,7 +923,8 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
         if device_id is not None:
             dev_id = int(getattr(device_id, "index", device_id))
         else:
-            dev_id = world_rank % 8
+            parent_dev = getattr(_default_pg, "_device_id", None)
+            dev_id = int(parent_dev) if parent_dev is not None else world_rank % 8
         pg = ProcessGroupHCCL(
             prefixed_store, group_rank, group_size,
             device_id=dev_id,
@@ -706,7 +937,6 @@ def new_group(ranks=None, timeout=None, backend=None, pg_options=None,
     _pg_map[pg] = (Backend(backend), prefixed_store)
     _pg_names[pg] = group_desc or prefix
     _pg_group_ranks[pg] = {ranks[i]: i for i in range(group_size)}
-    _group_count += 1
     return pg
 
 
@@ -718,14 +948,32 @@ def new_subgroups(group_size=None, group=None, timeout=None, backend=None,
     world_size = pg.size()
     if group_size is None:
         raise ValueError("group_size must be specified")
+    if group_size <= 0:
+        raise ValueError(f"group_size {group_size} must be a positive integer")
+    if group_size > world_size:
+        raise ValueError(
+            f"group_size {group_size} must not exceed world_size {world_size}"
+        )
     if world_size % group_size != 0:
         raise ValueError(
             f"world_size {world_size} not divisible by group_size {group_size}"
         )
+
+    parent_rank_map = _pg_group_ranks.get(pg)
+    if parent_rank_map is None:
+        raise ValueError("The given group is not registered")
+
+    group_to_global = {
+        group_rank: global_rank
+        for global_rank, group_rank in parent_rank_map.items()
+    }
+
     num_groups = world_size // group_size
     subgroups = []
     for i in range(num_groups):
-        ranks = list(range(i * group_size, (i + 1) * group_size))
+        start = i * group_size
+        stop = (i + 1) * group_size
+        ranks = [group_to_global[g_rank] for g_rank in range(start, stop)]
         subgroups.append(new_group(ranks, timeout=timeout, backend=backend,
                                    pg_options=pg_options))
     rank = pg.rank()
@@ -737,6 +985,26 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
                                  backend=None, pg_options=None):
     if _default_pg is None:
         raise RuntimeError("Default process group not initialized")
+
+    if ranks_per_subgroup_list is None or len(ranks_per_subgroup_list) == 0:
+        raise ValueError("The arg 'ranks_per_subgroup_list' cannot be empty")
+
+    world_size = _default_pg.size()
+    seen = set()
+    for ranks in ranks_per_subgroup_list:
+        if len(ranks) == 0:
+            raise ValueError("the split group cannot be empty")
+        if len(ranks) != len(set(ranks)):
+            raise ValueError("the split group cannot have duplicate ranks")
+        for r in ranks:
+            if r < 0 or r >= world_size:
+                raise ValueError(
+                    f"the split group rank {r} must be in range [0, {world_size})"
+                )
+            if r in seen:
+                raise ValueError("split groups cannot overlap")
+            seen.add(r)
+
     subgroups = []
     for ranks in ranks_per_subgroup_list:
         subgroups.append(new_group(ranks, timeout=timeout, backend=backend,
@@ -751,12 +1019,103 @@ def new_subgroups_by_enumeration(ranks_per_subgroup_list, timeout=None,
 
 
 def split_group(parent_pg, color, key=None):
-    raise NotImplementedError("split_group is not yet supported")
+
+
+    if _default_pg is None:
+        raise RuntimeError("Default process group not initialized")
+
+    if parent_pg is GroupMember.NON_GROUP_MEMBER:
+        return GroupMember.NON_GROUP_MEMBER
+
+    pg = parent_pg or _default_pg
+    if pg not in _pg_map:
+        raise ValueError("The given group is not registered")
+
+    if key is None:
+        key = 0
+
+    world_rank = _default_pg.rank()
+    parent_rank_map = _pg_group_ranks.get(pg)
+    if parent_rank_map is None:
+        raise ValueError("The given group is not registered")
+    if world_rank not in parent_rank_map:
+        raise ValueError(
+            f"Global rank {world_rank} is not part of the parent group"
+        )
+
+    group_rank = parent_rank_map[world_rank]
+    group_size = pg.size()
+    group_to_global = {
+        group_r: global_r for global_r, group_r in parent_rank_map.items()
+    }
+
+    split_call_id = _split_group_seq.get(pg, 0)
+    _split_group_seq[pg] = split_call_id + 1
+
+    _, parent_store = _pg_map[pg]
+    prefix = f"split_group_{split_call_id}"
+    parent_store.set(
+        f"{prefix}/rank_{group_rank}",
+        f"{int(color)}:{int(key)}".encode("utf-8"),
+    )
+
+    keys = [f"{prefix}/rank_{r}" for r in range(group_size)]
+    parent_store.wait(keys)
+
+    members = []
+    for parent_group_rank in range(group_size):
+        raw = parent_store.get(f"{prefix}/rank_{parent_group_rank}")
+        text = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        rank_color, rank_key = text.split(":", 1)
+        if int(rank_color) == int(color) and int(rank_color) >= 0:
+            members.append((int(rank_key), parent_group_rank))
+
+    if int(color) < 0:
+        return GroupMember.NON_GROUP_MEMBER
+
+    members.sort(key=lambda item: (item[0], item[1]))
+    ranks = [
+        group_to_global[parent_group_rank]
+        for _, parent_group_rank in members
+    ]
+    if world_rank not in ranks:
+        return GroupMember.NON_GROUP_MEMBER
+
+    backend = str(_pg_map[pg][0])
+    return new_group(
+        ranks,
+        backend=backend,
+        group_desc=f"split_group_{split_call_id}_color_{int(color)}",
+    )
 
 
 def monitored_barrier(group=None, timeout=None, wait_all_ranks=False):
-    # HCCL does not support monitored barrier. Fall back to regular barrier.
-    barrier(group=group)
+    pg = group or _default_pg
+    if pg is None:
+        raise RuntimeError("Default process group not initialized")
+
+    backend = str(get_backend(pg))
+    _, store = _pg_map.get(pg, (Backend("gloo"), None))
+
+    if backend in ("hccl", "nccl") and wait_all_ranks:
+        raise NotImplementedError(
+            "monitored_barrier(wait_all_ranks=True) is not supported for hccl backend"
+        )
+
+    wait_timeout = None
+    if timeout is not None:
+        parsed = _parse_timeout(timeout)
+        wait_timeout = parsed.total_seconds() if isinstance(parsed, timedelta) else float(parsed)
+
+    if store is not None and pg.size() > 1:
+        rank = pg.rank()
+        world_size = pg.size()
+        key = f"monitored_barrier/arrive/{rank}"
+        store.set(key, b"1")
+        keys = [f"monitored_barrier/arrive/{r}" for r in range(world_size)]
+        store.wait(keys, timeout=wait_timeout)
+
+    barrier(group=pg)
 
 
 def supports_complex(op):

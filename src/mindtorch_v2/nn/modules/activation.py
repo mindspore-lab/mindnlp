@@ -141,3 +141,148 @@ class Hardtanh(Module):
 class LogSigmoid(Module):
     def forward(self, input):
         return F.logsigmoid(input)
+
+
+class Hardswish(Module):
+    def __init__(self, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.hardswish(input, inplace=self.inplace)
+
+
+class Hardsigmoid(Module):
+    def __init__(self, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.hardsigmoid(input, inplace=self.inplace)
+
+
+class SELU(Module):
+    def __init__(self, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.selu(input, inplace=self.inplace)
+
+
+class CELU(Module):
+    def __init__(self, alpha=1.0, inplace=False):
+        super().__init__()
+        self.alpha = alpha
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.celu(input, self.alpha, self.inplace)
+
+    def extra_repr(self):
+        return f'alpha={self.alpha}'
+
+
+class Softplus(Module):
+    def __init__(self, beta=1, threshold=20):
+        super().__init__()
+        self.beta = beta
+        self.threshold = threshold
+
+    def forward(self, input):
+        return F.softplus(input, self.beta, self.threshold)
+
+    def extra_repr(self):
+        return f'beta={self.beta}, threshold={self.threshold}'
+
+
+class Softsign(Module):
+    def forward(self, input):
+        return F.softsign(input)
+
+
+class Threshold(Module):
+    def __init__(self, threshold, value, inplace=False):
+        super().__init__()
+        self.threshold = threshold
+        self.value = value
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.threshold(input, self.threshold, self.value, self.inplace)
+
+    def extra_repr(self):
+        return f'threshold={self.threshold}, value={self.value}'
+
+
+class GLU(Module):
+    def __init__(self, dim=-1):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, input):
+        return F.glu(input, self.dim)
+
+    def extra_repr(self):
+        return f'dim={self.dim}'
+
+
+class Softmax2d(Module):
+    def forward(self, input):
+        return F.softmax2d(input)
+
+
+class Softmin(Module):
+    def __init__(self, dim=None):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, input):
+        return F.softmin(input, self.dim)
+
+    def extra_repr(self):
+        return f'dim={self.dim}'
+
+
+class Tanhshrink(Module):
+    def forward(self, input):
+        return F.tanhshrink(input)
+
+
+class Softshrink(Module):
+    def __init__(self, lambd=0.5):
+        super().__init__()
+        self.lambd = lambd
+
+    def forward(self, input):
+        return F.softshrink(input, self.lambd)
+
+    def extra_repr(self):
+        return f'lambd={self.lambd}'
+
+
+class Hardshrink(Module):
+    def __init__(self, lambd=0.5):
+        super().__init__()
+        self.lambd = lambd
+
+    def forward(self, input):
+        return F.hardshrink(input, self.lambd)
+
+    def extra_repr(self):
+        return f'lambd={self.lambd}'
+
+
+class RReLU(Module):
+    def __init__(self, lower=1.0/8, upper=1.0/3, inplace=False):
+        super().__init__()
+        self.lower = lower
+        self.upper = upper
+        self.inplace = inplace
+
+    def forward(self, input):
+        return F.rrelu(input, self.lower, self.upper, self.training, self.inplace)
+
+    def extra_repr(self):
+        return f'lower={self.lower}, upper={self.upper}'
+

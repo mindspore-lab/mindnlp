@@ -17,16 +17,16 @@ import warnings
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _no_grad_uniform_(tensor, a, b):
+def _no_grad_uniform_(tensor, a, b, generator=None):
     from .._autograd.grad_mode import no_grad
     with no_grad():
-        return tensor.uniform_(a, b)
+        return tensor.uniform_(a, b, generator=generator)
 
 
-def _no_grad_normal_(tensor, mean, std):
+def _no_grad_normal_(tensor, mean, std, generator=None):
     from .._autograd.grad_mode import no_grad
     with no_grad():
-        return tensor.normal_(mean, std)
+        return tensor.normal_(mean, std, generator=generator)
 
 
 def _no_grad_fill_(tensor, val):
@@ -114,13 +114,14 @@ def calculate_gain(nonlinearity, param=None):
         raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
 
 
-def uniform_(tensor, a=0.0, b=1.0):
+def uniform_(tensor, a=0.0, b=1.0, *, generator=None):
     r"""Fill the input Tensor with values drawn from U(a, b).
 
     Args:
         tensor: an n-dimensional Tensor
         a: the lower bound of the uniform distribution
         b: the upper bound of the uniform distribution
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -128,16 +129,17 @@ def uniform_(tensor, a=0.0, b=1.0):
     if 0 in tensor.shape:
         warnings.warn("Initializing zero-element tensors is a no-op")
         return tensor
-    return _no_grad_uniform_(tensor, a, b)
+    return _no_grad_uniform_(tensor, a, b, generator=generator)
 
 
-def normal_(tensor, mean=0.0, std=1.0):
+def normal_(tensor, mean=0.0, std=1.0, *, generator=None):
     r"""Fill the input Tensor with values drawn from N(mean, std^2).
 
     Args:
         tensor: an n-dimensional Tensor
         mean: the mean of the normal distribution
         std: the standard deviation of the normal distribution
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -145,7 +147,7 @@ def normal_(tensor, mean=0.0, std=1.0):
     if 0 in tensor.shape:
         warnings.warn("Initializing zero-element tensors is a no-op")
         return tensor
-    return _no_grad_normal_(tensor, mean, std)
+    return _no_grad_normal_(tensor, mean, std, generator=generator)
 
 
 def constant_(tensor, val):
@@ -258,7 +260,7 @@ def dirac_(tensor, groups=1):
     return tensor
 
 
-def xavier_uniform_(tensor, gain=1.0):
+def xavier_uniform_(tensor, gain=1.0, *, generator=None):
     r"""Fill the input Tensor with values using Xavier uniform initialization.
 
     Also known as Glorot initialization.
@@ -266,6 +268,7 @@ def xavier_uniform_(tensor, gain=1.0):
     Args:
         tensor: an n-dimensional Tensor
         gain: an optional scaling factor
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -276,10 +279,10 @@ def xavier_uniform_(tensor, gain=1.0):
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
     a = math.sqrt(3.0) * std  # Calculate uniform bounds from standard deviation
-    return _no_grad_uniform_(tensor, -a, a)
+    return _no_grad_uniform_(tensor, -a, a, generator=generator)
 
 
-def xavier_normal_(tensor, gain=1.0):
+def xavier_normal_(tensor, gain=1.0, *, generator=None):
     r"""Fill the input Tensor with values using Xavier normal initialization.
 
     Also known as Glorot initialization.
@@ -287,6 +290,7 @@ def xavier_normal_(tensor, gain=1.0):
     Args:
         tensor: an n-dimensional Tensor
         gain: an optional scaling factor
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -296,10 +300,10 @@ def xavier_normal_(tensor, gain=1.0):
         return tensor
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
-    return _no_grad_normal_(tensor, 0.0, std)
+    return _no_grad_normal_(tensor, 0.0, std, generator=generator)
 
 
-def kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
+def kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu', generator=None):
     r"""Fill the input Tensor with values using Kaiming uniform initialization.
 
     Also known as He initialization.
@@ -310,6 +314,7 @@ def kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
             (only used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``
         nonlinearity: the non-linear function
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -321,10 +326,10 @@ def kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
     gain = calculate_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)
     bound = math.sqrt(3.0) * std  # Calculate uniform bounds from standard deviation
-    return _no_grad_uniform_(tensor, -bound, bound)
+    return _no_grad_uniform_(tensor, -bound, bound, generator=generator)
 
 
-def kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
+def kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu', generator=None):
     r"""Fill the input Tensor with values using Kaiming normal initialization.
 
     Also known as He initialization.
@@ -335,6 +340,7 @@ def kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
             (only used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``
         nonlinearity: the non-linear function
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -345,10 +351,10 @@ def kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
     fan = _calculate_correct_fan(tensor, mode)
     gain = calculate_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)
-    return _no_grad_normal_(tensor, 0.0, std)
+    return _no_grad_normal_(tensor, 0.0, std, generator=generator)
 
 
-def orthogonal_(tensor, gain=1.0):
+def orthogonal_(tensor, gain=1.0, *, generator=None):
     r"""Fill the input Tensor with a (semi) orthogonal matrix.
 
     The input tensor must have at least 2 dimensions. For tensors with
@@ -357,6 +363,7 @@ def orthogonal_(tensor, gain=1.0):
     Args:
         tensor: an n-dimensional Tensor, where n >= 2
         gain: optional scaling factor
+        generator: optional random number generator
 
     Returns:
         Tensor: the input tensor
@@ -369,7 +376,7 @@ def orthogonal_(tensor, gain=1.0):
     rows = tensor.shape[0]
     cols = tensor.numel() // rows
     from .._creation import randn as _randn
-    flattened = _randn(rows, cols, dtype=tensor.dtype, device=tensor.device)
+    flattened = _randn(rows, cols, dtype=tensor.dtype, device=tensor.device, generator=generator)
 
     if rows < cols:
         flattened.t_()
@@ -392,7 +399,7 @@ def orthogonal_(tensor, gain=1.0):
     return tensor
 
 
-def sparse_(tensor, sparsity, std=0.01):
+def sparse_(tensor, sparsity, std=0.01, *, generator=None):
     r"""Fill the 2D input Tensor as a sparse matrix.
 
     The non-zero elements will be drawn from N(0, std^2).
@@ -401,6 +408,7 @@ def sparse_(tensor, sparsity, std=0.01):
         tensor: an n-dimensional Tensor
         sparsity: The fraction of elements in each column to be set to zero
         std: the standard deviation of the normal distribution
+        generator: optional random number generator
 
     Returns:
         Tensor: the input tensor
@@ -421,7 +429,7 @@ def sparse_(tensor, sparsity, std=0.01):
         # Build the sparse matrix in numpy, then transfer to device
         from .._random import _get_cpu_rng
         from .._dtype import to_numpy_dtype
-        rng = _get_cpu_rng()
+        rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
         arr = rng.normal(0, std, (rows, cols)).astype(to_numpy_dtype(tensor.dtype))
         for col_idx in range(cols):
             row_indices = rng.permutation(rows)[:num_zeros]
@@ -433,7 +441,7 @@ def sparse_(tensor, sparsity, std=0.01):
     return tensor
 
 
-def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
+def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, *, generator=None):
     r"""Fill the input Tensor with values drawn from a truncated normal distribution.
 
     Values are effectively drawn from N(mean, std^2) and any values outside
@@ -448,6 +456,7 @@ def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
         std: the standard deviation of the normal distribution
         a: the minimum cutoff value
         b: the maximum cutoff value
+        generator: the torch Generator to use for sampling
 
     Returns:
         Tensor: the input tensor
@@ -468,7 +477,7 @@ def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
         u = (b - mean) / std
 
         # Fill with uniform [0, 1]
-        tensor.uniform_(0, 1)
+        tensor.uniform_(0, 1, generator=generator)
 
         # Use erfinv to transform: erfinv maps (-1, 1) -> (-inf, inf)
         # Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))

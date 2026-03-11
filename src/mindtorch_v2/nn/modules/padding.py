@@ -73,3 +73,35 @@ class ReflectionPad2d(Module):
 
     def extra_repr(self):
         return f'padding={self.padding}'
+
+
+class ReplicationPad1d(Module):
+    def __init__(self, padding):
+        super().__init__()
+        if isinstance(padding, int):
+            self.padding = (padding, padding)
+        else:
+            self.padding = tuple(padding)
+
+    def forward(self, input):
+        return F.pad(input, self.padding, mode='replicate')
+
+    def extra_repr(self):
+        return f'{self.padding}'
+
+
+class ReplicationPad2d(Module):
+    def __init__(self, padding):
+        super().__init__()
+        if isinstance(padding, int):
+            self.padding = (padding, padding, padding, padding)
+        elif len(padding) == 2:
+            self.padding = (padding[0], padding[0], padding[1], padding[1])
+        else:
+            self.padding = tuple(padding)
+
+    def forward(self, input):
+        return F.pad(input, self.padding, mode='replicate')
+
+    def extra_repr(self):
+        return f'{self.padding}'

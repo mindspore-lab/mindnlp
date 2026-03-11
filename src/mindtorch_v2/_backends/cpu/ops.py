@@ -51,6 +51,14 @@ def matmul(a, b):
     return _from_numpy(_to_numpy(a) @ _to_numpy(b), a.dtype, a.device)
 
 
+def mm(a, b):
+    return matmul(a, b)
+
+
+def bmm(a, b):
+    return matmul(a, b)
+
+
 def relu(a):
     return _from_numpy(np.maximum(_to_numpy(a), 0), a.dtype, a.device)
 
@@ -64,6 +72,25 @@ def gelu(a):
 def sum_(a, dim=None, keepdim=False, dtype=None):
     if dtype is not None:
         raise NotImplementedError("sum dtype not supported yet")
+    if isinstance(dim, list):
+        dim = tuple(dim)
+    if isinstance(dim, tuple) and len(dim) == 0:
+        dim = None
+
+    ndim = len(a.shape)
+
+    def _check_dim_range(d):
+        if d < -ndim or d >= ndim:
+            raise IndexError(
+                f"Dimension out of range (expected to be in range of [{-ndim}, {ndim - 1}], but got {d})"
+            )
+
+    if isinstance(dim, int):
+        _check_dim_range(dim)
+    elif isinstance(dim, tuple):
+        for d in dim:
+            _check_dim_range(d)
+
     return _from_numpy(_to_numpy(a).sum(axis=dim, keepdims=keepdim), a.dtype, a.device)
 
 
@@ -666,19 +693,65 @@ def zero_(a):
     return a
 
 
-def uniform_(a, low=0.0, high=1.0):
+def uniform_(a, low=0.0, high=1.0, generator=None):
     from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     arr = _to_numpy(a)
     arr[:] = rng.uniform(low, high, arr.shape).astype(arr.dtype)
     return a
 
 
-def normal_(a, mean=0.0, std=1.0):
+def normal_(a, mean=0.0, std=1.0, generator=None):
     from ..._random import _get_cpu_rng
-    rng = _get_cpu_rng()
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     arr = _to_numpy(a)
     arr[:] = rng.normal(mean, std, arr.shape).astype(arr.dtype)
+    return a
+
+
+def bernoulli_(a, p=0.5, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    if hasattr(p, '_numpy_view'):
+        probs = p._numpy_view()
+    elif hasattr(p, 'numpy'):
+        probs = p.numpy()
+    else:
+        probs = float(p)
+    arr[...] = (rng.uniform(0, 1, arr.shape) < probs).astype(arr.dtype)
+    return a
+
+
+def exponential_(a, lambd=1.0, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = rng.exponential(1.0 / lambd, arr.shape).astype(arr.dtype)
+    return a
+
+
+def log_normal_(a, mean=1.0, std=2.0, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = rng.lognormal(mean, std, arr.shape).astype(arr.dtype)
+    return a
+
+
+def cauchy_(a, median=0.0, sigma=1.0, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = (median + sigma * np.tan(np.pi * (rng.uniform(0, 1, arr.shape) - 0.5))).astype(arr.dtype)
+    return a
+
+
+def geometric_(a, p, generator=None):
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    arr[...] = rng.geometric(p, arr.shape).astype(arr.dtype)
     return a
 
 
@@ -873,6 +946,12 @@ def sign(a):
     return _from_numpy(np.sign(_to_numpy(a)), a.dtype, a.device)
 
 
+def square(a):
+    arr = _to_numpy(a)
+    out = np.square(arr)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
 def signbit(a):
     arr = np.signbit(_to_numpy(a))
     return _from_numpy(arr, bool_dtype, a.device)
@@ -992,12 +1071,82 @@ def hardtanh(a, min_val=-1.0, max_val=1.0):
     return _from_numpy(out, a.dtype, a.device)
 
 
+def selu(a):
+    ALPHA = 1.6732632423543772
+    SCALE = 1.0507009873554805
+    arr = _to_numpy(a)
+    out = SCALE * np.where(arr > 0, arr, ALPHA * (np.exp(arr) - 1))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def celu(a, alpha=1.0):
+    arr = _to_numpy(a)
+    out = np.maximum(arr, 0.0) + np.minimum(0.0, alpha * (np.exp(arr / alpha) - 1))
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def threshold(a, threshold_val, value):
+    arr = _to_numpy(a)
+    out = np.where(arr > threshold_val, arr, value)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def hardshrink(a, lambd=0.5):
+    arr = _to_numpy(a)
+    out = np.where(np.abs(arr) > lambd, arr, 0.0)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def softshrink(a, lambd=0.5):
+    arr = _to_numpy(a)
+    out = np.sign(arr) * np.maximum(np.abs(arr) - lambd, 0.0)
+    return _from_numpy(out, a.dtype, a.device)
+
+
+def rrelu(a, lower=1.0 / 8, upper=1.0 / 3, training=False):
+    arr = _to_numpy(a)
+    if training:
+        slope = np.random.uniform(lower, upper, size=arr.shape).astype(arr.dtype)
+    else:
+        slope = np.full_like(arr, (lower + upper) / 2.0)
+    out = np.where(arr >= 0, arr, arr * slope)
+    result = _from_numpy(out, a.dtype, a.device)
+    result._rrelu_slope = _from_numpy(slope, a.dtype, a.device)
+    return result
+
+
 def min_(a, b):
     return _from_numpy(np.minimum(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
 
 def max_(a, b):
     return _from_numpy(np.maximum(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
+
+
+def hardswish(a):
+    arr = _to_numpy(a).astype(np.float64)
+    out = arr * np.clip(arr + 3.0, 0.0, 6.0) / 6.0
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def hardsigmoid(a):
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.clip(arr + 3.0, 0.0, 6.0) / 6.0
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def softsign(a):
+    arr = _to_numpy(a).astype(np.float64)
+    out = arr / (1.0 + np.abs(arr))
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def normalize(a, p=2.0, dim=1, eps=1e-12):
+    arr = _to_numpy(a).astype(np.float64)
+    norm = np.linalg.norm(arr, ord=p, axis=dim, keepdims=True)
+    norm = np.maximum(norm, eps)
+    out = arr / norm
+    return _from_numpy(out.astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
 
 
 def amin(a, dim=None, keepdim=False):
@@ -1356,7 +1505,9 @@ def log_softmax(a, dim):
 
 def one_hot(a, num_classes=-1):
     arr = _to_numpy(a)
-    if not np.issubdtype(arr.dtype, np.integer):
+    # Check logical dtype — may be a string or DType object
+    dtype_str = str(a.dtype).replace('torch.', '')
+    if dtype_str not in ('int8', 'int16', 'int32', 'int64', 'uint8', 'bool'):
         raise TypeError("one_hot is only applicable to index tensor")
     flat = arr.astype(np.int64, copy=False).reshape(-1)
     if num_classes is None or int(num_classes) < 0:
@@ -1927,6 +2078,8 @@ def minimum(a, b):
 
 
 def dot(a, b):
+    if a.dtype != b.dtype:
+        raise RuntimeError("dot: expected both vectors to have same dtype")
     return _from_numpy(np.dot(_to_numpy(a), _to_numpy(b)), a.dtype, a.device)
 
 
@@ -1943,6 +2096,8 @@ def mv(a, b):
 
 
 def cross(a, b, dim=-1):
+    if a.dtype != b.dtype:
+        raise RuntimeError("cross: expected both inputs to have same dtype")
     a_np = np.moveaxis(_to_numpy(a), dim, -1)
     b_np = np.moveaxis(_to_numpy(b), dim, -1)
     out = np.cross(a_np, b_np)
@@ -1951,6 +2106,8 @@ def cross(a, b, dim=-1):
 
 
 def tensordot(a, b, dims=2):
+    if a.dtype != b.dtype:
+        raise RuntimeError("tensordot: expected both inputs to have same dtype")
     a_np = _to_numpy(a)
     b_np = _to_numpy(b)
     if isinstance(dims, int):
@@ -1963,6 +2120,8 @@ def tensordot(a, b, dims=2):
 
 
 def einsum(equation, *operands):
+    if len(operands) == 1 and isinstance(operands[0], (list, tuple)):
+        operands = operands[0]
     ops_np = [_to_numpy(op) for op in operands]
     out = np.einsum(equation, *ops_np)
     return _from_numpy(np.ascontiguousarray(out), operands[0].dtype, operands[0].device)
@@ -2024,12 +2183,28 @@ def bitwise_not(a):
 # Group 4: Random in-place op
 # ---------------------------------------------------------------------------
 
-def randint_(a, low, high=None):
+def randint_(a, low, high=None, generator=None):
     """In-place randint — fills tensor a with random integers from [low, high)."""
     if high is None:
         low, high = 0, low
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
     arr = _to_numpy(a)
-    arr[...] = np.random.randint(low, high, size=arr.shape)
+    arr[...] = rng.randint(int(low), int(high), size=arr.shape)
+    return a
+
+
+def random_(a, from_=0, to=None, generator=None):
+    """In-place random — fills tensor with random values from [from_, to)."""
+    from ..._random import _get_cpu_rng
+    rng = generator._rng if (generator is not None and hasattr(generator, '_rng') and generator._rng is not None) else _get_cpu_rng()
+    arr = _to_numpy(a)
+    if to is None:
+        if np.issubdtype(arr.dtype, np.floating):
+            to = 2**24 if arr.dtype == np.float32 else 2**53
+        else:
+            to = int(np.iinfo(arr.dtype).max) + 1
+    arr[...] = rng.randint(int(from_), int(to), size=arr.shape).astype(arr.dtype)
     return a
 
 
@@ -2131,6 +2306,44 @@ def kthvalue(a, k, dim=-1, keepdim=False):
     )
 
 
+def instance_norm(input, weight=None, bias=None, running_mean=None, running_var=None,
+                  use_input_stats=True, momentum=0.1, eps=1e-5, cudnn_enabled=False):
+    arr = _to_numpy(input)
+    ndim = len(arr.shape)
+    N = arr.shape[0]
+    C = arr.shape[1] if ndim >= 2 else 1
+    spatial_axes = tuple(range(2, ndim))
+
+    if use_input_stats:
+        mean = arr.mean(axis=spatial_axes, keepdims=True)
+        var = arr.var(axis=spatial_axes, keepdims=True)
+        if running_mean is not None:
+            rm = _to_numpy(running_mean)
+            batch_mean = mean.reshape(N, C).mean(axis=0)
+            rm[:] = (1 - momentum) * rm + momentum * batch_mean
+        if running_var is not None:
+            rv = _to_numpy(running_var)
+            batch_var = var.reshape(N, C).mean(axis=0)
+            rv[:] = (1 - momentum) * rv + momentum * batch_var
+    else:
+        rm = _to_numpy(running_mean)
+        rv = _to_numpy(running_var)
+        shape = [1, C] + [1] * (ndim - 2)
+        mean = rm.reshape(shape)
+        var = rv.reshape(shape)
+
+    normalized = (arr - mean) / np.sqrt(var + eps)
+
+    if weight is not None:
+        shape = [1, C] + [1] * (ndim - 2)
+        normalized = normalized * _to_numpy(weight).reshape(shape)
+    if bias is not None:
+        shape = [1, C] + [1] * (ndim - 2)
+        normalized = normalized + _to_numpy(bias).reshape(shape)
+
+    return _from_numpy(normalized, input.dtype, input.device)
+
+
 def median(a, dim=None, keepdim=False):
     arr = _to_numpy(a)
     if dim is None:
@@ -2151,3 +2364,1989 @@ def median(a, dim=None, keepdim=False):
             _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
             _from_numpy(np.ascontiguousarray(med_idx.astype(np.int64)), int64_dtype, a.device),
         )
+
+
+# ---------------------------------------------------------------------------
+# Group 7: New math ops for Tensor API alignment
+# ---------------------------------------------------------------------------
+
+def logsumexp(a, dim, keepdim=False):
+    """Numerically stable logsumexp: log(sum(exp(x), dim))."""
+    arr = _to_numpy(a)
+    max_val = np.max(arr, axis=dim, keepdims=True)
+    exp_shifted = np.exp(arr - max_val)
+    sum_exp = np.sum(exp_shifted, axis=dim, keepdims=keepdim)
+    if keepdim:
+        out = np.log(sum_exp) + max_val
+    else:
+        out = np.log(sum_exp) + np.squeeze(max_val, axis=dim)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def trace(a):
+    """Sum of diagonal elements (2D only)."""
+    arr = _to_numpy(a)
+    if arr.ndim != 2:
+        raise RuntimeError(
+            f"trace: expected a matrix (2-D tensor), but got {arr.ndim}-D tensor"
+        )
+    out = np.trace(arr)
+    return _from_numpy(np.array(out, dtype=arr.dtype), a.dtype, a.device)
+
+
+def det(a):
+    """Determinant of a square matrix (or batch of square matrices)."""
+    arr = _to_numpy(a)
+    if arr.ndim < 2:
+        raise RuntimeError(f"det: input must be at least 2-D, got {arr.ndim}-D")
+    if arr.shape[-2] != arr.shape[-1]:
+        raise RuntimeError(
+            f"det: input must be a square matrix, got shape {arr.shape}"
+        )
+    out = np.linalg.det(arr.astype(np.float64))
+    return _from_numpy(np.ascontiguousarray(out).astype(to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def matrix_power(a, n):
+    """Matrix raised to the integer power n."""
+    arr = _to_numpy(a)
+    if arr.ndim < 2:
+        raise RuntimeError(
+            f"matrix_power: input must be at least 2-D, got {arr.ndim}-D"
+        )
+    if arr.shape[-2] != arr.shape[-1]:
+        raise RuntimeError(
+            f"matrix_power: input must be a square matrix, got shape {arr.shape}"
+        )
+    out = np.linalg.matrix_power(arr, n)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def dist(a, b, p=2):
+    """p-norm distance between two tensors (flattened)."""
+    a_np = _to_numpy(a)
+    b_np = _to_numpy(b)
+    diff = a_np.ravel() - b_np.ravel()
+    out = np.linalg.norm(diff, ord=p)
+    return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+
+
+def renorm(a, p, dim, maxnorm):
+    """Renormalize tensor: each sub-tensor along dim has norm <= maxnorm."""
+    arr = _to_numpy(a)
+    # Compute the norm along all axes except dim
+    norm = np.linalg.norm(arr, ord=p, axis=dim, keepdims=True)
+    # Scale: if norm > maxnorm, scale down; otherwise keep unchanged
+    scale = np.where(norm > maxnorm, maxnorm / (norm + 1e-7), 1.0)
+    out = arr * scale
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def nansum(a, dim=None, keepdim=False):
+    """Sum ignoring NaN values."""
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.nansum(arr)
+        return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        out = np.nansum(arr, axis=dim, keepdims=keepdim)
+        return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def nanmean(a, dim=None, keepdim=False):
+    """Mean ignoring NaN values."""
+    arr = _to_numpy(a)
+    if dim is None:
+        out = np.nanmean(arr)
+        return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        out = np.nanmean(arr, axis=dim, keepdims=keepdim)
+        return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def argwhere(a):
+    """Returns indices of non-zero elements as a 2D tensor (shape [N, ndim])."""
+    arr = _to_numpy(a)
+    out = np.argwhere(arr)
+    return _from_numpy(out.astype(np.int64), int64_dtype, a.device)
+
+
+def baddbmm(input, batch1, batch2, beta=1, alpha=1):
+    """Batch matrix-matrix product: beta * input + alpha * (batch1 @ batch2)."""
+    input_np = _to_numpy(input)
+    batch1_np = _to_numpy(batch1)
+    batch2_np = _to_numpy(batch2)
+
+    if batch1_np.ndim != 3 or batch2_np.ndim != 3:
+        raise RuntimeError("baddbmm: batch1 and batch2 must be 3-D tensors")
+
+    bmm_result = batch1_np @ batch2_np
+    out = beta * input_np + alpha * bmm_result
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def cummin(a, dim):
+    """Cumulative minimum along a dimension, returns (values, indices) namedtuple."""
+    arr = _to_numpy(a)
+    ndim = arr.ndim
+    if dim < 0:
+        dim = dim + ndim
+
+    values = np.minimum.accumulate(arr, axis=dim)
+
+    # Compute indices: for each position i along dim, index is where min first occurred
+    n = arr.shape[dim]
+    indices = np.zeros_like(arr, dtype=np.int64)
+
+    # Iterate over the dimension to compute the argmin up to each point
+    idx_shape = list(arr.shape)
+    idx_shape[dim] = 1
+    running_min = np.take(arr, [0], axis=dim)
+    running_idx = np.zeros(idx_shape, dtype=np.int64)
+
+    slc_base = [slice(None)] * ndim
+    for i in range(n):
+        slc = slc_base[:]
+        slc[dim] = slice(i, i + 1)
+        current = arr[tuple(slc)]
+        new_min_mask = current < running_min
+        running_idx = np.where(new_min_mask, i, running_idx)
+        running_min = np.minimum(running_min, current)
+        indices_slc = slc_base[:]
+        indices_slc[dim] = i
+        indices[tuple(indices_slc)] = running_idx.squeeze(axis=dim)
+
+    from collections import namedtuple
+    CumminResult = namedtuple("cummin", ["values", "indices"])
+    return CumminResult(
+        _from_numpy(np.ascontiguousarray(values), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(indices), int64_dtype, a.device),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Top-level gap-fill ops (Category C2)
+# ---------------------------------------------------------------------------
+
+def diff(a, n=1, dim=-1, prepend=None, append=None):
+    """Compute the n-th discrete difference along the given dim."""
+    arr = _to_numpy(a)
+    if prepend is not None or append is not None:
+        pieces = []
+        if prepend is not None:
+            pieces.append(_to_numpy(prepend))
+        pieces.append(arr)
+        if append is not None:
+            pieces.append(_to_numpy(append))
+        arr = np.concatenate(pieces, axis=dim)
+    out = np.diff(arr, n=n, axis=dim)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def bincount(a, weights=None, minlength=0):
+    """Count number of occurrences of each value in a 1-D int tensor."""
+    arr = _to_numpy(a).astype(np.int64).ravel()
+    w = _to_numpy(weights).ravel() if weights is not None else None
+    out = np.bincount(arr, weights=w, minlength=minlength)
+    out_dtype = a.dtype if weights is None else weights.dtype
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(out_dtype))), out_dtype, a.device)
+
+
+def cdist(x1, x2, p=2.0):
+    """Batched pairwise distance between two sets of vectors."""
+    a = _to_numpy(x1).astype(np.float64)
+    b = _to_numpy(x2).astype(np.float64)
+    if a.ndim == 2:
+        a = a[np.newaxis]
+        b = b[np.newaxis]
+        squeeze = True
+    else:
+        squeeze = False
+    batch = a.shape[0]
+    results = []
+    for i in range(batch):
+        # Manual pairwise distance: (M, 1, D) - (1, N, D) -> (M, N, D)
+        diff = a[i][:, np.newaxis, :] - b[i][np.newaxis, :, :]
+        if p == 2.0:
+            d = np.sqrt(np.sum(diff ** 2, axis=-1))
+        elif p == 1.0:
+            d = np.sum(np.abs(diff), axis=-1)
+        elif p == float('inf'):
+            d = np.max(np.abs(diff), axis=-1)
+        elif p == 0.0:
+            d = np.sum(diff != 0, axis=-1).astype(np.float64)
+        else:
+            d = np.sum(np.abs(diff) ** p, axis=-1) ** (1.0 / p)
+        results.append(d)
+    out = np.stack(results)
+    if squeeze:
+        out = out[0]
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(x1.dtype))), x1.dtype, x1.device)
+
+
+def aminmax(a, dim=None, keepdim=False):
+    """Returns the min and max of a tensor."""
+    from collections import namedtuple
+    arr = _to_numpy(a)
+    if dim is None:
+        mn = np.min(arr)
+        mx = np.max(arr)
+        mn_t = _from_numpy(np.array(mn, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+        mx_t = _from_numpy(np.array(mx, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        mn = np.min(arr, axis=dim, keepdims=keepdim)
+        mx = np.max(arr, axis=dim, keepdims=keepdim)
+        mn_t = _from_numpy(np.ascontiguousarray(mn), a.dtype, a.device)
+        mx_t = _from_numpy(np.ascontiguousarray(mx), a.dtype, a.device)
+    AminmaxResult = namedtuple("aminmax", ["min", "max"])
+    return AminmaxResult(mn_t, mx_t)
+
+
+def quantile(a, q, dim=None, keepdim=False):
+    """Compute the q-th quantile of the input tensor."""
+    arr = _to_numpy(a).astype(np.float64)
+    q_val = _to_numpy(q) if hasattr(q, '_numpy_view') else np.asarray(q, dtype=np.float64)
+    if dim is None:
+        out = np.quantile(arr, q_val)
+    else:
+        out = np.quantile(arr, q_val, axis=dim, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def nanquantile(a, q, dim=None, keepdim=False):
+    """Compute the q-th quantile ignoring NaN values."""
+    arr = _to_numpy(a).astype(np.float64)
+    q_val = _to_numpy(q) if hasattr(q, '_numpy_view') else np.asarray(q, dtype=np.float64)
+    if dim is None:
+        out = np.nanquantile(arr, q_val)
+    else:
+        out = np.nanquantile(arr, q_val, axis=dim, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def nanmedian(a, dim=None, keepdim=False):
+    """Median ignoring NaN values. Returns (values, indices) when dim is given."""
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is None:
+        out = np.nanmedian(arr)
+        return _from_numpy(np.array(out, dtype=to_numpy_dtype(a.dtype)), a.dtype, a.device)
+    else:
+        values = np.nanmedian(arr, axis=dim, keepdims=keepdim)
+        # Compute indices: for each slice along dim, find index of the median value
+        n = arr.shape[dim]
+        sorted_arr = np.sort(arr, axis=dim)
+        # Count non-nan along dim
+        not_nan = ~np.isnan(arr)
+        count = np.sum(not_nan, axis=dim, keepdims=True)
+        # Median index in sorted order
+        med_idx_sorted = (count - 1) // 2
+        # For each position, find the index in the original array
+        sorted_indices = np.argsort(arr, axis=dim)
+        # Gather the median index from sorted_indices
+        indices = np.take_along_axis(sorted_indices, med_idx_sorted.astype(np.intp), axis=dim)
+        if not keepdim:
+            indices = np.squeeze(indices, axis=dim)
+        from collections import namedtuple
+        NanmedianResult = namedtuple("nanmedian", ["values", "indices"])
+        return NanmedianResult(
+            _from_numpy(np.ascontiguousarray(values.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+            _from_numpy(np.ascontiguousarray(indices.astype(np.int64)), int64_dtype, a.device),
+        )
+
+
+def histc(a, bins=100, min=0, max=0):
+    """Histogram with equal-width bins (1-D output count tensor)."""
+    arr = _to_numpy(a).ravel().astype(np.float64)
+    lo = float(min)
+    hi = float(max)
+    if lo == 0 and hi == 0:
+        lo = float(np.min(arr))
+        hi = float(np.max(arr))
+    out, _ = np.histogram(arr, bins=bins, range=(lo, hi))
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def histogram(a, bins, range=None, weight=None, density=False):
+    """Histogram returning (hist, bin_edges)."""
+    arr = _to_numpy(a).ravel().astype(np.float64)
+    bins_val = _to_numpy(bins) if hasattr(bins, '_numpy_view') else bins
+    w = _to_numpy(weight).ravel().astype(np.float64) if weight is not None else None
+    hist, edges = np.histogram(arr, bins=bins_val, range=range, weights=w, density=density)
+    return (
+        _from_numpy(np.ascontiguousarray(hist.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(edges.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+    )
+
+
+def bucketize(a, boundaries, out_int32=False, right=False):
+    """Maps values to bucket indices using boundaries."""
+    arr = _to_numpy(a)
+    b = _to_numpy(boundaries).ravel()
+    side = 'right' if not right else 'left'
+    out = np.searchsorted(b, arr, side=side)
+    out_np_dtype = np.int32 if out_int32 else np.int64
+    out_dtype = int64_dtype
+    return _from_numpy(np.ascontiguousarray(out.astype(out_np_dtype)), out_dtype, a.device)
+
+
+def isneginf(a):
+    """Returns a bool tensor indicating negative infinity."""
+    arr = _to_numpy(a)
+    out = np.isneginf(arr)
+    return _from_numpy(np.ascontiguousarray(out), bool_dtype, a.device)
+
+
+def isposinf(a):
+    """Returns a bool tensor indicating positive infinity."""
+    arr = _to_numpy(a)
+    out = np.isposinf(arr)
+    return _from_numpy(np.ascontiguousarray(out), bool_dtype, a.device)
+
+
+def isreal(a):
+    """Returns a bool tensor indicating real-valued elements."""
+    arr = _to_numpy(a)
+    out = np.isreal(arr)
+    if out.ndim == 0:
+        out = np.array(out)
+    return _from_numpy(np.ascontiguousarray(out.astype(np.bool_)), bool_dtype, a.device)
+
+
+def isin(elements, test_elements):
+    """Tests if each element is in test_elements."""
+    e = _to_numpy(elements)
+    te = _to_numpy(test_elements)
+    out = np.isin(e, te)
+    return _from_numpy(np.ascontiguousarray(out), bool_dtype, elements.device)
+
+
+def heaviside(a, values):
+    """Heaviside step function."""
+    a_np = _to_numpy(a)
+    v_np = _to_numpy(values)
+    out = np.heaviside(a_np, v_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# torch.linalg ops
+# ---------------------------------------------------------------------------
+
+def linalg_cholesky(a, upper=False):
+    """Cholesky decomposition."""
+    arr = _to_numpy(a).astype(np.float64)
+    L = np.linalg.cholesky(arr)
+    if upper:
+        # Transpose the last two dims
+        L = np.swapaxes(L, -2, -1).conj()
+    return _from_numpy(np.ascontiguousarray(L.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_cond(a, p=None):
+    """Condition number of a matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.cond(arr, p=p)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_det(a):
+    """Determinant of a square matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.det(arr)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_eig(a):
+    """Eigenvalue decomposition of a square matrix."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a).astype(np.float64)
+    eigenvalues, eigenvectors = np.linalg.eig(arr)
+    return (
+        _from_numpy(np.ascontiguousarray(eigenvalues), complex128_dtype, a.device),
+        _from_numpy(np.ascontiguousarray(eigenvectors), complex128_dtype, a.device),
+    )
+
+
+def linalg_eigh(a, UPLO='L'):
+    """Eigenvalue decomposition of a symmetric/Hermitian matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    eigenvalues, eigenvectors = np.linalg.eigh(arr, UPLO=UPLO)
+    return (
+        _from_numpy(np.ascontiguousarray(eigenvalues.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(eigenvectors.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+    )
+
+
+def linalg_eigvals(a):
+    """Eigenvalues of a square matrix."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.eigvals(arr)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def linalg_eigvalsh(a, UPLO='L'):
+    """Eigenvalues of a symmetric/Hermitian matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.eigvalsh(arr, UPLO=UPLO)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_householder_product(input, tau):
+    """Computes the first n columns of the product of Householder matrices."""
+    A = _to_numpy(input).astype(np.float64)
+    tau_np = _to_numpy(tau).astype(np.float64)
+    m, n = A.shape[-2], A.shape[-1]
+    k = tau_np.shape[-1]
+    Q = np.eye(m, dtype=np.float64)
+    for i in range(k):
+        v = np.zeros(m, dtype=np.float64)
+        v[i] = 1.0
+        v[i + 1:] = A[i + 1:, i]
+        Q = Q - tau_np[i] * np.outer(Q @ v, v)
+    Q = Q[:, :n]
+    return _from_numpy(np.ascontiguousarray(Q.astype(to_numpy_dtype(input.dtype))), input.dtype, input.device)
+
+
+def linalg_inv(a):
+    """Inverse of a square matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.inv(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_lstsq(a, b, rcond=None, driver=None):
+    """Least-squares solution to a linear matrix equation."""
+    from collections import namedtuple
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    if rcond is None:
+        rcond = -1 if np.lib.NumpyVersion(np.__version__) < '2.0.0' else None
+    solution, residuals, rank, singular_values = np.linalg.lstsq(a_np, b_np, rcond=rcond)
+    LstsqResult = namedtuple("LstsqResult", ["solution", "residuals", "rank", "singular_values"])
+    return LstsqResult(
+        _from_numpy(np.ascontiguousarray(solution.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(np.atleast_1d(residuals).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        rank,
+        _from_numpy(np.ascontiguousarray(singular_values.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+    )
+
+
+def linalg_lu(a, pivot=True):
+    """LU decomposition with partial pivoting."""
+    from collections import namedtuple
+    from scipy import linalg as scipy_linalg
+    arr = _to_numpy(a).astype(np.float64)
+    P_mat, L, U = scipy_linalg.lu(arr)
+    LUResult = namedtuple("LUResult", ["P", "L", "U"])
+    dt = to_numpy_dtype(a.dtype)
+    return LUResult(
+        _from_numpy(np.ascontiguousarray(P_mat.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(L.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(U.astype(dt)), a.dtype, a.device),
+    )
+
+
+def linalg_lu_factor(a, pivot=True):
+    """Compact LU factorization."""
+    from collections import namedtuple
+    from scipy import linalg as scipy_linalg
+    arr = _to_numpy(a).astype(np.float64)
+    lu, piv = scipy_linalg.lu_factor(arr)
+    LUFactorResult = namedtuple("LUFactorResult", ["LU", "pivots"])
+    return LUFactorResult(
+        _from_numpy(np.ascontiguousarray(lu.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(piv.astype(np.int32)), int64_dtype, a.device),
+    )
+
+
+def linalg_lu_solve(LU, pivots, B, left=True, adjoint=False):
+    """Solve using LU factorization."""
+    from scipy import linalg as scipy_linalg
+    lu_np = _to_numpy(LU).astype(np.float64)
+    piv_np = _to_numpy(pivots).astype(np.int32)
+    b_np = _to_numpy(B).astype(np.float64)
+    if not left:
+        b_np = b_np.T
+    trans = 1 if adjoint else 0
+    out = scipy_linalg.lu_solve((lu_np, piv_np), b_np, trans=trans)
+    if not left:
+        out = out.T
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(B.dtype))), B.dtype, B.device)
+
+
+def linalg_matrix_exp(a):
+    """Matrix exponential."""
+    from scipy import linalg as scipy_linalg
+    arr = _to_numpy(a).astype(np.float64)
+    out = scipy_linalg.expm(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_matrix_norm(a, ord='fro', dim=(-2, -1), keepdim=False):
+    """Matrix norm."""
+    arr = _to_numpy(a).astype(np.float64)
+    if isinstance(dim, (list, tuple)) and len(dim) == 2:
+        axis = tuple(dim)
+    else:
+        axis = dim
+    if ord == 'fro':
+        out = np.sqrt(np.sum(arr ** 2, axis=axis, keepdims=keepdim))
+    elif ord == 'nuc':
+        # Nuclear norm = sum of singular values
+        out = np.sum(np.linalg.svd(arr, compute_uv=False), axis=-1, keepdims=keepdim)
+    else:
+        out = np.linalg.norm(arr, ord=ord, axis=axis, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_matrix_power(a, n):
+    """Matrix raised to integer power n."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.matrix_power(arr, n)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_matrix_rank(a, atol=None, rtol=None, hermitian=False):
+    """Numerical rank of a matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    if atol is not None or rtol is not None:
+        s = np.linalg.svd(arr, compute_uv=False)
+        tol = 0.0
+        if atol is not None:
+            tol = max(tol, atol)
+        if rtol is not None:
+            tol = max(tol, rtol * s[..., 0])
+        rank = np.sum(s > tol, axis=-1)
+    else:
+        rank = np.linalg.matrix_rank(arr)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(rank).astype(np.int64)), int64_dtype, a.device)
+
+
+def linalg_multi_dot(tensors):
+    """Efficiently multiply 2+ matrices using np.linalg.multi_dot."""
+    arrays = [_to_numpy(t).astype(np.float64) for t in tensors]
+    out = np.linalg.multi_dot(arrays)
+    dt = tensors[0].dtype
+    dev = tensors[0].device
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(dt))), dt, dev)
+
+
+def linalg_norm(a, ord=None, dim=None, keepdim=False):
+    """Vector or matrix norm."""
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            axis = tuple(dim)
+        else:
+            axis = dim
+    else:
+        axis = None
+    out = np.linalg.norm(arr, ord=ord, axis=axis, keepdims=keepdim)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_pinv(a, atol=None, rtol=None, hermitian=False):
+    """Moore-Penrose pseudoinverse."""
+    arr = _to_numpy(a).astype(np.float64)
+    if rtol is not None:
+        rcond = rtol
+    elif atol is not None:
+        s_max = np.linalg.svd(arr, compute_uv=False)[..., 0]
+        rcond = atol / s_max
+    else:
+        rcond = 1e-15
+    out = np.linalg.pinv(arr, rcond=rcond)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_slogdet(a):
+    """Sign and log absolute value of determinant."""
+    from collections import namedtuple
+    arr = _to_numpy(a).astype(np.float64)
+    sign, logabsdet = np.linalg.slogdet(arr)
+    SlogdetResult = namedtuple("SlogdetResult", ["sign", "logabsdet"])
+    dt = to_numpy_dtype(a.dtype)
+    return SlogdetResult(
+        _from_numpy(np.ascontiguousarray(np.atleast_1d(sign).astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(np.atleast_1d(logabsdet).astype(dt)), a.dtype, a.device),
+    )
+
+
+def linalg_solve(a, b, left=True):
+    """Solve a square system of linear equations."""
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    if not left:
+        # X @ A = B => A^T @ X^T = B^T
+        out = np.linalg.solve(a_np.T, b_np.T).T
+    else:
+        out = np.linalg.solve(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_solve_triangular(a, b, upper, left=True, unitriangular=False):
+    """Solve a triangular system."""
+    from scipy import linalg as scipy_linalg
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    if not left:
+        a_np = a_np.T
+        b_np = b_np.T
+        upper = not upper
+    out = scipy_linalg.solve_triangular(a_np, b_np, lower=not upper, unit_diagonal=unitriangular)
+    if not left:
+        out = out.T
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_svd(a, full_matrices=True):
+    """Singular value decomposition."""
+    arr = _to_numpy(a).astype(np.float64)
+    U, S, Vh = np.linalg.svd(arr, full_matrices=full_matrices)
+    dt = to_numpy_dtype(a.dtype)
+    return (
+        _from_numpy(np.ascontiguousarray(U.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(S.astype(dt)), a.dtype, a.device),
+        _from_numpy(np.ascontiguousarray(Vh.astype(dt)), a.dtype, a.device),
+    )
+
+
+def linalg_svdvals(a):
+    """Singular values of a matrix."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.svd(arr, compute_uv=False)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_tensorinv(a, ind=2):
+    """Tensor inverse (generalization of matrix inverse)."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.linalg.tensorinv(arr, ind=ind)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_tensorsolve(a, b, dims=None):
+    """Solve a tensor equation."""
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    axes = None if dims is None else tuple(dims)
+    out = np.linalg.tensorsolve(a_np, b_np, axes=axes)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def linalg_vander(x, N=None):
+    """Vandermonde matrix."""
+    arr = _to_numpy(x)
+    n = N if N is not None else len(arr)
+    out = np.vander(arr, N=n, increasing=True)
+    return _from_numpy(np.ascontiguousarray(out), x.dtype, x.device)
+
+
+def linalg_vector_norm(a, ord=2, dim=None, keepdim=False):
+    """Vector norm."""
+    arr = _to_numpy(a).astype(np.float64)
+    if dim is not None:
+        if isinstance(dim, (list, tuple)):
+            axis = tuple(dim)
+        else:
+            axis = dim
+    else:
+        axis = None
+    if ord == float('inf'):
+        out = np.max(np.abs(arr), axis=axis, keepdims=keepdim)
+    elif ord == float('-inf'):
+        out = np.min(np.abs(arr), axis=axis, keepdims=keepdim)
+    elif ord == 0:
+        out = np.sum(arr != 0, axis=axis, keepdims=keepdim).astype(np.float64)
+    else:
+        out = np.sum(np.abs(arr) ** ord, axis=axis, keepdims=keepdim) ** (1.0 / ord)
+    return _from_numpy(np.ascontiguousarray(np.atleast_1d(out).astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# torch.fft ops
+# ---------------------------------------------------------------------------
+
+def fft_fft(a, n=None, dim=-1, norm=None):
+    """1D discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.fft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_ifft(a, n=None, dim=-1, norm=None):
+    """1D inverse discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.ifft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_fft2(a, s=None, dim=(-2, -1), norm=None):
+    """2D discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.fft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_ifft2(a, s=None, dim=(-2, -1), norm=None):
+    """2D inverse discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.ifft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_fftn(a, s=None, dim=None, norm=None):
+    """N-D discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.fftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_ifftn(a, s=None, dim=None, norm=None):
+    """N-D inverse discrete Fourier Transform."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.ifftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_rfft(a, n=None, dim=-1, norm=None):
+    """1D FFT of real-valued input."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.rfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_irfft(a, n=None, dim=-1, norm=None):
+    """Inverse of rfft."""
+    arr = _to_numpy(a)
+    out = np.fft.irfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_rfft2(a, s=None, dim=(-2, -1), norm=None):
+    """2D FFT of real-valued input."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.rfft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_irfft2(a, s=None, dim=(-2, -1), norm=None):
+    """Inverse of rfft2."""
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.irfft2(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_rfftn(a, s=None, dim=None, norm=None):
+    """N-D FFT of real-valued input."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.rfftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_irfftn(a, s=None, dim=None, norm=None):
+    """Inverse of rfftn."""
+    arr = _to_numpy(a)
+    axes = tuple(dim) if dim is not None else None
+    out = np.fft.irfftn(arr, s=s, axes=axes, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_hfft(a, n=None, dim=-1, norm=None):
+    """1D FFT of Hermitian symmetric signal (output is real)."""
+    arr = _to_numpy(a)
+    out = np.fft.hfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_ihfft(a, n=None, dim=-1, norm=None):
+    """Inverse of hfft."""
+    from ..._dtype import complex128 as complex128_dtype
+    arr = _to_numpy(a)
+    out = np.fft.ihfft(arr, n=n, axis=dim, norm=norm)
+    return _from_numpy(np.ascontiguousarray(out), complex128_dtype, a.device)
+
+
+def fft_fftshift(a, dim=None):
+    """Shift zero-frequency component to center."""
+    arr = _to_numpy(a)
+    axes = None if dim is None else (tuple(dim) if isinstance(dim, (list, tuple)) else (dim,))
+    out = np.fft.fftshift(arr, axes=axes)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def fft_ifftshift(a, dim=None):
+    """Inverse of fftshift."""
+    arr = _to_numpy(a)
+    axes = None if dim is None else (tuple(dim) if isinstance(dim, (list, tuple)) else (dim,))
+    out = np.fft.ifftshift(arr, axes=axes)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# torch.special ops
+# ---------------------------------------------------------------------------
+
+def special_digamma(a):
+    """Logarithmic derivative of the gamma function (psi function)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.digamma(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_entr(a):
+    """Entropy: -x * ln(x), 0 for x=0, -inf for x<0."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.where(arr > 0, -arr * np.log(arr), np.where(arr == 0, 0.0, -np.inf))
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_erfcx(a):
+    """Scaled complementary error function: exp(x^2) * erfc(x)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.erfcx(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_erfinv(a):
+    """Inverse error function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.erfinv(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_gammainc(a, b):
+    """Regularized lower incomplete gamma function."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.gammainc(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_gammaincc(a, b):
+    """Regularized upper incomplete gamma function."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.gammaincc(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_gammaln(a):
+    """Log of the absolute value of the gamma function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.gammaln(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i0(a):
+    """Zeroth order modified Bessel function of the first kind."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i0(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i0e(a):
+    """Exponentially scaled zeroth order modified Bessel function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i0e(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i1(a):
+    """First order modified Bessel function of the first kind."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i1(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_i1e(a):
+    """Exponentially scaled first order modified Bessel function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.i1e(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_log_ndtr(a):
+    """Log of the area under the standard Gaussian PDF from -inf to x."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.log_ndtr(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_logit(a, eps=None):
+    """Logit function: log(x / (1 - x))."""
+    arr = _to_numpy(a).astype(np.float64)
+    if eps is not None:
+        arr = np.clip(arr, eps, 1.0 - eps)
+    from scipy import special as sp
+    out = sp.logit(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_multigammaln(a, p):
+    """Multivariate log-gamma function with dimension p."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.multigammaln(arr, p)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_ndtr(a):
+    """Area under the standard Gaussian PDF from -inf to x (normal CDF)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.ndtr(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_ndtri(a):
+    """Inverse of ndtr (quantile function of standard normal)."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.ndtri(arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_polygamma(n, a):
+    """N-th derivative of the digamma function."""
+    from scipy import special as sp
+    arr = _to_numpy(a).astype(np.float64)
+    out = sp.polygamma(n, arr)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_sinc(a):
+    """Normalized sinc function: sin(pi*x) / (pi*x)."""
+    arr = _to_numpy(a).astype(np.float64)
+    out = np.sinc(arr)  # np.sinc already computes sin(pi*x)/(pi*x)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_xlog1py(a, b):
+    """x * log1p(y), with 0 when x=0."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.xlog1py(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_xlogy(a, b):
+    """x * log(y), with 0 when x=0."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.xlogy(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+def special_zeta(a, b):
+    """Hurwitz zeta function."""
+    from scipy import special as sp
+    a_np = _to_numpy(a).astype(np.float64)
+    b_np = _to_numpy(b).astype(np.float64)
+    out = sp.zeta(a_np, b_np)
+    return _from_numpy(np.ascontiguousarray(out.astype(to_numpy_dtype(a.dtype))), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# F.affine_grid / F.grid_sample
+# ---------------------------------------------------------------------------
+
+def affine_grid(theta, size, align_corners=None):
+    """Generate 2D or 3D affine sampling grid from transformation matrix.
+
+    Args:
+        theta: Tensor of shape (N, 2, 3) for 4-D or (N, 3, 4) for 5-D.
+        size: output spatial size, e.g. torch.Size([N, C, H, W]).
+        align_corners: if True, [-1, 1] maps to pixel centres at corners;
+                       if False, [-1, 1] maps to the edges of the corner pixels.
+    Returns:
+        grid: (N, H, W, 2) for 4-D or (N, D, H, W, 3) for 5-D.
+    """
+    if align_corners is None:
+        align_corners = False
+
+    theta_np = _to_numpy(theta).astype(np.float32)  # (N, 2, 3) or (N, 3, 4)
+    N = theta_np.shape[0]
+
+    if len(size) == 4:
+        # 2-D spatial
+        _, _, H, W = size
+        # Build base grid of (x, y, 1) coordinates
+        if align_corners:
+            # linspace from -1 to 1 with H / W points
+            ys = np.linspace(-1.0, 1.0, H, dtype=np.float32) if H > 1 else np.array([0.0], dtype=np.float32)
+            xs = np.linspace(-1.0, 1.0, W, dtype=np.float32) if W > 1 else np.array([0.0], dtype=np.float32)
+        else:
+            # coordinates centred in each cell, ranging from -1+1/W to 1-1/W
+            ys = (np.arange(H, dtype=np.float32) * 2.0 + 1.0) / H - 1.0 if H > 0 else np.zeros(0, dtype=np.float32)
+            xs = (np.arange(W, dtype=np.float32) * 2.0 + 1.0) / W - 1.0 if W > 0 else np.zeros(0, dtype=np.float32)
+
+        # meshgrid: grid_x (H, W), grid_y (H, W)
+        grid_x, grid_y = np.meshgrid(xs, ys)  # both (H, W)
+        ones = np.ones_like(grid_x)
+
+        # base_grid: (H*W, 3) — columns are x, y, 1
+        base_grid = np.stack([grid_x.ravel(), grid_y.ravel(), ones.ravel()], axis=1)  # (H*W, 3)
+
+        # Apply theta: out = base_grid @ theta^T  =>  (N, H*W, 2)
+        # theta: (N, 2, 3), base_grid: (H*W, 3)
+        # result[n] = base_grid @ theta[n].T  ->  (H*W, 2)
+        out = np.einsum('ij,nkj->nik', base_grid, theta_np)  # (N, H*W, 2)
+        out = out.reshape(N, H, W, 2)
+
+    elif len(size) == 5:
+        # 3-D spatial
+        _, _, D, H, W = size
+        if align_corners:
+            zs = np.linspace(-1.0, 1.0, D, dtype=np.float32) if D > 1 else np.array([0.0], dtype=np.float32)
+            ys = np.linspace(-1.0, 1.0, H, dtype=np.float32) if H > 1 else np.array([0.0], dtype=np.float32)
+            xs = np.linspace(-1.0, 1.0, W, dtype=np.float32) if W > 1 else np.array([0.0], dtype=np.float32)
+        else:
+            zs = (np.arange(D, dtype=np.float32) * 2.0 + 1.0) / D - 1.0 if D > 0 else np.zeros(0, dtype=np.float32)
+            ys = (np.arange(H, dtype=np.float32) * 2.0 + 1.0) / H - 1.0 if H > 0 else np.zeros(0, dtype=np.float32)
+            xs = (np.arange(W, dtype=np.float32) * 2.0 + 1.0) / W - 1.0 if W > 0 else np.zeros(0, dtype=np.float32)
+
+        grid_x, grid_y, grid_z = np.meshgrid(xs, ys, zs, indexing='xy')
+        # grid_x, grid_y, grid_z are (H, W, D) due to meshgrid 'xy' indexing
+        # Transpose to (D, H, W)
+        grid_x = np.transpose(grid_x, (2, 0, 1))
+        grid_y = np.transpose(grid_y, (2, 0, 1))
+        grid_z = np.transpose(grid_z, (2, 0, 1))
+        ones = np.ones_like(grid_x)
+
+        base_grid = np.stack([grid_x.ravel(), grid_y.ravel(), grid_z.ravel(), ones.ravel()], axis=1)  # (D*H*W, 4)
+        out = np.einsum('ij,nkj->nik', base_grid, theta_np)  # (N, D*H*W, 3)
+        out = out.reshape(N, D, H, W, 3)
+    else:
+        raise ValueError("affine_grid only supports 4-D (2-D spatial) and 5-D (3-D spatial) inputs")
+
+    return _from_numpy(np.ascontiguousarray(out), theta.dtype, theta.device)
+
+
+def _grid_sample_denormalize(coord, length, align_corners):
+    """Convert normalised coordinate [-1, 1] to pixel coordinate."""
+    if align_corners:
+        # -1 -> 0, 1 -> length-1
+        return ((coord + 1.0) / 2.0) * (length - 1)
+    else:
+        # -1 -> -0.5, 1 -> length - 0.5
+        return ((coord + 1.0) * length - 1.0) / 2.0
+
+
+def _grid_sample_compute_source(coord, length, padding_mode):
+    """Apply padding mode to source pixel coordinate.
+
+    Returns (index_array, in_bounds_mask).
+    For 'zeros': index is clamped but mask marks OOB.
+    For 'border': index is clamped.
+    For 'reflection': index is reflected.
+    """
+    if padding_mode == 'border':
+        coord = np.clip(coord, 0, length - 1)
+        return coord, None
+    elif padding_mode == 'reflection':
+        # Reflect: the range [0, length-1] is mirrored.
+        # Double the period and fold back.
+        if length > 1:
+            # Period = 2 * (length - 1)
+            period = 2.0 * (length - 1)
+            coord = np.abs(np.mod(coord, period))
+            coord = np.where(coord > length - 1, period - coord, coord)
+        else:
+            coord = np.zeros_like(coord)
+        coord = np.clip(coord, 0, length - 1)
+        return coord, None
+    else:
+        # zeros padding: mark out-of-bounds, clamp index
+        mask = (coord >= 0) & (coord < length)
+        coord = np.clip(coord, 0, length - 1)
+        return coord, mask
+
+
+def _cubic_interp_weight(t):
+    """Compute cubic convolution weights for distance t (|t| values).
+
+    Uses the Keys cubic with a = -0.75 (same as PyTorch).
+    Returns array of same shape as t.
+    """
+    t = np.abs(t)
+    w = np.where(
+        t <= 1.0,
+        (1.5 * t - 2.5) * t * t + 1.0,
+        np.where(
+            t < 2.0,
+            ((-0.5 * t + 2.5) * t - 4.0) * t + 2.0,
+            0.0,
+        ),
+    )
+    return w
+
+
+def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=None):
+    """Sample input tensor at grid coordinates.
+
+    Args:
+        input: (N, C, H_in, W_in) tensor.
+        grid:  (N, H_out, W_out, 2) tensor with values in [-1, 1].
+               The last dimension is (x, y) where x indexes W and y indexes H.
+        mode: 'bilinear', 'nearest', or 'bicubic'.
+        padding_mode: 'zeros', 'border', or 'reflection'.
+        align_corners: bool.
+    Returns:
+        (N, C, H_out, W_out) tensor.
+    """
+    if align_corners is None:
+        align_corners = False
+
+    inp = _to_numpy(input).astype(np.float64)  # (N, C, H_in, W_in)
+    g = _to_numpy(grid).astype(np.float64)      # (N, H_out, W_out, 2)
+
+    N, C, H_in, W_in = inp.shape
+    _, H_out, W_out, _ = g.shape
+
+    # De-normalise grid coordinates
+    gx = _grid_sample_denormalize(g[..., 0], W_in, align_corners)  # (N, H_out, W_out)
+    gy = _grid_sample_denormalize(g[..., 1], H_in, align_corners)  # (N, H_out, W_out)
+
+    if mode == 'nearest':
+        ix = np.round(gx).astype(np.int64)
+        iy = np.round(gy).astype(np.int64)
+
+        ix_src, mask_x = _grid_sample_compute_source(ix.astype(np.float64), W_in, padding_mode)
+        iy_src, mask_y = _grid_sample_compute_source(iy.astype(np.float64), H_in, padding_mode)
+        ix_src = ix_src.astype(np.int64)
+        iy_src = iy_src.astype(np.int64)
+
+        # Gather: out[n, c, h, w] = inp[n, c, iy_src[n,h,w], ix_src[n,h,w]]
+        n_idx = np.arange(N)[:, None, None]  # (N, 1, 1)
+        out = inp[n_idx, :, iy_src[:, :, :], ix_src[:, :, :]]  # (N, H_out, W_out, C)
+        out = out.transpose(0, 3, 1, 2)  # (N, C, H_out, W_out)
+
+        if padding_mode == 'zeros':
+            mask = mask_x & mask_y  # (N, H_out, W_out)
+            out = out * mask[:, np.newaxis, :, :]
+
+    elif mode == 'bilinear':
+        ix0 = np.floor(gx).astype(np.int64)
+        iy0 = np.floor(gy).astype(np.int64)
+
+        tx = gx - np.floor(gx)  # fractional part
+        ty = gy - np.floor(gy)
+
+        out = np.zeros((N, C, H_out, W_out), dtype=np.float64)
+
+        for dy in range(2):
+            for dx in range(2):
+                cy = iy0 + dy
+                cx = ix0 + dx
+
+                cx_src, mask_x = _grid_sample_compute_source(cx.astype(np.float64), W_in, padding_mode)
+                cy_src, mask_y = _grid_sample_compute_source(cy.astype(np.float64), H_in, padding_mode)
+                cx_src = cx_src.astype(np.int64)
+                cy_src = cy_src.astype(np.int64)
+
+                wx = (1.0 - tx) if dx == 0 else tx
+                wy = (1.0 - ty) if dy == 0 else ty
+                w = wx * wy  # (N, H_out, W_out)
+
+                n_idx = np.arange(N)[:, None, None]
+                val = inp[n_idx, :, cy_src, cx_src]  # (N, H_out, W_out, C)
+                val = val.transpose(0, 3, 1, 2)       # (N, C, H_out, W_out)
+
+                if padding_mode == 'zeros':
+                    mask = mask_x & mask_y
+                    val = val * mask[:, np.newaxis, :, :]
+
+                out += val * w[:, np.newaxis, :, :]
+
+    elif mode == 'bicubic':
+        ix0 = np.floor(gx).astype(np.int64)
+        iy0 = np.floor(gy).astype(np.int64)
+
+        tx = gx - np.floor(gx)
+        ty = gy - np.floor(gy)
+
+        out = np.zeros((N, C, H_out, W_out), dtype=np.float64)
+
+        for dy in range(-1, 3):
+            for dx in range(-1, 3):
+                cy = iy0 + dy
+                cx = ix0 + dx
+
+                cx_src, mask_x = _grid_sample_compute_source(cx.astype(np.float64), W_in, padding_mode)
+                cy_src, mask_y = _grid_sample_compute_source(cy.astype(np.float64), H_in, padding_mode)
+                cx_src = cx_src.astype(np.int64)
+                cy_src = cy_src.astype(np.int64)
+
+                wx = _cubic_interp_weight(tx - dx)
+                wy = _cubic_interp_weight(ty - dy)
+                w = wx * wy
+
+                n_idx = np.arange(N)[:, None, None]
+                val = inp[n_idx, :, cy_src, cx_src]
+                val = val.transpose(0, 3, 1, 2)
+
+                if padding_mode == 'zeros':
+                    mask = mask_x & mask_y
+                    val = val * mask[:, np.newaxis, :, :]
+
+                out += val * w[:, np.newaxis, :, :]
+
+    else:
+        raise ValueError(f"grid_sample mode must be 'bilinear', 'nearest', or 'bicubic', got '{mode}'")
+
+    out = out.astype(to_numpy_dtype(input.dtype))
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+# ---------------------------------------------------------------------------
+# F.unfold (im2col) / F.fold (col2im)
+# ---------------------------------------------------------------------------
+
+def im2col(a, kernel_size, dilation, padding, stride):
+    """F.unfold: Extract sliding local blocks from 4D input (N, C, H, W).
+
+    Returns tensor of shape (N, C*kH*kW, L) where L = number of valid blocks.
+    kernel_size, dilation, padding, stride are all 2-tuples.
+    """
+    arr = _to_numpy(a)
+    N, C, H, W = arr.shape
+    kH, kW = kernel_size
+    dH, dW = dilation
+    pH, pW = padding
+    sH, sW = stride
+
+    # Effective kernel size with dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    # Output spatial dimensions
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+    L = H_out * W_out
+
+    # Pad input if needed
+    if pH > 0 or pW > 0:
+        arr = np.pad(arr, ((0, 0), (0, 0), (pH, pH), (pW, pW)), mode='constant')
+
+    # Ensure contiguous for stride tricks
+    arr = np.ascontiguousarray(arr)
+
+    # Use stride tricks to extract patches efficiently
+    # Shape: (N, C, kH, kW, H_out, W_out)
+    shape = (N, C, kH, kW, H_out, W_out)
+    strides = (
+        arr.strides[0],          # batch
+        arr.strides[1],          # channel
+        arr.strides[2] * dH,     # kernel height (dilated)
+        arr.strides[3] * dW,     # kernel width (dilated)
+        arr.strides[2] * sH,     # output height (stride)
+        arr.strides[3] * sW,     # output width (stride)
+    )
+
+    patches = np.lib.stride_tricks.as_strided(arr, shape=shape, strides=strides)
+    # Reshape to (N, C*kH*kW, H_out*W_out)
+    out = patches.reshape(N, C * kH * kW, L)
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def col2im(a, output_size, kernel_size, dilation, padding, stride):
+    """F.fold: Combine array of sliding local blocks into a 4D tensor.
+
+    Input shape: (N, C*kH*kW, L)
+    Returns tensor of shape (N, C, output_size[0], output_size[1]).
+    Overlapping regions are summed (matching PyTorch behavior).
+    """
+    arr = _to_numpy(a)
+    N, C_kk, L = arr.shape
+    kH, kW = kernel_size
+    dH, dW = dilation
+    pH, pW = padding
+    sH, sW = stride
+    H_out, W_out = output_size
+
+    # Effective kernel size with dilation
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    # Number of output positions
+    H_col = (H_out + 2 * pH - ekH) // sH + 1
+    W_col = (W_out + 2 * pW - ekW) // sW + 1
+
+    if H_col * W_col != L:
+        raise ValueError(
+            f"Expected L={H_col * W_col} (H_col={H_col}, W_col={W_col}) but got L={L}"
+        )
+
+    C = C_kk // (kH * kW)
+    if C * kH * kW != C_kk:
+        raise ValueError(
+            f"C*kH*kW ({C}*{kH}*{kW}={C * kH * kW}) does not match input dim 1 ({C_kk})"
+        )
+
+    # Padded output dimensions
+    H_pad = H_out + 2 * pH
+    W_pad = W_out + 2 * pW
+
+    # Create output with padding
+    out = np.zeros((N, C, H_pad, W_pad), dtype=arr.dtype)
+
+    # Reshape input columns to (N, C, kH, kW, H_col, W_col)
+    cols = arr.reshape(N, C, kH, kW, H_col, W_col)
+
+    # Scatter-add patches back into output
+    for i in range(kH):
+        for j in range(kW):
+            h_start = i * dH
+            w_start = j * dW
+            for h_idx in range(H_col):
+                for w_idx in range(W_col):
+                    out[:, :, h_start + h_idx * sH, w_start + w_idx * sW] += cols[:, :, i, j, h_idx, w_idx]
+
+    # Remove padding
+    if pH > 0 or pW > 0:
+        out = out[:, :, pH:pH + H_out, pW:pW + W_out]
+
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# uniform (out-of-place) — needed by F.gumbel_softmax
+# ---------------------------------------------------------------------------
+def uniform(a):
+    """Return tensor of same shape filled with Uniform(0,1) samples."""
+    from ..._random import _get_cpu_rng
+    rng = _get_cpu_rng()
+    arr = rng.uniform(0.0, 1.0, _to_numpy(a).shape).astype(_to_numpy(a).dtype)
+    return _from_numpy(arr, a.dtype, a.device)
+
+
+# ---------------------------------------------------------------------------
+# Upsample ops — CPU numpy implementations
+# ---------------------------------------------------------------------------
+def upsample_nearest1d(a, output_size):
+    """Nearest-neighbor 1D upsampling. Input: (N, C, W_in) -> (N, C, W_out)."""
+    arr = _to_numpy(a)
+    W_out = output_size[0]
+    W_in = arr.shape[2]
+    indices = (np.arange(W_out, dtype=np.float64) * W_in / W_out).astype(np.intp)
+    np.clip(indices, 0, W_in - 1, out=indices)
+    out = arr[:, :, indices]
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def upsample_linear1d(a, output_size, align_corners=False, scales=None):
+    """Linear interpolation 1D upsampling. Input: (N, C, W_in) -> (N, C, W_out)."""
+    arr = _to_numpy(a).astype(np.float64)
+    W_out = output_size[0]
+    W_in = arr.shape[2]
+
+    if W_out == 1:
+        out = arr[:, :, :1]
+        return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+    if align_corners and W_in > 1 and W_out > 1:
+        x = np.linspace(0, W_in - 1, W_out)
+    else:
+        x = (np.arange(W_out, dtype=np.float64) + 0.5) * W_in / W_out - 0.5
+
+    x = np.clip(x, 0, W_in - 1)
+    x0 = np.floor(x).astype(np.intp)
+    x1 = np.minimum(x0 + 1, W_in - 1)
+    wx = (x - x0).reshape(1, 1, -1)
+
+    out = arr[:, :, x0] * (1.0 - wx) + arr[:, :, x1] * wx
+    return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+
+def upsample_nearest2d(a, output_size):
+    """Nearest-neighbor 2D upsampling. Input: (N, C, H_in, W_in) -> (N, C, H_out, W_out)."""
+    arr = _to_numpy(a)
+    H_out, W_out = output_size
+    H_in, W_in = arr.shape[2], arr.shape[3]
+    h_idx = (np.arange(H_out, dtype=np.float64) * H_in / H_out).astype(np.intp)
+    w_idx = (np.arange(W_out, dtype=np.float64) * W_in / W_out).astype(np.intp)
+    np.clip(h_idx, 0, H_in - 1, out=h_idx)
+    np.clip(w_idx, 0, W_in - 1, out=w_idx)
+    out = arr[:, :, h_idx[:, None], w_idx[None, :]]
+    return _from_numpy(np.ascontiguousarray(out), a.dtype, a.device)
+
+
+def upsample_bilinear2d(a, output_size, align_corners=False, scales_h=None, scales_w=None):
+    """Bilinear 2D upsampling. Input: (N, C, H_in, W_in) -> (N, C, H_out, W_out)."""
+    arr = _to_numpy(a).astype(np.float64)
+    H_out, W_out = output_size
+    H_in, W_in = arr.shape[2], arr.shape[3]
+
+    if align_corners and H_in > 1 and H_out > 1:
+        h = np.linspace(0, H_in - 1, H_out)
+    else:
+        h = (np.arange(H_out, dtype=np.float64) + 0.5) * H_in / H_out - 0.5
+    if align_corners and W_in > 1 and W_out > 1:
+        w = np.linspace(0, W_in - 1, W_out)
+    else:
+        w = (np.arange(W_out, dtype=np.float64) + 0.5) * W_in / W_out - 0.5
+
+    h = np.clip(h, 0, H_in - 1)
+    w = np.clip(w, 0, W_in - 1)
+
+    h0 = np.floor(h).astype(np.intp)
+    h1 = np.minimum(h0 + 1, H_in - 1)
+    w0 = np.floor(w).astype(np.intp)
+    w1 = np.minimum(w0 + 1, W_in - 1)
+
+    wh = (h - h0).reshape(1, 1, -1, 1)
+    ww = (w - w0).reshape(1, 1, 1, -1)
+
+    out = (arr[:, :, h0[:, None], w0[None, :]] * (1 - wh) * (1 - ww) +
+           arr[:, :, h0[:, None], w1[None, :]] * (1 - wh) * ww +
+           arr[:, :, h1[:, None], w0[None, :]] * wh * (1 - ww) +
+           arr[:, :, h1[:, None], w1[None, :]] * wh * ww)
+    return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+
+def upsample_bicubic2d(a, output_size, align_corners=False, scales_h=None, scales_w=None):
+    """Bicubic 2D upsampling. Input: (N, C, H_in, W_in) -> (N, C, H_out, W_out)."""
+    arr = _to_numpy(a).astype(np.float64)
+    H_out, W_out = output_size
+    H_in, W_in = arr.shape[2], arr.shape[3]
+
+    def _cubic_weight(t):
+        """Keys cubic kernel (a=-0.75)."""
+        at = np.abs(t)
+        return np.where(at <= 1, (1.5 * at - 2.5) * at * at + 1,
+               np.where(at < 2, ((-0.5 * at + 2.5) * at - 4) * at + 2, 0.0))
+
+    if align_corners and H_in > 1 and H_out > 1:
+        h = np.linspace(0, H_in - 1, H_out)
+    else:
+        h = (np.arange(H_out, dtype=np.float64) + 0.5) * H_in / H_out - 0.5
+    if align_corners and W_in > 1 and W_out > 1:
+        w = np.linspace(0, W_in - 1, W_out)
+    else:
+        w = (np.arange(W_out, dtype=np.float64) + 0.5) * W_in / W_out - 0.5
+
+    N, C = arr.shape[:2]
+    out = np.zeros((N, C, H_out, W_out), dtype=np.float64)
+    for j in range(H_out):
+        for i in range(W_out):
+            hy, wx = h[j], w[i]
+            hy0 = int(np.floor(hy)) - 1
+            wx0 = int(np.floor(wx)) - 1
+            for dh in range(4):
+                for dw in range(4):
+                    hh = min(max(hy0 + dh, 0), H_in - 1)
+                    ww = min(max(wx0 + dw, 0), W_in - 1)
+                    weight = _cubic_weight(hy - (hy0 + dh)) * _cubic_weight(wx - (wx0 + dw))
+                    out[:, :, j, i] += arr[:, :, hh, ww] * weight
+    return _from_numpy(np.ascontiguousarray(out.astype(_to_numpy(a).dtype)), a.dtype, a.device)
+
+
+def max_pool1d(input, kernel_size, stride, padding, dilation, ceil_mode=False, return_indices=False):
+    """Max pooling 1D via numpy sliding window."""
+    a = _to_numpy(input)
+    kW = kernel_size[0]
+    sW = stride[0]
+    pW = padding[0]
+    dW = dilation[0]
+
+    if input.ndim == 3:
+        N, C, W = a.shape
+    else:
+        raise ValueError(f"Expected 3D input, got {input.ndim}D")
+
+    # Pad input
+    if pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pW, pW)), mode='constant', constant_values=-np.inf)
+    W_padded = a.shape[2]
+
+    if ceil_mode:
+        oW = int(np.ceil((W_padded - dW * (kW - 1) - 1) / sW + 1))
+    else:
+        oW = int(np.floor((W_padded - dW * (kW - 1) - 1) / sW + 1))
+
+    out = np.empty((N, C, oW), dtype=a.dtype)
+    for ow in range(oW):
+        w_start = ow * sW
+        vals = [a[:, :, w_start + k * dW] for k in range(kW) if w_start + k * dW < W_padded]
+        out[:, :, ow] = np.maximum.reduce(vals)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def avg_pool1d(input, kernel_size, stride, padding, ceil_mode=False, count_include_pad=True):
+    """Avg pooling 1D via numpy sliding window."""
+    a = _to_numpy(input)
+    kW = kernel_size[0]
+    sW = stride[0]
+    pW = padding[0]
+
+    N, C, W = a.shape
+
+    if pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pW, pW)), mode='constant', constant_values=0)
+    W_padded = a.shape[2]
+
+    if ceil_mode:
+        oW = int(np.ceil((W_padded - kW) / sW + 1))
+    else:
+        oW = int(np.floor((W_padded - kW) / sW + 1))
+
+    out = np.empty((N, C, oW), dtype=a.dtype)
+    for ow in range(oW):
+        w_start = ow * sW
+        w_end = min(w_start + kW, W_padded)
+        window = a[:, :, w_start:w_end]
+        if count_include_pad:
+            out[:, :, ow] = window.sum(axis=2) / kW
+        else:
+            real_start = max(w_start - pW, 0)
+            real_end = min(w_end - pW, W)
+            count = max(real_end - real_start, 1)
+            out[:, :, ow] = window.sum(axis=2) / count
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def adaptive_avg_pool1d(input, output_size):
+    """Adaptive avg pool 1D: compute kernel and stride from output_size."""
+    a = _to_numpy(input)
+    N, C, W = a.shape
+    oW = output_size[0]
+
+    out = np.empty((N, C, oW), dtype=a.dtype)
+    for ow in range(oW):
+        w_start = int(np.floor(ow * W / oW))
+        w_end = int(np.ceil((ow + 1) * W / oW))
+        out[:, :, ow] = a[:, :, w_start:w_end].mean(axis=2)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def _conv_transpose3d_scatter(out, a, w, n, c_in, c_out_start, C_out_per_g,
+                               D_in, H_in, W_in, D_out, H_out, W_out,
+                               kD, kH, kW, sD, sH, sW, pD, pH, pW, dD, dH, dW):
+    """Scatter one input channel's contribution for conv_transpose3d."""
+    for d in range(D_in):
+        for h in range(H_in):
+            for wi in range(W_in):
+                val = a[n, c_in, d, h, wi]
+                if val == 0:
+                    continue
+                for c_out_local in range(C_out_per_g):
+                    c_out = c_out_start + c_out_local
+                    for kd in range(kD):
+                        od = d * sD - pD + kd * dD
+                        if od < 0 or od >= D_out:
+                            continue
+                        for kh in range(kH):
+                            oh = h * sH - pH + kh * dH
+                            if oh < 0 or oh >= H_out:
+                                continue
+                            for kw in range(kW):
+                                ow = wi * sW - pW + kw * dW
+                                if ow < 0 or ow >= W_out:
+                                    continue
+                                out[n, c_out, od, oh, ow] += val * w[c_in, c_out_local, kd, kh, kw]
+
+
+def conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation):
+    """Transposed convolution 3D via numpy."""
+    a = _to_numpy(input)
+    w = _to_numpy(weight)
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+    opD, opH, opW = output_padding
+    dD, dH, dW = dilation
+
+    N, C_in, D_in, H_in, W_in = a.shape
+    C_in_w, C_out_per_g, kD, kH, kW = w.shape
+    C_out = C_out_per_g * groups
+
+    D_out = (D_in - 1) * sD - 2 * pD + dD * (kD - 1) + opD + 1
+    H_out = (H_in - 1) * sH - 2 * pH + dH * (kH - 1) + opH + 1
+    W_out = (W_in - 1) * sW - 2 * pW + dW * (kW - 1) + opW + 1
+
+    out = np.zeros((N, C_out, D_out, H_out, W_out), dtype=a.dtype)
+    c_in_per_g = C_in // groups
+
+    for g in range(groups):
+        for n in range(N):
+            for c_in_local in range(c_in_per_g):
+                c_in = g * c_in_per_g + c_in_local
+                _conv_transpose3d_scatter(out, a, w, n, c_in, g * C_out_per_g, C_out_per_g,
+                                          D_in, H_in, W_in, D_out, H_out, W_out,
+                                          kD, kH, kW, sD, sH, sW, pD, pH, pW, dD, dH, dW)
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out += b.reshape(1, C_out, 1, 1, 1)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def max_pool3d(input, kernel_size, stride, padding, dilation, ceil_mode=False, return_indices=False):
+    """Max pooling 3D via numpy sliding window."""
+    a = _to_numpy(input)
+    kD, kH, kW = kernel_size
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+    dD, dH, dW = dilation
+
+    N, C, D, H, W = a.shape
+
+    if pD > 0 or pH > 0 or pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)),
+                   mode='constant', constant_values=-np.inf)
+
+    D_pad, H_pad, W_pad = a.shape[2], a.shape[3], a.shape[4]
+
+    if ceil_mode:
+        oD = int(np.ceil((D_pad - dD * (kD - 1) - 1) / sD + 1))
+        oH = int(np.ceil((H_pad - dH * (kH - 1) - 1) / sH + 1))
+        oW = int(np.ceil((W_pad - dW * (kW - 1) - 1) / sW + 1))
+    else:
+        oD = int(np.floor((D_pad - dD * (kD - 1) - 1) / sD + 1))
+        oH = int(np.floor((H_pad - dH * (kH - 1) - 1) / sH + 1))
+        oW = int(np.floor((W_pad - dW * (kW - 1) - 1) / sW + 1))
+
+    out = np.empty((N, C, oD, oH, oW), dtype=a.dtype)
+    for od in range(oD):
+        for oh in range(oH):
+            for ow in range(oW):
+                d_start = od * sD
+                h_start = oh * sH
+                w_start = ow * sW
+                window_vals = []
+                for kd in range(kD):
+                    di = d_start + kd * dD
+                    if di >= D_pad:
+                        continue
+                    for kh in range(kH):
+                        hi = h_start + kh * dH
+                        if hi >= H_pad:
+                            continue
+                        for kw in range(kW):
+                            wi = w_start + kw * dW
+                            if wi >= W_pad:
+                                continue
+                            window_vals.append(a[:, :, di, hi, wi])
+                if window_vals:
+                    out[:, :, od, oh, ow] = np.maximum.reduce(window_vals)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def avg_pool3d(input, kernel_size, stride, padding, ceil_mode=False, count_include_pad=True):
+    """Avg pooling 3D via numpy sliding window."""
+    a = _to_numpy(input)
+    kD, kH, kW = kernel_size
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+
+    N, C, D, H, W = a.shape
+
+    if pD > 0 or pH > 0 or pW > 0:
+        a = np.pad(a, ((0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)),
+                   mode='constant', constant_values=0)
+
+    D_pad, H_pad, W_pad = a.shape[2], a.shape[3], a.shape[4]
+
+    if ceil_mode:
+        oD = int(np.ceil((D_pad - kD) / sD + 1))
+        oH = int(np.ceil((H_pad - kH) / sH + 1))
+        oW = int(np.ceil((W_pad - kW) / sW + 1))
+    else:
+        oD = int(np.floor((D_pad - kD) / sD + 1))
+        oH = int(np.floor((H_pad - kH) / sH + 1))
+        oW = int(np.floor((W_pad - kW) / sW + 1))
+
+    out = np.empty((N, C, oD, oH, oW), dtype=a.dtype)
+    pool_size = kD * kH * kW
+    for od in range(oD):
+        for oh in range(oH):
+            for ow in range(oW):
+                d_start = od * sD
+                h_start = oh * sH
+                w_start = ow * sW
+                d_end = min(d_start + kD, D_pad)
+                h_end = min(h_start + kH, H_pad)
+                w_end = min(w_start + kW, W_pad)
+                window = a[:, :, d_start:d_end, h_start:h_end, w_start:w_end]
+                if count_include_pad:
+                    out[:, :, od, oh, ow] = window.sum(axis=(2, 3, 4)) / pool_size
+                else:
+                    count = window.shape[2] * window.shape[3] * window.shape[4]
+                    out[:, :, od, oh, ow] = window.sum(axis=(2, 3, 4)) / max(count, 1)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def adaptive_avg_pool3d(input, output_size):
+    """Adaptive avg pool 3D: compute regions from output_size."""
+    a = _to_numpy(input)
+    N, C, D, H, W = a.shape
+    oD, oH, oW = output_size
+
+    out = np.empty((N, C, oD, oH, oW), dtype=a.dtype)
+    for od in range(oD):
+        d_start = int(np.floor(od * D / oD))
+        d_end = int(np.ceil((od + 1) * D / oD))
+        for oh in range(oH):
+            h_start = int(np.floor(oh * H / oH))
+            h_end = int(np.ceil((oh + 1) * H / oH))
+            for ow in range(oW):
+                w_start = int(np.floor(ow * W / oW))
+                w_end = int(np.ceil((ow + 1) * W / oW))
+                out[:, :, od, oh, ow] = a[:, :, d_start:d_end, h_start:h_end, w_start:w_end].mean(axis=(2, 3, 4))
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def addmm(input, mat1, mat2, beta=1, alpha=1):
+    """addmm: beta * input + alpha * (mat1 @ mat2)."""
+    inp = _to_numpy(input)
+    m1 = _to_numpy(mat1)
+    m2 = _to_numpy(mat2)
+    out = beta * inp + alpha * np.dot(m1, m2)
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def conv3d(input, weight, bias=None, stride=(1, 1, 1), padding=(0, 0, 0), dilation=(1, 1, 1), groups=1):
+    """Conv3d forward using numpy. Input: (N,C,D,H,W), Weight: (O,C/g,kD,kH,kW)."""
+    inp = _to_numpy(input)
+    w = _to_numpy(weight)
+    N, C_in, D, H, W = inp.shape
+    C_out, C_in_g, kD, kH, kW = w.shape
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+    dD, dH, dW = dilation
+
+    ekD = (kD - 1) * dD + 1
+    ekH = (kH - 1) * dH + 1
+    ekW = (kW - 1) * dW + 1
+
+    D_out = (D + 2 * pD - ekD) // sD + 1
+    H_out = (H + 2 * pH - ekH) // sH + 1
+    W_out = (W + 2 * pW - ekW) // sW + 1
+
+    if pD > 0 or pH > 0 or pW > 0:
+        inp = np.pad(inp, ((0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)), mode='constant')
+
+    out = np.zeros((N, C_out, D_out, H_out, W_out), dtype=inp.dtype)
+
+    for g in range(groups):
+        c_out_per_g = C_out // groups
+        c_out_s = g * c_out_per_g
+        c_in_s = g * C_in_g
+        for co_local in range(c_out_per_g):
+            co = c_out_s + co_local
+            for ci_local in range(C_in_g):
+                ci = c_in_s + ci_local
+                kernel = w[co, ci_local]
+                for od in range(D_out):
+                    for oh in range(H_out):
+                        for ow in range(W_out):
+                            for kd in range(kD):
+                                for kh in range(kH):
+                                    for kw in range(kW):
+                                        id_ = od * sD + kd * dD
+                                        ih = oh * sH + kh * dH
+                                        iw = ow * sW + kw * dW
+                                        out[:, co, od, oh, ow] += inp[:, ci, id_, ih, iw] * kernel[kd, kh, kw]
+
+    if bias is not None:
+        b = _to_numpy(bias)
+        out += b.reshape(1, C_out, 1, 1, 1)
+
+    return _from_numpy(np.ascontiguousarray(out), input.dtype, input.device)
+
+
+def adaptive_max_pool2d(input, output_size, return_indices=False):
+    """Adaptive max pooling 2D via numpy."""
+    a = _to_numpy(input)
+    N, C, H, W = a.shape
+    if isinstance(output_size, int):
+        oH = oW = output_size
+    else:
+        oH, oW = output_size
+
+    out = np.empty((N, C, oH, oW), dtype=a.dtype)
+    if return_indices:
+        out_indices = np.empty((N, C, oH, oW), dtype=np.int64)
+        for oh in range(oH):
+            h_start = oh * H // oH
+            h_end = (oh + 1) * H // oH
+            for ow in range(oW):
+                w_start = ow * W // oW
+                w_end = (ow + 1) * W // oW
+                region = a[:, :, h_start:h_end, w_start:w_end]
+                region_flat = region.reshape(N, C, -1)
+                out[:, :, oh, ow] = region_flat.max(axis=2)
+                local_idx = region_flat.argmax(axis=2)
+                rW = w_end - w_start
+                local_h = local_idx // rW + h_start
+                local_w = local_idx % rW + w_start
+                out_indices[:, :, oh, ow] = local_h * W + local_w
+        result = _from_numpy(out, input.dtype, input.device)
+        return result, _from_numpy(out_indices, int64_dtype, input.device)
+
+    for oh in range(oH):
+        h_start = oh * H // oH
+        h_end = (oh + 1) * H // oH
+        for ow in range(oW):
+            w_start = ow * W // oW
+            w_end = (ow + 1) * W // oW
+            region = a[:, :, h_start:h_end, w_start:w_end]
+            region_flat = region.reshape(N, C, -1)
+            out[:, :, oh, ow] = region_flat.max(axis=2)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def adaptive_max_pool1d(input, output_size, return_indices=False):
+    """Adaptive max pooling 1D via numpy."""
+    a = _to_numpy(input)
+    N, C, L = a.shape
+    oL = output_size if isinstance(output_size, int) else output_size[0]
+
+    out = np.empty((N, C, oL), dtype=a.dtype)
+    if return_indices:
+        out_indices = np.empty((N, C, oL), dtype=np.int64)
+        for ol in range(oL):
+            l_start = ol * L // oL
+            l_end = (ol + 1) * L // oL
+            region = a[:, :, l_start:l_end]
+            out[:, :, ol] = region.max(axis=2)
+            out_indices[:, :, ol] = region.argmax(axis=2) + l_start
+        result = _from_numpy(out, input.dtype, input.device)
+        return result, _from_numpy(out_indices, int64_dtype, input.device)
+
+    for ol in range(oL):
+        l_start = ol * L // oL
+        l_end = (ol + 1) * L // oL
+        region = a[:, :, l_start:l_end]
+        out[:, :, ol] = region.max(axis=2)
+
+    return _from_numpy(out, input.dtype, input.device)
+
+
+def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
+    """CTC Loss forward via numpy alpha (forward variable) algorithm.
+
+    Args:
+        log_probs: (T, N, C) log probabilities
+        targets: (N, S) or (sum(target_lengths),) target sequences
+        input_lengths: (N,) lengths of inputs
+        target_lengths: (N,) lengths of targets
+        blank: blank label index
+        reduction: 'none', 'mean', or 'sum'
+        zero_infinity: if True, zero out infinite losses
+    """
+    lp = _to_numpy(log_probs).astype(np.float64)
+    T, N, C = lp.shape
+
+    if isinstance(targets, Tensor):
+        tgt = _to_numpy(targets)
+    else:
+        tgt = np.array(targets)
+
+    if isinstance(input_lengths, Tensor):
+        inp_lens = _to_numpy(input_lengths).astype(np.int64)
+    else:
+        inp_lens = np.array(input_lengths, dtype=np.int64)
+
+    if isinstance(target_lengths, Tensor):
+        tgt_lens = _to_numpy(target_lengths).astype(np.int64)
+    else:
+        tgt_lens = np.array(target_lengths, dtype=np.int64)
+
+    NEG_INF = -1e30
+    losses = np.zeros(N, dtype=np.float64)
+
+    # Determine if targets is 1D (concatenated) or 2D
+    is_1d = (tgt.ndim == 1)
+    offset = 0
+
+    for b in range(N):
+        T_b = int(inp_lens[b])
+        S_b = int(tgt_lens[b])
+
+        if is_1d:
+            labels_b = tgt[offset:offset + S_b]
+            offset += S_b
+        else:
+            labels_b = tgt[b, :S_b]
+
+        # Build extended labels with blanks: [blank, l0, blank, l1, blank, ...]
+        L = 2 * S_b + 1
+        ext = np.full(L, blank, dtype=np.int64)
+        for s in range(S_b):
+            ext[2 * s + 1] = labels_b[s]
+
+        # Alpha (forward variables): alpha[t, s] = log-prob of emitting ext[:s+1] up to time t
+        alpha = np.full((T_b, L), NEG_INF, dtype=np.float64)
+        alpha[0, 0] = lp[0, b, ext[0]]
+        if L > 1:
+            alpha[0, 1] = lp[0, b, ext[1]]
+
+        for t in range(1, T_b):
+            for s in range(L):
+                a = alpha[t - 1, s]
+                if s > 0:
+                    a = np.logaddexp(a, alpha[t - 1, s - 1])
+                if s > 1 and ext[s] != blank and ext[s] != ext[s - 2]:
+                    a = np.logaddexp(a, alpha[t - 1, s - 2])
+                alpha[t, s] = a + lp[t, b, ext[s]]
+
+        # Loss = -log(alpha[T-1, L-1] + alpha[T-1, L-2])
+        log_likelihood = alpha[T_b - 1, L - 1]
+        if L > 1:
+            log_likelihood = np.logaddexp(log_likelihood, alpha[T_b - 1, L - 2])
+        loss = -log_likelihood
+
+        if zero_infinity and np.isinf(loss):
+            loss = 0.0
+        losses[b] = loss
+
+    if reduction == 'none':
+        result = losses
+    elif reduction == 'sum':
+        result = np.array(losses.sum(), dtype=np.float64)
+    else:  # 'mean'
+        tgt_lens_f = tgt_lens.astype(np.float64)
+        tgt_lens_f = np.maximum(tgt_lens_f, 1.0)
+        result = np.array((losses / tgt_lens_f).mean(), dtype=np.float64)
+
+    out_dtype = log_probs.dtype
+    return _from_numpy(result.astype(to_numpy_dtype(out_dtype)), out_dtype, log_probs.device)

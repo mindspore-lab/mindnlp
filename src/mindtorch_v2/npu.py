@@ -7,8 +7,26 @@ from ._device import device as Device
 
 _MEMORY_FRACTION = None
 _NPU_INITIALIZED = False
-_NPU_SEED = None
-_NPU_SEED_OFFSET = 0
+
+_default_generators = {}  # device_index -> Generator
+
+
+def _get_default_generator(device_index=0):
+    """Get or create the default NPU generator for a device."""
+    if device_index not in _default_generators:
+        from ._random import Generator
+        gen = Generator(f'npu:{device_index}')
+        _default_generators[device_index] = gen
+    return _default_generators[device_index]
+
+
+class _DefaultGeneratorsAccessor:
+    """Lazy accessor for default NPU generators, mimicking torch.cuda.default_generators."""
+    def __getitem__(self, index):
+        return _get_default_generator(index)
+
+
+default_generators = _DefaultGeneratorsAccessor()
 
 
 
@@ -52,6 +70,14 @@ __all__ = [
     "is_pinned",
     "is_initialized",
     "init",
+    "manual_seed",
+    "manual_seed_all",
+    "get_rng_state",
+    "set_rng_state",
+    "get_rng_state_all",
+    "set_rng_state_all",
+    "default_generators",
+    "_get_default_generator",
 ]
 
 
@@ -387,35 +413,68 @@ def memory_snapshot():
 
 
 def manual_seed(seed: int):
-    """Set the seed for generating random numbers for the current NPU device.
-
-    Args:
-        seed (int): The desired seed.
-
-    Note: This seed is used by ACLNN random kernels (dropout, inplace_normal, etc.).
-    """
-    global _NPU_SEED, _NPU_SEED_OFFSET
-    _NPU_SEED = int(seed)
-    _NPU_SEED_OFFSET = 0
+    """Set the seed for generating random numbers for the current NPU device."""
+    dev_idx = current_device()
+    gen = _get_default_generator(dev_idx)
+    gen.manual_seed(seed)
 
 
 def manual_seed_all(seed: int):
-    """Set the seed for generating random numbers on all NPU devices.
+    """Set the seed for generating random numbers on all NPU devices."""
+    from ._backends.npu.runtime import device_count
+    try:
+        n = device_count()
+    except Exception:
+        n = 1
+    for i in range(n):
+        gen = _get_default_generator(i)
+        gen.manual_seed(seed)
 
-    Args:
-        seed (int): The desired seed.
+
+def _get_seed(device_index=None):
+    """Get current NPU seed for the given device."""
+    if device_index is None:
+        device_index = current_device()
+    return _get_default_generator(device_index)._seed
+
+
+def _get_and_advance_offset(device_index=None, increment=10):
+    """Get (seed, offset) and advance offset for the given device.
+
+    Returns:
+        tuple: (seed, offset) as integers.
     """
-    manual_seed(seed)
+    if device_index is None:
+        device_index = current_device()
+    gen = _get_default_generator(device_index)
+    return gen.philox_engine_inputs(increment)
 
 
-def _get_seed():
-    """Get current NPU seed (or default 0)."""
-    return _NPU_SEED if _NPU_SEED is not None else 0
+def get_rng_state(device=None):
+    """Get NPU RNG state as a ByteTensor."""
+    dev = _normalize_npu_device(device)
+    gen = _get_default_generator(dev.index or 0)
+    return gen.get_state()
 
 
-def _get_and_advance_offset(advance=1):
-    """Get current offset and advance it for next operation."""
-    global _NPU_SEED_OFFSET
-    offset = _NPU_SEED_OFFSET
-    _NPU_SEED_OFFSET += advance
-    return offset
+def set_rng_state(new_state, device=None):
+    """Set NPU RNG state from a ByteTensor."""
+    dev = _normalize_npu_device(device)
+    gen = _get_default_generator(dev.index or 0)
+    gen.set_state(new_state)
+
+
+def get_rng_state_all():
+    """Get RNG state for all NPU devices."""
+    from ._backends.npu.runtime import device_count
+    try:
+        n = device_count()
+    except Exception:
+        n = 1
+    return [get_rng_state(i) for i in range(n)]
+
+
+def set_rng_state_all(states):
+    """Set RNG state for all NPU devices."""
+    for i, state in enumerate(states):
+        set_rng_state(state, device=i)

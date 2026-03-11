@@ -3,11 +3,17 @@ from ._autograd.grad_mode import GradMode, no_grad
 from ._device import device as Device, get_default_device
 from ._dtype import to_numpy_dtype
 
+import builtins as _builtins
+
 
 def add(*args, **kwargs):
-    alpha = kwargs.get("alpha", 1)
+    alpha = kwargs.pop("alpha", 1)
+    kwargs.pop("out", None)
     if alpha != 1:
-        raise NotImplementedError("alpha != 1 not supported yet")
+        # Pre-multiply: add(a, b, alpha=k) => a + k*b
+        a, b = args[0], args[1]
+        b = mul(b, alpha)
+        return dispatch("add", None, a, b)
     return dispatch("add", None, *args, **kwargs)
 
 
@@ -271,7 +277,10 @@ def true_divide(a, b):
 def mean(a, dim=None, keepdim=False, *, dtype=None, axis=None):
     if axis is not None:
         dim = axis
-    return dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+    result = dispatch("mean", a.device.type, a, dim=dim, keepdim=keepdim)
+    if dtype is not None:
+        result = result.to(dtype=dtype)
+    return result
 
 
 def std(a, dim=None, keepdim=False, unbiased=True, *, axis=None):
@@ -301,11 +310,12 @@ def softplus(a):
 
 
 def sum(*args, **kwargs):
-    dtype = kwargs.get("dtype")
-    if dtype is not None:
-        raise NotImplementedError("sum dtype not supported yet")
+    dtype = kwargs.pop("dtype", None)
     kwargs.pop("device", None)
-    return dispatch("sum", None, *args, **kwargs)
+    result = dispatch("sum", None, *args, **kwargs)
+    if dtype is not None:
+        result = result.to(dtype=dtype)
+    return result
 
 
 def all(a, dim=None, keepdim=False):
@@ -710,28 +720,28 @@ def empty(*shape, dtype=None, device=None, memory_format=None):
     return dispatch("empty", dev, shape, dtype=dtype, memory_format=memory_format)
 
 
-def randn(*shape, dtype=None, device=None, memory_format=None):
+def randn(*shape, dtype=None, device=None, memory_format=None, generator=None):
     if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
         shape = shape[0]
     dev = _as_device(device)
-    return dispatch("randn", dev, shape, dtype=dtype, memory_format=memory_format)
+    return dispatch("randn", dev, shape, dtype=dtype, memory_format=memory_format, generator=generator)
 
 
-def rand(*shape, dtype=None, device=None, memory_format=None):
+def rand(*shape, dtype=None, device=None, memory_format=None, generator=None):
     if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
         shape = shape[0]
     dev = _as_device(device)
-    return dispatch("rand", dev, shape, dtype=dtype, memory_format=memory_format)
+    return dispatch("rand", dev, shape, dtype=dtype, memory_format=memory_format, generator=generator)
 
 
-def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False):
+def randint(low, high=None, size=None, *, dtype=None, device=None, requires_grad=False, generator=None):
     dev = _as_device(device)
-    return dispatch("randint", dev, low, high=high, size=size, dtype=dtype, requires_grad=requires_grad)
+    return dispatch("randint", dev, low, high=high, size=size, dtype=dtype, requires_grad=requires_grad, generator=generator)
 
 
-def randperm(n, *, dtype=None, device=None, requires_grad=False):
+def randperm(n, *, dtype=None, device=None, requires_grad=False, generator=None):
     dev = _as_device(device)
-    return dispatch("randperm", dev, n, dtype=dtype, requires_grad=requires_grad)
+    return dispatch("randperm", dev, n, dtype=dtype, requires_grad=requires_grad, generator=generator)
 
 
 def arange(start, end=None, step=1, dtype=None, device=None):
@@ -910,32 +920,80 @@ def full_like(input, fill_value, *, dtype=None, device=None, memory_format=None)
     return full(input.shape, fill_value, dtype=dtype, device=device)
 
 
-def randn_like(input, *, dtype=None, device=None, memory_format=None):
+def randn_like(input, *, dtype=None, device=None, memory_format=None, generator=None):
     if dtype is None:
         dtype = input.dtype
     if device is None:
         device = input.device
-    return randn(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+    return randn(input.shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
 
 
-def rand_like(input, *, dtype=None, device=None, memory_format=None):
+def rand_like(input, *, dtype=None, device=None, memory_format=None, generator=None):
     if dtype is None:
         dtype = input.dtype
     if device is None:
         device = input.device
-    return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format)
+    return rand(input.shape, dtype=dtype, device=device, memory_format=memory_format, generator=generator)
+
+
+def randint_like(input, low=0, high=None, *, dtype=None, device=None, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
+    if device is None:
+        device = input.device
+    return randint(low, high, size=input.shape, dtype=dtype, device=device)
 
 
 def rms_norm(input, normalized_shape, weight=None, eps=1e-6):
     return dispatch("rms_norm", input.device.type, input, normalized_shape, weight, eps)
 
 
+def normal(mean, std, size=None, *, generator=None, out=None):
+    if size is not None:
+        result = empty(size)
+        result.normal_(float(mean), float(std), generator=generator)
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    # Tensor mean/std forms
+    from ._tensor import Tensor
+    mean_is_tensor = isinstance(mean, Tensor)
+    std_is_tensor = isinstance(std, Tensor)
+    if mean_is_tensor or std_is_tensor:
+        if mean_is_tensor and std_is_tensor:
+            shape = mean.shape
+            device = str(mean.device)
+            dt = mean.dtype
+        elif mean_is_tensor:
+            shape = mean.shape
+            device = str(mean.device)
+            dt = mean.dtype
+        else:
+            shape = std.shape
+            device = str(std.device)
+            dt = std.dtype
+        result = randn(shape, dtype=dt, device=device)
+        result = add(mul(result, std), mean)
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    raise TypeError("normal expects at least one of mean/std to be a Tensor, or size to be specified")
+
+
 # ---------------------------------------------------------------------------
 # New ops: math, logical, bitwise, shape, search
 # ---------------------------------------------------------------------------
 
-def sub(a, b):
-    return dispatch("sub", None, a, b)
+def sub(*args, **kwargs):
+    alpha = kwargs.pop("alpha", 1)
+    kwargs.pop("out", None)
+    if alpha != 1:
+        a, b = args[0], args[1]
+        b = mul(b, alpha)
+        return dispatch("sub", None, a, b)
+    return dispatch("sub", None, *args, **kwargs)
 
 
 def log1p(a):
@@ -1041,6 +1099,10 @@ def movedim(a, source, destination):
     return dispatch("movedim", a.device.type, a, source, destination)
 
 
+def moveaxis(a, source, destination):
+    return dispatch("moveaxis", a.device.type, a, source, destination)
+
+
 def diagonal(a, offset=0, dim1=0, dim2=1):
     return dispatch("diagonal", a.device.type, a, offset, dim1, dim2)
 
@@ -1064,9 +1126,279 @@ def median(a, dim=None, keepdim=False):
     return dispatch("median", a.device.type, a, dim, keepdim)
 
 
+def baddbmm(input, batch1, batch2, *, beta=1, alpha=1):
+    return dispatch("baddbmm", input.device.type, input, batch1, batch2, beta=beta, alpha=alpha)
+
+
+def trace(a):
+    return dispatch("trace", a.device.type, a)
+
+
+def cummin(a, dim):
+    return dispatch("cummin", a.device.type, a, dim)
+
+
+def logsumexp(a, dim, keepdim=False):
+    return dispatch("logsumexp", a.device.type, a, dim, keepdim)
+
+
+def renorm(a, p, dim, maxnorm):
+    return dispatch("renorm", a.device.type, a, p, dim, maxnorm)
+
+
 def _as_device(dev):
     if dev is None:
         return get_default_device()
     if isinstance(dev, str):
         return Device(dev)
     return dev
+
+
+# ---------------------------------------------------------------------------
+# Category B: Wrappers for existing schema+kernel functions
+# ---------------------------------------------------------------------------
+
+def nansum(a, dim=None, keepdim=False):
+    return dispatch("nansum", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def nanmean(a, dim=None, keepdim=False):
+    return dispatch("nanmean", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def det(a):
+    return dispatch("det", a.device.type, a)
+
+
+def dist(a, other, p=2):
+    return dispatch("dist", a.device.type, a, other, p)
+
+
+def matrix_power(a, n):
+    return dispatch("matrix_power", a.device.type, a, n)
+
+
+def argwhere(a):
+    return dispatch("argwhere", a.device.type, a)
+
+
+# ---------------------------------------------------------------------------
+# Category C1: Pure-Python functions (no dispatch needed)
+# ---------------------------------------------------------------------------
+
+def meshgrid(*tensors, indexing='ij'):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        tensors = tuple(tensors[0])
+    if indexing not in ('ij', 'xy'):
+        raise ValueError(f"meshgrid: indexing must be 'ij' or 'xy', got '{indexing}'")
+    if len(tensors) == 0:
+        return []
+    # For 'xy' indexing, swap the first two inputs, build 'ij', then swap outputs
+    if indexing == 'xy' and len(tensors) >= 2:
+        swapped = (tensors[1], tensors[0]) + tensors[2:]
+        grids = meshgrid(*swapped, indexing='ij')
+        grids[0], grids[1] = grids[1], grids[0]
+        return grids
+    grids = []
+    ndim = len(tensors)
+    for i, t in enumerate(tensors):
+        shape = [1] * ndim
+        shape[i] = t.numel()
+        reshaped = t.reshape(shape)
+        expand_shape = [s.numel() for s in tensors]
+        grids.append(reshaped.expand(*expand_shape))
+    return grids
+
+
+def atleast_1d(*tensors):
+    if len(tensors) == 1:
+        t = tensors[0]
+        if t.ndim == 0:
+            return t.reshape(1)
+        return t
+    result = []
+    for t in tensors:
+        if t.ndim == 0:
+            result.append(t.reshape(1))
+        else:
+            result.append(t)
+    return result
+
+
+def atleast_2d(*tensors):
+    if len(tensors) == 1:
+        t = tensors[0]
+        if t.ndim == 0:
+            return t.reshape(1, 1)
+        elif t.ndim == 1:
+            return t.unsqueeze(0)
+        return t
+    result = []
+    for t in tensors:
+        if t.ndim == 0:
+            result.append(t.reshape(1, 1))
+        elif t.ndim == 1:
+            result.append(t.unsqueeze(0))
+        else:
+            result.append(t)
+    return result
+
+
+def atleast_3d(*tensors):
+    if len(tensors) == 1:
+        t = tensors[0]
+        if t.ndim == 0:
+            return t.reshape(1, 1, 1)
+        elif t.ndim == 1:
+            return t.unsqueeze(0).unsqueeze(-1)
+        elif t.ndim == 2:
+            return t.unsqueeze(-1)
+        return t
+    result = []
+    for t in tensors:
+        if t.ndim == 0:
+            result.append(t.reshape(1, 1, 1))
+        elif t.ndim == 1:
+            result.append(t.unsqueeze(0).unsqueeze(-1))
+        elif t.ndim == 2:
+            result.append(t.unsqueeze(-1))
+        else:
+            result.append(t)
+    return result
+
+
+def broadcast_shapes(*shapes):
+    if not shapes:
+        return ()
+    max_ndim = _builtins.max(len(s) for s in shapes)
+    result = [1] * max_ndim
+    for shape in shapes:
+        padded = [1] * (max_ndim - len(shape)) + list(shape)
+        for i in _builtins.range(max_ndim):
+            if padded[i] == 1:
+                continue
+            if result[i] == 1:
+                result[i] = padded[i]
+            elif result[i] != padded[i]:
+                raise RuntimeError(
+                    f"Shape mismatch: objects cannot be broadcast to a single shape. "
+                    f"Mismatch at dim {i}: {result[i]} vs {padded[i]}"
+                )
+    return tuple(result)
+
+
+def broadcast_tensors(*tensors):
+    if len(tensors) == 1 and isinstance(tensors[0], (list, tuple)):
+        tensors = tuple(tensors[0])
+    shapes = [t.shape for t in tensors]
+    target = broadcast_shapes(*shapes)
+    return [t.expand(*target) for t in tensors]
+
+
+def complex(real, imag):
+    import numpy as _np
+    r = real.numpy() if hasattr(real, 'numpy') else _np.asarray(real)
+    i = imag.numpy() if hasattr(imag, 'numpy') else _np.asarray(imag)
+    c = r.astype(_np.float64) + 1j * i.astype(_np.float64)
+    from ._dtype import complex128 as _cdouble
+    dev = _as_device(real.device if hasattr(real, 'device') else None)
+    return dispatch("tensor", dev, c.tolist(), dtype=_cdouble)
+
+
+def polar(abs, angle):
+    import numpy as _np
+    a = abs.numpy() if hasattr(abs, 'numpy') else _np.asarray(abs)
+    ang = angle.numpy() if hasattr(angle, 'numpy') else _np.asarray(angle)
+    c = a * _np.exp(1j * ang)
+    from ._dtype import complex128 as _cdouble
+    dev = _as_device(abs.device if hasattr(abs, 'device') else None)
+    return dispatch("tensor", dev, c.tolist(), dtype=_cdouble)
+
+
+# ---------------------------------------------------------------------------
+# Category C2: Dispatch-based functions (need schema + kernel)
+# ---------------------------------------------------------------------------
+
+def diff(a, n=1, dim=-1, prepend=None, append=None):
+    return dispatch("diff", a.device.type, a, n=n, dim=dim, prepend=prepend, append=append)
+
+
+def bincount(a, weights=None, minlength=0):
+    return dispatch("bincount", a.device.type, a, weights=weights, minlength=minlength)
+
+
+def cdist(x1, x2, p=2.0):
+    return dispatch("cdist", x1.device.type, x1, x2, p=p)
+
+
+def aminmax(a, *, dim=None, keepdim=False):
+    return dispatch("aminmax", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def quantile(a, q, dim=None, keepdim=False):
+    return dispatch("quantile", a.device.type, a, q, dim=dim, keepdim=keepdim)
+
+
+def nanquantile(a, q, dim=None, keepdim=False):
+    return dispatch("nanquantile", a.device.type, a, q, dim=dim, keepdim=keepdim)
+
+
+def nanmedian(a, dim=None, keepdim=False):
+    return dispatch("nanmedian", a.device.type, a, dim=dim, keepdim=keepdim)
+
+
+def histc(a, bins=100, min=0, max=0):
+    return dispatch("histc", a.device.type, a, bins=bins, min=min, max=max)
+
+
+def histogram(a, bins, *, range=None, weight=None, density=False):
+    return dispatch("histogram", a.device.type, a, bins, range=range, weight=weight, density=density)
+
+
+def bucketize(a, boundaries, *, out_int32=False, right=False):
+    return dispatch("bucketize", a.device.type, a, boundaries, out_int32=out_int32, right=right)
+
+
+def isneginf(a):
+    return dispatch("isneginf", a.device.type, a)
+
+
+def isposinf(a):
+    return dispatch("isposinf", a.device.type, a)
+
+
+def isreal(a):
+    return dispatch("isreal", a.device.type, a)
+
+
+def isin(elements, test_elements):
+    return dispatch("isin", elements.device.type, elements, test_elements)
+
+
+def heaviside(a, values):
+    return dispatch("heaviside", a.device.type, a, values)
+
+
+# ---------------------------------------------------------------------------
+# P0 dtype utilities & query functions
+# ---------------------------------------------------------------------------
+
+def is_tensor(obj):
+    from ._tensor import Tensor
+    return isinstance(obj, Tensor)
+
+
+def is_floating_point(input):
+    return input.is_floating_point()
+
+
+def is_complex(input):
+    return input.is_complex()
+
+
+def numel(input):
+    return input.numel()
+
+
+def square(a):
+    return dispatch("square", a.device.type, a)
