@@ -1,0 +1,28 @@
+# Ultralytics  AGPL-3.0 License - https://ultralytics.com/license
+# Imagenette2-160 Dataset by fast.ai
+# Example usage: python train.py --data imagenette2-160.yaml
+
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+path: ./datasets/imagenette2-160 # 你的数据集根目录 (根据你的截图和运行路径调整)
+train: train # 训练集相对路径 (会与 path 拼接)
+val: val     # 验证集相对路径 (会与 path 拼接)
+test:        # 测试集 (Imagenette 没有单独的 test，可以留空)
+
+# Classes
+nc: 10 # 类别数量
+names:
+  0: tench            # 丁鱼
+  1: English springer # 英国斯宾格犬
+  2: cassette player  # 录音机
+  3: chain saw        # 链锯
+  4: church           # 教堂
+  5: French horn      # 圆号
+  6: garbage truck    # 垃圾车
+  7: gas pump         # 加油泵
+  8: golf ball        # 高尔夫球
+  9: parachute        # 降落伞
+
+# Download script/URL (optional)
+download: |
+  wget https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz
+  tar -xzvf imagenette2-160.tgz

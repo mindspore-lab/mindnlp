@@ -1,0 +1,60 @@
+# ==========================================
+# YOLO11 统一超参数配置 (适用于 Classify, Detect, Segment, Pose)
+# ==========================================
+
+# 1. 优化器与学习率 (Optimizer & LR)
+
+optimizer: 'SGD'      # 优化器选择 
+lr0: 0.01             # 初始学习率（微调pose任务,使用coco8-pose数据集时,推荐使用0.001）
+lrf: 0.01             # 最终学习率比例 (lr0 * lrf = 0.0001)
+momentum: 0.937       # 动量 (SGD momentum / Adam beta1)
+weight_decay: 0.0005  # 权重衰减系数 (L2 正则化)
+warmup_epochs: 3.0    # 预热轮数 (前几个 Epoch 学习率从低爬升)
+warmup_momentum: 0.8  # 预热阶段的初始动量
+warmup_bias_lr: 0.1   # 预热阶段偏置项(bias)的学习率
+
+
+# 2. 任务损失权重 (Loss Weights)
+# 说明：各个任务会自动读取自己需要的权重，无关的会被忽略
+
+box: 7.5              # 边界框回归损失 (GIoU/CIoU)
+cls: 0.5              # 类别分类损失 (BCE / CE)
+dfl: 1.5              # 分布焦点损失 (DFL)
+pose: 12.0            # 姿态估计：关键点坐标损失
+kobj: 1.0             # 姿态估计：关键点可见度损失
+seg: 2.5              # 实例分割：掩码 BCE 损失
+label_smoothing: 0.0  # 标签平滑系数 (防止过拟合，通常为0)
+
+
+# 3. 基础数据增强 (Data Augmentation)
+
+hsv_h: 0.015          # 图像 HSV 色调增强比例
+hsv_s: 0.7            # 图像 HSV 饱和度增强比例
+hsv_v: 0.4            # 图像 HSV 明度增强比例
+degrees: 0.0          # 图像旋转角度 (+/- deg)
+translate: 0.1        # 图像平移比例 (+/- fraction)
+scale: 0.5            # 图像缩放比例 (+/- gain)
+shear: 0.0            # 图像剪切角度 (+/- deg)
+perspective: 0.0      # 透视变换系数 (0-0.001)
+flipud: 0.0           # 图像上下翻转概率 
+fliplr: 0.5           # 图像左右翻转概率 (分类和检测常用)
+
+
+# 4. 高级图像拼接增强 (Mosaic & MixUp)
+# 注意：分类任务通常不使用马赛克增强，代码里需做判断
+
+mosaic: 1.0           # 马赛克数据增强概率 (检测/分割/姿态 核心)
+mixup: 0.0            # MixUp 增强概率
+copy_paste: 0.0       # Copy-Paste 分割增强概率
+
+
+# 5. 验证与推理超参数 (Val & Inference Settings)
+# 注意：在验证(Val)计算 mAP 时，系统会自动将 conf 降为 0.001；
+# 下面填写的 conf 主要供常规推理(Predict)或最终展示使用。
+
+conf: 0.25            # 目标置信度阈值 (预测时使用 0.25，验证算 mAP 时代码内部会强转为 0.001)
+iou: 0.6              # NMS (非极大值抑制) 的 IoU 阈值
+max_det: 300          # 每张图像最多保留的预测框数量
+half: False           # 是否使用 FP16 半精度推理 (Ascend/GPU 推荐开启以提速)
+dnn: False            # 是否使用 OpenCV DNN 进行 ONNX 推理
+plots: True           # 是否在验证期间保存画好框的结果图和各种评估图表
