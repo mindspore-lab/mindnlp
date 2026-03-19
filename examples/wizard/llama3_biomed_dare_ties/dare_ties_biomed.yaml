@@ -1,0 +1,42 @@
+# Reproduces lighteternal/Llama3-merge-biomed-8b
+# Original: https://huggingface.co/lighteternal/Llama3-merge-biomed-8b
+#
+# DARE-TIES merge of Llama-3-8B-Instruct + Hermes-2-Pro + OpenBioLLM
+# The first two model entries share the base_model identity (delta=0).
+# Only Hermes-2-Pro and OpenBioLLM contribute non-zero task vectors.
+#
+# 用法:
+#   python -m mindnlp.wizard.merge.scripts.run_yaml \
+#       examples/wizard/llama3_biomed_dare_ties/dare_ties_biomed.yaml \
+#       ./output/Llama3-merge-biomed-8b
+#
+# 如果模型已下载到本地，可将 HF Hub ID 替换为本地路径，例如:
+#   model: /path/to/NousResearch/Meta-Llama-3-8B-Instruct
+
+merge_method: dare_ties
+base_model: NousResearch/Meta-Llama-3-8B-Instruct
+
+models:
+  - model: NousResearch/Meta-Llama-3-8B-Instruct
+    parameters:
+      density: 1.0
+      weight: 1.0
+
+  - model: NousResearch/Meta-Llama-3-8B-Instruct
+    parameters:
+      density: 0.60
+      weight: 0.5
+
+  - model: NousResearch/Hermes-2-Pro-Llama-3-8B
+    parameters:
+      density: 0.55
+      weight: 0.1
+
+  - model: aaditya/Llama3-OpenBioLLM-8B
+    parameters:
+      density: 0.55
+      weight: 0.4
+
+parameters:
+  int8_mask: true
+dtype: bfloat16

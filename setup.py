@@ -171,7 +171,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'mtrun=mindtorch.distributed.run:main'
+            'mtrun=mindtorch.distributed.run:main',
+            'wizard-merge=mindnlp.wizard.merge.scripts.run_yaml:main',
         ],
     },
 

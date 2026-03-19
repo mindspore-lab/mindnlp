@@ -1,0 +1,22 @@
+# TIES 合并示例
+# 使用 TIES (Trim, Elect Sign & Merge) 方法合并，
+# 需要指定 base_model 作为参考基准。
+#
+# 用法:
+#   python -m mindnlp.wizard.merge.scripts.run_yaml \
+#       examples/wizard/ties_merge.yaml ./output/ties_merged
+
+models:
+  - model: Qwen/Qwen2.5-7B-Instruct
+    parameters:
+      density: 0.5
+      weight: 1.0
+  - model: Qwen/Qwen2.5-7B-Math
+    parameters:
+      density: 0.5
+      weight: 0.5
+merge_method: ties
+base_model: Qwen/Qwen2.5-7B
+parameters:
+  normalize: true
+dtype: bfloat16
