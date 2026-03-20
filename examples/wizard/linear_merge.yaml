@@ -1,0 +1,16 @@
+# 线性加权合并示例
+# 将两个 Qwen2.5-7B 变体按权重线性合并
+#
+# 用法:
+#   python -m mindnlp.wizard.merge.scripts.run_yaml \
+#       examples/wizard/linear_merge.yaml ./output/linear_merged
+
+models:
+  - model: Qwen/Qwen2.5-7B
+    parameters:
+      weight: 1.0
+  - model: Qwen/Qwen2.5-7B-Instruct
+    parameters:
+      weight: 0.3
+merge_method: linear
+dtype: float16

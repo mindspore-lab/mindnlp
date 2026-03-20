@@ -1,0 +1,11 @@
+# HuggingFace 令牌（敏感信息，禁止提交）
+.hf_token
+
+# 下载的模型文件与运行产物
+*/models/
+*/output/
+*/offload/
+
+# Python 缓存
+__pycache__/
+*.pyc

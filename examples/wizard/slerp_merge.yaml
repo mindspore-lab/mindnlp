@@ -1,0 +1,16 @@
+# SLERP 合并示例
+# 球面线性插值 (Spherical Linear Interpolation)，
+# 适用于两个模型之间的平滑权重合并。
+#
+# 用法:
+#   python -m mindnlp.wizard.merge.scripts.run_yaml \
+#       examples/wizard/slerp_merge.yaml ./output/slerp_merged
+
+models:
+  - model: meta-llama/Llama-3-8B
+  - model: meta-llama/Llama-3-8B-Instruct
+merge_method: slerp
+base_model: meta-llama/Llama-3-8B
+parameters:
+  t: 0.5
+dtype: bfloat16

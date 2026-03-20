@@ -1,0 +1,32 @@
+# ====================================================================
+# Llama3-8B-merge-biomed DARE-TIES 示例 — 环境依赖
+# 基于 Wizard conda 环境实际版本锁定
+# 安装: pip install -r requirements.txt
+# ====================================================================
+
+# ---- MindSpore 框架 ----
+mindspore==2.7.1
+
+# ---- 序列化 / 张量 I/O ----
+safetensors==0.7.0
+ml_dtypes==0.5.4
+
+# ---- 配置与数据建模 ----
+PyYAML==6.0.3
+immutables==0.21
+pydantic==2.12.5
+typing_extensions==4.15.0
+
+# ---- HuggingFace 生态 ----
+transformers==4.55.0
+tokenizers==0.21.4
+huggingface_hub==0.36.2
+
+# ---- 工具库 ----
+numpy==1.26.4
+tqdm==4.67.3
+click==8.3.1
+
+# ---- 评测 ----
+lm_eval==0.4.11
+datasets==4.8.2

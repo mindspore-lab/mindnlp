@@ -1,0 +1,50 @@
+# ====================================================================
+# Wizard 模块依赖（模型合并引擎）
+#
+# 用途:
+# 1. 提供 Wizard 模块的兼容依赖范围
+# 2. 作为 requirements/requirements.txt 之上的补充依赖
+#
+# 说明:
+# - MindSpore 由 requirements/requirements.txt 或现有环境提供
+# - 端到端示例的精确复现，请使用:
+#   examples/wizard/llama3_biomed_dare_ties/requirements.txt
+#
+# 安装:
+#   pip install -r requirements/requirements.txt
+#   pip install -r requirements/wizard-requirements.txt
+# ====================================================================
+
+# ---- 序列化 / 张量 I/O（必需）----
+safetensors>=0.7,<1.0
+ml_dtypes>=0.5,<1.0
+
+# ---- 配置与数据建模（必需）----
+PyYAML>=6.0,<7.0
+immutables>=0.21,<1.0
+pydantic>=2.12,<3.0
+typing_extensions>=4.15,<5.0
+
+# ---- HuggingFace 生态（必需）----
+transformers>=4.55,<5.0
+tokenizers>=0.21,<0.22
+huggingface_hub>=0.36,<1.0
+
+# ---- LoRA 子命令（可选：wizard-extract-lora / LoRA merge）----
+# 如需使用 LoRA 相关路径，建议额外安装 peft
+peft>=0.18,<0.19
+
+# ---- 工具库（必需）----
+numpy>=1.26,<2.0
+tqdm>=4.67,<5.0
+click>=8.3,<9.0
+
+# ---- 评测后端（推荐）----
+lm_eval>=0.4,<0.5
+datasets>=4.8,<5.0
+
+# ---- 进化搜索 / 分布式（可选，仅 evo 子模块使用）----
+# pandas>=2.0,<3.0
+# ray>=2.0,<3.0
+# cma>=3.0,<4.0
+# vllm
