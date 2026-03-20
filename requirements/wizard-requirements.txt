@@ -30,6 +30,10 @@ transformers>=4.55,<5.0
 tokenizers>=0.21,<0.22
 huggingface_hub>=0.36,<1.0
 
+# ---- LoRA 子命令（可选：wizard-extract-lora / LoRA merge）----
+# 如需使用 LoRA 相关路径，建议额外安装 peft
+peft>=0.18,<0.19
+
 # ---- 工具库（必需）----
 numpy>=1.26,<2.0
 tqdm>=4.67,<5.0

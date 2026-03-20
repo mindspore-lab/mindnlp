@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click
 import mindspore  # pylint: disable=import-error
-from mindspore import nn  # pylint: disable=import-error
+from mindspore import nn as ms_nn  # pylint: disable=import-error
 from mindspore import ops  # pylint: disable=import-error
 import tqdm
 import transformers
@@ -420,6 +420,11 @@ def plan_extraction(  # pylint: disable=too-many-positional-arguments
     for name, module in tqdm.tqdm(
         list(dummy_model.named_modules()), desc="Planning operations"
     ):
+        module_type = type(module).__name__
+        is_embed_module = isinstance(module, ms_nn.Embedding) or module_type == "Embedding"
+        is_supported_module = isinstance(
+            module, (ms_nn.Dense, ms_nn.Conv1d, ms_nn.Conv2d, ms_nn.Embedding)
+        ) or module_type in {"Linear", "Conv1d", "Conv2d", "Conv1D", "Embedding"}
         wi = name_to_wi.get(name + ".weight")
         bias_wi = name_to_wi.get(name + ".bias")
         if wi is None:
@@ -430,7 +435,7 @@ def plan_extraction(  # pylint: disable=too-many-positional-arguments
                 wi = WeightInfo(
                     name=name + ".weight",
                     optional=True,
-                    is_embed=isinstance(module, nn.Embedding),
+                    is_embed=is_embed_module,
                 )
             else:
                 continue
@@ -440,7 +445,7 @@ def plan_extraction(  # pylint: disable=too-many-positional-arguments
             and (
                 module == embed_in
                 or module == embed_out
-                or isinstance(module, nn.Embedding)
+                or is_embed_module
             )
             and not any(re.search(r, name) for r in exclude_regexes or [])
         ):
@@ -453,7 +458,7 @@ def plan_extraction(  # pylint: disable=too-many-positional-arguments
             LOG.info(f"Planning to save {name} at full rank")
             targets.extend(plan_module_to_save(model_ref, writer_task, wi, bias_wi))
         elif _should_extract(name):
-            if isinstance(module, (nn.Dense, nn.Conv1d, nn.Conv2d, nn.Embedding)):
+            if is_supported_module:
                 LOG.info(f"Planning LoRA extraction for {name}")
                 targets.extend(
                     plan_lora_module(
@@ -464,7 +469,7 @@ def plan_extraction(  # pylint: disable=too-many-positional-arguments
                         writer_task,
                         max_rank,
                         distribute_scale,
-                        transpose=isinstance(module, nn.Embedding),
+                        transpose=is_embed_module,
                         sv_epsilon=sv_epsilon,
                     )
                 )

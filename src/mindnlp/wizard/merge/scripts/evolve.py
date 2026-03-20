@@ -187,10 +187,10 @@ def main(  # pylint: disable=too-many-positional-arguments
     else:
         run = None
 
-    merge_options = MergeOptions(  # pylint: disable=unexpected-keyword-arg
+    merge_options = MergeOptions(
         transformers_cache=os.path.join(storage_path, "transformers_cache"),
         lora_merge_cache=os.path.join(storage_path, "lora_merge_cache"),
-        npu=merge_npu,
+        multi_npu=merge_npu,
         low_cpu_memory=merge_npu and not in_memory,
         out_shard_size=1_000_000_000_000,
         trust_remote_code=trust_remote_code,
